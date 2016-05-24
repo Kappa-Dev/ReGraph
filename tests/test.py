@@ -73,10 +73,13 @@ if __name__ == '__main__':
             LHS,
             instance,
             "instance_%d" % i)
+
     rw.transform_instance(
         instances[0],
-        """delete_node 6.
-merge [1, 5] method union.
-merge [4, 7]."""
+        """delete_node 6.\n"""
+        """merge [1, 5] method union as merge_1.\n"""
+        """merge [4, 7] as merge_2.\n"""
+        """add_edge merge_1 merge_2."""
     )
+
     rw.plot_graph("result.png")

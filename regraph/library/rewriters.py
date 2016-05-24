@@ -106,7 +106,10 @@ class Rewriter:
             print(command)
             parsed = parser.parseString(command)
             if parsed["keyword"] == "clone":
-                self.clone_node(instance[parsed["node"]])
+                if parsed["node"] in instance.keys():
+                    self.clone_node(instance[parsed["node"]])
+                else:
+                    self.clone_node(parsed["node"])
             elif parsed["keyword"] == "merge":
                 method = None
                 node_name = None
@@ -114,7 +117,9 @@ class Rewriter:
                     method = parsed["method"]
                 if "node_name" in parsed.keys():
                     node_name = parsed["node_name"]
-                nodes_to_merge = [instance[n] for n in parsed["nodes"]]
+                nodes_to_merge =\
+                    [instance[n] if n in instance.keys() else n
+                     for n in parsed["nodes"]]
                 self.merge_nodes(nodes_to_merge, method, node_name)
             elif parsed["keyword"] == "add_node":
                 name = None
@@ -128,15 +133,30 @@ class Rewriter:
                     attrs = parsed["attrubutes"]
                 self.add_node(name, node_type, attrs)
             elif parsed["keyword"] == "delete_node":
-                self.remove_node(instance[parsed["node"]])
+                if parsed["node"] in instance.keys():
+                    self.remove_node(instance[parsed["node"]])
+                else:
+                    self.remove_node(parsed["node"])
             elif parsed["keyword"] == "add_edge":
-                self.remove_edge(
-                    instance[parsed["node_1"]],
-                    instance[parsed["node_2"]])
+                if parsed["node_1"] in instance.keys():
+                    node_1 = instance[parsed["node_1"]]
+                else:
+                    node_1 = parsed["node_1"]
+                if parsed["node_2"] in instance.keys():
+                    node_2 = instance[parsed["node_2"]]
+                else:
+                    node_2 = parsed["node_2"]
+                self.add_edge(node_1, node_2)
             elif parsed["keyword"] == "delete_edge":
-                self.delete_edge(
-                    instance[parsed["node_1"]],
-                    instance[parsed["node_2"]])
+                if parsed["node_1"] in instance.keys():
+                    node_1 = instance[parsed["node_1"]]
+                else:
+                    node_1 = parsed["node_1"]
+                if parsed["node_2"] in instance.keys():
+                    node_2 = instance[parsed["node_2"]]
+                else:
+                    node_2 = parsed["node_2"]
+                self.remove_edge(node_1, node_2)
             else:
                 raise ValueError("Unknown command")
 
@@ -233,13 +253,16 @@ class Rewriter:
     def plot_graph(self, filename=None):
         """Plot the graph that is being currently rewrited."""
         pos = nx.spring_layout(self.graph_)
-        nx.draw_networkx_nodes(self.graph_, pos, arrows=True)
+        nx.draw_networkx_nodes(self.graph_, pos, node_size=100, arrows=True)
+        nx.draw_networkx_edges(self.graph_, pos, alpha=0.6)
+
         labels = {}
         for node in self.graph_.nodes():
             labels[node] = node
+        offset = 0.05
+        for p in pos:  # raise text positions
+            pos[p][1] += offset
         nx.draw_networkx_labels(self.graph_, pos, labels, font_size=11)
-        nx.draw_networkx_edges(self.graph_, pos)
-        nx.draw(self.graph_, pos)
         if filename is not None:
             with open(filename, "w") as f:
                 plt.savefig(f)
@@ -249,17 +272,15 @@ class Rewriter:
         return
 
     def plot_instance(self, pattern, instance, filename):
-        """Plot the graph with."""
+        """Plot the graph with instance of pattern highlighted."""
         new_colors = ["g" if not self.graph_.nodes()[i] in instance.values()
                       else "r" for i, c in enumerate(self.graph_.nodes())]
         pos = nx.spring_layout(self.graph_)
         nx.draw_networkx_nodes(
-            self.graph_, pos, node_color=new_colors, arrows=True)
-        labels = {}
-        for node in self.graph_.nodes():
-            labels[node] = node
-        nx.draw_networkx_labels(self.graph_, pos, labels, font_size=11)
-        nx.draw_networkx_edges(self.graph_, pos)
+            self.graph_, pos, node_color=new_colors,
+            node_size=100, arrows=True)
+        nx.draw_networkx_edges(self.graph_, pos, alpha=0.6)
+
         # Draw pattern edges highlighted
         edgelist = [(instance[edge[0]], instance[edge[1]])
                     for edge in pattern.edges()]
@@ -267,6 +288,15 @@ class Rewriter:
             self.graph_, pos,
             edgelist=edgelist,
             width=3, alpha=0.5, edge_color='r')
+
+        labels = {}
+        for node in self.graph_.nodes():
+            labels[node] = node
+        offset = 0.05
+        for p in pos:  # raise text positions
+            pos[p][1] += offset
+        nx.draw_networkx_labels(self.graph_, pos, labels, font_size=11)
+
         # color the instances
         plt.title("Graph with instance of pattern highlighted")
         if filename is not None:
