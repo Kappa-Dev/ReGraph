@@ -1,0 +1,11 @@
+cycler==0.10.0
+decorator==4.0.9
+matplotlib==1.5.1
+networkx==1.11
+numpy==1.11.0
+pyparsing==2.1.4
+python-dateutil==2.5.3
+pytz==2016.4
+ReGraph==0.1
+six==1.10.0
+wheel==0.24.0
