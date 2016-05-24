@@ -1,4 +1,4 @@
 build/*
 dist/*
-regraph.egg-info/*
+ReGraph.egg-info/
 regraph/library/__pycache__/
