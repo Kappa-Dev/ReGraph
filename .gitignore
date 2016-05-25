@@ -2,3 +2,4 @@ build/*
 dist/*
 ReGraph.egg-info/
 regraph/library/__pycache__/
+venv/*
