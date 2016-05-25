@@ -56,7 +56,29 @@ class TypedGraph:
     """Define simple typed undirected graph."""
 
     def __init__(self):
-        self.graph_ = nx.DiGraph()
+        self.graph_ = nx.Graph()
+
+    def add_node(self, node_id, type, attrs={}):
+        nx.Graph.add_node(self, node_id)
+        self.node[node_id] = TypedNode(type, attrs)
+
+    def add_nodes_from(self, node_list):
+        raise NotImplementedError(
+            "Adding the nodes from the list is not impemented!")
+
+    def add_edges_from(self, edge_list):
+        for edge in edge_list:
+            if not edge[0] in self.nodes():
+                raise ValueError("Node %s is not defined!" % edge[0])
+            if not edge[1] in self.nodes():
+                raise ValueError("Node %s is not defined!" % edge[1])
+        nx.Graph.add_edges_from(self, edge_list)
+
+    def get_edge(self, source, target):
+        return self.edge[source][target]
+
+    def set_edge(self, source, target, attrs):
+        self.edge[source][target] = attrs
 
 
 def is_valid_homomorphism(source, target, dictionary):
