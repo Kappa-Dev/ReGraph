@@ -2,19 +2,19 @@
 import networkx as nx
 from networkx.algorithms import isomorphism
 
-import matplotlib.pyplot as plt
-
 import itertools
 
 from regraph.library.parser import parser
-from regraph.library.primitives import (is_subdict,
-                                        merge_nodes,
+from regraph.library.primitives import (merge_nodes,
                                         clone_node,
                                         add_node,
                                         remove_node,
                                         add_edge,
                                         remove_edge)
+from regraph.library.utils import is_subdict
 
+
+# taken from projx https://github.com/davebshow/projx
 
 class Rewriter:
     """Class implements the transformation on the graph."""
@@ -31,9 +31,12 @@ class Rewriter:
         # find all the nodes matching the nodes in pattern
         for pattern_node in pattern.nodes():
             for node in self.graph_.nodes():
-                if is_subdict(pattern.node[pattern_node],
-                              self.graph_.node[node]):
-                    matching_nodes.add(node)
+                print(pattern.node[pattern_node].attrs_)
+                print(self.graph_.node[node].attrs_)
+                if pattern.node[pattern_node].type_ == self.graph_.node[node].type_:
+                    if is_subdict(pattern.node[pattern_node].attrs_,
+                                  self.graph_.node[node].attrs_):
+                        matching_nodes.add(node)
 
         reduced_graph = self.graph_.subgraph(matching_nodes)
         instances = []
@@ -47,15 +50,26 @@ class Rewriter:
                     GM = isomorphism.GraphMatcher(pattern, edge_induced_graph)
                     if GM.is_isomorphic():
                         isomorphic_subgraphs.append((subg, GM.mapping))
-        # check node matches
-        # exclude subgraphs which nodes information does not
-        # correspond to pattern
+
         for subgraph, mapping in isomorphic_subgraphs:
+            # check node matches
+            # exclude subgraphs which nodes information does not
+            # correspond to pattern
             for (pattern_node, node) in mapping.items():
-                if not is_subdict(pattern.node[pattern_node], subgraph.node[node]):
+                if not pattern.node[pattern_node].type_ == subgraph.node[node].type_:
+                    break
+                if not is_subdict(pattern.node[pattern_node].attrs_, subgraph.node[node].attrs_):
                     break
             else:
-                instances.append(mapping)
+                # check edge attribute matched
+                for edge in pattern.edges():
+                    pattern_attrs = pattern.get_edge(edge[0], edge[1])
+                    target_attrs = subgraph.get_edge(mapping[edge[0]], mapping[edge[1]])
+                    if not is_subdict(pattern_attrs, target_attrs):
+                        break
+                else:
+                    instances.append(mapping)
+
         return instances
 
     def clone(self, instance, node):
@@ -144,60 +158,3 @@ class Rewriter:
                 self.delete_edge(instance, parsed["node_1"], parsed["node_2"])
             else:
                 raise ValueError("Unknown command")
-
-    def plot_graph(self, filename=None):
-        """Plot the graph that is being currently rewrited."""
-        pos = nx.spring_layout(self.graph_)
-        nx.draw_networkx_nodes(self.graph_, pos, node_size=100, arrows=True)
-        nx.draw_networkx_edges(self.graph_, pos, alpha=0.6)
-
-        labels = {}
-        for node in self.graph_.nodes():
-            labels[node] = node
-        offset = 0.05
-        for p in pos:  # raise text positions
-            pos[p][1] += offset
-        nx.draw_networkx_labels(self.graph_, pos, labels, font_size=11)
-        if filename is not None:
-            with open(filename, "w") as f:
-                plt.savefig(f)
-                plt.clf()
-        else:
-            plt.show()
-        return
-
-    def plot_instance(self, pattern, instance, filename):
-        """Plot the graph with instance of pattern highlighted."""
-        new_colors = ["g" if not self.graph_.nodes()[i] in instance.values()
-                      else "r" for i, c in enumerate(self.graph_.nodes())]
-        pos = nx.spring_layout(self.graph_)
-        nx.draw_networkx_nodes(
-            self.graph_, pos, node_color=new_colors,
-            node_size=100, arrows=True)
-        nx.draw_networkx_edges(self.graph_, pos, alpha=0.6)
-
-        # Draw pattern edges highlighted
-        edgelist = [(instance[edge[0]], instance[edge[1]])
-                    for edge in pattern.edges()]
-        nx.draw_networkx_edges(
-            self.graph_, pos,
-            edgelist=edgelist,
-            width=3, alpha=0.5, edge_color='r')
-
-        labels = {}
-        for node in self.graph_.nodes():
-            labels[node] = node
-        offset = 0.05
-        for p in pos:  # raise text positions
-            pos[p][1] += offset
-        nx.draw_networkx_labels(self.graph_, pos, labels, font_size=11)
-
-        # color the instances
-        plt.title("Graph with instance of pattern highlighted")
-        if filename is not None:
-            with open(filename, "w") as f:
-                plt.savefig(f)
-                plt.clf()
-        else:
-            plt.show()
-        return

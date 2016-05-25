@@ -3,11 +3,6 @@
 import itertools
 
 
-def is_subdict(small_dict, big_dict):
-    """Check if the dictionary is a subset of other."""
-    return set(small_dict.items()).issubset(set(big_dict.items()))
-
-
 def merge_attributes(attr1, attr2, method="union"):
     """Merge two dictionaries of attributes."""
     result = {}

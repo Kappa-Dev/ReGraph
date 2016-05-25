@@ -1,11 +1,33 @@
 """Testing of the rewriters module."""
 from regraph.library.rewriters import Rewriter
 
-import networkx as nx
+from regraph.library.data_structures import TypedDiGraph
+from regraph.library.data_structures import Homomorphism
+
+from regraph.library.utils import plot_graph
+from regraph.library.utils import plot_instance
 
 
 def init_test_graph():
-    graph = nx.DiGraph()
+    graph = TypedDiGraph()
+
+    graph.add_node(1, 'agent',
+                   {'name': 'EGFR', 'state': 'p'})
+    graph.add_node(2, 'action', attrs={'name': 'BND'})
+    graph.add_node(3, 'agent',
+                   {'name': 'Grb2', 'aa': 'S', 'loc': 90})
+    graph.add_node(4, 'region', attrs={'name': 'SH2'})
+    graph.add_node(5, 'agent', attrs={'name': 'EGFR'})
+    graph.add_node(6, 'action', attrs={'name': 'BND'})
+    graph.add_node(7, 'agent', attrs={'name': 'Grb2'})
+
+    graph.add_node(8, 'agent', attrs={'name': 'WAF1'})
+    graph.add_node(9, 'action', {'name': 'BND'})
+    graph.add_node(10, 'agent', {'name': 'G1-S/CDK', 'state': 'p'})
+
+    graph.add_node(11, 'agent')
+    graph.add_node(12, 'agent')
+    graph.add_node(13, 'agent')
 
     edges = [
         (1, 2),
@@ -25,61 +47,81 @@ def init_test_graph():
 
     graph.add_edges_from(edges)
 
-    # Graph from example in the paper page 5 and something more
-    graph.node[1] = {'type': 'agent', 'name': 'EGFR', 'state': 'p'}
-    graph.node[2] = {'type': 'action', 'name': 'BND'}
-    graph.node[3] = {'type': 'agent', 'name': 'Grb2', 'aa': 'S', 'loc': 90}
-    graph.node[4] = {'type': 'region', 'name': 'SH2'}
+    # later you can add some attributes to the edge
 
-    graph.node[5] = {'type': 'agent', 'name': 'EGFR'}
-    graph.node[6] = {'type': 'action', 'name': 'BND'}
-    graph.node[7] = {'type': 'agent', 'name': 'Grb2'}
-
-    graph.node[8] = {'type': 'agent', 'name': 'WAF1'}
-    graph.node[9] = {'type': 'action', 'name': 'BND'}
-    graph.node[10] = {'type': 'agent', 'name': 'G1-S/CDK', 'state': 'p'}
-
-    graph.node[11] = {'type': 'agent'}
-    graph.node[12] = {'type': 'agent'}
-    graph.node[13] = {'type': 'agent'}
-
+    graph.set_edge(1, 2, {'s': 'p'})
+    graph.set_edge(4, 2, {'s': 'u'})
+    graph.set_edge(5, 6, {'s': 'p'})
+    graph.set_edge(7, 6, {'s': 'u'})
     return graph
 
 
 def init_pattern_graph():
-    pattern = nx.DiGraph()
+    pattern = TypedDiGraph()
+
+    pattern.add_node(1, 'agent', {'name': 'EGFR'})
+    pattern.add_node(2, 'action', {'name': 'BND'})
+    pattern.add_node(3, 'region')
+    pattern.add_node(4, 'agent', {'name': 'Grb2'})
+    pattern.add_node(5, 'agent', {'name': 'EGFR'})
+    pattern.add_node(6, 'action', {'name': 'BND'})
+    pattern.add_node(7, 'agent', {'name': 'Grb2'})
+
     pattern.add_edges_from([(1, 2), (3, 2), (3, 4), (5, 6), (7, 6)])
 
-    pattern.node[1] = {'type': 'agent', 'name': 'EGFR'}
-    pattern.node[2] = {'type': 'action', 'name': 'BND'}
-    pattern.node[3] = {'type': 'region'}
-    pattern.node[4] = {'type': 'agent', 'name': 'Grb2'}
-
-    pattern.node[5] = {'type': 'agent', 'name': 'EGFR'}
-    pattern.node[6] = {'type': 'action', 'name': 'BND'}
-    pattern.node[7] = {'type': 'agent', 'name': 'Grb2'}
+    pattern.set_edge(1, 2, {'s': 'p'})
+    pattern.set_edge(5, 6, {'s': 'p'})
 
     return pattern
 
 
 if __name__ == '__main__':
+
+    # Test TypedGraph functionality
     test_graph = init_test_graph()
-    rw = Rewriter(test_graph)
-    rw.plot_graph("initial.png")
+
+    plot_graph(test_graph, filename="initial.png")
     LHS = init_pattern_graph()
-    instances = rw.find_matching(LHS)
+
+    # Test homomorphisms functionality
+    mapping = {1: 1,
+               2: 2,
+               3: 4,
+               4: 3,
+               5: 5,
+               6: 6,
+               7: 7}
+    # h1 = Homomorphism(LHS, test_graph, mapping)
+
+    rw1 = Rewriter(test_graph)
+    rw2 = Rewriter(test_graph.copy())
+
+    instances = rw1.find_matching(LHS)
+    print(instances)
     for i, instance in enumerate(instances):
-        rw.plot_instance(
+        plot_instance(
+            test_graph,
             LHS,
             instance,
-            "instance_%d" % i)
+            "instance_%d.png" % i)
 
-    rw.transform_instance(
-        instances[0],
-        """delete_node 6.\n"""
-        """merge [1, 5] method union as merge_1.\n"""
-        """merge [4, 7] as merge_2.\n"""
-        """add_edge merge_1 merge_2."""
-    )
+    # # Define graph rewriting:
 
-    rw.plot_graph("result.png")
+    # # 1. In the form of script
+    # rw1.transform_instance(
+    #     instances[0],
+    #     """delete_node 6.\n"""
+    #     """merge [1, 5] method union as merge_1.\n"""
+    #     """merge [4, 7] as merge_2.\n"""
+    #     """add_edge 1 merge_2."""
+    # )
+    # rw1.plot_graph("result_1.png")
+
+    # # 2. With a simple sequence of class method calls
+    # rw2.delete_node(instances[0], 6)
+    # rw2.merge(instances[0], [1, 5], node_name='merge_1')
+    # rw2.merge(instances[0], [4, 7], node_name='merge_2')
+    # rw2.add_edge(instances[0], 'merge_1', 'merge_2')
+    # rw2.plot_graph("result_2.png")
+
+    # 3. With LHS <-h1- P -h2-> RHS
