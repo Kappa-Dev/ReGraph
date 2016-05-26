@@ -88,8 +88,8 @@ class Rewriter:
             node_name)
         return
 
-    def add_node(self, name, node_type, attrs):
-        add_node(self.graph_, name, node_type, attrs)
+    def add_node(self, node_type, name=None, attrs={}):
+        add_node(self.graph_, node_type, name, attrs)
         return
 
     def delete_node(self, instance, node):
@@ -152,7 +152,7 @@ class Rewriter:
                     node_type = parsed["type"]
                 if "attrubutes" in parsed.keys():
                     attrs = parsed["attrubutes"]
-                self.add_node(name, node_type, attrs)
+                self.add_node(node_type, name, attrs)
             elif parsed["keyword"] == "delete_node":
                 self.delete_node(instance, parsed["node"])
             elif parsed["keyword"] == "add_edge":
