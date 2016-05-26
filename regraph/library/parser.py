@@ -81,11 +81,6 @@ dictMembers << delimitedList(memberDef)
 attributes = attr_open + Optional(dictMembers).setResultsName("attributes") +\
     attr_close
 
-
-clone = CaselessKeyword("CLONE")
-clone.setParseAction(lambda t: t[0].lower())
-clone = clone + node.setResultsName("node")
-
 merge = CaselessKeyword("MERGE")
 merge.setParseAction(lambda t: t[0].lower())
 method = CaselessKeyword("METHOD")
@@ -100,6 +95,11 @@ merge = merge + list_open +\
     Optional(method + method_id) +\
     Optional(as_keyword + node.setResultsName("node_name"))
 
+clone = CaselessKeyword("CLONE")
+clone.setParseAction(lambda t: t[0].lower())
+clone = clone + node.setResultsName("node") +\
+    Optional(as_keyword + node.setResultsName("node_name"))
+
 delete_node = CaselessKeyword("DELETE_NODE")
 delete_node.setParseAction(lambda t: t[0].lower())
 delete_node = delete_node + node.setResultsName("node")
@@ -112,7 +112,7 @@ typing = type_keyword + type_name
 add_node = CaselessKeyword("ADD_NODE")
 add_node.setParseAction(lambda t: t[0].lower())
 add_node = add_node + Optional(node.setResultsName("node")) +\
-    Optional(typing) + Optional(attributes)
+    typing + Optional(attributes)
 
 delete_edge = CaselessKeyword("DELETE_EDGE")
 delete_edge.setParseAction(lambda t: t[0].lower())
