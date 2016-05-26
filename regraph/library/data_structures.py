@@ -49,6 +49,9 @@ class TypedDiGraph(nx.DiGraph):
         return self.edge[source][target]
 
     def set_edge(self, source, target, attrs):
+        if not (source, target) in self.edges():
+            raise ValueError(
+                "Edge %s-%s does not exist" % (str(source), str(target)))
         self.edge[source][target] = attrs
 
 
