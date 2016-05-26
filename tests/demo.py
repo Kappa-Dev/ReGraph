@@ -7,6 +7,8 @@ from regraph.library.data_structures import Homomorphism
 from regraph.library.utils import plot_graph
 from regraph.library.utils import plot_instance
 
+from regraph.library.primitives import merge_attributes
+
 
 def init_test_graph():
     graph = TypedDiGraph()
