@@ -38,14 +38,25 @@ def merge_attributes(attr1, attr2, method="union"):
     elif method == "intersection":
         for key1 in attr1.keys():
             if key1 in attr2.keys():
-                attr_set1 = set(itertools.chain([attr1[key1]]))
-                attr_set2 = set(itertools.chain([attr2[key1]]))
-                intersect = set.intersection(attr_set1, attr_set2)
-                if len(intersect) == 1:
-                    result.update({key1: list(intersect)[0]})
-                elif len(intersect) > 0:
-                    result.update({key1: intersect})
-
+                if attr1[key1] == attr2[key1]:
+                    result.update(
+                        {key1: attr1[key1]})
+                else:
+                    attr_set1 = set()
+                    attr_set2 = set()
+                    if type(attr1[key1]) == set:
+                        attr_set1.update(attr1[key1])
+                    else:
+                        attr_set1.add(attr1[key1])
+                    if type(attr2[key1]) == set:
+                        attr_set2.update(attr2[key1])
+                    else:
+                        attr_set2.add(attr2[key1])
+                    intersect = set.intersection(attr_set1, attr_set2)
+                    if len(intersect) == 1:
+                        result.update({key1: list(intersect)[0]})
+                    elif len(intersect) > 1:
+                        result.update({key1: intersect})
     else:
         raise ValueError("Merging method %s is not defined!" % method)
     return result
@@ -80,7 +91,7 @@ def merge_nodes(graph, nodes, method="union",
     if method == "union":
         attr_accumulator = {}
     elif method == "intersection":
-        attr_accumulator = graph.node[nodes[0]]
+        attr_accumulator = graph.node[nodes[0]].attrs_
     else:
         raise ValueError("Merging method %s is not defined!" % method)
     source_nodes = set()
@@ -142,12 +153,18 @@ def merge_nodes(graph, nodes, method="union",
 
 def clone_node(graph, node, name=None):
     """Clone existing node and all its edges."""
+    if node not in graph.nodes():
+        raise ValueError("Node %s does not exist" % str(node))
+
     if name is None:
         new_node = "%s_copy" % str(node)
         while new_node in graph.nodes():
             new_node = "%s_copy" % new_node
     else:
-        new_node = name
+        if name in graph.nodes():
+            raise ValueError("Node %s already exist!" % str(name))
+        else:
+            new_node = name
 
     graph.add_node(new_node, graph.node[node].type_,
                    graph.node[node].attrs_)
@@ -165,19 +182,20 @@ def clone_node(graph, node, name=None):
         graph.edge[new_node][t] = graph.edge[s][t]
 
 
-def add_node(graph, name=None, type=None, attrs={}):
+def add_node(graph, node_type, name=None, attrs={}):
     """Add new node to the graph."""
     if name is not None:
-        graph.add_node(name)
-        graph.node[name] = attrs
+        new_name = name
     else:
         i = 0
         new_name = "new_node_%d" % i
         while new_name in graph.nodes():
             i += 1
             new_name = "new_node_%d" % i
-        graph.add_node(new_name)
-        graph.node[new_name] = attrs
+    if new_name not in graph.nodes():
+        graph.add_node(new_name, node_type, attrs)
+    else:
+        raise ValueError("Node %s already exists!" % str(new_name))
     return
 
 
@@ -185,6 +203,8 @@ def remove_node(graph, node):
     """Remove node from the graph."""
     if node in graph.nodes():
         graph.remove_node(node)
+    else:
+        raise ValueError("Node %s does not exist!" % str(node))
     return
 
 
@@ -197,6 +217,9 @@ def add_edge(graph, source, target, attrs={}):
             raise ValueError("Node %s does not exist" % str(target))
         graph.add_edge(source, target)
         graph.edge[source][target] = attrs
+    else:
+        raise ValueError(
+            "Edge %s-%s already exists" % (str(source), str(target)))
     return
 
 
@@ -204,4 +227,7 @@ def remove_edge(graph, source, target):
     """Remove edge from the graph."""
     if (source, target) in graph.edges():
         graph.remove_edge(source, target)
+    else:
+        raise ValueError(
+            "Edge %s->%s does not exist!", (str(source), str(target)))
     return
