@@ -1,10 +1,8 @@
 """Defines primitives for graph transformation."""
 
-import itertools
-
 
 def cast_node(graph, node, new_type):
-    """Change the node type in the TypedGraph"""
+    """Change the node type in the TypedGraph."""
     graph.node[node].type_ = new_type
 
 

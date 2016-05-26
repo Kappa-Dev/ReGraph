@@ -1,20 +1,10 @@
-"""Test primitives of self.graph_ rewriting."""
+"""Test primitives of graph rewriting."""
 
 from nose.tools import assert_equals
+from nose.tools import raises
 
 from regraph.library.data_structures import TypedDiGraph
 from regraph.library import primitives
-
-from nose.tools import raises
-
-
-def assert_equals_each(list1, list2):
-    # check the lengths
-    assert_equals(len(list1), len(list2))
-    # check values
-    for i in range(len(list1)):
-        val1, val2 = list1[i], list2[i]
-        assert_equals(val1, val2)
 
 
 class TestPrimitives(object):

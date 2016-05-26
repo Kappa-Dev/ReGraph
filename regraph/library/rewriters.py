@@ -128,36 +128,42 @@ class Rewriter:
         #     print(self.graph_.node[node].type_)
         command_strings = [c for c in commands.splitlines() if len(c) > 0]
         for command in command_strings:
-            parsed = parser.parseString(command)
-            if parsed["keyword"] == "clone":
-                node_name = None
-                if "node_name" in parsed.keys():
-                    node_name = parsed["node_name"]
-                self.clone(instance, parsed["node"], node_name)
-            elif parsed["keyword"] == "merge":
-                method = None
-                node_name = None
-                if "method" in parsed.keys():
-                    method = parsed["method"]
-                if "node_name" in parsed.keys():
-                    node_name = parsed["node_name"]
-                self.merge(instance, parsed["nodes"], method, node_name)
-            elif parsed["keyword"] == "add_node":
-                name = None
-                node_type = None
-                attrs = {}
-                if "node" in parsed.keys():
-                    name = parsed["node"]
-                if "type" in parsed.keys():
-                    node_type = parsed["type"]
-                if "attrubutes" in parsed.keys():
-                    attrs = parsed["attrubutes"]
-                self.add_node(node_type, name, attrs)
-            elif parsed["keyword"] == "delete_node":
-                self.delete_node(instance, parsed["node"])
-            elif parsed["keyword"] == "add_edge":
-                self.add_edge(instance, parsed["node_1"], parsed["node_2"])
-            elif parsed["keyword"] == "delete_edge":
-                self.delete_edge(instance, parsed["node_1"], parsed["node_2"])
-            else:
-                raise ValueError("Unknown command")
+            try:
+                parsed = parser.parseString(command).asDict()
+                if parsed["keyword"] == "clone":
+                    node_name = None
+                    if "node_name" in parsed.keys():
+                        node_name = parsed["node_name"]
+                    self.clone(instance, parsed["node"], node_name)
+                elif parsed["keyword"] == "merge":
+                    method = None
+                    node_name = None
+                    if "method" in parsed.keys():
+                        method = parsed["method"]
+                    if "node_name" in parsed.keys():
+                        node_name = parsed["node_name"]
+                    self.merge(instance, parsed["nodes"], method, node_name)
+                elif parsed["keyword"] == "add_node":
+                    name = None
+                    node_type = None
+                    attrs = {}
+                    if "node" in parsed.keys():
+                        name = parsed["node"]
+                    if "type" in parsed.keys():
+                        node_type = parsed["type"]
+                    if "attrubutes" in parsed.keys():
+                        attrs = parsed["attrubutes"]
+                    self.add_node(node_type, name, attrs)
+                elif parsed["keyword"] == "delete_node":
+                    self.delete_node(instance, parsed["node"])
+                elif parsed["keyword"] == "add_edge":
+                    attrs = {}
+                    if "attrubutes" in parsed.keys():
+                        attrs = parsed["attrubutes"]
+                    self.add_edge(instance, parsed["node_1"], parsed["node_2"], attrs)
+                elif parsed["keyword"] == "delete_edge":
+                    self.delete_edge(instance, parsed["node_1"], parsed["node_2"])
+                else:
+                    raise ValueError("Unknown command")
+            except:
+                raise ValueError("Cannot parse command '%s'" % command)
