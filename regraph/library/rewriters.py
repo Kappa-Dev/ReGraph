@@ -31,8 +31,6 @@ class Rewriter:
         # find all the nodes matching the nodes in pattern
         for pattern_node in pattern.nodes():
             for node in self.graph_.nodes():
-                print(pattern.node[pattern_node].attrs_)
-                print(self.graph_.node[node].attrs_)
                 if pattern.node[pattern_node].type_ == self.graph_.node[node].type_:
                     if is_subdict(pattern.node[pattern_node].attrs_,
                                   self.graph_.node[node].attrs_):

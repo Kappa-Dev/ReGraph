@@ -3,6 +3,11 @@
 import itertools
 
 
+def cast_node(graph, node, new_type):
+    """Change the node type in the TypedGraph"""
+    graph.node[node].type_ = new_type
+
+
 def merge_attributes(attr1, attr2, method="union"):
     """Merge two dictionaries of attributes."""
     result = {}
@@ -46,21 +51,31 @@ def merge_attributes(attr1, attr2, method="union"):
     return result
 
 
-def merge_nodes(graph, nodes, method="union", node_name=None):
-    """Merge two nodes."""
+def merge_nodes(graph, nodes, method="union",
+                node_name=None, edge_method="union"):
+    """Merge list of nodes."""
+    # Type checking
+    node_type = graph.node[nodes[0]].type_
+    for node in nodes:
+        if graph.node[node].type_ != node_type:
+            raise ValueError(
+                "Merge error: Non consistent node types ('%s', '%s')!" %
+                (str(graph.node[node].type_), str(node_type)))
+
     if method is None:
         method = "union"
 
-    # generate name for new node
+    if edge_method is None:
+        method = "union"
+
+    # Generate name for new node
     if node_name is None:
         node_name = "_".join([str(n) for n in nodes])
     elif node_name in graph.nodes():
         raise ValueError(
             "The node with name '%s' already exists!" % str(node_name))
 
-    graph.add_node(node_name)
-
-    # merge data attached to node according to the method specified
+    # Merge data attached to node according to the method specified
     # restore proper connectivity
     if method == "union":
         attr_accumulator = {}
@@ -70,21 +85,59 @@ def merge_nodes(graph, nodes, method="union", node_name=None):
         raise ValueError("Merging method %s is not defined!" % method)
     source_nodes = set()
     target_nodes = set()
+    source_dict = {}
+    target_dict = {}
     for node in nodes:
         attr_accumulator = merge_attributes(
-            attr_accumulator, graph.node[node], method)
+            attr_accumulator, graph.node[node].attrs_, method)
+
+        in_edges = graph.in_edges(node)
+        out_edges = graph.out_edges(node)
+
         source_nodes.update(
             [n if n not in nodes else node_name
              for n, _ in graph.in_edges(node)])
         target_nodes.update(
             [n if n not in nodes else node_name
              for _, n in graph.out_edges(node)])
+
+        for edge in in_edges:
+            if not edge[0] in source_dict.keys():
+                attrs = graph.edge[edge[0]][edge[1]]
+                source_dict.update({edge[0]: attrs})
+            else:
+                attrs = merge_attributes(
+                    source_dict[edge[0]],
+                    graph.edge[edge[0]][edge[1]],
+                    edge_method)
+                source_dict.update({edge[0]: attrs})
+
+        for edge in out_edges:
+            if not edge[1] in target_dict.keys():
+                attrs = graph.edge[edge[0]][edge[1]]
+                target_dict.update({edge[1]: attrs})
+            else:
+                attrs = merge_attributes(
+                    target_dict[edge[1]],
+                    graph.edge[edge[0]][edge[1]],
+                    edge_method)
+                target_dict.update({edge[1]: attrs})
+
+        # ! Here usage of nx.DiGraph.remove_node causes
+        # error (maybe some bug in networkx)
+        # print(graph.nodes())
+        # print(graph.edges())
         graph.remove_node(node)
 
-    graph.node[node_name] = attr_accumulator
-    print(graph.node[node_name])
+    graph.add_node(node_name, node_type, attr_accumulator)
     graph.add_edges_from([(n, node_name) for n in source_nodes])
     graph.add_edges_from([(node_name, n) for n in target_nodes])
+
+    # Attach accumulated attributes to edges
+    for node, attrs in source_dict.items():
+        graph.edge[node][node_name] = attrs
+    for node, attrs in target_dict.items():
+        graph.edge[node_name][node] = attrs
 
 
 def clone_node(graph, node):

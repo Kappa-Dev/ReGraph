@@ -42,7 +42,8 @@ def init_test_graph():
         (12, 13),
         (13, 12),
         (11, 13),
-        (13, 11)
+        (13, 11),
+        (5, 2)
     ]
 
     graph.add_edges_from(edges)
@@ -53,6 +54,7 @@ def init_test_graph():
     graph.set_edge(4, 2, {'s': 'u'})
     graph.set_edge(5, 6, {'s': 'p'})
     graph.set_edge(7, 6, {'s': 'u'})
+    graph.set_edge(5, 2, {'s': 'u'})
     return graph
 
 
@@ -97,7 +99,7 @@ if __name__ == '__main__':
     rw2 = Rewriter(test_graph.copy())
 
     instances = rw1.find_matching(LHS)
-    print(instances)
+    # print(instances)
     for i, instance in enumerate(instances):
         plot_instance(
             test_graph,
@@ -105,9 +107,9 @@ if __name__ == '__main__':
             instance,
             "instance_%d.png" % i)
 
-    # # Define graph rewriting:
+    # Define graph rewriting:
 
-    # # 1. In the form of script
+    # 1. In the form of script
     # rw1.transform_instance(
     #     instances[0],
     #     """delete_node 6.\n"""
@@ -117,11 +119,14 @@ if __name__ == '__main__':
     # )
     # rw1.plot_graph("result_1.png")
 
-    # # 2. With a simple sequence of class method calls
+    # 2. With a simple sequence of class method calls
     # rw2.delete_node(instances[0], 6)
-    # rw2.merge(instances[0], [1, 5], node_name='merge_1')
+    rw2.merge(instances[0], [1, 5], node_name='merge_1')
+    # print(rw2.graph_.edge['merge_1'][2])
+    # print(rw2.graph_.node['merge_1'].type_)
+    # print(rw2.graph_.node['merge_1'].attrs_)
     # rw2.merge(instances[0], [4, 7], node_name='merge_2')
     # rw2.add_edge(instances[0], 'merge_1', 'merge_2')
-    # rw2.plot_graph("result_2.png")
+    plot_graph(rw2.graph_, filename="result_2.png")
 
     # 3. With LHS <-h1- P -h2-> RHS
