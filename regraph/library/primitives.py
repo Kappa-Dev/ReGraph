@@ -140,22 +140,29 @@ def merge_nodes(graph, nodes, method="union",
         graph.edge[node_name][node] = attrs
 
 
-def clone_node(graph, node):
+def clone_node(graph, node, name=None):
     """Clone existing node and all its edges."""
-    new_node = "%s_copy" % str(node)
-    while new_node in graph.nodes():
-        new_node = "%s_copy" % new_node
+    if name is None:
+        new_node = "%s_copy" % str(node)
+        while new_node in graph.nodes():
+            new_node = "%s_copy" % new_node
+    else:
+        new_node = name
 
-    graph.add_node(new_node)
-
-    # Copy the attributes
-    graph.node[new_node] = graph.node[node]
+    graph.add_node(new_node, graph.node[node].type_,
+                   graph.node[node].attrs_)
 
     # Connect all the edges
     graph.add_edges_from(
         [(n, new_node) for n, _ in graph.in_edges(node)])
     graph.add_edges_from(
         [(new_node, n) for _, n in graph.out_edges(node)])
+
+    # Copy the attributes of the edges
+    for s, t in graph.in_edges(node):
+        graph.edge[s][new_node] = graph.edge[s][t]
+    for s, t in graph.out_edges(node):
+        graph.edge[new_node][t] = graph.edge[s][t]
 
 
 def add_node(graph, name=None, type=None, attrs={}):
@@ -181,10 +188,15 @@ def remove_node(graph, node):
     return
 
 
-def add_edge(graph, source, target):
+def add_edge(graph, source, target, attrs={}):
     """Add edge to the graph."""
     if not (source, target) in graph.edges():
+        if source not in graph.nodes():
+            raise ValueError("Node %s does not exist" % str(source))
+        if target not in graph.nodes():
+            raise ValueError("Node %s does not exist" % str(target))
         graph.add_edge(source, target)
+        graph.edge[source][target] = attrs
     return
 
 

@@ -70,11 +70,11 @@ class Rewriter:
 
         return instances
 
-    def clone(self, instance, node):
+    def clone(self, instance, node, name=None):
         if node in instance.keys():
-            clone_node(self.graph_, instance[node])
+            clone_node(self.graph_, instance[node], name)
         else:
-            clone_node(self.graph_, node)
+            clone_node(self.graph_, node, name)
         return
 
     def merge(self, instance, nodes, method=None, node_name=None):
@@ -99,7 +99,7 @@ class Rewriter:
             remove_node(self.graph_, node)
         return
 
-    def add_edge(self, instance, node_1, node_2):
+    def add_edge(self, instance, node_1, node_2, attrs={}):
         if node_1 in instance.keys():
             source = instance[node_1]
         else:
@@ -108,7 +108,7 @@ class Rewriter:
             target = instance[node_2]
         else:
             target = node_2
-        add_edge(self.graph_, source, target)
+        add_edge(self.graph_, source, target, attrs)
         return
 
     def delete_edge(self, instance, node_1, node_2):
@@ -124,11 +124,16 @@ class Rewriter:
 
     def transform_instance(self, instance, commands):
         """Transform the instance of LHS of the rule in the graph."""
+        # for node in self.graph_.nodes():
+        #     print(self.graph_.node[node].type_)
         command_strings = [c for c in commands.splitlines() if len(c) > 0]
         for command in command_strings:
             parsed = parser.parseString(command)
             if parsed["keyword"] == "clone":
-                self.clone(instance, parsed["node"])
+                node_name = None
+                if "node_name" in parsed.keys():
+                    node_name = parsed["node_name"]
+                self.clone(instance, parsed["node"], node_name)
             elif parsed["keyword"] == "merge":
                 method = None
                 node_name = None

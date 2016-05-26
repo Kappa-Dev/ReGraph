@@ -82,7 +82,7 @@ if __name__ == '__main__':
     # Test TypedGraph functionality
     test_graph = init_test_graph()
 
-    plot_graph(test_graph, filename="initial.png")
+    # plot_graph(test_graph, filename="initial.png")
     LHS = init_pattern_graph()
 
     # Test homomorphisms functionality
@@ -110,23 +110,24 @@ if __name__ == '__main__':
     # Define graph rewriting:
 
     # 1. In the form of script
-    # rw1.transform_instance(
-    #     instances[0],
-    #     """delete_node 6.\n"""
-    #     """merge [1, 5] method union as merge_1.\n"""
-    #     """merge [4, 7] as merge_2.\n"""
-    #     """add_edge 1 merge_2."""
-    # )
-    # rw1.plot_graph("result_1.png")
+    rw1.transform_instance(
+        instances[0],
+        """delete_node 6.\n"""
+        """merge [1, 5] method union as merge_1.\n"""
+        """merge [4, 7] as merge_2.\n"""
+        """add_edge merge_1 merge_2.\n"""
+        """clone merge_1 as clone_1.\n"""
+        """clone 3 as clone_2."""
+    )
+    plot_graph(rw1.graph_, filename="result_1.png")
 
     # 2. With a simple sequence of class method calls
-    # rw2.delete_node(instances[0], 6)
+    rw2.delete_node(instances[0], 6)
     rw2.merge(instances[0], [1, 5], node_name='merge_1')
-    # print(rw2.graph_.edge['merge_1'][2])
-    # print(rw2.graph_.node['merge_1'].type_)
-    # print(rw2.graph_.node['merge_1'].attrs_)
-    # rw2.merge(instances[0], [4, 7], node_name='merge_2')
-    # rw2.add_edge(instances[0], 'merge_1', 'merge_2')
+    rw2.merge(instances[0], [4, 7], node_name='merge_2')
+    rw2.add_edge(instances[0], 'merge_1', 'merge_2', {'state': 0})
+    rw2.clone(instances[0], 'merge_1', 'clone_1')
+    rw2.clone(instances[0], 3, 'clone_2')
     plot_graph(rw2.graph_, filename="result_2.png")
 
     # 3. With LHS <-h1- P -h2-> RHS
