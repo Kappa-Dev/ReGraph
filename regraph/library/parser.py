@@ -84,16 +84,20 @@ attributes = attr_open + Optional(dictMembers).setResultsName("attributes") +\
 merge = CaselessKeyword("MERGE")
 merge.setParseAction(lambda t: t[0].lower())
 method = CaselessKeyword("METHOD")
+method.setParseAction(lambda t: t[0].lower())
+edges = CaselessKeyword("EDGES")
+edges.setParseAction(lambda t: t[0].lower())
 union = CaselessKeyword("UNION")
 as_keyword = CaselessKeyword("AS")
 intersection = CaselessKeyword("INTERSECTION")
-method_id = (union | intersection).setResultsName("method")
+method_id = (union | intersection)
 method_id.setParseAction(lambda t: t[0].lower())
 merge = merge + list_open +\
     Group(list_of_nodes).setResultsName("nodes") +\
     list_close +\
-    Optional(method + method_id) +\
-    Optional(as_keyword + node.setResultsName("node_name"))
+    Optional(method + method_id.setResultsName("method")) +\
+    Optional(as_keyword + node.setResultsName("node_name")) +\
+    Optional(edges + method_id.setResultsName("edges_method"))
 
 clone = CaselessKeyword("CLONE")
 clone.setParseAction(lambda t: t[0].lower())
@@ -122,7 +126,8 @@ delete_edge = delete_edge + node.setResultsName("node_1") +\
 add_edge = CaselessKeyword("ADD_EDGE")
 add_edge.setParseAction(lambda t: t[0].lower())
 add_edge = add_edge + node.setResultsName("node_1") +\
-    node.setResultsName("node_2")
+    node.setResultsName("node_2") +\
+    Optional(attributes)
 
 command = (
     add_node |
