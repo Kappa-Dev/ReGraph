@@ -4,6 +4,7 @@ import networkx as nx
 import matplotlib.pyplot as plt
 
 
+# taken from projx https://github.com/davebshow/projx
 def colors_by_type(graph):
     """
     Generate colors for node by types.
@@ -55,7 +56,7 @@ def plot_graph(graph, types=True, filename=None):
         return
 
 
-def plot_instance(graph, pattern, instance, filename):
+def plot_instance(graph, pattern, instance, filename=None):
         """Plot the graph with instance of pattern highlighted."""
         new_colors = ["g" if not graph.nodes()[i] in instance.values()
                       else "r" for i, c in enumerate(graph.nodes())]

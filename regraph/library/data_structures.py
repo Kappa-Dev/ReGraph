@@ -136,3 +136,30 @@ class Homomorphism:
         """Check if the homomorphism is monic."""
         return len(set(self.mapping_.keys())) ==\
             len(set(self.mapping_.values()))
+
+    def find_final_PBC(self):
+        # edges to remove will be removed automatically upon removal of the nodes 
+        nodes_to_remove = [n for n in self.target_.nodes() if n not in self.mapping_.values()]
+        edges_to_remove = []
+        for edge in self.target_.edges():
+            for p_node, l_node in self.mapping_.items():
+                if l_node == edge[0]:
+                    s = p_node
+                if l_node == edge[1]:
+                    t = p_node
+            if (s, t) not in self.source_.edges():
+                edges_to_remove.append(edge)
+        return (nodes_to_remove, edges_to_remove)
+
+    def find_PO(self):
+        nodes_to_add = [n for n in self.target_.nodes() if n not in self.mapping_.values()]
+        edges_to_add = []
+        for edge in self.target_.edges():
+            for p_node, l_node in self.mapping_.items():
+                if p_node == edge[0]:
+                    s = p_node
+                if p_node == edge[1]:
+                    t = p_node
+            if (s, t) not in self.source_.edges():
+                edges_to_add.append(edge)
+        return (nodes_to_add, edges_to_add)

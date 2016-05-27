@@ -14,8 +14,6 @@ from regraph.library.primitives import (merge_nodes,
 from regraph.library.utils import is_subdict
 
 
-# taken from projx https://github.com/davebshow/projx
-
 class Rewriter:
     """Class implements the transformation on the graph."""
 
@@ -67,7 +65,6 @@ class Rewriter:
                         break
                 else:
                     instances.append(mapping)
-
         return instances
 
     def clone(self, instance, node, name=None):
@@ -167,3 +164,60 @@ class Rewriter:
                     raise ValueError("Unknown command")
             except:
                 raise ValueError("Cannot parse command '%s'" % command)
+
+    def appy_rule(self, instance, left_h, right_h):
+        # 1) find final PBC
+        (nodes_to_remove, edges_to_remove) = left_h.find_final_PBC()
+        print("PBC: ", (nodes_to_remove, edges_to_remove))
+
+        for edge in edges_to_remove:
+            self.delete_edge(instance, edge[0], edge[1])
+        for node in nodes_to_remove:
+            self.delete_node(instance, node)
+
+        # 3) find nodes to merge
+        merge_dict = {}
+        for n in right_h.target_.nodes():
+            merge_dict.update({n: []})
+        for p_node, r_node in right_h.mapping_.items():
+            if left_h.mapping_[p_node] not in nodes_to_remove:
+                merge_dict[r_node].append(left_h.mapping_[p_node])
+
+        nodes_to_merge = [value for key, value in merge_dict.items() if len(value) > 1]
+        print("Nodes to merge: ", nodes_to_merge)
+
+        # 4) find nodes to clone
+        clone_dict = {}
+        for n in left_h.target_.nodes():
+            clone_dict.update({n: []})
+        for p_node, r_node in left_h.mapping_.items():
+            clone_dict[r_node].append(p_node)
+
+        nodes_to_clone = [(key, len(value)) for key, value in clone_dict.items() if len(value) > 1]
+        print("Nodes to clone: ", nodes_to_clone)
+
+        # Now delete add merge and clone what is required in the graph
+        # (special order is required)
+        for nodes in nodes_to_merge:
+            self.merge(instance, nodes)
+
+        for node, times in nodes_to_clone:
+            for i in range(times):
+                self.clone(instance, node)
+
+        # 2) find push-out
+        (nodes_to_add, edges_to_add) = right_h.find_PO()
+        print("Push out: ", (nodes_to_add, edges_to_add))
+
+        for node in nodes_to_add:
+            self.add_node(
+                instance,
+                right_h.target_.node[node].type_,
+                attrs=right_h.target_.node[node].attrs_)
+        for edge in edges_to_add:
+            self.add_edge(
+                instance,
+                edge[0],
+                edge[1],
+                right_h.target_.edge[edge[0]][edge[1]])
+        return

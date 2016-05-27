@@ -99,6 +99,7 @@ if __name__ == '__main__':
 
     rw1 = Rewriter(test_graph)
     rw2 = Rewriter(test_graph.copy())
+    rw3 = Rewriter(test_graph.copy())
 
     instances = rw1.find_matching(LHS)
     # print(instances)
@@ -115,21 +116,51 @@ if __name__ == '__main__':
     rw1.transform_instance(
         instances[0],
         """delete_node 6.\n"""
-        """merge [1, 5] method union as merge_1.\n"""
-        """merge [4, 7] as merge_2.\n"""
-        """add_edge merge_1 merge_2.\n"""
-        """clone merge_1 as clone_1.\n"""
-        """clone 3 as clone_2."""
+        """merge [1, 5].\n"""
+        """merge [4, 7].\n"""
+        # """add_edge merge_1 merge_2.\n"""
+        # """clone merge_1 as clone_1.\n"""
+        # """clone 3 as clone_2."""
     )
     plot_graph(rw1.graph_, filename="result_1.png")
 
     # 2. With a simple sequence of class method calls
     rw2.delete_node(instances[0], 6)
-    rw2.merge(instances[0], [1, 5], node_name='merge_1')
-    rw2.merge(instances[0], [4, 7], node_name='merge_2')
-    rw2.add_edge(instances[0], 'merge_1', 'merge_2', {'state': 0})
-    rw2.clone(instances[0], 'merge_1', 'clone_1')
-    rw2.clone(instances[0], 3, 'clone_2')
+    rw2.merge(instances[0], [1, 5])
+    rw2.merge(instances[0], [4, 7])
+    # rw2.add_edge(instances[0], 'merge_1', 'merge_2', {'state': 0})
+    # rw2.clone(instances[0], 'merge_1', 'clone_1')
+    # rw2.clone(instances[0], 3, 'clone_2')
     plot_graph(rw2.graph_, filename="result_2.png")
 
     # 3. With LHS <-h1- P -h2-> RHS
+    RHS = TypedDiGraph()
+    RHS.add_node(1, "agent", {"state": 0})
+    RHS.add_node(2, "action")
+    RHS.add_node(3, "region")
+    RHS.add_node(4, "agent")
+
+    RHS.add_edges_from([(1, 2), (3, 2), (3, 4)])
+
+    P = TypedDiGraph()
+    P.add_node(1, "agent")
+    P.add_node(2, "action")
+    P.add_node(3, "region")
+    P.add_node(4, "agent")
+    P.add_node(5, "agent")
+    P.add_node(6, "agent")
+
+    P.add_edges_from([(1, 2), (3, 2), (3, 4)])
+
+    h_p_lhs = Homomorphism(
+        P,
+        LHS,
+        {1: 1, 2: 2, 3: 3, 4: 4, 5: 5, 6: 7})
+
+    h_p_rhs = Homomorphism(
+        P,
+        RHS,
+        {1: 1, 2: 2, 3: 3, 4: 4, 5: 1, 6: 4})
+
+    rw3.appy_rule(instances[0], h_p_lhs, h_p_rhs)
+    plot_graph(rw3.graph_, filename="result_3.png")
