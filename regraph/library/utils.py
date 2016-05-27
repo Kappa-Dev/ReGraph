@@ -35,7 +35,7 @@ def plot_graph(graph, types=True, filename=None):
         nx.draw_networkx_nodes(graph, pos,
                                node_color=color_list,
                                node_size=100, arrows=True)
-        nx.draw_networkx_edges(graph, pos, alpha=0.6)
+        nx.draw_networkx_edges(graph, pos, alpha=0.4)
 
         labels = {}
         for node in graph.nodes():
@@ -63,7 +63,7 @@ def plot_instance(graph, pattern, instance, filename):
         nx.draw_networkx_nodes(
             graph, pos, node_color=new_colors,
             node_size=100, arrows=True)
-        nx.draw_networkx_edges(graph, pos, alpha=0.6)
+        nx.draw_networkx_edges(graph, pos, alpha=0.4)
 
         # Draw pattern edges highlighted
         edgelist = [(instance[edge[0]], instance[edge[1]])
