@@ -11,7 +11,7 @@ class TestPrimitives(object):
     """Class for testing primitives with Python nose tests."""
 
     def __init__(self):
-        """Initialize test self.graph_."""
+        """Initialize test graph."""
         self.graph_ = TypedDiGraph()
         self.graph_.add_node(1, 'agent',
                              {'name': 'EGFR', 'state': 'p'})
