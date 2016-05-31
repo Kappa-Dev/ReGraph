@@ -144,9 +144,12 @@ def merge_nodes(graph, nodes, method="union",
 
     # Attach accumulated attributes to edges
     for node, attrs in source_dict.items():
-        graph.edge[node][node_name] = attrs
+        if node not in nodes:
+            graph.edge[node][node_name] = attrs
     for node, attrs in target_dict.items():
-        graph.edge[node_name][node] = attrs
+        if node not in nodes:
+            graph.edge[node_name][node] = attrs
+    return node_name
 
 
 def clone_node(graph, node, name=None):
@@ -178,6 +181,7 @@ def clone_node(graph, node, name=None):
         graph.edge[s][new_node] = graph.edge[s][t]
     for s, t in graph.out_edges(node):
         graph.edge[new_node][t] = graph.edge[s][t]
+    return new_node
 
 
 def add_node(graph, node_type, name=None, attrs={}):
@@ -194,7 +198,7 @@ def add_node(graph, node_type, name=None, attrs={}):
         graph.add_node(new_name, node_type, attrs)
     else:
         raise ValueError("Node %s already exists!" % str(new_name))
-    return
+    return new_name
 
 
 def remove_node(graph, node):

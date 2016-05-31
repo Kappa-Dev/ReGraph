@@ -155,11 +155,11 @@ class Homomorphism:
         nodes_to_add = [n for n in self.target_.nodes() if n not in self.mapping_.values()]
         edges_to_add = []
         for edge in self.target_.edges():
-            for p_node, l_node in self.mapping_.items():
-                if p_node == edge[0]:
+            for p_node, r_node in self.mapping_.items():
+                if r_node == edge[0]:
                     s = p_node
-                if p_node == edge[1]:
+                if r_node == edge[1]:
                     t = p_node
             if (s, t) not in self.source_.edges():
-                edges_to_add.append(edge)
+                edges_to_add.append((s, t, self.target_.edge[edge[0]][edge[1]]))
         return (nodes_to_add, edges_to_add)
