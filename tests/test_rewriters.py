@@ -1,8 +1,13 @@
 """."""
+import os
+
 from nose.tools import assert_equals
 
 from regraph.library.data_structures import TypedDiGraph
 from regraph.library.rewriters import Rewriter
+
+from regraph.library.utils import plot_graph
+from regraph.library.utils import plot_instance
 
 
 class TestRewrites(object):
@@ -92,3 +97,43 @@ class TestRewrites(object):
             """add_edge merge_1 merge_2.\n"""
             """clone merge_1 as clone_1.\n"""
             """clone 3 as clone_2.""")
+
+    def test_clonning_merging_sequence(self):
+        __location__ = os.path.realpath(
+            os.path.join(os.getcwd(), os.path.dirname(__file__)))
+
+        g = TypedDiGraph()
+
+        g.add_node(1, "agent", {"name": "John"})
+        g.add_node(2, "action", {})
+
+        g.add_edges_from([(1, 2), (2, 1)])
+
+        plot_graph(
+            g,
+            filename=os.path.join(__location__, "cms_test_init.png"))
+
+        LHS = TypedDiGraph()
+        LHS.add_node('entity', 'agent')
+        LHS.add_node('media', 'action')
+
+        LHS.add_edges_from([('entity', 'media'), ('media', 'entity')])
+
+        rewriter = Rewriter(g)
+        instances = rewriter.find_matching(LHS)
+        print(instances)
+
+        for i, instance in enumerate(instances):
+            plot_instance(
+                rewriter.graph_,
+                LHS,
+                instance,
+                os.path.join(__location__, "cms_instance_%d.png" % i))
+        for instance in instances:
+            new_name = rewriter.clone(instance, 'media')
+            rewriter.add_edge(instance, 'media', new_name)
+            # rewriter.merge(instance, ['media', new_name])
+            print(rewriter.graph_.edges())
+        plot_graph(
+            rewriter.graph_,
+            filename=os.path.join(__location__, "cms_test_clone1.png"))
