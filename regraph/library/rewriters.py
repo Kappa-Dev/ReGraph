@@ -10,10 +10,13 @@ from regraph.library.primitives import (merge_nodes,
                                         add_node,
                                         remove_node,
                                         add_edge,
-                                        remove_edge)
+                                        remove_edge,
+                                        remove_node_attrs,
+                                        add_node_attrs,
+                                        remove_edge_attrs,
+                                        add_edge_attrs)
 from regraph.library.utils import is_subdict
-from regraph.library.data_structures import (TypedDiGraph,
-                                             Homomorphism)
+from regraph.library.data_structures import (Homomorphism)
 
 
 class Rewriter:
@@ -35,7 +38,6 @@ class Rewriter:
                     if is_subdict(pattern.node[pattern_node].attrs_,
                                   self.graph_.node[node].attrs_):
                         matching_nodes.add(node)
-
         reduced_graph = self.graph_.subgraph(matching_nodes)
         instances = []
         isomorphic_subgraphs = []
@@ -44,11 +46,20 @@ class Rewriter:
                 subg = reduced_graph.subgraph(sub_nodes)
                 for edgeset in itertools.combinations(subg.edges(),
                                                       len(pattern.edges())):
-                    edge_induced_graph = nx.DiGraph(edgeset)
-                    GM = isomorphism.GraphMatcher(pattern, edge_induced_graph)
-                    if GM.is_isomorphic():
-                        isomorphic_subgraphs.append((subg, GM.mapping))
-
+                    if self.graph_.is_directed():
+                        edge_induced_graph = nx.DiGraph(edgeset)
+                        edge_induced_graph.add_nodes_from(
+                            [n for n in subg.nodes() if n not in edge_induced_graph.nodes()])
+                        GM = isomorphism.DiGraphMatcher(pattern, edge_induced_graph)
+                        for isom in GM.isomorphisms_iter():
+                            isomorphic_subgraphs.append((subg, isom))
+                    else:
+                        edge_induced_graph = nx.Graph(edgeset)
+                        edge_induced_graph.add_nodes_from(
+                            [n for n in subg.nodes() if n not in edge_induced_graph.nodes()])
+                        GM = isomorphism.GraphMatcher(pattern, edge_induced_graph)
+                        for isom in GM.isomorphisms_iter():
+                            isomorphic_subgraphs.append((subg, isom))
         for subgraph, mapping in isomorphic_subgraphs:
             # check node matches
             # exclude subgraphs which nodes information does not
@@ -71,7 +82,6 @@ class Rewriter:
 
     def clone(self, instance, node, name=None):
         if node in instance.keys():
-            print("Hello")
             new_name = clone_node(self.graph_, instance[node], name)
         else:
             new_name = clone_node(self.graph_, node, name)
@@ -122,6 +132,40 @@ class Rewriter:
         else:
             target = node_2
         remove_edge(self.graph_, source, target)
+
+    def delete_node_attrs(self, instance, node, attrs_dict):
+        if node in instance.keys():
+            remove_node_attrs(self.graph_, instance[node], attrs_dict)
+        else:
+            remove_node_attrs(self.graph_, node, attrs_dict)
+
+    def delete_edge_attrs(self, instance, node_1, node_2, attrs_dict):
+        if node_1 in instance.keys():
+            source = instance[node_1]
+        else:
+            source = node_1
+        if node_2 in instance.keys():
+            target = instance[node_2]
+        else:
+            target = node_2
+        remove_edge_attrs(self.graph_, source, target, attrs_dict)
+
+    def add_node_attrs(self, instance, node, attrs_dict):
+        if node in instance.keys():
+            add_node_attrs(self.graph_, instance[node], attrs_dict)
+        else:
+            add_node_attrs(self.graph_, node, attrs_dict)
+
+    def add_edge_attrs(self, instance, node_1, node_2, attrs_dict):
+        if node_1 in instance.keys():
+            source = instance[node_1]
+        else:
+            source = node_1
+        if node_2 in instance.keys():
+            target = instance[node_2]
+        else:
+            target = node_2
+        add_edge_attrs(self.graph_, source, target, attrs_dict)
 
     def transform_instance(self, instance, commands):
         """Transform the instance of LHS of the rule in the graph."""
@@ -188,29 +232,114 @@ class Rewriter:
         RHS_instance =\
             dict([(r, instance[left_h.mapping_[p]]) for p, r in right_h.mapping_.items()])
 
-        # 0) fetch attributes for nodes
-        for p, r in right_h.mapping_.items():
-            for key, value in right_h.target_.node[r].attrs_.items():
-                node_id = instance[left_h.mapping_[p]]
-                self.graph_.node[node_id].attrs_.update({key: value})
+        (nodes_to_remove,
+         edges_to_remove,
+         node_attrs_to_remove,
+         edge_attrs_to_remove) = left_h.find_final_PBC()
 
-        for s, t in right_h.source_.edges():
-            s_from_r = right_h.mapping_[s]
-            t_from_r = right_h.mapping_[t]
-            for key, value in right_h.target_.edge[s_from_r][t_from_r].items():
-                left_h.target_.edge[left_h.mapping_[s]][left_h.mapping_[t]].update({key: value})
+        (nodes_to_add,
+         edges_to_add,
+         node_attrs_to_add,
+         edge_attrs_to_add) = right_h.find_PO()
 
-        # 1) find final PBC
-        (nodes_to_remove, edges_to_remove) = left_h.find_final_PBC()
-
+        # 1) Delete nodes/edges
+        print("\nDeleting edges:")
         for edge in edges_to_remove:
-            self.delete_edge(instance, edge[0], edge[1])
+            print(edge)
+            print(RHS_instance)
+            self.delete_edge(
+                RHS_instance,
+                right_h.mapping_[edge[0]],
+                right_h.mapping_[edge[1]])
+
+        print("Deleting nodes:")
         for node in nodes_to_remove:
+            print(node)
             self.delete_node(instance, node)
 
-        # 2) find push-out
-        (nodes_to_add, edges_to_add) = right_h.find_PO()
+        # 2) Clone nodes
+        clone_dict = {}
+        for n in left_h.target_.nodes():
+            clone_dict.update({n: []})
+        for p_node, r_node in left_h.mapping_.items():
+            clone_dict[r_node].append(p_node)
 
+        print("Cloning nodes:")
+        for node, value in clone_dict.items():
+            if len(value) > 1:
+                i = 0
+                for val in value:
+                    if i > 0:
+                        new_name = self.clone(instance, node)
+                        print(node, "->", new_name)
+                        RHS_instance.update(
+                            {right_h.mapping_[val]: new_name})
+                    else:
+                        RHS_instance.update(
+                            {right_h.mapping_[val]: instance[node]})
+                    i += 1
+
+        # 3) Delete attrs
+        print("Deleting node attributes:")
+        for node, attrs in node_attrs_to_remove.items():
+            if len(attrs) > 0:
+                print("Node ", RHS_instance[right_h.mapping_[node]], " attrs ", attrs)
+                self.delete_node_attrs(
+                    RHS_instance,
+                    right_h.mapping_[node],
+                    attrs)
+
+        print("Deleting edge attributes:")
+        for edge, attrs in edge_attrs_to_remove.items():
+            print("Edge ",
+                  (instance[left_h.mapping_[edge[0]]],
+                   instance[left_h.mapping_[edge[1]]]),
+                  " attrs ", attrs)
+            self.delete_edge_attrs(
+                instance,
+                left_h.mapping_[edge[0]],
+                left_h.mapping_[edge[1]],
+                attrs)
+
+        # 4) Add attrs
+        print("Adding node attributes:")
+        for node, attrs in node_attrs_to_add.items():
+            if len(attrs) > 0:
+                print("Node ", RHS_instance[right_h.mapping_[node]], " attrs ", attrs)
+                self.add_node_attrs(RHS_instance, right_h.mapping_[node], attrs)
+
+        print("Adding edge attrubutes:")
+        for edge, attrs in edge_attrs_to_add.items():
+            print("Edge ",
+                  (left_h.mapping_[edge[0]],
+                   left_h.mapping_[edge[1]]),
+                  " attrs ",
+                  attrs)
+            self.add_edge_attrs(
+                instance,
+                left_h.mapping_[edge[0]],
+                left_h.mapping_[edge[1]],
+                attrs)
+
+        # 5) Merge
+        print("Merging nodes:")
+        merge_dict = {}
+        for n in right_h.target_.nodes():
+            merge_dict.update({n: []})
+        for p_node, r_node in right_h.mapping_.items():
+            if left_h.mapping_[p_node] not in nodes_to_remove:
+                merge_dict[r_node].append(left_h.mapping_[p_node])
+        nodes_to_merge =\
+            [(key, value) for key, value in merge_dict.items()
+             if len(value) > 1]
+
+        for rhs_node, nodes in nodes_to_merge:
+            new_name = self.merge(instance, nodes)
+            print("Merged nodes %s into %s" % (str(nodes), new_name))
+            RHS_instance.update({rhs_node: new_name})
+
+        # 6) Add nodes/edges
+        print("Adding nodes:")
         for node in nodes_to_add:
             new_name = self.add_node(
                 instance,
@@ -218,47 +347,21 @@ class Rewriter:
                 attrs=right_h.target_.node[node].attrs_)
             RHS_instance.update({node: new_name})
 
+        print("Adding edges:")
         for s, t, attrs in edges_to_add:
             try:
                 self.add_edge(
-                    instance,
-                    left_h.mapping_[s],
-                    left_h.mapping_[t],
+                    RHS_instance,
+                    s,
+                    t,
                     attrs)
+                print("Edge:",
+                      RHS_instance[s],
+                      RHS_instance[t],
+                      attrs)
             except:
-                for key, value in attrs.items():
-                    self.graph_.edge[left_h.mapping_[s]][left_h.mapping_[t]].update({key: value}) 
-
-        # 3) find nodes to merge
-        merge_dict = {}
-        for n in right_h.target_.nodes():
-            merge_dict.update({n: []})
-        for p_node, r_node in right_h.mapping_.items():
-            if left_h.mapping_[p_node] not in nodes_to_remove:
-                merge_dict[r_node].append(left_h.mapping_[p_node])
-
-        nodes_to_merge = [(key, value) for key, value in merge_dict.items() if len(value) > 1]
-
-        for rhs_node, nodes in nodes_to_merge:
-            new_name = self.merge(instance, nodes)
-            RHS_instance.update({rhs_node: new_name})
-
-        # 4) find nodes to clone
-        clone_dict = {}
-        for n in left_h.target_.nodes():
-            clone_dict.update({n: []})
-        for p_node, r_node in left_h.mapping_.items():
-            clone_dict[r_node].append(p_node)
-
-        nodes_to_clone = [(key, len(value)) for key, value in clone_dict.items() if len(value) > 1]
-
-        for node, times in nodes_to_clone:
-            for i in range(times):
-                new_name = self.clone(instance, node)
-                # RHS_instance.update({ node: })
-
+                pass
         return RHS_instance
-
 
     def rule_to_homomorphisms(self, LHS, commands):
         """Cast sequence of commands to homomorphisms."""
