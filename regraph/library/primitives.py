@@ -297,26 +297,46 @@ def remove_node(graph, node):
 
 def add_edge(graph, source, target, attrs={}):
     """Add edge to the graph."""
-    if not (source, target) in graph.edges():
-        if source not in graph.nodes():
-            raise ValueError("Node %s does not exist" % str(source))
-        if target not in graph.nodes():
-            raise ValueError("Node %s does not exist" % str(target))
-        graph.add_edge(source, target)
-        graph.edge[source][target] = attrs
+    if graph.is_directed(): 
+        if not (source, target) in graph.edges():
+            if source not in graph.nodes():
+                raise ValueError("Node %s does not exist" % str(source))
+            if target not in graph.nodes():
+                raise ValueError("Node %s does not exist" % str(target))
+            graph.add_edge(source, target)
+            graph.edge[source][target] = attrs
+        else:
+            raise ValueError(
+                "Edge %s-%s already exists" % (str(source), str(target)))
     else:
-        raise ValueError(
-            "Edge %s-%s already exists" % (str(source), str(target)))
-    return
+        if (source, target) not in graph.edges() and (target, source) not in graph.edges():
+            if source not in graph.nodes():
+                raise ValueError("Node %s does not exist" % str(source))
+            if target not in graph.nodes():
+                raise ValueError("Node %s does not exist" % str(target))
+            graph.add_edge(source, target)
+            graph.edge[source][target] = attrs
+            graph.edge[target][source] = attrs
+        else:
+            raise ValueError(
+                "Edge %s-%s already exists" % (str(source), str(target)))
+        return
 
 
 def remove_edge(graph, source, target):
     """Remove edge from the graph."""
-    if (source, target) in graph.edges():
-        graph.remove_edge(source, target)
+    if graph.is_directed():
+        if (source, target) in graph.edges():
+            graph.remove_edge(source, target)
+        else:
+            raise ValueError(
+                "Edge %s->%s does not exist!" % (str(source), str(target)))
     else:
-        raise ValueError(
-            "Edge %s->%s does not exist!" % (str(source), str(target)))
+        if (source, target) in graph.edges() or (target, source) in graph.edges():
+            graph.remove_edge(source, target)
+        else:
+            raise ValueError(
+                "Edge %s->%s does not exist!" % (str(source), str(target))) 
     return
 
 
@@ -334,7 +354,7 @@ def add_node_attrs(graph, node, attrs_dict):
                     graph.node[node].attrs_[key] =\
                         set([graph.node[node].attrs_[key]])
                 graph.node[node].attrs_[key].update(value)
-        print(node, graph.node[node].attrs_)
+
 
 def remove_node_attrs(graph, node, attrs_dict):
     if node not in graph.nodes():
@@ -357,30 +377,43 @@ def remove_node_attrs(graph, node, attrs_dict):
                         warnings.warn(
                             "Node %s does not have attribute '%s' with value '%s'" %
                             (str(node), str(key), str(el)), RuntimeWarning)
-        print(graph.node[node].attrs_)
 
 
 def add_edge_attrs(graph, node_1, node_2, attrs_dict):
-    if (node_1, node_2) not in graph.edges():
-        raise ValueError("Edge %s-%s does not exist" % (str(node_1), str(node_2)))
+    if graph.is_directed():
+        if (node_1, node_2) not in graph.edges():
+            raise ValueError("Edge %s-%s does not exist" % (str(node_1), str(node_2)))
+        else:
+            for key, value in attrs_dict.items():
+                if key not in graph.edge[node_1][node_2].keys():
+                    graph.edge[node_1][node_2].update({key: value})
+                else:
+                    if type(value) != set:
+                        value = set([value])
+                    if type(graph.edge[node_1][node_2][key]) != set:
+                        graph.edge[node_1][node_2][key] =\
+                            set([graph.edge[node_1][node_2][key]])
+                    graph.edge[node_1][node_2][key].update(value)
     else:
-        for key, value in attrs_dict.items():
-            if key not in graph.edge[node_1][node_2].keys():
-                graph.edge[node_1][node_2].update({key: value})
-                if not graph.is_directed():
+        if (node_1, node_2) not in graph.edges() and (node_2, node_1) not in graph.edges():
+            raise ValueError("Edge %s-%s does not exist" % (str(node_1), str(node_2)))
+        else:
+            for key, value in attrs_dict.items():
+                if key not in graph.edge[node_1][node_2].keys():
+                    graph.edge[node_1][node_2].update({key: value})
                     graph.edge[node_2][node_1].update({key: value})
-            else:
-                if type(value) != set:
-                    value = set([value])
-                if type(graph.edge[node_1][node_2][key]) != set:
-                    graph.edge[node_1][node_2][key] =\
-                        set([graph.edge[node_1][node_2][key]])
-                    if not graph.is_directed():
+                else:
+                    print(graph.edge[node_1][node_2][key])
+                    if type(value) != set:
+                        value = set([value])
+                    if type(graph.edge[node_1][node_2][key]) != set:
+                        graph.edge[node_1][node_2][key] =\
+                            set([graph.edge[node_1][node_2][key]])
                         graph.edge[node_2][node_1][key] =\
                             set([graph.edge[node_2][node_1][key]])
-                graph.edge[node_1][node_2][key].update(value)
-                if not graph.is_directed():
+                    graph.edge[node_1][node_2][key].update(value)
                     graph.edge[node_2][node_1][key].update(value)
+                    print(graph.edge[node_1][node_2][key])
 
 
 def remove_edge_attrs(graph, node_1, node_2, attrs_dict):

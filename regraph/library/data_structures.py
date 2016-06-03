@@ -113,9 +113,13 @@ def is_valid_homomorphism(source, target, dictionary):
     # check connectivity and edges attr matches
     for s_edge in source.edges():
         if not (dictionary[s_edge[0]], dictionary[s_edge[1]]) in target.edges():
-            raise ValueError(
-                "Invalid homomorphism: Connectivity is not preserved!")
-
+            if not target.is_directed():
+                if not (dictionary[s_edge[1]], dictionary[s_edge[0]]) in target.edges():
+                    raise ValueError(
+                        "Invalid homomorphism: Connectivity is not preserved!")
+            else:
+                raise ValueError(
+                    "Invalid homomorphism: Connectivity is not preserved!")
         source_edge_attrs = source.get_edge(s_edge[0], s_edge[1])
         target_edge_attrs = target.get_edge(dictionary[s_edge[0]],
                                             dictionary[s_edge[1]])
@@ -273,5 +277,4 @@ class Homomorphism:
                             edge_attrs[edge].update(
                                 {key: set([el for el in value
                                            if el not in attrs[key]])})
-
         return (nodes, edges, node_attrs, edge_attrs)

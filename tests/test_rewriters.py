@@ -164,7 +164,7 @@ class TestRewrites(object):
                 os.path.join(__location__, "undir_instance_%d.png" % i))
         rw.add_node(instances[0], 'region', 'Europe', {"a": 44})
         rw.delete_node(instances[0], 1)
-        rw.add_edge(instances[0], 2, 'Europe', {"a": 55})
+        # rw.add_edge(instances[0], 2, 'Europe', {"a": 55})
         rw.delete_edge(instances[0], 2, 3)
         rw.clone(instances[0], 2)
         cast_node(rw.graph_, "Europe", "action")
@@ -179,7 +179,7 @@ class TestRewrites(object):
 
         g = TypedGraph()
         g.add_node(1, "action")
-        g.add_node(2, "agent", {"u": {0, 100}})
+        g.add_node(2, "agent", {"u": {0, 1}})
         g.add_node(3, "agent", {"u": {4}, "name": "Paul"})
         g.add_node(4, "action")
         g.add_node(5, "agent", {"u": {0}})
@@ -193,38 +193,42 @@ class TestRewrites(object):
             (5, 4),
             (5, 6)])
         g.set_edge(1, 2, {"a": 0})
-        g.set_edge(2, 3, {"k": {55, 66, 45}})
+        g.set_edge(2, 3, {"k": {1, 2, 3}})
 
         rw = Rewriter(g)
 
         LHS = TypedGraph()
         LHS.add_nodes_from(
-            [(1000, "action"),
-             (2000, "agent"),
-             (3000, "agent")])
-        LHS.node[2000].attrs_ = {"u": 0}
+            [(10, "action"),
+             (20, "agent"),
+             (30, "agent")])
+        LHS.node[20].attrs_ = {"u": 0}
 
         LHS.add_edges_from([
-            (1000, 2000),
-            (2000, 3000)])
-        LHS.set_edge(2000, 3000, {"k": {45, 66}})
-
-        RHS = TypedGraph()
-        RHS.add_node(33, "region")
-        RHS.add_node(44, "agent", {"u": {3}})
-        RHS.add_node(55, "agent", {"u": {0, 2}})
-
-        RHS.add_edges_from([(33, 55), (44, 55), (55, 55)])
-        RHS.set_edge(55, 55, {"k": {45, 99, 66, 105}})
-        RHS.set_edge(44, 55, {"k": {18}})
-        RHS.set_edge(33, 55, {"a": 12})
+            (10, 20),
+            (20, 30)])
+        LHS.set_edge(20, 30, {"k": {1, 2}})
 
         P = TypedGraph()
-        P.add_node(101, "agent")
-        P.add_node(201, "agent", {"u": {0}})
-        P.add_node(301, "agent")
-        P.add_edges_from([(301, 101), (201, 301)])
-        P.set_edge(201, 301, {"k": {45, 66}})
+        P.add_node(100, "agent")
+        P.add_node(200, "agent", {"u": {0}})
+        P.add_node(300, "agent")
+        P.add_edges_from([(300, 100), (200, 300)])
+        P.set_edge(100, 300, {"k": {1, 2}})
+        P.set_edge(200, 300, {"k": set()})
+
+        RHS = TypedGraph()
+        RHS.add_node(1000, "region")
+        RHS.add_node(2000, "agent", {"u": {3}})
+        RHS.add_node(3000, "agent", {"u": {0, 2}})
+
+        RHS.add_edges_from(
+            [(1000, 3000),
+             (2000, 3000),
+             (3000, 3000)])
+        RHS.set_edge(3000, 3000, {"k": {5, 6}})
+        RHS.set_edge(2000, 3000, {"k": {1, 2, 10}})
+        RHS.set_edge(1000, 3000, {"a": 12})
 
         instances = rw.find_matching(LHS)
         for i, instance in enumerate(instances):
@@ -236,18 +240,18 @@ class TestRewrites(object):
         left_h = Homomorphism(
             P,
             LHS,
-            {101: 2000, 201: 2000, 301: 3000})
+            {100: 20, 200: 20, 300: 30})
         righ_h = Homomorphism(
             P,
             RHS,
-            {101: 44, 201: 55, 301: 55})
+            {100: 2000, 200: 3000, 300: 3000})
         RHS_instance = rw.apply_rule(instances[0], left_h, righ_h)
         print(rw.graph_.edges())
-        # print(rw.graph_.node['2_copy'].attrs_)
-        # print(rw.graph_.node['2_3'].attrs_)
+        print(rw.graph_.node['2_copy'].attrs_)
+        print(rw.graph_.node['2_3'].attrs_)
         print(rw.graph_.edge['2_3']['2_3'])
-        print(rw.graph_.edge['2_copy']['2_3'])
-        print(rw.graph_.edge['new_node_0']['2_3'])
+        print(rw.graph_.edge['2_3']['2_copy'])
+        print(rw.graph_.edge['2_3']['new_node_0'])
         plot_instance(
             rw.graph_,
             RHS,

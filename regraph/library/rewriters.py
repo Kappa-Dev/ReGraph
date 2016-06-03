@@ -231,6 +231,9 @@ class Rewriter:
 
         RHS_instance =\
             dict([(r, instance[left_h.mapping_[p]]) for p, r in right_h.mapping_.items()])
+        P_instance =\
+            dict([(p, instance[l]) for p, l in left_h.mapping_.items()])
+        print(P_instance)
 
         (nodes_to_remove,
          edges_to_remove,
@@ -243,15 +246,6 @@ class Rewriter:
          edge_attrs_to_add) = right_h.find_PO()
 
         # 1) Delete nodes/edges
-        print("\nDeleting edges:")
-        for edge in edges_to_remove:
-            print(edge)
-            print(RHS_instance)
-            self.delete_edge(
-                RHS_instance,
-                right_h.mapping_[edge[0]],
-                right_h.mapping_[edge[1]])
-
         print("Deleting nodes:")
         for node in nodes_to_remove:
             print(node)
@@ -263,7 +257,6 @@ class Rewriter:
             clone_dict.update({n: []})
         for p_node, r_node in left_h.mapping_.items():
             clone_dict[r_node].append(p_node)
-
         print("Cloning nodes:")
         for node, value in clone_dict.items():
             if len(value) > 1:
@@ -271,54 +264,72 @@ class Rewriter:
                 for val in value:
                     if i > 0:
                         new_name = self.clone(instance, node)
-                        print(node, "->", new_name)
+                        print(instance[node], "->", new_name)
+                        P_instance.update(
+                            {val: new_name})
                         RHS_instance.update(
                             {right_h.mapping_[val]: new_name})
                     else:
+                        P_instance.update(
+                            {val: instance[node]})
                         RHS_instance.update(
                             {right_h.mapping_[val]: instance[node]})
                     i += 1
+        print(P_instance)
+
+        print("\nDeleting edges:")
+        print(self.graph_.edges())
+        for edge in edges_to_remove:
+            print("Edge ",
+                  P_instance[edge[0]],
+                  P_instance[edge[1]])
+            self.delete_edge(
+                P_instance,
+                edge[0],
+                edge[1])
 
         # 3) Delete attrs
         print("Deleting node attributes:")
         for node, attrs in node_attrs_to_remove.items():
             if len(attrs) > 0:
-                print("Node ", RHS_instance[right_h.mapping_[node]], " attrs ", attrs)
+                print("Node ", P_instance[node], " attrs ", attrs)
                 self.delete_node_attrs(
-                    RHS_instance,
-                    right_h.mapping_[node],
+                    P_instance,
+                    node,
                     attrs)
 
         print("Deleting edge attributes:")
         for edge, attrs in edge_attrs_to_remove.items():
-            print("Edge ",
-                  (instance[left_h.mapping_[edge[0]]],
-                   instance[left_h.mapping_[edge[1]]]),
-                  " attrs ", attrs)
+            print(
+                "Edge ",
+                P_instance[edge[0]],
+                P_instance[edge[1]],
+                " attrs ",
+                attrs)
             self.delete_edge_attrs(
-                instance,
-                left_h.mapping_[edge[0]],
-                left_h.mapping_[edge[1]],
+                P_instance,
+                edge[0],
+                edge[1],
                 attrs)
 
         # 4) Add attrs
         print("Adding node attributes:")
         for node, attrs in node_attrs_to_add.items():
             if len(attrs) > 0:
-                print("Node ", RHS_instance[right_h.mapping_[node]], " attrs ", attrs)
-                self.add_node_attrs(RHS_instance, right_h.mapping_[node], attrs)
+                print("Node ", P_instance[node], " attrs ", attrs)
+                self.add_node_attrs(P_instance, node, attrs)
 
         print("Adding edge attrubutes:")
         for edge, attrs in edge_attrs_to_add.items():
             print("Edge ",
-                  (left_h.mapping_[edge[0]],
-                   left_h.mapping_[edge[1]]),
+                  (P_instance[edge[0]],
+                   P_instance[edge[1]]),
                   " attrs ",
                   attrs)
             self.add_edge_attrs(
-                instance,
-                left_h.mapping_[edge[0]],
-                left_h.mapping_[edge[1]],
+                P_instance,
+                edge[0],
+                edge[1],
                 attrs)
 
         # 5) Merge
@@ -345,6 +356,7 @@ class Rewriter:
                 instance,
                 right_h.target_.node[node].type_,
                 attrs=right_h.target_.node[node].attrs_)
+            print("New node: ", new_name)
             RHS_instance.update({node: new_name})
 
         print("Adding edges:")
