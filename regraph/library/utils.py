@@ -95,4 +95,33 @@ def plot_instance(graph, pattern, instance, filename=None):
 
 def is_subdict(small_dict, big_dict):
     """Check if the dictionary is a subset of other."""
-    return set(small_dict.items()).issubset(set(big_dict.items()))
+
+    if small_dict is None:
+        return True
+    if len(small_dict) == 0:
+        return True
+    if len(big_dict) == 0 and len(small_dict) != 0:
+        return False
+    for key, value in small_dict.items():
+        if key not in big_dict.keys():
+            return False
+        else:
+            if type(value) == set:
+                small_attrs = value
+            else:
+                small_attrs = set([value])
+            if type(big_dict[key]) == set:
+                big_attrs = big_dict[key]
+            else:
+                big_attrs = set([big_dict[key]])
+            if not small_attrs.issubset(big_attrs):
+                return False
+    return True
+
+
+def keys_by_value(dictionary, val):
+    res = []
+    for key, value in dictionary.items():
+        if value == val:
+            res.append(key)
+    return res
