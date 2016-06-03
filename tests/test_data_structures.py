@@ -74,7 +74,6 @@ class TestDataStructures(object):
         self.LHS_.set_edge(1, 2, {'s': 'p'})
         self.LHS_.set_edge(5, 6, {'s': 'p'})
 
-
     def test_homorphism_init(self):
         # Test homomorphisms functionality
         mapping = {1: 1,
