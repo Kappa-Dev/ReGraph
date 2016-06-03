@@ -2,7 +2,7 @@
 
 import networkx as nx
 
-from regraph.library.utils import is_subdict
+from regraph.library.utils import (is_subdict, keys_by_value)
 
 
 class TypedNode:
@@ -34,8 +34,8 @@ class TypedDiGraph(nx.DiGraph):
         self.node[node_id] = TypedNode(type, attrs)
 
     def add_nodes_from(self, node_list):
-        raise NotImplementedError(
-            "Adding the nodes from the list is not impemented!")
+        for node_id, node_type in node_list:
+            self.add_node(node_id, node_type)
 
     def add_edges_from(self, edge_list):
         for edge in edge_list:
@@ -55,33 +55,41 @@ class TypedDiGraph(nx.DiGraph):
         self.edge[source][target] = attrs
 
 
-# class TypedGraph:
-#     """Define simple typed undirected graph."""
+class TypedGraph(nx.Graph):
+    """Define simple typed undirected graph."""
 
-#     def __init__(self):
-#         self.graph_ = nx.Graph()
+    def __init__(self):
+        nx.Graph.__init__(self)
 
-#     def add_node(self, node_id, type, attrs={}):
-#         nx.Graph.add_node(self, node_id)
-#         self.node[node_id] = TypedNode(type, attrs)
+    def add_node(self, node_id, type, attrs={}):
+        if node_id not in self.nodes():
+            nx.Graph.add_node(self, node_id)
+            self.node[node_id] = TypedNode(type, attrs)
+        else:
+            raise ValueError("Node %s already exists!" % node_id)
 
-#     def add_nodes_from(self, node_list):
-#         raise NotImplementedError(
-#             "Adding the nodes from the list is not impemented!")
 
-#     def add_edges_from(self, edge_list):
-#         for edge in edge_list:
-#             if not edge[0] in self.nodes():
-#                 raise ValueError("Node %s is not defined!" % edge[0])
-#             if not edge[1] in self.nodes():
-#                 raise ValueError("Node %s is not defined!" % edge[1])
-#         nx.Graph.add_edges_from(self, edge_list)
+    def add_nodes_from(self, node_list):
+        for node_id, node_type in node_list:
+            if node_id not in self.nodes():
+                self.add_node(node_id, node_type)
+            else:
+                raise ValueError("Node %s already exists!" % node_id)
 
-#     def get_edge(self, source, target):
-#         return self.edge[source][target]
+    def add_edges_from(self, edge_list):
+        for edge in edge_list:
+            if not edge[0] in self.nodes():
+                raise ValueError("Node %s is not defined!" % edge[0])
+            if not edge[1] in self.nodes():
+                raise ValueError("Node %s is not defined!" % edge[1])
+        nx.Graph.add_edges_from(self, edge_list)
 
-#     def set_edge(self, source, target, attrs):
-#         self.edge[source][target] = attrs
+    def get_edge(self, source, target):
+        return self.edge[source][target]
+
+    def set_edge(self, u, v, attrs):
+        self.edge[u][v] = attrs
+        self.edge[v][u] = attrs
 
 
 def is_valid_homomorphism(source, target, dictionary):
@@ -97,7 +105,6 @@ def is_valid_homomorphism(source, target, dictionary):
             raise ValueError(
                 "Invalid homomorphism: Node type does not match ('%s' and '%s')!" %
                 (str(source.node[s].type_), str(target.node[t].type_)))
-
         if not is_subdict(source.node[s].attrs_, target.node[t].attrs_):
             raise ValueError(
                 "Invalid homomorphism: Attributes of nodes source:'%s' and target:'%s' does not match!" %
@@ -139,27 +146,132 @@ class Homomorphism:
 
     def find_final_PBC(self):
         # edges to remove will be removed automatically upon removal of the nodes 
-        nodes_to_remove = [n for n in self.target_.nodes() if n not in self.mapping_.values()]
-        edges_to_remove = []
+        nodes = [n for n in self.target_.nodes() if n not in self.mapping_.values()]
+
+        node_attrs = {}
+        for node in self.source_.nodes():
+            if node not in node_attrs.keys():
+                node_attrs.update({node: {}})
+
+            mapped_node = self.mapping_[node]
+            mapped_attrs = self.target_.node[mapped_node].attrs_
+
+            attrs = self.source_.node[node].attrs_
+
+            for key, value in mapped_attrs.items():
+                if key not in attrs.keys():
+                    node_attrs[node].update({key: value})
+                else:
+                    if type(value) != set:
+                        value = set([value])
+                    else:
+                        node_attrs[node].update(
+                            {key: set([el for el in value if el not in attrs[key]])})
+
+        edge_attrs = {}
+        edges = set()
         for edge in self.target_.edges():
-            for p_node, l_node in self.mapping_.items():
-                if l_node == edge[0]:
-                    s = p_node
-                if l_node == edge[1]:
-                    t = p_node
-            if (s, t) not in self.source_.edges():
-                edges_to_remove.append(edge)
-        return (nodes_to_remove, edges_to_remove)
+            if self.source_.is_directed():
+                sources = keys_by_value(self.mapping_, edge[0])
+                targets = keys_by_value(self.mapping_, edge[1])
+                if len(sources) == 0 or len(targets) == 0:
+                    continue
+                for s in sources:
+                    for t in targets:
+                        if (s, t) not in self.source_.edges():
+                            edges.add((s, t))
+            else:
+                sources = keys_by_value(self.mapping_, edge[0])
+                targets = keys_by_value(self.mapping_, edge[1])
+                if len(sources) == 0 or len(targets) == 0:
+                    continue
+                for s in sources:
+                    for t in targets:
+                        if (s, t) not in self.source_.edges():
+                            if (t, s) not in self.source_.edges():
+                                edges.add((s, t))
+
+        for edge in self.source_.edges():
+            if edge not in edge_attrs.keys():
+                edge_attrs.update({edge: {}})
+
+            mapped_edge = (self.mapping_[edge[0]], self.mapping_[edge[1]])
+            mapped_attrs = self.target_.edge[mapped_edge[0]][mapped_edge[1]]
+
+            attrs = self.source_.edge[edge[0]][edge[1]]
+
+            for key, value in mapped_attrs.items():
+                if key not in attrs.keys():
+                    edge_attrs[edge].update({key: value})
+                else:
+                    if type(value) != set:
+                        value = set([value])
+                    else:
+                        edge_attrs[edge].update(
+                            {key: set([el for el in value if el not in attrs[key]])})
+        return (nodes, edges, node_attrs, edge_attrs)
+
 
     def find_PO(self):
-        nodes_to_add = [n for n in self.target_.nodes() if n not in self.mapping_.values()]
-        edges_to_add = []
+        nodes = [n for n in self.target_.nodes() if n not in self.mapping_.values()]
+
+        node_attrs = {}
+        for node in self.source_.nodes():
+            if node not in node_attrs.keys():
+                node_attrs.update({node: {}})
+
+            mapped_node = self.mapping_[node]
+            mapped_attrs = self.target_.node[mapped_node].attrs_
+
+            attrs = self.source_.node[node].attrs_
+
+            for key, value in mapped_attrs.items():
+                if key not in attrs.keys():
+                    node_attrs[node].update({key: value})
+                else:
+                    if type(value) != set:
+                        value = set([value])
+                    else:
+                        node_attrs[node].update(
+                            {key: set([el for el in value if el not in attrs[key]])})
+
+        edges = []
+        edge_attrs = {}
+
         for edge in self.target_.edges():
-            for p_node, r_node in self.mapping_.items():
-                if r_node == edge[0]:
-                    s = p_node
-                if r_node == edge[1]:
-                    t = p_node
-            if (s, t) not in self.source_.edges():
-                edges_to_add.append((s, t, self.target_.edge[edge[0]][edge[1]]))
-        return (nodes_to_add, edges_to_add)
+            sources = keys_by_value(self.mapping_, edge[0])
+            targets = keys_by_value(self.mapping_, edge[1])
+            if len(sources) == 0 or len(targets) == 0:
+                edges.append((edge[0], edge[1], self.target_.edge[edge[0]][edge[1]]))
+                continue
+            for s in sources:
+                for t in targets:
+                    if (s, t) not in self.source_.edges():
+                        edges.append((edge[0], edge[1], self.target_.edge[edge[0]][edge[1]]))
+
+        for edge in self.source_.edges():
+            if edge not in edge_attrs.keys():
+                edge_attrs.update({edge: {}})
+
+            mapped_edge = (self.mapping_[edge[0]], self.mapping_[edge[1]])
+            mapped_attrs = self.target_.edge[mapped_edge[0]][mapped_edge[1]]
+
+            attrs = self.source_.edge[edge[0]][edge[1]]
+
+            for key, value in mapped_attrs.items():
+                if key not in attrs.keys():
+                    edge_attrs[edge].update({key: value})
+                else:
+                    if type(value) != set:
+                        value = set([value])
+                    else:
+                        if type(attrs[key]) != set:
+                            edge_attrs[edge].update(
+                                {key: set([el for el in value
+                                           if el not in set([attrs[key]])])})
+                        else:
+                            edge_attrs[edge].update(
+                                {key: set([el for el in value
+                                           if el not in attrs[key]])})
+
+        return (nodes, edges, node_attrs, edge_attrs)
