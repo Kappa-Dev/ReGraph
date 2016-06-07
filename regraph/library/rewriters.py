@@ -47,7 +47,7 @@ class Rewriter:
                 for edgeset in itertools.combinations(subg.edges(),
                                                       len(pattern.edges())):
                     if self.graph_.is_directed():
-                        edge_induced_graph = nx.DiGraph(edgeset)
+                        edge_induced_graph = nx.DiGraph(list(edgeset))
                         edge_induced_graph.add_nodes_from(
                             [n for n in subg.nodes() if n not in edge_induced_graph.nodes()])
                         GM = isomorphism.DiGraphMatcher(pattern, edge_induced_graph)
