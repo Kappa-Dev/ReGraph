@@ -441,3 +441,21 @@ def remove_edge_attrs(graph, node_1, node_2, attrs_dict):
                         warnings.warn(
                             "Edge %s-%s does not have attribute '%s' with value '%s'" %
                             (str(node_1), str(node_2), str(key), str(el)), RuntimeWarning)
+
+
+def update_node_attrs(graph, node, new_attrs):
+    if node not in graph.nodes():
+        raise ValueError("Node %s does not exist" % str(node))
+    else:
+        for key, value in new_attrs.items():
+            graph.node[node].attrs_[key] = value
+
+
+def update_edge_attrs(graph, node_1, node_2, new_attrs):
+    if (node_1, node_2) not in graph.edges() and (node_2, node_1) not in graph.edges():
+        raise ValueError("Edge %s-%s does not exist" % (str(node_1), str(node_2)))
+    else:
+        for key, value in new_attrs.items():
+            graph.edge[node_1][node_2][key] = value
+            if not graph.is_directed():
+                graph.edge[node_2][node_1][key] = value
