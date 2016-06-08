@@ -3,6 +3,8 @@
 from nose.tools import assert_equals
 from nose.tools import raises
 
+import warnings
+
 from regraph.library.data_structures import TypedDiGraph
 from regraph.library import primitives
 
@@ -231,3 +233,68 @@ class TestPrimitives(object):
             assert_equals(
                 new_graph.edge["clone"][t],
                 new_graph.edge[s][t])
+
+    def test_add_node_attrs(self):
+        primitives.add_node_attrs(
+            self.graph_,
+            1,
+            {"a": 1, "state": "u", "name": {"EGFR"}})
+        assert_equals(
+            self.graph_.node[1].attrs_,
+            {"state": {"u", "p"},
+             "name": {"EGFR"},
+             "a": 1})
+
+    def test_remove_node_attrs(self):
+        with warnings.catch_warnings(record=True) as w:
+            primitives.remove_node_attrs(
+                self.graph_,
+                1,
+                {"state": "p", "name": "Strange"})
+            assert len(w) > 0
+        assert_equals(
+            self.graph_.node[1].attrs_,
+            {'name': {'EGFR'}, 'state': set()})
+
+    def test_add_edge_attrs(self):
+        primitives.add_edge_attrs(
+            self.graph_,
+            1,
+            2,
+            {"k": 12, "s": "p"})
+        assert_equals(
+            self.graph_.edge[1][2],
+            {"k": 12, "s": {"p"}})
+
+    def test_remove_edge_attrs(self):
+        with warnings.catch_warnings(record=True) as w:
+            primitives.remove_edge_attrs(
+                self.graph_,
+                1,
+                2,
+                {"k": 12, "s": "p"})
+        assert_equals(
+            self.graph_.edge[1][2],
+            {"s": set()})
+
+    def test_update_node_attrs(self):
+        primitives.update_node_attrs(
+            self.graph_,
+            1,
+            {"state": {1, 2, 3},
+             "new_attr": "val"})
+        assert_equals(
+            self.graph_.node[1].attrs_,
+            {"state": {1, 2, 3},
+             "new_attr": "val",
+             "name": "EGFR"})
+
+    def test_update_edge_attrs(self):
+        primitives.update_edge_attrs(
+            self.graph_,
+            1,
+            2,
+            {"k": 12, "s": "i"})
+        assert_equals(
+            self.graph_.edge[1][2],
+            {"k": 12, "s": "i"})
