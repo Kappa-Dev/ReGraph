@@ -129,13 +129,49 @@ add_edge = add_edge + node.setResultsName("node_1") +\
     node.setResultsName("node_2") +\
     Optional(attributes)
 
+add_node_attrs = CaselessKeyword("ADD_NODE_ATTRS")
+add_node_attrs.setParseAction(lambda t: t[0].lower())
+add_node_attrs = add_node_attrs + node.setResultsName("node") +\
+    attributes
+
+add_edge_attrs = CaselessKeyword("ADD_EDGE_ATTRS")
+add_edge_attrs.setParseAction(lambda t: t[0].lower())
+add_edge_attrs = add_edge_attrs + node.setResultsName("node_1") +\
+    node.setResultsName("node_2") + attributes
+
+delete_node_attrs = CaselessKeyword("DELETE_NODE_ATTRS")
+delete_node_attrs.setParseAction(lambda t: t[0].lower())
+delete_node_attrs = delete_node_attrs + node.setResultsName("node") +\
+    attributes
+
+delete_edge_attrs = CaselessKeyword("DELETE_EDGE_ATTRS")
+delete_edge_attrs.setParseAction(lambda t: t[0].lower())
+delete_edge_attrs = delete_edge_attrs + node.setResultsName("node_1") +\
+    node.setResultsName("node_2") + attributes
+
+update_node_attrs = CaselessKeyword("UPDATE_NODE_ATTRS")
+update_node_attrs.setParseAction(lambda t: t[0].lower())
+update_node_attrs = update_node_attrs + node.setResultsName("node") +\
+    attributes
+
+update_edge_attrs = CaselessKeyword("UPDATE_EDGE_ATTRS")
+update_edge_attrs.setParseAction(lambda t: t[0].lower())
+update_edge_attrs = update_edge_attrs + node.setResultsName("node_1") +\
+    node.setResultsName("node_2") + attributes
+
 command = (
     add_node |
     clone |
     merge |
     delete_node |
     delete_edge |
-    add_edge
+    add_edge |
+    add_node_attrs |
+    add_edge_attrs |
+    delete_node_attrs |
+    delete_edge_attrs |
+    update_node_attrs |
+    update_edge_attrs
 )
 
 parser = command.setResultsName("keyword") + "."
