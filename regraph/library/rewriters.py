@@ -14,7 +14,9 @@ from regraph.library.primitives import (merge_nodes,
                                         remove_node_attrs,
                                         add_node_attrs,
                                         remove_edge_attrs,
-                                        add_edge_attrs)
+                                        add_edge_attrs,
+                                        update_edge_attrs,
+                                        update_node_attrs)
 from regraph.library.utils import is_subdict
 from regraph.library.data_structures import (Homomorphism)
 
@@ -167,6 +169,23 @@ class Rewriter:
             target = node_2
         add_edge_attrs(self.graph_, source, target, attrs_dict)
 
+    def update_node_attrs(self, instance, node, new_attrs):
+        if node in instance.keys():
+            update_node_attrs(self.graph_, instance[node], new_attrs)
+        else:
+            update_node_attrs(self.graph_, node, new_attrs)
+
+    def update_edge_attrs(self, instance, node_1, node_2, new_attrs):
+        if node_1 in instance.keys():
+            source = instance[node_1]
+        else:
+            source = node_1
+        if node_2 in instance.keys():
+            target = instance[node_2]
+        else:
+            target = node_2
+        update_edge_attrs(self.graph_, source, target, new_attrs)
+
     def transform_instance(self, instance, commands):
         """Transform the instance of LHS of the rule in the graph."""
         # for node in self.graph_.nodes():
@@ -216,6 +235,33 @@ class Rewriter:
                     self.add_edge(instance, parsed["node_1"], parsed["node_2"], attrs)
                 elif parsed["keyword"] == "delete_edge":
                     self.delete_edge(instance, parsed["node_1"], parsed["node_2"])
+                elif parsed["keyword"] == "add_node_attrs":
+                    self.add_node_attrs(
+                        parsed["node"],
+                        parsed["attrubutes"])
+                elif parsed["keyword"] == "add_edge_attrs":
+                    self.add_edge_attrs(
+                        parsed["node_1"],
+                        parsed["node_2"],
+                        parsed["attrubutes"])
+                elif parsed["keyword"] == "delete_node_attrs":
+                    self.delete_node_attrs(
+                        parsed["node"],
+                        parsed["attrubutes"])
+                elif parsed["keyword"] == "delete_edge_attrs":
+                    self.delete_edge_attrs(
+                        parsed["node_1"],
+                        parsed["node_2"],
+                        parsed["attrubutes"])
+                elif parsed["keyword"] == "update_node_attrs":
+                    self.update_node_attrs(
+                        parsed["node"],
+                        parsed["attrubutes"])
+                elif parsed["keyword"] == "update_edge_attrs":
+                    self.update_edge_attrs(
+                        parsed["node_1"],
+                        parsed["node_2"],
+                        parsed["attrubutes"])
                 else:
                     raise ValueError("Unknown command")
             except:
@@ -233,7 +279,6 @@ class Rewriter:
             dict([(r, instance[left_h.mapping_[p]]) for p, r in right_h.mapping_.items()])
         P_instance =\
             dict([(p, instance[l]) for p, l in left_h.mapping_.items()])
-        print(P_instance)
 
         (nodes_to_remove,
          edges_to_remove,
@@ -246,9 +291,7 @@ class Rewriter:
          edge_attrs_to_add) = right_h.find_PO()
 
         # 1) Delete nodes/edges
-        print("Deleting nodes:")
         for node in nodes_to_remove:
-            print(node)
             self.delete_node(instance, node)
 
         # 2) Clone nodes
@@ -257,14 +300,12 @@ class Rewriter:
             clone_dict.update({n: []})
         for p_node, r_node in left_h.mapping_.items():
             clone_dict[r_node].append(p_node)
-        print("Cloning nodes:")
         for node, value in clone_dict.items():
             if len(value) > 1:
                 i = 0
                 for val in value:
                     if i > 0:
                         new_name = self.clone(instance, node)
-                        print(instance[node], "->", new_name)
                         P_instance.update(
                             {val: new_name})
                         RHS_instance.update(
@@ -275,37 +316,22 @@ class Rewriter:
                         RHS_instance.update(
                             {right_h.mapping_[val]: instance[node]})
                     i += 1
-        print(P_instance)
 
-        print("\nDeleting edges:")
-        print(self.graph_.edges())
         for edge in edges_to_remove:
-            print("Edge ",
-                  P_instance[edge[0]],
-                  P_instance[edge[1]])
             self.delete_edge(
                 P_instance,
                 edge[0],
                 edge[1])
 
         # 3) Delete attrs
-        print("Deleting node attributes:")
         for node, attrs in node_attrs_to_remove.items():
             if len(attrs) > 0:
-                print("Node ", P_instance[node], " attrs ", attrs)
                 self.delete_node_attrs(
                     P_instance,
                     node,
                     attrs)
 
-        print("Deleting edge attributes:")
         for edge, attrs in edge_attrs_to_remove.items():
-            print(
-                "Edge ",
-                P_instance[edge[0]],
-                P_instance[edge[1]],
-                " attrs ",
-                attrs)
             self.delete_edge_attrs(
                 P_instance,
                 edge[0],
@@ -313,19 +339,11 @@ class Rewriter:
                 attrs)
 
         # 4) Add attrs
-        print("Adding node attributes:")
         for node, attrs in node_attrs_to_add.items():
             if len(attrs) > 0:
-                print("Node ", P_instance[node], " attrs ", attrs)
                 self.add_node_attrs(P_instance, node, attrs)
 
-        print("Adding edge attrubutes:")
         for edge, attrs in edge_attrs_to_add.items():
-            print("Edge ",
-                  (P_instance[edge[0]],
-                   P_instance[edge[1]]),
-                  " attrs ",
-                  attrs)
             self.add_edge_attrs(
                 P_instance,
                 edge[0],
@@ -333,7 +351,6 @@ class Rewriter:
                 attrs)
 
         # 5) Merge
-        print("Merging nodes:")
         merge_dict = {}
         for n in right_h.target_.nodes():
             merge_dict.update({n: []})
@@ -346,20 +363,16 @@ class Rewriter:
 
         for rhs_node, nodes in nodes_to_merge:
             new_name = self.merge(instance, nodes)
-            print("Merged nodes %s into %s" % (str(nodes), new_name))
             RHS_instance.update({rhs_node: new_name})
 
         # 6) Add nodes/edges
-        print("Adding nodes:")
         for node in nodes_to_add:
             new_name = self.add_node(
                 instance,
                 right_h.target_.node[node].type_,
                 attrs=right_h.target_.node[node].attrs_)
-            print("New node: ", new_name)
             RHS_instance.update({node: new_name})
 
-        print("Adding edges:")
         for s, t, attrs in edges_to_add:
             try:
                 self.add_edge(
@@ -367,10 +380,6 @@ class Rewriter:
                     s,
                     t,
                     attrs)
-                print("Edge:",
-                      RHS_instance[s],
-                      RHS_instance[t],
-                      attrs)
             except:
                 pass
         return RHS_instance
@@ -454,13 +463,54 @@ class Rewriter:
                     RHS,
                     action["node_1"],
                     action["node_2"])
+            elif action["keyword"] == "add_node_attrs":
+                add_node_attrs(
+                    RHS,
+                    action["node"],
+                    action["attributes"])
+            elif action["keyword"] == "add_edge_attrs":
+                add_edge_attrs(
+                    RHS,
+                    action["node_1"],
+                    action["node_2"],
+                    action["attributes"])
+            elif action["keyword"] == "delete_node_attrs":
+                remove_node_attrs(
+                    P,
+                    action["node"],
+                    action["attributes"])
+                remove_node_attrs(
+                    RHS,
+                    action["node"],
+                    action["attributes"])
+            elif action["keyword"] == "delete_edge_attrs":
+                remove_edge_attrs(
+                    P,
+                    action["node_1"],
+                    action["node_2"],
+                    action["attributes"])
+                remove_edge_attrs(
+                    RHS,
+                    action["node_1"],
+                    action["node_2"],
+                    action["attributes"])
+            elif action["keyword"] == "update_node_attrs":
+                remove_node_attrs(
+                    P,
+                    action["node"],
+                    P.node[action["node"]].attrs_)
+                remove_node_attrs(
+                    RHS,
+                    action["node"],
+                    RHS.node[action["node"]].attrs_)
+                add_node_attrs(
+                    RHS,
+                    action["node"],
+                    action["attributes"])
+            elif action["keyword"] == "update_edge_attrs":
+                pass
             else:
                 raise ValueError("Unknown command")
-        print(P.nodes())
-        print(LHS.nodes())
-        print(RHS.nodes())
-        print(pl_mapping)
-        print(pr_mapping)
         h_p_lhs = Homomorphism(P, LHS, pl_mapping)
         h_p_rhs = Homomorphism(P, RHS, pr_mapping)
         return (h_p_lhs, h_p_rhs)
