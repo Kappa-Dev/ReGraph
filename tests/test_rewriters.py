@@ -246,14 +246,75 @@ class TestRewrites(object):
             RHS,
             {100: 2000, 200: 3000, 300: 3000})
         RHS_instance = rw.apply_rule(instances[0], left_h, righ_h)
-        print(rw.graph_.edges())
-        print(rw.graph_.node['2_copy'].attrs_)
-        print(rw.graph_.node['2_3'].attrs_)
-        print(rw.graph_.edge['2_3']['2_3'])
-        print(rw.graph_.edge['2_3']['2_copy'])
-        print(rw.graph_.edge['2_3']['new_node_0'])
         plot_instance(
             rw.graph_,
             RHS,
             RHS_instance,
-            filename=os.path.join(__location__, "undir_dec_RHS_instance.png"))
+            filename=os.path.join(__location__, "undir_dec_RHS.png"))
+
+    def test_rule_to_homomorphism(self):
+        __location__ = os.path.realpath(
+            os.path.join(os.getcwd(), os.path.dirname(__file__)))
+
+        g = TypedGraph()
+        g.add_node(1, "action")
+        g.add_node(2, "agent", {"u": {0, 1}})
+        g.add_node(3, "agent", {"u": {4}, "name": "Paul"})
+        g.add_node(4, "action")
+        g.add_node(5, "agent", {"u": {0}})
+        g.add_node(6, "agent", {"u": {7}})
+        g.add_node(7, "agent", {"u": {4}})
+
+        g.add_edges_from([
+            (1, 2),
+            (3, 2),
+            (1, 5),
+            (5, 4),
+            (5, 6)])
+        g.set_edge(1, 2, {"a": 0})
+        g.set_edge(2, 3, {"k": {1, 2, 3}})
+
+        rw = Rewriter(g)
+
+        LHS = TypedGraph()
+        LHS.add_nodes_from(
+            [(10, "action"),
+             (20, "agent"),
+             (30, "agent")])
+        LHS.node[20].attrs_ = {"u": 0}
+
+        LHS.add_edges_from([
+            (10, 20),
+            (20, 30)])
+        LHS.set_edge(20, 30, {"k": {1, 2}})
+
+        instances = rw.find_matching(LHS)
+
+        h1, h2 = rw.rule_to_homomorphisms(
+            LHS,
+            """delete_node 10.
+            clone 20 as clone.
+            delete_node_attrs clone {u: 0}.
+            merge [clone, 30] as merged.
+            add_node_attrs merged {m: 1}.
+            add_node new_node type region.
+            add_node_attrs new_node {x: 1}.
+            add_edge new_node merged."""
+        )
+        print("H1 source:", h1.source_.nodes())
+        print("H1 target:", h1.target_.nodes())
+        print("H1 mapping:", h1.mapping_)
+
+        print("H2 source:", h2.source_.nodes())
+        print("H2 target:", h2.target_.nodes())
+        print("H2 mapping:", h2.mapping_)
+
+        RHS_instance = rw.apply_rule(instances[0], h1, h2)
+        print(rw.graph_.nodes())
+        print(rw.graph_.node["2_copy"].attrs_)
+        print(rw.graph_.node["2_3"].attrs_)
+        print(rw.graph_.node["new_node_0"].attrs_)
+        plot_instance(
+            rw.graph_,
+            h2.target_, RHS_instance,
+            filename=os.path.join(__location__, "undir_rule_to_hom_RHS.png"))
