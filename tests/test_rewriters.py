@@ -155,6 +155,7 @@ class TestRewrites(object):
         LHS = TypedGraph()
         LHS.add_nodes_from([(1, "agent"), (2, "action")])
         LHS.add_edges_from([(1, 2)])
+
         instances = rw.find_matching(LHS)
         for i, instance in enumerate(instances):
             plot_instance(
@@ -164,7 +165,6 @@ class TestRewrites(object):
                 os.path.join(__location__, "undir_instance_%d.png" % i))
         rw.add_node(instances[0], 'region', 'Europe', {"a": 44})
         rw.delete_node(instances[0], 1)
-        # rw.add_edge(instances[0], 2, 'Europe', {"a": 55})
         rw.delete_edge(instances[0], 2, 3)
         rw.clone(instances[0], 2)
         cast_node(rw.graph_, "Europe", "action")
@@ -278,43 +278,142 @@ class TestRewrites(object):
 
         LHS = TypedGraph()
         LHS.add_nodes_from(
-            [(10, "action"),
-             (20, "agent"),
-             (30, "agent")])
-        LHS.node[20].attrs_ = {"u": 0}
+            [(1, "action"),
+             (2, "agent"),
+             (3, "agent")])
+        LHS.node[2].attrs_ = {"u": 0}
 
         LHS.add_edges_from([
-            (10, 20),
-            (20, 30)])
-        LHS.set_edge(20, 30, {"k": {1, 2}})
+            (1, 2),
+            (2, 3)])
+        LHS.set_edge(2, 3, {"k": {1, 2}})
 
         instances = rw.find_matching(LHS)
+        # print(rw.graph_.node[instances[0][10]])
 
+        rw.add_node_attrs(
+            instances[0],
+            1,
+            {"u": 55, "x": 0})
         h1, h2 = rw.rule_to_homomorphisms(
             LHS,
-            """delete_node 10.
-            clone 20 as clone.
+            """delete_node 1.
+            clone 2 as clone.
             delete_node_attrs clone {u: 0}.
-            merge [clone, 30] as merged.
+            delete_edge 2 3.
+            delete_edge_attrs clone 3 {k: {1}}.
+            update_edge_attrs clone 3 {t: 333}.
+            update_node_attrs 2 {u: {12, 13}}.
+            merge [clone, 3] as merged.
             add_node_attrs merged {m: 1}.
             add_node new_node type region.
             add_node_attrs new_node {x: 1}.
-            add_edge new_node merged."""
+            add_edge new_node merged.
+            add_edge_attrs merged new_node {j: 33}."""
         )
-        print("H1 source:", h1.source_.nodes())
-        print("H1 target:", h1.target_.nodes())
-        print("H1 mapping:", h1.mapping_)
-
-        print("H2 source:", h2.source_.nodes())
-        print("H2 target:", h2.target_.nodes())
-        print("H2 mapping:", h2.mapping_)
 
         RHS_instance = rw.apply_rule(instances[0], h1, h2)
-        print(rw.graph_.nodes())
-        print(rw.graph_.node["2_copy"].attrs_)
-        print(rw.graph_.node["2_3"].attrs_)
-        print(rw.graph_.node["new_node_0"].attrs_)
         plot_instance(
             rw.graph_,
             h2.target_, RHS_instance,
             filename=os.path.join(__location__, "undir_rule_to_hom_RHS.png"))
+
+    def test_cloning_cases(self):
+        g = TypedDiGraph()
+        g.add_node(10, "agent", {"a": 0})
+        g.add_node(20, "agent", {"b": 0})
+        g.add_node(30, "action", {"c": 0})
+        g.add_edges_from(
+            [(10, 30),
+             (20, 30)])
+        g.set_edge(10, 30, {"x": 0})
+        g.set_edge(20, 30, {"y": 0})
+
+        LHS = TypedDiGraph()
+        LHS.add_node(1, "agent")
+
+        rw = Rewriter(g)
+        instances = rw.find_matching(LHS)
+
+        # simple clone
+        P1 = TypedDiGraph()
+        P1.add_node("a", "agent")
+        P1.add_node("b", "agent")
+
+        RHS1 = TypedDiGraph()
+        RHS1.add_node("x", "agent")
+        RHS1.add_node("y", "agent")
+
+        h1 = Homomorphism(
+            P1, LHS,
+            {"a": 1, "b": 1})
+        h2 = Homomorphism(
+            P1, RHS1,
+            {"a": "x", "b": "y"})
+        RHS_instance = rw.apply_rule(instances[0], h1, h2)
+        print(RHS_instance)
+
+        # clone merge on the same nodes
+        RHS2 = TypedGraph()
+        RHS2.add_node("x", "agent")
+        h2 = Homomorphism(
+            P1, RHS2, {"a": "x", "b": "x"})
+        RHS_instance = rw.apply_rule(instances[0], h1, h2)
+        print(RHS_instance)
+
+        # clone and merge one with other node
+        LHS.add_node(2, "agent")
+        # update matching
+        instances = rw.find_matching(LHS)
+
+        P3 = TypedDiGraph()
+        P3.add_node("a", "agent")
+        P3.add_node("b", "agent")
+        P3.add_node("c", "agent")
+
+        RHS3 = TypedDiGraph()
+        RHS3.add_node("x", "agent")
+        RHS3.add_node("y", "agent")
+
+        h1 = Homomorphism(
+            P3, LHS,
+            {"a": 1, "b": 1, "c": 2})
+        h2 = Homomorphism(
+            P3, RHS3,
+            {"a": "x", "b": "y", "c": "y"})
+        RHS_instance = rw.apply_rule(instances[0], h1, h2)
+        print(RHS_instance)
+
+
+    def test_merging(self):
+        g = TypedDiGraph()
+        g.add_node(10, "agent", {"a": 0})
+        g.add_node(20, "agent", {"b": 0})
+        g.add_node(30, "action", {"c": 0})
+        g.add_edges_from(
+            [(10, 30),
+             (20, 30)])
+        g.set_edge(10, 30, {"x": 0})
+        g.set_edge(20, 30, {"y": 0})
+
+        LHS = TypedDiGraph()
+        LHS.add_node(1, "agent")
+        LHS.add_node(2, "agent")
+
+        P = TypedDiGraph()
+        P.add_node("a", "agent")
+        P.add_node("b", "agent")
+
+        RHS = TypedDiGraph()
+        RHS.add_node("x", "agent")
+
+        h1 = Homomorphism(
+            P, LHS, {"a": 1, "b": 2})
+        h2 = Homomorphism(
+            P, RHS, {"a": "x", "b": "x"})
+
+        rw = Rewriter(g)
+        instances = rw.find_matching(LHS)
+        RHS_instance = rw.apply_rule(
+            instances[0],
+            h1, h2)
