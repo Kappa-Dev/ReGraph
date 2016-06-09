@@ -53,6 +53,17 @@ list_of_nodes = delimitedList(node, delim=r',')
 attr_open = Suppress(Literal("{"))
 attr_close = Suppress(Literal("}"))
 
+set_member_val = Forward()
+set_member_val << (
+    floatnumber |
+    integer |
+    var
+)
+
+sets = attr_open + delimitedList(set_member_val, delim=r',') +\
+    attr_close
+sets.setParseAction(lambda t: set(t))
+
 colon = Suppress(Literal(":"))
 field_name = Word(alphanums)
 
@@ -71,6 +82,7 @@ field_val << (
     integer |
     var |
     attr_open + Optional(dictMembers) + attr_close |
+    sets |
     list_open + Group(delimitedList(list_member_val)) + list_close
 )
 
