@@ -100,6 +100,8 @@ def is_subdict(small_dict, big_dict):
         return True
     if len(small_dict) == 0:
         return True
+    if big_dict is None and len(small_dict) != 0:
+        return True
     if len(big_dict) == 0 and len(small_dict) != 0:
         return False
     for key, value in small_dict.items():

@@ -29,7 +29,7 @@ class TypedDiGraph(nx.DiGraph):
     def __init__(self):
         nx.DiGraph.__init__(self)
 
-    def add_node(self, node_id, type, attrs={}):
+    def add_node(self, node_id, type, attrs=None):
         nx.DiGraph.add_node(self, node_id)
         self.node[node_id] = TypedNode(type, attrs)
 
@@ -54,6 +54,41 @@ class TypedDiGraph(nx.DiGraph):
                 "Edge %s-%s does not exist" % (str(source), str(target)))
         self.edge[source][target] = attrs
 
+    def relabel_nodes(self, mapping):
+        """Relabel graph nodes in place.
+
+        Similar to networkx.relabel.relabel_nodes:
+        https://networkx.github.io/documentation/development/_modules/networkx/relabel.html
+        """
+        g = TypedDiGraph()
+        old_nodes = set(mapping.keys())
+
+        for old_node in old_nodes:
+            try:
+                new_node = mapping[old_node]
+            except KeyError:
+                continue
+            try:
+                g.add_node(
+                    new_node,
+                    self.node[old_node].type_,
+                    self.node[old_node].attrs_)
+            except KeyError:
+                raise ValueError("Node %s does not exist!" % old_node)
+        new_edges = []
+        attributes = {}
+        for s, t in self.edges():
+            new_edges.append((
+                mapping[s],
+                mapping[t]))
+            attributes[(mapping[s], mapping[t])] =\
+                self.edge[s][t]
+
+        g.add_edges_from(new_edges)
+        for s, t in g.edges():
+            g.set_edge(s, t, attributes[(s, t)])
+        return g
+
 
 class TypedGraph(nx.Graph):
     """Define simple typed undirected graph."""
@@ -61,13 +96,12 @@ class TypedGraph(nx.Graph):
     def __init__(self):
         nx.Graph.__init__(self)
 
-    def add_node(self, node_id, type, attrs={}):
+    def add_node(self, node_id, type, attrs=None):
         if node_id not in self.nodes():
             nx.Graph.add_node(self, node_id)
             self.node[node_id] = TypedNode(type, attrs)
         else:
             raise ValueError("Node %s already exists!" % node_id)
-
 
     def add_nodes_from(self, node_list):
         for node_id, node_type in node_list:
@@ -90,6 +124,41 @@ class TypedGraph(nx.Graph):
     def set_edge(self, u, v, attrs):
         self.edge[u][v] = attrs
         self.edge[v][u] = attrs
+
+    def relabel_nodes(self, mapping):
+        """Relabel graph nodes in place.
+
+        Similar to networkx.relabel.relabel_nodes:
+        https://networkx.github.io/documentation/development/_modules/networkx/relabel.html
+        """
+        g = TypedGraph()
+        old_nodes = set(mapping.keys())
+
+        for old_node in old_nodes:
+            try:
+                new_node = mapping[old_node]
+            except KeyError:
+                continue
+            try:
+                g.add_node(
+                    new_node,
+                    self.node[old_node].type_,
+                    self.node[old_node].attrs_)
+            except KeyError:
+                raise ValueError("Node %s does not exist!" % old_node)
+        new_edges = []
+        attributes = {}
+        for s, t in self.edges():
+            new_edges.append((
+                mapping[s],
+                mapping[t]))
+            attributes[(mapping[s], mapping[t])] =\
+                self.edge[s][t]
+
+        g.add_edges_from(new_edges)
+        for s, t in g.edges():
+            g.set_edge(s, t, attributes[(s, t)])
+        return g
 
 
 def is_valid_homomorphism(source, target, dictionary):
@@ -150,8 +219,8 @@ class Homomorphism:
 
     def find_final_PBC(self):
         # edges to remove will be removed automatically upon removal of the nodes 
-        nodes = [n for n in self.target_.nodes() if n not in self.mapping_.values()]
-
+        nodes = set([n for n in self.target_.nodes()
+                     if n not in self.mapping_.values()])
         node_attrs = {}
         for node in self.source_.nodes():
             if node not in node_attrs.keys():
@@ -161,16 +230,16 @@ class Homomorphism:
             mapped_attrs = self.target_.node[mapped_node].attrs_
 
             attrs = self.source_.node[node].attrs_
-
-            for key, value in mapped_attrs.items():
-                if key not in attrs.keys():
-                    node_attrs[node].update({key: value})
-                else:
-                    if type(value) != set:
-                        value = set([value])
+            if mapped_attrs is not None and attrs is not None:
+                for key, value in mapped_attrs.items():
+                    if key not in attrs.keys():
+                        node_attrs[node].update({key: value})
                     else:
-                        node_attrs[node].update(
-                            {key: set([el for el in value if el not in attrs[key]])})
+                        if type(value) != set:
+                            value = set([value])
+                        else:
+                            node_attrs[node].update(
+                                {key: set([el for el in value if el not in attrs[key]])})
 
         edge_attrs = {}
         edges = set()
@@ -215,7 +284,6 @@ class Homomorphism:
                             {key: set([el for el in value if el not in attrs[key]])})
         return (nodes, edges, node_attrs, edge_attrs)
 
-
     def find_PO(self):
         nodes = [n for n in self.target_.nodes() if n not in self.mapping_.values()]
 
@@ -228,16 +296,16 @@ class Homomorphism:
             mapped_attrs = self.target_.node[mapped_node].attrs_
 
             attrs = self.source_.node[node].attrs_
-
-            for key, value in mapped_attrs.items():
-                if key not in attrs.keys():
-                    node_attrs[node].update({key: value})
-                else:
-                    if type(value) != set:
-                        value = set([value])
+            if mapped_attrs is not None and attrs is not None:
+                for key, value in mapped_attrs.items():
+                    if key not in attrs.keys():
+                        node_attrs[node].update({key: value})
                     else:
-                        node_attrs[node].update(
-                            {key: set([el for el in value if el not in attrs[key]])})
+                        if type(value) != set:
+                            value = set([value])
+                        else:
+                            node_attrs[node].update(
+                                {key: set([el for el in value if el not in attrs[key]])})
 
         edges = []
         edge_attrs = {}
