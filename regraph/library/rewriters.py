@@ -389,18 +389,18 @@ class Rewriter:
                 attrs=right_h.target_.node[node].attrs_)
             RHS_instance.update({node: new_name})
 
-        for s, t, attrs in edges_to_add:
+        for edge, attrs in edges_to_add.items():
             try:
                 self.add_edge(
                     RHS_instance,
-                    s,
-                    t,
+                    edge[0],
+                    edge[1],
                     attrs)
             except:
                 pass
         return RHS_instance
 
-    def rule_to_homomorphisms(self, LHS, commands):
+    def generate_rule(self, LHS, commands):
         """Cast sequence of commands to homomorphisms."""
         command_strings = [c for c in commands.splitlines() if len(c) > 0]
         actions = []
@@ -535,3 +535,101 @@ class Rewriter:
         h_p_lhs = Homomorphism(P, LHS, pl_mapping)
         h_p_rhs = Homomorphism(P, RHS, pr_mapping)
         return (h_p_lhs, h_p_rhs)
+
+    # def generate_script(self, left_h, right_h):
+    #     script = ""
+
+    #     # check left_h.source == right_h.source
+    #     if left_h.source_.nodes() != right_h.source_.nodes():
+    #         raise ValueError("Preserving part does not match!")
+    #     if left_h.source_.edges() != right_h.source_.edges():
+    #         raise ValueError("Preserving part does not match!")
+
+    #     (nodes_to_remove,
+    #      edges_to_remove,
+    #      node_attrs_to_remove,
+    #      edge_attrs_to_remove) = left_h.find_final_PBC()
+
+    #     (nodes_to_add,
+    #      edges_to_add,
+    #      node_attrs_to_add,
+    #      edge_attrs_to_add) = right_h.find_PO()
+
+    #     # 1) Delete nodes/edges
+    #     for node in nodes_to_remove:
+    #         script += "delete_node %s.\n" % str(node)
+
+    #     merge_dict = {}
+    #     for n in right_h.target_.nodes():
+    #         merge_dict.update({n: []})
+    #     for p_node, r_node in right_h.mapping_.items():
+    #         if left_h.mapping_[p_node] not in nodes_to_remove:
+    #             merge_dict[r_node].append(p_node)
+    #     nodes_to_merge =\
+    #         dict([(key, value) for key, value in merge_dict.items()
+    #               if len(value) > 1])
+
+    #     # 2) Clone nodes
+    #     clone_dict = {}
+    #     for n in left_h.target_.nodes():
+    #         clone_dict.update({n: []})
+    #     for p_node, r_node in left_h.mapping_.items():
+    #         clone_dict[r_node].append(p_node)
+    #     for node, value in clone_dict.items():
+    #         if value is not None and len(value) > 1:
+    #             i = 0
+    #             for val in value:
+    #                 if i > 0:
+    #                     new_node = "%s_copy" % str(node)
+    #                     while new_node in self.graph_.nodes():
+    #                         new_node = "%s_copy" % new_node
+    #                     script += "clone %s as %s.\n" % (str(node), str(new_node))
+    #                 i += 1
+
+    #     for edge in edges_to_remove:
+    #         script += "delete_edge %s %s.\n" % (str(edge[0]), str(edge[1]))
+
+    #     # 3) Delete attrs
+    #     for node, attrs in node_attrs_to_remove.items():
+    #         if len(attrs) > 0:
+    #             script += "delete_node_attrs %s %s.\n" % (str(node), str(attrs))
+
+    #     for edge, attrs in edge_attrs_to_remove.items():
+    #         script += "delete_edge_attrs %s %s %s.\n" %\
+    #             (str(edge[0]),
+    #              str(edge[1]),
+    #              str(attrs))
+
+    #     # 4) Add attrs
+    #     for node, attrs in node_attrs_to_add.items():
+    #         if len(attrs) > 0:
+    #             script += "add_node_attrs %s %s.\n" %\
+    #                 (str(node), str(attrs))
+
+    #     for edge, attrs in edge_attrs_to_add.items():
+    #         script += "add_edge_attrs %s %s %s.\n" %\
+    #             (str(edge[0]),
+    #              str(edge[1]),
+    #              str(attrs))
+
+    #     # # 5) Merge
+    #     # for rhs_node, nodes in nodes_to_merge.items():
+    #     #     new_name = self.merge(P_instance, nodes)
+    #     #     RHS_instance.update({rhs_node: new_name})
+
+    #     # 6) Add nodes/edges
+    #     # for node in nodes_to_add:
+    #     #     new_name = self.add_node(
+    #     #         instance,
+    #     #         right_h.target_.node[node].type_,
+    #     #         attrs=right_h.target_.node[node].attrs_)
+    #     #     RHS_instance.update({node: new_name})
+
+    #     print(edges_to_add)
+    #     for edge, attrs in edges_to_add.items():
+    #         script += "add_edge %s %s %s.\n" %\
+    #             (str(edge[0]),
+    #              str(edge[1]),
+    #              str(attrs))
+
+    #     return script

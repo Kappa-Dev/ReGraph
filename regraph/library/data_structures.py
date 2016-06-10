@@ -285,7 +285,7 @@ class Homomorphism:
         return (nodes, edges, node_attrs, edge_attrs)
 
     def find_PO(self):
-        nodes = [n for n in self.target_.nodes() if n not in self.mapping_.values()]
+        nodes = set([n for n in self.target_.nodes() if n not in self.mapping_.values()])
 
         node_attrs = {}
         for node in self.source_.nodes():
@@ -307,19 +307,19 @@ class Homomorphism:
                             node_attrs[node].update(
                                 {key: set([el for el in value if el not in attrs[key]])})
 
-        edges = []
+        edges = dict()
         edge_attrs = {}
 
         for edge in self.target_.edges():
             sources = keys_by_value(self.mapping_, edge[0])
             targets = keys_by_value(self.mapping_, edge[1])
             if len(sources) == 0 or len(targets) == 0:
-                edges.append((edge[0], edge[1], self.target_.edge[edge[0]][edge[1]]))
+                edges[(edge[0], edge[1])] = self.target_.edge[edge[0]][edge[1]]
                 continue
             for s in sources:
                 for t in targets:
                     if (s, t) not in self.source_.edges():
-                        edges.append((edge[0], edge[1], self.target_.edge[edge[0]][edge[1]]))
+                        edges[(edge[0], edge[1])] = self.target_.edge[edge[0]][edge[1]]
 
         for edge in self.source_.edges():
             if edge not in edge_attrs.keys():

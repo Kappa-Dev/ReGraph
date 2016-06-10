@@ -295,7 +295,7 @@ class TestRewrites(object):
             instances[0],
             1,
             {"u": 55, "x": 0})
-        h1, h2 = rw.rule_to_homomorphisms(
+        h1, h2 = rw.generate_rule(
             LHS,
             """delete_node 1.
             clone 2 as clone.
