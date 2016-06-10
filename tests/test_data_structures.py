@@ -4,6 +4,7 @@ from nose.tools import assert_equals
 from nose.tools import raises
 
 from regraph.library.data_structures import TypedDiGraph
+from regraph.library.data_structures import TypedGraph
 from regraph.library.data_structures import Homomorphism
 
 from regraph.library.primitives import cast_node, remove_edge
@@ -154,3 +155,83 @@ class TestDataStructures(object):
                    36: 6}
         h = Homomorphism(new_pattern, self.graph_, mapping)
         assert_equals(h.is_monic(), False)
+
+    def test_init_with_metamodel_directed(self):
+        meta_meta = TypedDiGraph()
+        meta_meta.add_node("agent", "node")
+        meta_meta.add_node("action", "node")
+        meta_meta.add_edges_from([
+            ("agent", "agent"),
+            ("action", "action"),
+            ("action", "agent"),
+            ("agent", "action")])
+
+        meta = TypedDiGraph(meta_meta)
+        meta.add_node("protein", "agent")
+        meta.add_node("region", "agent")
+        meta.add_node("action", "agent")
+        meta.add_edges_from([
+            ("protein", "protein"),
+            ("region", "region"),
+            ("action", "action"),
+            ("region", "protein"),
+            ("region", "action"),
+            ("action", "region"),
+        ])
+
+        graph = TypedDiGraph(meta)
+        graph.add_nodes_from([
+            (1, "protein"),
+            (2, "region"),
+            (3, "action"),
+            (4, "region"),
+            (5, "protein"),
+            (6, "region"),
+            (7, "protein")])
+        graph.add_edge(2, 1)
+        graph.add_edge(2, 3)
+        graph.add_edge(4, 3)
+        graph.add_edge(4, 5)
+        graph.add_edge(6, 3)
+        graph.add_edge(6, 7)
+
+    def test_init_with_metamodel_undirected(self):
+        meta_meta = TypedGraph()
+        meta_meta.add_node("agent", "node")
+        meta_meta.add_node("action", "node")
+        meta_meta.add_edges_from([
+            ("agent", "agent"),
+            ("action", "action"),
+            ("action", "agent")])
+
+        meta = TypedGraph(meta_meta)
+        meta.add_node("protein", "agent")
+        meta.add_node("region", "agent")
+        meta.add_node("action", "agent")
+        meta.add_edges_from([
+            ("protein", "protein", {'a': 1}),
+            ("region", "region"),
+            ("action", "action"),
+            ("protein", "region", {'a': 2}),
+            ("action", "region"),
+        ])
+        assert_equals(
+            meta.edge["protein"]["region"],
+            meta.edge["region"]["protein"])
+
+        graph = TypedGraph(meta)
+        graph.add_nodes_from([
+            (1, "protein"),
+            (2, "region"),
+            (3, "action"),
+            (4, "region"),
+            (5, "protein"),
+            (6, "region"),
+            (7, "protein")])
+        graph.add_edge(2, 1, {'x': 1})
+        graph.add_edge(2, 3, {'x': 2})
+        graph.add_edge(4, 3, {'x': 3})
+        graph.add_edge(4, 5, {'x': 4})
+        graph.add_edge(6, 3, {'x': 5})
+        graph.add_edge(6, 7, {'x': 6})
+        assert_equals(graph.edge[1][2], graph.edge[2][1])

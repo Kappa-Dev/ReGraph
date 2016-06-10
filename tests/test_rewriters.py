@@ -289,7 +289,6 @@ class TestRewrites(object):
         LHS.set_edge(2, 3, {"k": {1, 2}})
 
         instances = rw.find_matching(LHS)
-        # print(rw.graph_.node[instances[0][10]])
 
         rw.add_node_attrs(
             instances[0],
@@ -351,7 +350,6 @@ class TestRewrites(object):
             P1, RHS1,
             {"a": "x", "b": "y"})
         RHS_instance = rw.apply_rule(instances[0], h1, h2)
-        print(RHS_instance)
 
         # clone merge on the same nodes
         RHS2 = TypedGraph()
@@ -359,7 +357,6 @@ class TestRewrites(object):
         h2 = Homomorphism(
             P1, RHS2, {"a": "x", "b": "x"})
         RHS_instance = rw.apply_rule(instances[0], h1, h2)
-        print(RHS_instance)
 
         # clone and merge one with other node
         LHS.add_node(2, "agent")
@@ -382,8 +379,6 @@ class TestRewrites(object):
             P3, RHS3,
             {"a": "x", "b": "y", "c": "y"})
         RHS_instance = rw.apply_rule(instances[0], h1, h2)
-        print(RHS_instance)
-
 
     def test_merging(self):
         g = TypedDiGraph()
