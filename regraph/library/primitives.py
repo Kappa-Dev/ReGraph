@@ -275,6 +275,10 @@ def clone_node(graph, node, name=None):
 
 def add_node(graph, node_type, name=None, attrs={}):
     """Add new node to the graph."""
+    if graph.metamodel_ is not None:
+        if node_type not in graph.metamodel_.nodes():
+            raise ValueError(
+                "Type '%s' is not allowed by metamodel!" % node_type)
     if name is not None:
         new_name = name
     else:
@@ -301,7 +305,17 @@ def remove_node(graph, node):
 
 def add_edge(graph, source, target, attrs={}):
     """Add edge to the graph."""
-    if graph.is_directed(): 
+    if graph.is_directed():
+        # check restrictions of metamodel
+        if graph.metamodel_ is not None:
+            source_type = graph.node[source].type_
+            target_type = graph.node[target].type_
+            if (source_type, target_type) not in graph.metamodel_.edges():
+                raise ValueError(
+                    "Edge from '%s' to '%s' is not allowed by metamodel" %
+                    (source_type, target_type)
+                )
+        # check existance of nodes
         if not (source, target) in graph.edges():
             if source not in graph.nodes():
                 raise ValueError("Node %s does not exist" % str(source))
@@ -313,6 +327,17 @@ def add_edge(graph, source, target, attrs={}):
             raise ValueError(
                 "Edge %s-%s already exists" % (str(source), str(target)))
     else:
+        # check restrictions of metamodel
+        if graph.metamodel_ is not None:
+            source_type = graph.node[source].type_
+            target_type = graph.node[target].type_
+            if (source_type, target_type) not in graph.metamodel_.edges():
+                if (target_type, source_type) not in graph.metamodel_.edges():
+                    raise ValueError(
+                        "Edge from '%s' to '%s' is not allowed by metamodel" %
+                        (source_type, target_type)
+                    )
+        # check existance of nodes
         if (source, target) not in graph.edges() and (target, source) not in graph.edges():
             if source not in graph.nodes():
                 raise ValueError("Node %s does not exist" % str(source))
