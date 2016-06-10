@@ -26,24 +26,78 @@ class TypedDiGraph(nx.DiGraph):
     between the node if one of them does not exist
     """
 
-    def __init__(self):
+    def __init__(self, metamodel=None):
         nx.DiGraph.__init__(self)
+        self.metamodel_ = metamodel
 
-    def add_node(self, node_id, type, attrs=None):
+    def add_node(self, node_id, node_type, attrs=None):
+        if self.metamodel_ is not None:
+            if node_type not in self.metamodel_.nodes():
+                raise ValueError(
+                    "Type '%s' is not allowed by metamodel!" % node_type)
         nx.DiGraph.add_node(self, node_id)
-        self.node[node_id] = TypedNode(type, attrs)
+        self.node[node_id] = TypedNode(node_type, attrs)
 
     def add_nodes_from(self, node_list):
         for node_id, node_type in node_list:
+            if self.metamodel_ is not None:
+                if node_type not in self.metamodel_.nodes():
+                    raise ValueError(
+                        "Type '%s' is not allowed by metamodel!" %
+                        node_type
+                    )
             self.add_node(node_id, node_type)
 
-    def add_edges_from(self, edge_list):
+    def add_edge(self, s, t, attrs=None, **attr):
+        # set up attribute dict (from Networkx to preserve the signature)
+        if attrs is None:
+            attrs = attr
+        else:
+            try:
+                attrs.update(attr)
+            except AttributeError:
+                raise ValueError(
+                    "The attr_dict argument must be a dictionary."
+                )
+        if s not in self.nodes():
+            raise ValueError("Node %s is not defined!" % s)
+        if t not in self.nodes():
+            raise ValueError("Node %s is not defined!" % t)
+        source_type = self.node[s].type_
+        target_type = self.node[t].type_
+        if self.metamodel_ is not None:
+            if (source_type, target_type) not in self.metamodel_.edges():
+                raise ValueError(
+                    "Edge from '%s' to '%s' is not allowed by metamodel" %
+                    (source_type, target_type)
+                )
+        nx.DiGraph.add_edge(self, s, t, attrs)
+
+    def add_edges_from(self, edge_list, attrs=None, **attr):
+        # set up attribute dict (from Networkx to preserve the signature)
+        if attrs is None:
+            attrs = attr
+        else:
+            try:
+                attrs.update(attr)
+            except AttributeError:
+                raise ValueError(
+                    "The attr_dict argument must be a dictionary."
+                )
         for edge in edge_list:
             if not edge[0] in self.nodes():
                 raise ValueError("Node %s is not defined!" % edge[0])
             if not edge[1] in self.nodes():
                 raise ValueError("Node %s is not defined!" % edge[1])
-        nx.DiGraph.add_edges_from(self, edge_list)
+            source_type = self.node[edge[0]].type_
+            target_type = self.node[edge[1]].type_
+            if self.metamodel_ is not None:
+                if (source_type, target_type) not in self.metamodel_.edges():
+                    raise ValueError(
+                        "Edge from '%s' to '%s' is not allowed by metamodel" %
+                        (source_type, target_type)
+                    )
+        nx.DiGraph.add_edges_from(self, edge_list, attrs)
 
     def get_edge(self, source, target):
         return self.edge[source][target]
@@ -60,7 +114,11 @@ class TypedDiGraph(nx.DiGraph):
         Similar to networkx.relabel.relabel_nodes:
         https://networkx.github.io/documentation/development/_modules/networkx/relabel.html
         """
-        g = TypedDiGraph()
+        if self.metamodel_ is not None:
+            g = TypedDiGraph(self.metamodel_.copy())
+        else:
+            g = TypedDiGraph()
+
         old_nodes = set(mapping.keys())
 
         for old_node in old_nodes:
@@ -93,30 +151,90 @@ class TypedDiGraph(nx.DiGraph):
 class TypedGraph(nx.Graph):
     """Define simple typed undirected graph."""
 
-    def __init__(self):
+    def __init__(self, metamodel=None):
         nx.Graph.__init__(self)
+        self.metamodel_ = metamodel
 
-    def add_node(self, node_id, type, attrs=None):
+    def add_node(self, node_id, node_type, attrs=None):
         if node_id not in self.nodes():
+            if self.metamodel_ is not None:
+                if node_type not in self.metamodel_.nodes():
+                    raise ValueError(
+                        "Type '%s' is not allowed by metamodel!" % node_type)
             nx.Graph.add_node(self, node_id)
-            self.node[node_id] = TypedNode(type, attrs)
+            self.node[node_id] = TypedNode(node_type, attrs)
         else:
             raise ValueError("Node %s already exists!" % node_id)
 
     def add_nodes_from(self, node_list):
         for node_id, node_type in node_list:
             if node_id not in self.nodes():
+                if self.metamodel_ is not None:
+                    if node_type not in self.metamodel_.nodes():
+                        raise ValueError(
+                            "Type '%s' is not allowed by metamodel!" %
+                            node_type
+                        )
                 self.add_node(node_id, node_type)
             else:
                 raise ValueError("Node %s already exists!" % node_id)
 
-    def add_edges_from(self, edge_list):
+    def add_edge(self, s, t, attrs=None, **attr):
+        # set up attribute dict (from Networkx to preserve the signature)
+        if attrs is None:
+            attrs = attr
+        else:
+            try:
+                attrs.update(attr)
+            except AttributeError:
+                raise ValueError(
+                    "The attr_dict argument must be a dictionary."
+                )
+        if s not in self.nodes():
+            raise ValueError("Node %s is not defined!" % s)
+        if t not in self.nodes():
+            raise ValueError("Node %s is not defined!" % t)
+        source_type = self.node[s].type_
+        target_type = self.node[t].type_
+        if self.metamodel_ is not None:
+            if (source_type, target_type) not in self.metamodel_.edges():
+                if (target_type, source_type) not in self.metamodel_.edges():
+                    raise ValueError(
+                        "Edge from '%s' to '%s' is not allowed by metamodel" %
+                        (source_type, target_type)
+                    )
+        # There is some strange things with edge attributes in NetworkX
+        # for undirected graphs: if I say graph.edge[1][2] = <some attributes>
+        # if will not update value of graph.edge[2][1]
+        nx.Graph.add_edge(self, s, t, attrs)
+        nx.Graph.add_edge(self, t, s, attrs)
+
+    def add_edges_from(self, edge_list, attrs=None, **attr):
+        # set up attribute dict (from Networkx to preserve the signature)
+        if attrs is None:
+            attrs = attr
+        else:
+            try:
+                attrs.update(attr)
+            except AttributeError:
+                raise ValueError(
+                    "The attr_dict argument must be a dictionary."
+                )
         for edge in edge_list:
             if not edge[0] in self.nodes():
                 raise ValueError("Node %s is not defined!" % edge[0])
             if not edge[1] in self.nodes():
                 raise ValueError("Node %s is not defined!" % edge[1])
-        nx.Graph.add_edges_from(self, edge_list)
+            source_type = self.node[edge[0]].type_
+            target_type = self.node[edge[1]].type_
+            if self.metamodel_ is not None:
+                if (source_type, target_type) not in self.metamodel_.edges():
+                    if (target_type, source_type) not in self.metamodel_.edges():
+                        raise ValueError(
+                            "Edge from '%s' to '%s' is not allowed by metamodel" %
+                            (source_type, target_type)
+                        )
+        nx.Graph.add_edges_from(self, edge_list, attrs)
 
     def get_edge(self, source, target):
         return self.edge[source][target]
@@ -131,7 +249,11 @@ class TypedGraph(nx.Graph):
         Similar to networkx.relabel.relabel_nodes:
         https://networkx.github.io/documentation/development/_modules/networkx/relabel.html
         """
-        g = TypedGraph()
+        if self.metamodel_ is not None:
+            g = TypedGraph(self.metamodel_.copy())
+        else:
+            g = TypedGraph()
+
         old_nodes = set(mapping.keys())
 
         for old_node in old_nodes:
