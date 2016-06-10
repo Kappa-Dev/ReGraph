@@ -412,3 +412,63 @@ class TestRewrites(object):
         RHS_instance = rw.apply_rule(
             instances[0],
             h1, h2)
+
+    def test_rewriting_with_metamodel(self):
+        meta_meta = TypedDiGraph()
+        meta_meta.add_node("agent", "node")
+        meta_meta.add_node("action", "node")
+        meta_meta.add_edges_from([
+            ("agent", "agent"),
+            ("action", "action"),
+            ("action", "agent"),
+            ("agent", "action")])
+
+        meta = TypedDiGraph(meta_meta)
+        meta.add_node("protein", "agent")
+        meta.add_node("region", "agent")
+        meta.add_node("action", "agent")
+        meta.add_edges_from([
+            ("protein", "protein"),
+            ("region", "region"),
+            ("action", "action"),
+            ("region", "protein"),
+            ("region", "action"),
+            ("action", "region"),
+        ])
+
+        graph = TypedDiGraph(meta)
+        graph.add_nodes_from([
+            (1, "protein"),
+            (2, "region"),
+            (3, "action"),
+            (4, "region"),
+            (5, "protein"),
+            (6, "region"),
+            (7, "protein")])
+        graph.add_edge(2, 1)
+        graph.add_edge(2, 3)
+        graph.add_edge(4, 3)
+        graph.add_edge(4, 5)
+        graph.add_edge(6, 3)
+        graph.add_edge(6, 7)
+
+        rw = Rewriter(graph)
+
+        LHS = TypedDiGraph()
+        LHS.add_node("a", "protein")
+        LHS.add_node("b", "region")
+        LHS.add_node(33, "action")
+        LHS.add_edges_from([
+            ("b", "a"),
+            ("b", 33)])
+        instances = rw.find_matching(LHS)
+        try:
+            rw.add_node(instances[0], "new_type", 2)
+            assert False
+        except:
+            assert True
+        try:
+            rw.add_edge(instances[0], "a", 33)
+            assert False
+        except:
+            assert True
