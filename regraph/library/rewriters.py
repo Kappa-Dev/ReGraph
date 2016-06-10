@@ -1,11 +1,13 @@
 """."""
 import networkx as nx
 from networkx.algorithms import isomorphism
+import warnings
 
 import itertools
 
 from regraph.library.parser import parser
 from regraph.library.primitives import (merge_nodes,
+                                        cast_node,
                                         clone_node,
                                         add_node,
                                         remove_node,
@@ -197,6 +199,75 @@ class Rewriter:
         else:
             target = node_2
         update_edge_attrs(self.graph_, source, target, new_attrs)
+
+    def fold_attr(self, typ, attr):
+        fold_dict = {}
+        for n in self.graph_.nodes():
+            if self.graph_.node[n].type_ == typ:
+                if attr in self.graph_.node[n].attrs_:
+                    if self.graph_.node[n].attrs_[attr] in fold_dict.keys():
+                        fold_dict[self.graph_.node[n].attrs_[attr]].append(n)
+                    else:
+                        fold_dict[self.graph_.node[n].attrs_[attr]] = [n]
+                else:
+                    if "__NOT_DEFINED__" in fold_dict.keys():
+                        fold_dict["__NOT_DEFINED__"].append(n)
+                    else:
+                        fold_dict["__NOT_DEFINED__"] = [n]
+        for (k, l) in fold_dict.items():
+            merge_nodes(self.graph_, l, node_name=attr+":"+k)
+            for n in l:
+                for n0 in self.fully_expanded_graph.nodes():
+                    if self.h_exp.mapping_[n0] == n:
+                        self.h_exp.mapping_[n0] = attr+":"+k
+
+    def fold_nodes(self, l):
+        ty = []
+        for n in l:
+            if n in self.graph_.nodes():
+                if not self.graph_.node[n].type_ in ty:
+                    ty.append(str(self.graph_.node[n].type_))
+            else:
+                raise ValueError(
+                    "Node %s isn't a valid node" % str(n)
+                )
+        new_ty = fold_left(lambda x, acc : acc+"_"+x, "_", sorted(ty))
+        i = 0
+        new_name = new_ty+"0"
+        while(new_name in self.graph_.nodes()):
+            i += 1
+            new_name = new_ty+str(i)
+        for n in l:
+            cast_node(self.graph_, n, new_ty)
+            for n0 in self.fully_expanded_graph.nodes():
+                if self.h_exp.mapping_[n0] == n:
+                    self.h_exp.mapping_[n0] = new_name
+        merge_nodes(self.graph_, l, node_name = new_name)
+
+
+    def expand_node(self, n0):
+        origin = []
+        for n in self.fully_expanded_graph.nodes():
+            if self.h_exp.mapping_[n] == n0:
+                origin.append(n)
+        if len(origin) > 1 :
+            exp_graph = self.fully_expanded_graph.subgraph(origin).copy()
+            self.graph_ = union(self.graph_, exp_graph)
+            for n in exp_graph.nodes():
+                neighbors = self.fully_expanded_graph.neighbors(n)
+                for n1 in neighbors:
+                    self.graph_.add_edge(n, self.h_exp.mapping_[n1], self.fully_expanded_graph.get_edge(n,n1))
+                self.h_exp.mapping_[n] = n
+            remove_node(self.graph_, n0)
+        elif len(origin) == 1 :
+            warnings.warn(
+                "Node %s is atomic, can't expand it further" % str(origin[0]),
+                Warning
+            )
+        else:
+            raise ValueError(
+                "Node %s does not exist, can't expand it" % (str(n0))
+            )
 
     def transform_instance(self, instance, commands):
         """Transform the instance of LHS of the rule in the graph."""

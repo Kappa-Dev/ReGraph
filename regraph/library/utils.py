@@ -127,3 +127,13 @@ def keys_by_value(dictionary, val):
         if value == val:
             res.append(key)
     return res
+
+def fold_left(f, init, l):
+    """ f : a -> b -> b
+        init : b
+        l : a list
+        Returns f(...f(l[1],f(l[0], init)) """
+    res = init
+    for x in l:
+        res = f(x, res)
+    return res
