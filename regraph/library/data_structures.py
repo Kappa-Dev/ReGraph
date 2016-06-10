@@ -31,21 +31,18 @@ class TypedDiGraph(nx.DiGraph):
         self.metamodel_ = metamodel
 
     def add_node(self, node_id, node_type, attrs=None):
-        if self.metamodel_ is not None:
-            if node_type not in self.metamodel_.nodes():
-                raise ValueError(
-                    "Type '%s' is not allowed by metamodel!" % node_type)
-        nx.DiGraph.add_node(self, node_id)
-        self.node[node_id] = TypedNode(node_type, attrs)
-
-    def add_nodes_from(self, node_list):
-        for node_id, node_type in node_list:
+        if node_id not in self.nodes():
             if self.metamodel_ is not None:
                 if node_type not in self.metamodel_.nodes():
                     raise ValueError(
-                        "Type '%s' is not allowed by metamodel!" %
-                        node_type
-                    )
+                        "Type '%s' is not allowed by metamodel!" % node_type)
+                nx.Graph.add_node(self, node_id)
+                self.node[node_id] = TypedNode(node_type, attrs)
+        else:
+            raise ValueError("Node %s already exists!" % node_id)
+
+    def add_nodes_from(self, node_list):
+        for node_id, node_type in node_list:
             self.add_node(node_id, node_type)
 
     def add_edge(self, s, t, attrs=None, **attr):
@@ -161,23 +158,14 @@ class TypedGraph(nx.Graph):
                 if node_type not in self.metamodel_.nodes():
                     raise ValueError(
                         "Type '%s' is not allowed by metamodel!" % node_type)
-            nx.Graph.add_node(self, node_id)
-            self.node[node_id] = TypedNode(node_type, attrs)
+                nx.Graph.add_node(self, node_id)
+                self.node[node_id] = TypedNode(node_type, attrs)
         else:
             raise ValueError("Node %s already exists!" % node_id)
 
     def add_nodes_from(self, node_list):
         for node_id, node_type in node_list:
-            if node_id not in self.nodes():
-                if self.metamodel_ is not None:
-                    if node_type not in self.metamodel_.nodes():
-                        raise ValueError(
-                            "Type '%s' is not allowed by metamodel!" %
-                            node_type
-                        )
-                self.add_node(node_id, node_type)
-            else:
-                raise ValueError("Node %s already exists!" % node_id)
+            self.add_node(node_id, node_type)
 
     def add_edge(self, s, t, attrs=None, **attr):
         # set up attribute dict (from Networkx to preserve the signature)
@@ -205,7 +193,7 @@ class TypedGraph(nx.Graph):
                     )
         # There is some strange things with edge attributes in NetworkX
         # for undirected graphs: if I say graph.edge[1][2] = <some attributes>
-        # if will not update value of graph.edge[2][1]
+        # it will not update value of graph.edge[2][1]
         nx.Graph.add_edge(self, s, t, attrs)
         nx.Graph.add_edge(self, t, s, attrs)
 
@@ -340,7 +328,7 @@ class Homomorphism:
             len(set(self.mapping_.values()))
 
     def find_final_PBC(self):
-        # edges to remove will be removed automatically upon removal of the nodes 
+        # edges to remove will be removed automatically upon removal of the nodes
         nodes = set([n for n in self.target_.nodes()
                      if n not in self.mapping_.values()])
         node_attrs = {}

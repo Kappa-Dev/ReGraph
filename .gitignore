@@ -7,3 +7,4 @@ regraph/__pycache__/
 tests/__pycache__/
 tests/*.png
 *.pyc
+regraph/library/tmp.py
