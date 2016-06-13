@@ -137,3 +137,12 @@ def fold_left(f, init, l):
     for x in l:
         res = f(x, res)
     return res
+
+def normalize_attrs(attrs_):
+    if attrs_ != None:
+        for k,v in attrs_.items():
+            if type(v) != set:
+                if type(v) == list:
+                    attrs_[k] = set(v)
+                else:
+                    attrs_[k] = {v}

@@ -23,14 +23,8 @@ def merge_attributes(attr1, attr2, method="union"):
                         {key1: attr1[key1]})
                 else:
                     attr_set = set()
-                    if type(attr1[key1]) == set:
-                        attr_set.update(attr1[key1])
-                    else:
-                        attr_set.add(attr1[key1])
-                    if type(attr2[key1]) == set:
-                        attr_set.update(attr2[key1])
-                    else:
-                        attr_set.add(attr2[key1])
+                    attr_set.add(attr1[key1])
+                    attr_set.add(attr2[key1])
                     result.update(
                         {key1: attr_set})
             else:
@@ -48,14 +42,8 @@ def merge_attributes(attr1, attr2, method="union"):
                 else:
                     attr_set1 = set()
                     attr_set2 = set()
-                    if type(attr1[key1]) == set:
-                        attr_set1.update(attr1[key1])
-                    else:
-                        attr_set1.add(attr1[key1])
-                    if type(attr2[key1]) == set:
-                        attr_set2.update(attr2[key1])
-                    else:
-                        attr_set2.add(attr2[key1])
+                    attr_set1.add(attr1[key1])
+                    attr_set2.add(attr2[key1])
                     intersect = set.intersection(attr_set1, attr_set2)
                     if len(intersect) == 1:
                         result.update({key1: list(intersect)[0]})
@@ -365,7 +353,7 @@ def remove_edge(graph, source, target):
             graph.remove_edge(source, target)
         else:
             raise ValueError(
-                "Edge %s->%s does not exist!" % (str(source), str(target))) 
+                "Edge %s->%s does not exist!" % (str(source), str(target)))
     return
 
 
@@ -380,11 +368,6 @@ def add_node_attrs(graph, node, attrs_dict):
                 if key not in graph.node[node].attrs_.keys():
                     graph.node[node].attrs_.update({key: value})
                 else:
-                    if type(value) != set:
-                        value = set([value])
-                    if type(graph.node[node].attrs_[key]) != set:
-                        graph.node[node].attrs_[key] =\
-                            set([graph.node[node].attrs_[key]])
                     graph.node[node].attrs_[key].update(value)
 
 
@@ -397,11 +380,6 @@ def remove_node_attrs(graph, node, attrs_dict):
                 warnings.warn(
                     "Node %s does not have attribute '%s'" % (str(node), str(key)), RuntimeWarning)
             else:
-                if type(value) != set:
-                    value = set([value])
-                if type(graph.node[node].attrs_[key]) != set:
-                    graph.node[node].attrs_[key] =\
-                        set([graph.node[node].attrs_[key]])
                 elements_to_remove = []
                 for el in value:
                     if el in graph.node[node].attrs_[key]:
@@ -423,11 +401,6 @@ def add_edge_attrs(graph, node_1, node_2, attrs_dict):
                 if key not in graph.edge[node_1][node_2].keys():
                     graph.edge[node_1][node_2].update({key: value})
                 else:
-                    if type(value) != set:
-                        value = set([value])
-                    if type(graph.edge[node_1][node_2][key]) != set:
-                        graph.edge[node_1][node_2][key] =\
-                            set([graph.edge[node_1][node_2][key]])
                     graph.edge[node_1][node_2][key].update(value)
     else:
         if (node_1, node_2) not in graph.edges() and (node_2, node_1) not in graph.edges():
@@ -438,13 +411,6 @@ def add_edge_attrs(graph, node_1, node_2, attrs_dict):
                     graph.edge[node_1][node_2].update({key: value})
                     graph.edge[node_2][node_1].update({key: value})
                 else:
-                    if type(value) != set:
-                        value = set([value])
-                    if type(graph.edge[node_1][node_2][key]) != set:
-                        graph.edge[node_1][node_2][key] =\
-                            set([graph.edge[node_1][node_2][key]])
-                        graph.edge[node_2][node_1][key] =\
-                            set([graph.edge[node_2][node_1][key]])
                     graph.edge[node_1][node_2][key].update(value)
                     graph.edge[node_2][node_1][key].update(value)
 
@@ -459,14 +425,6 @@ def remove_edge_attrs(graph, node_1, node_2, attrs_dict):
                     "Edge %s-%s does not have attribute '%s'" %
                     (str(node_1), str(node_2), str(key)), RuntimeWarning)
             else:
-                if type(value) != set:
-                    value = set([value])
-                if type(graph.edge[node_1][node_2][key]) != set:
-                    graph.edge[node_1][node_2][key] =\
-                        set([graph.edge[node_1][node_2][key]])
-                    if not graph.is_directed():
-                        graph.edge[node_2][node_1][key] =\
-                            set([graph.edge[node_2][node_1][key]])
                 elements_to_remove = []
                 for el in value:
                     if el in graph.edge[node_1][node_2][key]:

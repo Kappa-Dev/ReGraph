@@ -2,7 +2,7 @@
 
 import networkx as nx
 
-from regraph.library.utils import (is_subdict, keys_by_value)
+from regraph.library.utils import (is_subdict, keys_by_value, normalize_attrs)
 
 
 class TypedNode:
@@ -11,6 +11,7 @@ class TypedNode:
     def __init__(self, n_type=None, attrs=None):
         self.type_ = n_type
         self.attrs_ = attrs
+        normalize_attrs(self.attrs_)
         return
 
 
@@ -68,6 +69,7 @@ class TypedDiGraph(nx.DiGraph):
                     "Edge from '%s' to '%s' is not allowed by metamodel" %
                     (source_type, target_type)
                 )
+        normalize_attrs(attrs)
         nx.DiGraph.add_edge(self, s, t, attrs)
 
     def add_edges_from(self, edge_list, attrs=None, **attr):
@@ -94,6 +96,7 @@ class TypedDiGraph(nx.DiGraph):
                         "Edge from '%s' to '%s' is not allowed by metamodel" %
                         (source_type, target_type)
                     )
+        normalize_attrs(attrs)
         nx.DiGraph.add_edges_from(self, edge_list, attrs)
 
     def get_edge(self, source, target):
@@ -103,6 +106,7 @@ class TypedDiGraph(nx.DiGraph):
         if not (source, target) in self.edges():
             raise ValueError(
                 "Edge %s-%s does not exist" % (str(source), str(target)))
+        normalize_attrs(attrs)
         self.edge[source][target] = attrs
 
     def relabel_nodes(self, mapping):
@@ -194,6 +198,7 @@ class TypedGraph(nx.Graph):
         # There is some strange things with edge attributes in NetworkX
         # for undirected graphs: if I say graph.edge[1][2] = <some attributes>
         # it will not update value of graph.edge[2][1]
+        normalize_attrs(attrs)
         nx.Graph.add_edge(self, s, t, attrs)
         nx.Graph.add_edge(self, t, s, attrs)
 
@@ -222,12 +227,17 @@ class TypedGraph(nx.Graph):
                             "Edge from '%s' to '%s' is not allowed by metamodel" %
                             (source_type, target_type)
                         )
+        normalize_attrs(attrs)
         nx.Graph.add_edges_from(self, edge_list, attrs)
 
     def get_edge(self, source, target):
         return self.edge[source][target]
 
     def set_edge(self, u, v, attrs):
+        if not (u, v) in self.edges():
+            raise ValueError(
+                "Edge %s-%s does not exist" % (str(u), str(v)))
+        normalize_attrs(attrs)
         self.edge[u][v] = attrs
         self.edge[v][u] = attrs
 

@@ -1,0 +1,108 @@
+test_category_op.TestCategoryOp.test_type ... ok
+test_data_structures.TestDataStructures.test_homomorphism ... ok
+test_data_structures.TestDataStructures.test_homomorphism_attributes_mismatch ... ok
+test_data_structures.TestDataStructures.test_homomorphism_connectivity_fails ... ok
+test_data_structures.TestDataStructures.test_homomorphism_edge_attributes_mismatch ... ok
+test_data_structures.TestDataStructures.test_homomorphism_not_covered ... ok
+test_data_structures.TestDataStructures.test_homomorphism_type_mismatch ... ok
+test_data_structures.TestDataStructures.test_homorphism_init ... ok
+test_data_structures.TestDataStructures.test_init_with_metamodel_directed ... ok
+test_data_structures.TestDataStructures.test_init_with_metamodel_undirected ... ok
+test_parser.TestParser.test_add_edge ... FAIL
+test_parser.TestParser.test_add_node ... FAIL
+test_parser.TestParser.test_clone ... ok
+test_parser.TestParser.test_delete_edge ... ok
+test_parser.TestParser.test_delete_node ... ok
+test_parser.TestParser.test_merge_nodes ... FAIL
+test_primitives.TestPrimitives.test_add_edge ... ok
+test_primitives.TestPrimitives.test_add_edge_attrs ... ok
+test_primitives.TestPrimitives.test_add_edge_exists ... ok
+test_primitives.TestPrimitives.test_add_edge_non_existing_node ... ok
+test_primitives.TestPrimitives.test_add_node ... ok
+test_primitives.TestPrimitives.test_add_node_attrs ... ok
+test_primitives.TestPrimitives.test_add_node_exists ... ok
+test_primitives.TestPrimitives.test_cast_node ... ok
+test_primitives.TestPrimitives.test_clone_node ... ok
+test_primitives.TestPrimitives.test_clone_node_non_existing ... ok
+test_primitives.TestPrimitives.test_merge_attributes ... ok
+test_primitives.TestPrimitives.test_merge_nodes ... ok
+test_primitives.TestPrimitives.test_merge_nodes_method ... ok
+test_primitives.TestPrimitives.test_merge_nodes_name_exists ... ok
+test_primitives.TestPrimitives.test_merge_nodes_type_fail ... ok
+test_primitives.TestPrimitives.test_remove_edge ... ok
+test_primitives.TestPrimitives.test_remove_edge_attrs ... ok
+test_primitives.TestPrimitives.test_remove_edge_non_existing ... ok
+test_primitives.TestPrimitives.test_remove_node ... ok
+test_primitives.TestPrimitives.test_remove_node_attrs ... ok
+test_primitives.TestPrimitives.test_remove_node_non_existing ... ok
+test_primitives.TestPrimitives.test_update_edge_attrs ... ok
+test_primitives.TestPrimitives.test_update_node_attrs ... ok
+test_pullback.TestPullback.test_type ... ok
+test_rewriters.TestRewrites.test_cloning_cases ... ok
+test_rewriters.TestRewrites.test_clonning_merging_sequence ... ok
+test_rewriters.TestRewrites.test_find_matching ... ok
+test_rewriters.TestRewrites.test_merging ... ok
+test_rewriters.TestRewrites.test_rewriting_with_metamodel ... ok
+test_rewriters.TestRewrites.test_rule_to_homomorphism ... ERROR
+test_rewriters.TestRewrites.test_transform_instance ... ok
+test_rewriters.TestRewrites.test_undirected_dec_init ... ok
+test_rewriters.TestRewrites.test_undirected_imp_init ... ok
+
+======================================================================
+ERROR: test_rewriters.TestRewrites.test_rule_to_homomorphism
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/usr/local/lib/python2.7/dist-packages/nose/case.py", line 197, in runTest
+    self.test(*self.arg)
+  File "/home/ismail/Documents/projects/ReGraph/tests/test_rewriters.py", line 311, in test_rule_to_homomorphism
+    add_edge_attrs merged new_node {j: 33}."""
+  File "/home/ismail/Documents/projects/ReGraph/regraph/library/rewriters.py", line 516, in generate_rule
+    edges_method)
+  File "/home/ismail/Documents/projects/ReGraph/regraph/library/primitives.py", line 225, in merge_nodes
+    graph.add_edges_from([(n, node_name) for n in neighbors])
+  File "/home/ismail/Documents/projects/ReGraph/regraph/library/data_structures.py", line 213, in add_edges_from
+    raise ValueError("Node %s is not defined!" % edge[0])
+ValueError: Node 3 is not defined!
+
+======================================================================
+FAIL: test_parser.TestParser.test_add_edge
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/usr/local/lib/python2.7/dist-packages/nose/case.py", line 197, in runTest
+    self.test(*self.arg)
+  File "/home/ismail/Documents/projects/ReGraph/tests/test_parser.py", line 119, in test_add_edge
+    assert_equals(parsed["attributes"], {"a": "v"})
+AssertionError: ([(['a', 'v'], {})], {'a': [('v', 0)]}) != {'a': 'v'}
+
+======================================================================
+FAIL: test_parser.TestParser.test_add_node
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/usr/local/lib/python2.7/dist-packages/nose/case.py", line 197, in runTest
+    self.test(*self.arg)
+  File "/home/ismail/Documents/projects/ReGraph/tests/test_parser.py", line 61, in test_add_node
+    assert False
+AssertionError
+
+======================================================================
+FAIL: test_parser.TestParser.test_merge_nodes
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/usr/local/lib/python2.7/dist-packages/nose/case.py", line 197, in runTest
+    self.test(*self.arg)
+  File "/home/ismail/Documents/projects/ReGraph/tests/test_parser.py", line 155, in test_merge_nodes
+    "edges_method": "union"}
+AssertionError: {'edges_method': 'union', 'nodes': ([6, 'A', 2], {}), 'method': 'union', 'keywor [truncated]... != {'edges_method': 'union', 'nodes': [6, 'A', 2], 'method': 'union', 'keyword': 'm [truncated]...
+  {'edges_method': 'union',
+   'keyword': 'merge',
+   'method': 'union',
+   'node_name': 'mergee',
+-  'nodes': ([6, 'A', 2], {})}
+?           -           --- --
+
++  'nodes': [6, 'A', 2]}
+
+----------------------------------------------------------------------
+Ran 49 tests in 5.515s
+
+FAILED (errors=1, failures=3)

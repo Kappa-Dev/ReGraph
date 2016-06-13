@@ -71,11 +71,8 @@ def pullback_complement(hom):
                 if key not in attrs.keys():
                     node_attrs[node].update({key: value})
                 else:
-                    if type(value) != set:
-                        value = set([value])
-                    else:
-                        node_attrs[node].update(
-                            {key: set([el for el in value if el not in attrs[key]])})
+                    node_attrs[node].update(
+                        {key: set([el for el in value if el not in attrs[key]])})
 
     edge_attrs = {}
     edges = set()
@@ -113,11 +110,8 @@ def pullback_complement(hom):
             if key not in attrs.keys():
                 edge_attrs[edge].update({key: value})
             else:
-                if type(value) != set:
-                    value = set([value])
-                else:
-                    edge_attrs[edge].update(
-                        {key: set([el for el in value if el not in attrs[key]])})
+                edge_attrs[edge].update(
+                    {key: set([el for el in value if el not in attrs[key]])})
     return (nodes, edges, node_attrs, edge_attrs)
 
 
@@ -138,11 +132,8 @@ def pushout(hom):
                 if key not in attrs.keys():
                     node_attrs[node].update({key: value})
                 else:
-                    if type(value) != set:
-                        value = set([value])
-                    else:
-                        node_attrs[node].update(
-                            {key: set([el for el in value if el not in attrs[key]])})
+                    node_attrs[node].update(
+                        {key: set([el for el in value if el not in attrs[key]])})
 
     edges = dict()
     edge_attrs = {}
@@ -171,15 +162,7 @@ def pushout(hom):
             if key not in attrs.keys():
                 edge_attrs[edge].update({key: value})
             else:
-                if type(value) != set:
-                    value = set([value])
-                else:
-                    if type(attrs[key]) != set:
-                        edge_attrs[edge].update(
-                            {key: set([el for el in value
-                                       if el not in set([attrs[key]])])})
-                    else:
-                        edge_attrs[edge].update(
-                            {key: set([el for el in value
-                                       if el not in attrs[key]])})
+                edge_attrs[edge].update(
+                    {key: set([el for el in value
+                               if el not in attrs[key]])})
     return (nodes, edges, node_attrs, edge_attrs)

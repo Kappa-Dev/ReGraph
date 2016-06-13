@@ -1,6 +1,11 @@
+import networkx as nx
+
 from regraph.library.data_structures import (TypedGraph,
                                              TypedDiGraph,
                                              Homomorphism)
+from regraph.library.category_op import (find_PB,
+                                         find_PO,
+                                         find_final_PBC)
 
 class GraphModeler(object):
     """ Arguments : l : nx.Graph * dict list
@@ -9,12 +14,16 @@ class GraphModeler(object):
                     directed : bool
     """
 
-    def __init__(self, l, names, directed=False):
+    def __init__(self, l, names):
+        """ l : nx.Graph list (directed or not)
+            names : str list
+        """
         typing_graph = None
         self.rw_chain = []
         self.rw_names = []
         self.gr_homs = []
         for i in range(len(l)):
+            directed = type(l[î]) == nx.DiGraph
             typing_graph, gr_homs[i] = self.make_tygraph(l[i][0], typing_graph, l[i][1], directed)
             self.rw_chain[i] = Rewriter(typing_graph)
 
@@ -40,7 +49,7 @@ class GraphModeler(object):
         return res, Homomorphism(res, T, hom)
 
     def get_by_id(self, n):
-        return self.rw_chain[n][1]
+        return self.rw_chain[n]
 
     def get_by_name(self, name):
         for i in range(self.rw_names):
@@ -50,10 +59,24 @@ class GraphModeler(object):
             "Graph %s is not defined in the modeler" % name
         )
 
-    def rewrite(self, n_i, o_f):
+    def rewrite(self, n_i, left_h, right_h):
         """ n_i : name or id
-            o_f : operations (imperative) or function : rg.Rewriter -> unit
+            ops : operations (imperative)
         """
+        if type(n_i) == int:
+            rew = self.get_by_id(n_i)
+        elif type(n_i) == str:
+            rew = self.get_by_name(n_i)
+        else:
+            raise ValueError(
+                "Undefined identifier of type %s, was expecting int or str" %
+                type(n_i)
+            )
+
+        if left_h.source_ != right_h.source_:
+            raise ValueError(
+                "Can't rewrite, homomorphisms don't have the same preserved part"
+            )
 
 
     def propagate(self):
