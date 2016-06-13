@@ -3,65 +3,57 @@ from regraph.library.data_structures import TypedGraph
 from regraph.library.data_structures import Homomorphism
 
 from regraph.library.primitives import cast_node, remove_edge
+from regraph.library.category_op import pullback
 
-graph_ = TypedDiGraph()
-graph_.add_node(1, 'agent',
-                     {'name': 'EGFR', 'state': 'p'})
-graph_.add_node(2, 'action', attrs={'name': 'BND'})
-graph_.add_node(3, 'agent',
-                     {'name': 'Grb2', 'aa': 'S', 'loc': 90})
-graph_.add_node(4, 'region', attrs={'name': 'SH2'})
-graph_.add_node(5, 'agent', attrs={'name': 'EGFR'})
-graph_.add_node(6, 'action', attrs={'name': 'BND'})
-graph_.add_node(7, 'agent', attrs={'name': 'Grb2'})
+D = TypedGraph()
 
-graph_.add_node(8, 'agent', attrs={'name': 'WAF1'})
-graph_.add_node(9, 'action', {'name': 'BND'})
-graph_.add_node(10, 'agent', {'name': 'G1-S/CDK', 'state': 'p'})
+D.add_node('square', 'square')
+D.add_node('circle', 'circle')
+D.add_node('dark_square', 'dark_square')
+D.add_node('dark_circle', 'dark_circle')
 
-graph_.add_node(11, 'agent')
-graph_.add_node(12, 'agent')
-graph_.add_node(13, 'agent')
+D.add_edge('square', 'circle')
+D.add_edge('circle', 'dark_circle')
+D.add_edge('circle', 'dark_square')
+D.add_edge('circle', 'circle')
 
-edges = [
-    (1, 2),
-    (4, 2),
-    (4, 3),
-    (5, 6),
-    (7, 6),
-    (8, 9),
-    (10, 9),
-    (11, 12),
-    (12, 11),
-    (12, 13),
-    (13, 12),
-    (11, 13),
-    (13, 11),
-    (5, 2)
-]
+B = TypedGraph(D)
 
-graph_.add_edge(1,3)
-graph_.add_edges_from(edges)
+B.add_node(1, 'square')
+B.add_node(2, 'circle')
+B.add_node(3, 'dark_circle')
 
-# later you can add some attributes to the edge
+B.add_edge(1, 2)
+B.add_edge(2, 3)
 
-graph_.set_edge(1, 2, {'s': 'p'})
-graph_.set_edge(4, 2, {'s': 'u'})
-graph_.set_edge(5, 6, {'s': 'p'})
-graph_.set_edge(7, 6, {'s': 'u'})
-graph_.set_edge(5, 2, {'s': 'u'})
+C = TypedGraph(D)
 
-LHS_ = TypedDiGraph()
+C.add_node(1, 'circle')
+C.add_node(2, 'circle')
+C.add_node(3, 'dark_circle')
+C.add_node(4, 'dark_square')
 
-LHS_.add_node(1, 'agent', {'name': 'EGFR'})
-LHS_.add_node(2, 'action', {'name': 'BND'})
-LHS_.add_node(3, 'region')
-LHS_.add_node(4, 'agent', {'name': 'Grb2'})
-LHS_.add_node(5, 'agent', {'name': 'EGFR'})
-LHS_.add_node(6, 'action', {'name': 'BND'})
-LHS_.add_node(7, 'agent', {'name': 'Grb2'})
+C.add_edge(1, 2)
+C.add_edge(1, 3)
+C.add_edge(1, 4)
 
-LHS_.add_edges_from([(1, 2), (3, 2), (3, 4), (5, 6), (7, 6)])
+dic_homBD = {
+    1: 'square',
+    2: 'circle',
+    3: 'dark_circle'
+}
 
-LHS_.set_edge(1, 2, {'s': 'p'})
-LHS_.set_edge(5, 6, {'s': 'p'})
+dic_homCD = {
+    1: 'circle',
+    2: 'circle',
+    3: 'dark_circle',
+    4: 'dark_square'
+}
+
+homBD = Homomorphism(B, D, dic_homBD)
+homCD = Homomorphism(C, D, dic_homCD)
+
+A, homAB, homAC = pullback(homBD, homCD)
+
+print(A.edges())
+print(A.nodes())

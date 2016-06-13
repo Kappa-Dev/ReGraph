@@ -38,8 +38,8 @@ class Rewriter:
         # have different types (e.g ints and strings).
         # For the sake of security we will temporarily make
         # all the nodes ids to be int
-        labels_mapping = dict([(n, i + 1) for i, n in enumerate(self.graph_.nodes())])
-        g = self.graph_.relabel_nodes(labels_mapping)
+        labels_mapping = dict([(n, i + 1) for i, n in enumerate(self.metamodel_.nodes())])
+        g = self.metamodel_relabel_nodes(labels_mapping)
         matching_nodes = set()
         # find all the nodes matching the nodes in pattern
         for pattern_node in pattern.nodes():

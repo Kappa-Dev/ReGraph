@@ -78,6 +78,15 @@ class GraphModeler(object):
                 "Can't rewrite, homomorphisms don't have the same preserved part"
             )
 
+        L_T = rew.find_matching(left_h.target_)
+        T-, P_T-, T-_T = pullback_complement(left_h, L_T)
+        G-, G-_G, G-_T- = pullback(rew.graph_.hom, T-_T)
+        Tprime, T-_Tprime, R_Tprime = pushout(P_T-, P_R)
+        Gprime, G-_Gprime, Gprime_Tprime = pullback_complement(G-_T-, T-_Tprime)
+        Gprime.metamodel_ = Tprime
+        Gprime.hom = Gprime_Tprime
+        return Gprime
+
 
     def propagate(self):
         pass
