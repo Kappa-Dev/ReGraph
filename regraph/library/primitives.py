@@ -387,6 +387,7 @@ def remove_node_attrs(graph, node, attrs_dict):
     if node not in graph.nodes():
         raise ValueError("Node %s does not exist" % str(node))
     else:
+        normalize_attrs(attrs_dict)
         for key, value in attrs_dict.items():
             if key not in graph.node[node].attrs_.keys():
                 warnings.warn(
@@ -433,6 +434,7 @@ def remove_edge_attrs(graph, node_1, node_2, attrs_dict):
     if (node_1, node_2) not in graph.edges() and (node_2, node_1) not in graph.edges():
         raise ValueError("Edge %s-%s does not exist" % (str(node_1), str(node_2)))
     else:
+        normalize_attrs(attrs_dict)
         for key, value in attrs_dict.items():
             if key not in graph.edge[node_1][node_2].keys():
                 warnings.warn(

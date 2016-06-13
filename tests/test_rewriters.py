@@ -192,7 +192,7 @@ class TestRewrites(object):
             (1, 5),
             (5, 4),
             (5, 6)])
-        g.set_edge(1, 2, {"a": 0})
+        g.set_edge(1, 2, {"a": {0}})
         g.set_edge(2, 3, {"k": {1, 2, 3}})
 
         rw = Rewriter(g)
@@ -202,7 +202,7 @@ class TestRewrites(object):
             [(10, "action"),
              (20, "agent"),
              (30, "agent")])
-        LHS.node[20].attrs_ = {"u": 0}
+        LHS.node[20].attrs_ = {"u": {0}}
 
         LHS.add_edges_from([
             (10, 20),
@@ -228,7 +228,7 @@ class TestRewrites(object):
              (3000, 3000)])
         RHS.set_edge(3000, 3000, {"k": {5, 6}})
         RHS.set_edge(2000, 3000, {"k": {1, 2, 10}})
-        RHS.set_edge(1000, 3000, {"a": 12})
+        RHS.set_edge(1000, 3000, {"a": {12}})
 
         instances = rw.find_matching(LHS)
         for i, instance in enumerate(instances):
@@ -271,7 +271,7 @@ class TestRewrites(object):
             (1, 5),
             (5, 4),
             (5, 6)])
-        g.set_edge(1, 2, {"a": 0})
+        g.set_edge(1, 2, {"a": {0}})
         g.set_edge(2, 3, {"k": {1, 2, 3}})
 
         rw = Rewriter(g)
@@ -281,7 +281,7 @@ class TestRewrites(object):
             [(1, "action"),
              (2, "agent"),
              (3, "agent")])
-        LHS.node[2].attrs_ = {"u": 0}
+        LHS.node[2].set_attrs({"u": 0})
 
         LHS.add_edges_from([
             (1, 2),

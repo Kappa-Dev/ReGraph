@@ -15,6 +15,10 @@ class TypedNode:
         normalize_attrs(self.attrs_)
         return
 
+    def set_attrs(self, attrs):
+        normalize_attrs(attrs)
+        self.attrs_ = attrs
+
 
 class TypedDiGraph(nx.DiGraph):
     """Define simple typed directed graph.
@@ -235,7 +239,7 @@ class TypedGraph(nx.Graph):
         return self.edge[source][target]
 
     def set_edge(self, u, v, attrs):
-        if not (u, v) in self.edges():
+        if (not (u, v) in self.edges()) and (not (v,u) in self.edges()):
             raise ValueError(
                 "Edge %s-%s does not exist" % (str(u), str(v)))
         normalize_attrs(attrs)
