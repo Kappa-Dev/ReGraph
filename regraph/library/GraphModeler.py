@@ -15,9 +15,9 @@ class GraphModeler(object):
         self.rw_names = []
         self.gr_homs = []
         for i in range(len(l)):
-            typing_graph, gr_homs[i] = self.make_tygraph(l[i][0], typing_graph, l[i][1] directed)
+            typing_graph, gr_homs[i] = self.make_tygraph(l[i][0], typing_graph, l[i][1], directed)
             self.rw_chain[i] = Rewriter(typing_graph)
-            
+
             if i>len(names):
                 self.rw_names[i] = None
             else:
