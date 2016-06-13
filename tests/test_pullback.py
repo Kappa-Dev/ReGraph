@@ -3,7 +3,7 @@ from nose.tools import assert_equals
 
 from regraph.library.data_structures import (TypedGraph,
                                              Homomorphism)
-from regraph.library.tmp import (pullback)
+from regraph.library.category_op import (pullback)
 
 class TestPullback:
 
