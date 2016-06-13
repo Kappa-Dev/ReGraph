@@ -7,6 +7,7 @@ import warnings
 
 from regraph.library.data_structures import TypedDiGraph
 from regraph.library import primitives
+from regraph.library.utils import (normalize_attrs)
 
 
 class TestPrimitives(object):
@@ -69,11 +70,13 @@ class TestPrimitives(object):
 
     def test_add_node(self):
         new_graph = self.graph_.copy()
+        attrs_ = {"a": 33, "b": 44}
+        normalize_attrs(attrs_)
         primitives.add_node(
             new_graph,
             node_type="my_type",
             name="new_node",
-            attrs={"a": 33, "b": 44})
+            attrs=attrs_)
 
         if "new_node" not in new_graph.nodes():
             assert False
@@ -81,7 +84,7 @@ class TestPrimitives(object):
         assert_equals(new_graph.node["new_node"].type_, "my_type")
         assert_equals(
             new_graph.node["new_node"].attrs_,
-            {"a": 33, "b": 44})
+            attrs_)
 
     @raises(ValueError)
     def test_remove_node_non_existing(self):
@@ -113,7 +116,7 @@ class TestPrimitives(object):
     def test_add_edge(self):
         new_graph = self.graph_.copy()
         primitives.add_edge(
-            new_graph, 8, 2, {"a": 4})
+            new_graph, 8, 2, {"a": {4}})
         primitives.add_edge(
             new_graph, 6, 2)
         if (8, 2) not in new_graph.edges():
@@ -122,7 +125,7 @@ class TestPrimitives(object):
             assert False
         assert_equals(
             new_graph.edge[8][2],
-            {"a": 4})
+            {"a": {4}})
 
     @raises(ValueError)
     def test_remove_edge_non_existing(self):
@@ -143,17 +146,19 @@ class TestPrimitives(object):
         attr2 = {"a": 12,
                  "c": {(4, 4), (6, 7)},
                  "d": (1, 2)}
+        normalize_attrs(attr1)
+        normalize_attrs(attr2)
         res1 = primitives.merge_attributes(attr1, attr2, "union")
         res2 = primitives.merge_attributes(attr1, attr2, "intersection")
 
         assert_equals(res1, {
             "a": {12, 23},
-            "b": (1, 2),
+            "b": {(1, 2)},
             "c": {(4, 4), (4, 5), (6, 7)},
             "d": {(1, 2), (3, 4)}})
 
         assert_equals(res2, {"c": {(4, 4), (6, 7)},
-                             "d": (1, 2)})
+                             "d": {(1, 2)}})
 
     @raises(ValueError)
     def test_merge_nodes_type_fail(self):
@@ -180,7 +185,7 @@ class TestPrimitives(object):
             "agent")
         assert_equals(
             new_graph.node["merge_1"].attrs_,
-            {'name': 'EGFR', 'state': 'p'})
+            {'name': {'EGFR'}, 'state': {'p'}})
         assert_equals(
             new_graph.edge["merge_1"][2],
             {"s": {"u", "p"}})
@@ -197,7 +202,7 @@ class TestPrimitives(object):
             "agent")
         assert_equals(
             new_graph.node["merge_1"].attrs_,
-            {"name": "EGFR"})
+            {"name": {"EGFR"}})
         assert_equals(
             new_graph.edge["merge_1"][2],
             {})
@@ -238,19 +243,19 @@ class TestPrimitives(object):
         primitives.add_node_attrs(
             self.graph_,
             1,
-            {"a": 1, "state": "u", "name": {"EGFR"}})
+            {"a": {1}, "state": {"u"}, "name": {"EGFR"}})
         assert_equals(
             self.graph_.node[1].attrs_,
             {"state": {"u", "p"},
              "name": {"EGFR"},
-             "a": 1})
+             "a": {1}})
 
     def test_remove_node_attrs(self):
         with warnings.catch_warnings(record=True) as w:
             primitives.remove_node_attrs(
                 self.graph_,
                 1,
-                {"state": "p", "name": "Strange"})
+                {"state": {"p"}, "name": {"Strange"}})
             assert len(w) > 0
         assert_equals(
             self.graph_.node[1].attrs_,
@@ -261,10 +266,10 @@ class TestPrimitives(object):
             self.graph_,
             1,
             2,
-            {"k": 12, "s": "p"})
+            {"k": {12}, "s": {"p"}})
         assert_equals(
             self.graph_.edge[1][2],
-            {"k": 12, "s": {"p"}})
+            {"k": {12}, "s": {"p"}})
 
     def test_remove_edge_attrs(self):
         with warnings.catch_warnings(record=True) as w:
@@ -272,7 +277,7 @@ class TestPrimitives(object):
                 self.graph_,
                 1,
                 2,
-                {"k": 12, "s": "p"})
+                {"k": {12}, "s": {"p"}})
         assert_equals(
             self.graph_.edge[1][2],
             {"s": set()})
@@ -282,19 +287,19 @@ class TestPrimitives(object):
             self.graph_,
             1,
             {"state": {1, 2, 3},
-             "new_attr": "val"})
+             "new_attr": {"val"}})
         assert_equals(
             self.graph_.node[1].attrs_,
             {"state": {1, 2, 3},
-             "new_attr": "val",
-             "name": "EGFR"})
+             "new_attr": {"val"},
+             "name": {"EGFR"}})
 
     def test_update_edge_attrs(self):
         primitives.update_edge_attrs(
             self.graph_,
             1,
             2,
-            {"k": 12, "s": "i"})
+            {"k": {12}, "s": {"i"}})
         assert_equals(
             self.graph_.edge[1][2],
-            {"k": 12, "s": "i"})
+            {"k": {12}, "s": {"i"}})

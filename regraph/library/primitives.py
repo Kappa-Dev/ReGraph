@@ -46,7 +46,7 @@ def merge_attributes(attr1, attr2, method="union"):
                     attr_set2.update(attr2[key1])
                     intersect = set.intersection(attr_set1, attr_set2)
                     if len(intersect) == 1:
-                        result.update({key1: list(intersect)[0]})
+                        result.update({key1: {list(intersect)[0]}})
                     elif len(intersect) > 1:
                         result.update({key1: intersect})
     else:

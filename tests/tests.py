@@ -40,9 +40,6 @@ edges = [
     (5, 2)
 ]
 
-print(graph_.nodes())
-print(graph_.edges())
-
 graph_.add_edge(1,3)
 graph_.add_edges_from(edges)
 
