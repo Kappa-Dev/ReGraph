@@ -2,7 +2,8 @@
 
 import networkx as nx
 
-from regraph.library.utils import (is_subdict, keys_by_value, normalize_attrs)
+from regraph.library.utils import (is_subdict, keys_by_value)
+from regraph.library.primitives import (normalize_attrs)
 
 
 class TypedNode:

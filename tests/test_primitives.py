@@ -7,7 +7,6 @@ import warnings
 
 from regraph.library.data_structures import TypedDiGraph
 from regraph.library import primitives
-from regraph.library.utils import (normalize_attrs)
 
 
 class TestPrimitives(object):
@@ -71,7 +70,7 @@ class TestPrimitives(object):
     def test_add_node(self):
         new_graph = self.graph_.copy()
         attrs_ = {"a": 33, "b": 44}
-        normalize_attrs(attrs_)
+        primitives.normalize_attrs(attrs_)
         primitives.add_node(
             new_graph,
             node_type="my_type",
@@ -146,8 +145,8 @@ class TestPrimitives(object):
         attr2 = {"a": 12,
                  "c": {(4, 4), (6, 7)},
                  "d": (1, 2)}
-        normalize_attrs(attr1)
-        normalize_attrs(attr2)
+        primitives.normalize_attrs(attr1)
+        primitives.normalize_attrs(attr2)
         res1 = primitives.merge_attributes(attr1, attr2, "union")
         res2 = primitives.merge_attributes(attr1, attr2, "intersection")
 

@@ -2,6 +2,14 @@
 import warnings
 from copy import deepcopy
 
+def normalize_attrs(attrs_):
+    if attrs_ != None:
+        for k,v in attrs_.items():
+            if type(v) != set:
+                if type(v) == list:
+                    attrs_[k] = set(v)
+                else:
+                    attrs_[k] = {v}
 
 def cast_node(graph, node, new_type):
     """Change the node type in the TypedGraph."""
@@ -276,6 +284,7 @@ def add_node(graph, node_type, name=None, attrs={}):
             i += 1
             new_name = "new_node_%d" % i
     if new_name not in graph.nodes():
+        normalize_attrs(attrs)
         graph.add_node(new_name, node_type, attrs)
     else:
         raise ValueError("Node %s already exists!" % str(new_name))
@@ -309,6 +318,7 @@ def add_edge(graph, source, target, attrs={}):
                 raise ValueError("Node %s does not exist" % str(source))
             if target not in graph.nodes():
                 raise ValueError("Node %s does not exist" % str(target))
+            normalize_attrs(attrs)
             graph.add_edge(source, target)
             graph.edge[source][target] = attrs
         else:
@@ -331,6 +341,7 @@ def add_edge(graph, source, target, attrs={}):
                 raise ValueError("Node %s does not exist" % str(source))
             if target not in graph.nodes():
                 raise ValueError("Node %s does not exist" % str(target))
+            normalize_attrs(attrs)
             graph.add_edge(source, target)
             graph.edge[source][target] = attrs
             graph.edge[target][source] = attrs
@@ -361,6 +372,7 @@ def add_node_attrs(graph, node, attrs_dict):
     if node not in graph.nodes():
         raise ValueError("Node %s does not exist" % str(node))
     else:
+        normalize_attrs(attrs_dict)
         if graph.node[node].attrs_ is None:
             graph.node[node].attrs_ = deepcopy(attrs_dict)
         else:
@@ -397,6 +409,7 @@ def add_edge_attrs(graph, node_1, node_2, attrs_dict):
         if (node_1, node_2) not in graph.edges():
             raise ValueError("Edge %s-%s does not exist" % (str(node_1), str(node_2)))
         else:
+            normalize_attrs(attrs_dict)
             for key, value in attrs_dict.items():
                 if key not in graph.edge[node_1][node_2].keys():
                     graph.edge[node_1][node_2].update({key: value})
@@ -406,6 +419,7 @@ def add_edge_attrs(graph, node_1, node_2, attrs_dict):
         if (node_1, node_2) not in graph.edges() and (node_2, node_1) not in graph.edges():
             raise ValueError("Edge %s-%s does not exist" % (str(node_1), str(node_2)))
         else:
+            normalize_attrs(attrs_dict)
             for key, value in attrs_dict.items():
                 if key not in graph.edge[node_1][node_2].keys():
                     graph.edge[node_1][node_2].update({key: value})
@@ -441,6 +455,7 @@ def update_node_attrs(graph, node, new_attrs):
     if node not in graph.nodes():
         raise ValueError("Node %s does not exist" % str(node))
     else:
+        normalize_attrs(new_attrs)
         if graph.node[node].attrs_ is None:
             graph.node[node].attrs_ = new_attrs
         else:
@@ -452,6 +467,7 @@ def update_edge_attrs(graph, node_1, node_2, new_attrs):
     if (node_1, node_2) not in graph.edges() and (node_2, node_1) not in graph.edges():
         raise ValueError("Edge %s-%s does not exist" % (str(node_1), str(node_2)))
     else:
+        normalize_attrs(new_attrs)
         for key, value in new_attrs.items():
             graph.edge[node_1][node_2][key] = value
             if not graph.is_directed():
