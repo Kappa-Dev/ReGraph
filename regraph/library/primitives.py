@@ -23,8 +23,8 @@ def merge_attributes(attr1, attr2, method="union"):
                         {key1: attr1[key1]})
                 else:
                     attr_set = set()
-                    attr_set.add(attr1[key1])
-                    attr_set.add(attr2[key1])
+                    attr_set.update(attr1[key1])
+                    attr_set.update(attr2[key1])
                     result.update(
                         {key1: attr_set})
             else:
@@ -42,8 +42,8 @@ def merge_attributes(attr1, attr2, method="union"):
                 else:
                     attr_set1 = set()
                     attr_set2 = set()
-                    attr_set1.add(attr1[key1])
-                    attr_set2.add(attr2[key1])
+                    attr_set1.update(attr1[key1])
+                    attr_set2.update(attr2[key1])
                     intersect = set.intersection(attr_set1, attr_set2)
                     if len(intersect) == 1:
                         result.update({key1: list(intersect)[0]})
