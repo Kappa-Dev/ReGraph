@@ -36,8 +36,8 @@ class TypedDiGraph(nx.DiGraph):
                 if node_type not in self.metamodel_.nodes():
                     raise ValueError(
                         "Type '%s' is not allowed by metamodel!" % node_type)
-                nx.Graph.add_node(self, node_id)
-                self.node[node_id] = TypedNode(node_type, attrs)
+            nx.DiGraph.add_node(self, node_id)
+            self.node[node_id] = TypedNode(node_type, attrs)
         else:
             raise ValueError("Node %s already exists!" % node_id)
 
@@ -158,8 +158,8 @@ class TypedGraph(nx.Graph):
                 if node_type not in self.metamodel_.nodes():
                     raise ValueError(
                         "Type '%s' is not allowed by metamodel!" % node_type)
-                nx.Graph.add_node(self, node_id)
-                self.node[node_id] = TypedNode(node_type, attrs)
+            nx.Graph.add_node(self, node_id)
+            self.node[node_id] = TypedNode(node_type, attrs)
         else:
             raise ValueError("Node %s already exists!" % node_id)
 
