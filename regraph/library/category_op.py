@@ -2,6 +2,8 @@ from regraph.library.data_structures import (TypedGraph,
                                              TypedDiGraph,
                                              Homomorphism)
 from regraph.library.primitives import (merge_attributes)
+from regraph.library.utils import keys_by_value
+
 
 def pullback(h1, h2):
     """ Given h1 : B -> D; h2 : C -> D returns A, rh1, rh2
@@ -36,18 +38,22 @@ def pullback(h1, h2):
         for n2 in res_graph.nodes():
             if (hom1[n1], hom1[n2]) in h1.source_.edges():
                 if (hom2[n1], hom2[n2]) in h2.source_.edges():
-                   res_graph.add_edge(n1, n2)
-                   res_graph.set_edge(n1, n2,
-                      merge_attributes(h1.source_.get_edge(hom1[n1], hom1[n2]),
-                                       h2.source_.get_edge(hom2[n1], hom2[n2]),
-                                       'intersection'))
+                    res_graph.add_edge(n1, n2)
+                    res_graph.set_edge(
+                        n1,
+                        n2,
+                        merge_attributes(
+                            h1.source_.get_edge(hom1[n1], hom1[n2]),
+                            h2.source_.get_edge(hom2[n1], hom2[n2]),
+                            'intersection'))
 
     res_h1 = Homomorphism(res_graph, h1.source_, hom1)
     res_h2 = Homomorphism(res_graph, h2.source_, hom2)
 
     return res_graph, res_h1, res_h2
 
-def find_final_PBC(hom):
+
+def pullback_complement(hom):
     # edges to remove will be removed automatically upon removal of the nodes
     nodes = set([n for n in hom.target_.nodes()
                  if n not in hom.mapping_.values()])
@@ -114,7 +120,8 @@ def find_final_PBC(hom):
                         {key: set([el for el in value if el not in attrs[key]])})
     return (nodes, edges, node_attrs, edge_attrs)
 
-def find_PO(hom):
+
+def pushout(hom):
     nodes = set([n for n in hom.target_.nodes() if n not in hom.mapping_.values()])
 
     node_attrs = {}
