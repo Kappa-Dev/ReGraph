@@ -6,19 +6,6 @@ import warnings
 import itertools
 
 from regraph.library.parser import parser
-from regraph.library.primitives import (merge_nodes,
-                                        cast_node,
-                                        clone_node,
-                                        add_node,
-                                        remove_node,
-                                        add_edge,
-                                        remove_edge,
-                                        remove_node_attrs,
-                                        add_node_attrs,
-                                        remove_edge_attrs,
-                                        add_edge_attrs,
-                                        update_edge_attrs,
-                                        update_node_attrs)
 from regraph.library.utils import (is_subdict)
 from regraph.library.data_structures import (Homomorphism)
 
