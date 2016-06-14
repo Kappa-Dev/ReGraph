@@ -22,6 +22,8 @@ class Transformer(object):
         self.P_L_dict = {}
         self.P_R_dict = {}
 
+    # Canonic operations
+
     def get(self):
         return Homomorphism(P, L, P_L_dict), Homomorphism(P, L, P_R_dict)
 
@@ -177,7 +179,20 @@ class Transformer(object):
                     (str(n1), str(n2))
             )
 
+        self.P_L_dict[n1] = n1
+        self.P_L_dict[n2] = n2
 
+    # Advanced operations
+
+    def merge_edges(self, e1, e2, name_n1=None, name_n2=None):
+        n1_1, n2_1 = e1
+        n2_1, n2_1 = e2
+        self.merge_nodes(n1, n2, name_n1)
+        self.merge_nodes(n1, n2, name_n2)
+
+    def clone_edge(self, n1, n2):
+        self.clone_node(n1)
+        self.clone_node(n2)
 
 class Rewriter:
     """Class implements the transformation on the graph."""
@@ -190,74 +205,6 @@ class Rewriter:
         self.parser_ = parser
         return
 
-    def fold_attr(self, typ, attr):
-        fold_dict = {}
-        for n in self.graph_.nodes():
-            if self.graph_.node[n].type_ == typ:
-                if attr in self.graph_.node[n].attrs_:
-                    if self.graph_.node[n].attrs_[attr] in fold_dict.keys():
-                        fold_dict[self.graph_.node[n].attrs_[attr]].append(n)
-                    else:
-                        fold_dict[self.graph_.node[n].attrs_[attr]] = [n]
-                else:
-                    if "__NOT_DEFINED__" in fold_dict.keys():
-                        fold_dict["__NOT_DEFINED__"].append(n)
-                    else:
-                        fold_dict["__NOT_DEFINED__"] = [n]
-        for (k, l) in fold_dict.items():
-            merge_nodes(self.graph_, l, node_name=attr+":"+k)
-            for n in l:
-                for n0 in self.fully_expanded_graph.nodes():
-                    if self.h_exp.mapping_[n0] == n:
-                        self.h_exp.mapping_[n0] = attr+":"+k
-
-    def fold_nodes(self, l):
-        ty = []
-        for n in l:
-            if n in self.graph_.nodes():
-                if not self.graph_.node[n].type_ in ty:
-                    ty.append(str(self.graph_.node[n].type_))
-            else:
-                raise ValueError(
-                    "Node %s isn't a valid node" % str(n)
-                )
-        new_ty = fold_left(lambda x, acc : acc+"_"+x, "_", sorted(ty))
-        i = 0
-        new_name = new_ty+"0"
-        while(new_name in self.graph_.nodes()):
-            i += 1
-            new_name = new_ty+str(i)
-        for n in l:
-            cast_node(self.graph_, n, new_ty)
-            for n0 in self.fully_expanded_graph.nodes():
-                if self.h_exp.mapping_[n0] == n:
-                    self.h_exp.mapping_[n0] = new_name
-        merge_nodes(self.graph_, l, node_name = new_name)
-
-
-    def expand_node(self, n0):
-        origin = []
-        for n in self.fully_expanded_graph.nodes():
-            if self.h_exp.mapping_[n] == n0:
-                origin.append(n)
-        if len(origin) > 1 :
-            exp_graph = self.fully_expanded_graph.subgraph(origin).copy()
-            self.graph_ = union(self.graph_, exp_graph)
-            for n in exp_graph.nodes():
-                neighbors = self.fully_expanded_graph.neighbors(n)
-                for n1 in neighbors:
-                    self.graph_.add_edge(n, self.h_exp.mapping_[n1], self.fully_expanded_graph.get_edge(n,n1))
-                self.h_exp.mapping_[n] = n
-            remove_node(self.graph_, n0)
-        elif len(origin) == 1 :
-            warnings.warn(
-                "Node %s is atomic, can't expand it further" % str(origin[0]),
-                RuntimeWarning
-            )
-        else:
-            raise ValueError(
-                "Node %s does not exist, can't expand it" % (str(n0))
-            )
     @staticmethod
     def rewriting(graph, L_G, left_h, right_h):
         """ left_h : P -> L
