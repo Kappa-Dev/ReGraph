@@ -54,6 +54,3 @@ homBD = Homomorphism(B, D, dic_homBD)
 homCD = Homomorphism(C, D, dic_homCD)
 
 A, homAB, homAC = pullback(homBD, homCD)
-
-print(A.edges())
-print(A.nodes())
