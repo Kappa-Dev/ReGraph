@@ -475,47 +475,6 @@ class TypedGraph(TypedDiGraph):
         TypedDiGraph.set_edge(self, u, v, attrs)
         TypedDiGraph.set_edge(self, v, u, attrs)
 
-
-def is_valid_homomorphism(source, target, dictionary):
-    """Check if the homomorphism is valid (preserves edges and types)."""
-    # check if there is mapping for all the nodes of source graph
-    if set(source.nodes()) != set(dictionary.keys()):
-        raise ValueError(
-            "Invalid homomorphism: Mapping is not covering all the nodes of source graph!")
-
-    # check nodes match with types and sets of attributes
-    for s, t in dictionary.items():
-        if source.node[s].type_ != target.node[t].type_:
-            raise ValueError(
-                "Invalid homomorphism: Node type does not match ('%s' and '%s')!" %
-                (str(source.node[s].type_), str(target.node[t].type_)))
-        if not is_subdict(source.node[s].attrs_, target.node[t].attrs_):
-            raise ValueError(
-                "Invalid homomorphism: Attributes of nodes source:'%s' and target:'%s' does not match!" %
-                (str(s), str(t)))
-
-    # check connectivity and edges attr matches
-    for s_edge in source.edges():
-        if not (dictionary[s_edge[0]], dictionary[s_edge[1]]) in target.edges():
-            if not target.is_directed():
-                if not (dictionary[s_edge[1]], dictionary[s_edge[0]]) in target.edges():
-                    raise ValueError(
-                        "Invalid homomorphism: Connectivity is not preserved!")
-            else:
-                raise ValueError(
-                    "Invalid homomorphism: Connectivity is not preserved!")
-        source_edge_attrs = source.get_edge(s_edge[0], s_edge[1])
-        target_edge_attrs = target.get_edge(dictionary[s_edge[0]],
-                                            dictionary[s_edge[1]])
-        if not is_subdict(source_edge_attrs, target_edge_attrs):
-            raise ValueError(
-                "Invalid homomorphism: Attributes of edges (%s)-(%s) and (%s)-(%s) does not match!" %
-                (s_edge[0], s_edge[1], dictionary[s_edge[0]],
-                    dictionary[s_edge[1]]))
-
-    return True
-
-
 class Homomorphism:
     """Define graph homomorphism data structure."""
 
@@ -531,6 +490,46 @@ class Homomorphism:
         """Check if the homomorphism is monic."""
         return len(set(self.mapping_.keys())) ==\
             len(set(self.mapping_.values()))
+
+    @staticmethod
+    def is_valid_homomorphism(source, target, dictionary):
+        """Check if the homomorphism is valid (preserves edges and types)."""
+        # check if there is mapping for all the nodes of source graph
+        if set(source.nodes()) != set(dictionary.keys()):
+            raise ValueError(
+                "Invalid homomorphism: Mapping is not covering all the nodes of source graph!")
+
+        # check nodes match with types and sets of attributes
+        for s, t in dictionary.items():
+            if source.node[s].type_ != target.node[t].type_:
+                raise ValueError(
+                    "Invalid homomorphism: Node type does not match ('%s' and '%s')!" %
+                    (str(source.node[s].type_), str(target.node[t].type_)))
+            if not is_subdict(source.node[s].attrs_, target.node[t].attrs_):
+                raise ValueError(
+                    "Invalid homomorphism: Attributes of nodes source:'%s' and target:'%s' does not match!" %
+                    (str(s), str(t)))
+
+        # check connectivity and edges attr matches
+        for s_edge in source.edges():
+            if not (dictionary[s_edge[0]], dictionary[s_edge[1]]) in target.edges():
+                if not target.is_directed():
+                    if not (dictionary[s_edge[1]], dictionary[s_edge[0]]) in target.edges():
+                        raise ValueError(
+                            "Invalid homomorphism: Connectivity is not preserved!")
+                else:
+                    raise ValueError(
+                        "Invalid homomorphism: Connectivity is not preserved!")
+            source_edge_attrs = source.get_edge(s_edge[0], s_edge[1])
+            target_edge_attrs = target.get_edge(dictionary[s_edge[0]],
+                                                dictionary[s_edge[1]])
+            if not is_subdict(source_edge_attrs, target_edge_attrs):
+                raise ValueError(
+                    "Invalid homomorphism: Attributes of edges (%s)-(%s) and (%s)-(%s) does not match!" %
+                    (s_edge[0], s_edge[1], dictionary[s_edge[0]],
+                        dictionary[s_edge[1]]))
+
+        return True
 
     @staticmethod
     def canonic_homomorphism(G, T):
