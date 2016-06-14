@@ -20,8 +20,8 @@ class TypedNode:
         return
 
     def set_attrs(self, attrs):
-        normalize_attrs(attrs)
         self.attrs_ = attrs
+        normalize_attrs(self.attrs_)
 
 class TypedDiGraph(nx.DiGraph):
     """Define simple typed directed graph.
