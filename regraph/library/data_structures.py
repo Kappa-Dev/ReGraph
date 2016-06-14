@@ -1,9 +1,13 @@
 """Define data structures used by graph rewriting tool."""
 
 import networkx as nx
+import warnings
+from copy import deepcopy
 
-from regraph.library.utils import (is_subdict, keys_by_value)
-from regraph.library.primitives import (normalize_attrs)
+from regraph.library.utils import (is_subdict,
+                                   keys_by_value,
+                                   to_set,
+                                   normalize_attrs)
 
 
 class TypedNode:
@@ -18,7 +22,6 @@ class TypedNode:
     def set_attrs(self, attrs):
         normalize_attrs(attrs)
         self.attrs_ = attrs
-
 
 class TypedDiGraph(nx.DiGraph):
     """Define simple typed directed graph.
@@ -49,9 +52,63 @@ class TypedDiGraph(nx.DiGraph):
         else:
             raise ValueError("Node %s already exists!" % node_id)
 
+    def remove_node(self, node):
+        """Remove node from the self."""
+        if node in self.nodes():
+            nx.DiGraph.remove_node(node)
+        else:
+            raise ValueError("Node %s does not exist!" % str(node))
+        return
+
     def add_nodes_from(self, node_list):
         for node_id, node_type in node_list:
             self.add_node(node_id, node_type)
+
+    def add_node_attrs(self, node, attrs_dict):
+        if node not in self.nodes():
+            raise ValueError("Node %s does not exist" % str(node))
+        else:
+            if self.node[node].attrs_ is None:
+                self.node[node].attrs_ = deepcopy(attrs_dict)
+                normalize_attrs(self.node[node].attrs_)
+            else:
+                for key, value in attrs_dict.items():
+                    if key not in self.node[node].attrs_.keys():
+                        self.node[node].attrs_.update({key: to_set(value)})
+                    else:
+                        self.node[node].attrs_[key].union(to_set(value))
+
+    def update_node_attrs(self, node, new_attrs):
+        if node not in self.nodes():
+            raise ValueError("Node %s does not exist" % str(node))
+        else:
+            normalize_attrs(new_attrs)
+            if self.node[node].attrs_ is None:
+                self.node[node].attrs_ = new_attrs
+                normalize_attrs(self.node[node].attrs_)
+            else:
+                for key, value in new_attrs.items():
+                    self.node[node].attrs_[key] = to_set(value)
+
+    def remove_node_attrs(self, node, attrs_dict):
+        if node not in self.nodes():
+            raise ValueError("Node %s does not exist" % str(node))
+        else:
+            for key, value in attrs_dict.items():
+                if key not in self.node[node].attrs_.keys():
+                    warnings.warn(
+                        "Node %s does not have attribute '%s'" % (str(node), str(key)), RuntimeWarning)
+                else:
+                    elements_to_remove = []
+                    for el in to_set(value):
+                        if el in self.node[node].attrs_[key]:
+                            elements_to_remove.append(el)
+                        else:
+                            warnings.warn(
+                                "Node %s does not have attribute '%s' with value '%s'" %
+                                (str(node), str(key), str(el)), RuntimeWarning)
+                    for el in elements_to_remove:
+                        self.node[node].attrs_[key].remove(el)
 
     def add_edge(self, s, t, attrs=None, **attr):
         # set up attribute dict (from Networkx to preserve the signature)
@@ -79,32 +136,55 @@ class TypedDiGraph(nx.DiGraph):
         normalize_attrs(attrs)
         nx.DiGraph.add_edge(self, s, t, attrs)
 
-    def add_edges_from(self, edge_list, attrs=None, **attr):
-        # set up attribute dict (from Networkx to preserve the signature)
-        if attrs is None:
-            attrs = attr
+    def remove_edge(self, source, target):
+        """Remove edge from the graph."""
+        if (source, target) in self.edges():
+            nx.DiGraph.remove_edge(source, target)
         else:
-            try:
-                attrs.update(attr)
-            except AttributeError:
-                raise ValueError(
-                    "The attr_dict argument must be a dictionary."
-                )
-        for edge in edge_list:
-            if not edge[0] in self.nodes():
-                raise ValueError("Node %s is not defined!" % edge[0])
-            if not edge[1] in self.nodes():
-                raise ValueError("Node %s is not defined!" % edge[1])
-            source_type = self.node[edge[0]].type_
-            target_type = self.node[edge[1]].type_
-            if self.metamodel_ is not None:
-                if (source_type, target_type) not in self.metamodel_.edges():
-                    raise ValueError(
-                        "Edge from '%s' to '%s' is not allowed by metamodel" %
-                        (source_type, target_type)
-                    )
-        normalize_attrs(attrs)
-        nx.DiGraph.add_edges_from(self, edge_list, attrs)
+            raise ValueError(
+                "Edge %s->%s does not exist!" % (str(source), str(target)))
+
+    def add_edges_from(self, edge_list, attrs=None, **attr):
+        for (source, target) in edge_list:
+            self.add_edge(source, target, attrs, **attr)
+
+    def add_edge_attrs(self, node_1, node_2, attrs_dict):
+        if (node_1, node_2) not in self.edges():
+            raise ValueError("Edge %s-%s does not exist" % (str(node_1), str(node_2)))
+        else:
+            for key, value in attrs_dict.items():
+                if key not in self.edge[node_1][node_2].keys():
+                    self.edge[node_1][node_2].update({key: to_set(value)})
+                else:
+                    self.edge[node_1][node_2][key].update(to_set(value))
+
+    def update_edge_attrs(self, node_1, node_2, new_attrs):
+        if (node_1, node_2) not in self.edges():
+            raise ValueError("Edge %s-%s does not exist" % (str(node_1), str(node_2)))
+        else:
+            for key, value in new_attrs.items():
+                self.edge[node_1][node_2][key] = to_set(value)
+
+    def remove_edge_attrs(self, node_1, node_2, attrs_dict):
+        if (node_1, node_2) not in self.edges():
+            raise ValueError("Edge %s-%s does not exist" % (str(node_1), str(node_2)))
+        else:
+            for key, value in attrs_dict.items():
+                if key not in self.edge[node_1][node_2].keys():
+                    warnings.warn(
+                        "Edge %s-%s does not have attribute '%s'" %
+                        (str(node_1), str(node_2), str(key)), RuntimeWarning)
+                else:
+                    elements_to_remove = []
+                    for el in to_set(value):
+                        if el in self.edge[node_1][node_2][key]:
+                            elements_to_remove.append(el)
+                        else:
+                            warnings.warn(
+                                "Edge %s-%s does not have attribute '%s' with value '%s'" %
+                                (str(node_1), str(node_2), str(key), str(el)), RuntimeWarning)
+                    for el in elements_to_remove:
+                        self.edge[node_1][node_2][key].remove(el)
 
     def get_edge(self, source, target):
         return self.edge[source][target]
@@ -115,6 +195,215 @@ class TypedDiGraph(nx.DiGraph):
                 "Edge %s-%s does not exist" % (str(source), str(target)))
         normalize_attrs(attrs)
         self.edge[source][target] = attrs
+
+    def cast_node(self, node, new_type):
+        """Changes the node type in the graph"""
+        self.node[node].type_ = new_type
+
+    def merge_nodes(self, nodes, method="union",
+                    node_name=None, edge_method="union"):
+        """Merge list of nodes."""
+        # Type checking
+        node_type = self.node[nodes[0]].type_
+        for node in nodes:
+            if self.node[node].type_ != node_type:
+                raise ValueError(
+                    "Merge error: Non consistent node types ('%s', '%s')!" %
+                    (str(self.node[node].type_), str(node_type)))
+
+        if method is None:
+            method = "union"
+
+        if edge_method is None:
+            method = "union"
+
+        # Generate name for new node
+        if node_name is None:
+            node_name = "_".join([str(n) for n in nodes])
+        elif node_name in self.nodes():
+            raise ValueError(
+                "The node with name '%s' already exists!" % str(node_name))
+
+        # Merge data attached to node according to the method specified
+        # restore proper connectivity
+        if method == "union":
+            attr_accumulator = {}
+        elif method == "intersection":
+            attr_accumulator = deepcopy(self.node[nodes[0]].attrs_)
+        else:
+            raise ValueError("Merging method %s is not defined!" % method)
+
+        self_loop = False
+        self_loop_attrs = {}
+
+        if self.is_directed():
+            source_nodes = set()
+            target_nodes = set()
+
+            source_dict = {}
+            target_dict = {}
+        else:
+            neighbors = set()
+            neighbors_dict = {}
+
+        for node in nodes:
+
+            attr_accumulator = merge_attributes(
+                attr_accumulator, self.node[node].attrs_, method)
+
+            if self.is_directed():
+                in_edges = self.in_edges(node)
+                out_edges = self.out_edges(node)
+
+                # manage self loops
+                for s, t in in_edges:
+                    if s in nodes:
+                        self_loop = True
+                        if len(self_loop_attrs) == 0:
+                            self_loop_attrs = self.edge[s][t]
+                        else:
+                            self_loop_attrs = merge_attributes(
+                                self_loop_attrs,
+                                self.edge[s][t],
+                                edge_method)
+
+                for s, t in out_edges:
+                    if t in nodes:
+                        self_loop = True
+                        if len(self_loop_attrs) == 0:
+                            self_loop_attrs = self.edge[s][t]
+                        else:
+                            self_loop_attrs = merge_attributes(
+                                self_loop_attrs,
+                                self.edge[s][t],
+                                edge_method)
+
+                source_nodes.update(
+                    [n if n not in nodes else node_name
+                     for n, _ in in_edges])
+                target_nodes.update(
+                    [n if n not in nodes else node_name
+                     for _, n in out_edges])
+
+                for edge in in_edges:
+                    if not edge[0] in source_dict.keys():
+                        attrs = self.edge[edge[0]][edge[1]]
+                        source_dict.update({edge[0]: attrs})
+                    else:
+                        attrs = merge_attributes(
+                            source_dict[edge[0]],
+                            self.edge[edge[0]][edge[1]],
+                            edge_method)
+                        source_dict.update({edge[0]: attrs})
+
+                for edge in out_edges:
+                    if not edge[1] in target_dict.keys():
+                        attrs = self.edge[edge[0]][edge[1]]
+                        target_dict.update({edge[1]: attrs})
+                    else:
+                        attrs = merge_attributes(
+                            target_dict[edge[1]],
+                            self.edge[edge[0]][edge[1]],
+                            edge_method)
+                        target_dict.update({edge[1]: attrs})
+            else:
+                for n in self.neighbors(node):
+                    if n in nodes:
+                        self_loop = True
+                        if len(self_loop_attrs) == 0:
+                            self_loop_attrs = self.edge[n][node]
+                        else:
+                            self_loop_attrs = merge_attributes(
+                                self_loop_attrs,
+                                self.edge[n][node],
+                                edge_method)
+
+                neighbors.update(
+                    [n for n in self.neighbors(node) if n not in nodes])
+                for n in self.neighbors(node):
+                    if n not in nodes:
+                        if n not in neighbors_dict.keys():
+                            attrs = self.edge[n][node]
+                            neighbors_dict.update({n: attrs})
+                        else:
+                            attrs = merge_attributes(
+                                neighbors_dict[n],
+                                self.edge[n][node],
+                                edge_method)
+                            neighbors_dict.update({n: attrs})
+
+            self.remove_node(node)
+
+        self.add_node(node_name, node_type, attr_accumulator)
+
+        if self.is_directed():
+            if self_loop:
+                self.add_edges_from([(node_name, node_name)])
+                self.edge[node_name][node_name] = self_loop_attrs
+
+            self.add_edges_from([(n, node_name) for n in source_nodes])
+            self.add_edges_from([(node_name, n) for n in target_nodes])
+
+            # Attach accumulated attributes to edges
+            for node, attrs in source_dict.items():
+                if node not in nodes:
+                    self.edge[node][node_name] = attrs
+            for node, attrs in target_dict.items():
+                if node not in nodes:
+                    self.edge[node_name][node] = attrs
+        else:
+            if self_loop:
+                self.add_edges_from([(node_name, node_name)])
+                self.set_edge(node_name, node_name, self_loop_attrs)
+
+            self.add_edges_from([(n, node_name) for n in neighbors])
+
+            # Attach accumulated attributes to edges
+            for node, attrs in neighbors_dict.items():
+                if node not in nodes:
+                    self.set_edge(node, node_name, attrs)
+
+        return node_name
+
+    def clone_node(self, node, name=None):
+        """Clone existing node and all its edges."""
+        if node not in self.nodes():
+            raise ValueError("Node %s does not exist" % str(node))
+
+        if name is None:
+            new_node = "%s_copy" % str(node)
+            while new_node in self.nodes():
+                new_node = "%s_copy" % new_node
+        else:
+            if name in self.nodes():
+                raise ValueError("Node %s already exist!" % str(name))
+            else:
+                new_node = name
+
+        self.add_node(new_node, self.node[node].type_,
+                       deepcopy(self.node[node].attrs_))
+
+        # Connect all the edges
+        if self.is_directed():
+            self.add_edges_from(
+                [(n, new_node) for n, _ in self.in_edges(node)])
+            self.add_edges_from(
+                [(new_node, n) for _, n in self.out_edges(node)])
+
+            # Copy the attributes of the edges
+            for s, t in self.in_edges(node):
+                self.edge[s][new_node] = deepcopy(self.edge[s][t])
+            for s, t in self.out_edges(node):
+                self.edge[new_node][t] = deepcopy(self.edge[s][t])
+        else:
+            self.add_edges_from(
+                [(n, new_node) for n in self.neighbors(node)])
+
+            # Copy the attributes of the edges
+            for n in self.neighbors(node):
+                self.set_edge(new_node, n, deepcopy(self.edge[n][node]))
+
+        return new_node
 
     def relabel_nodes(self, mapping):
         """Relabel graph nodes in place.
@@ -156,138 +445,35 @@ class TypedDiGraph(nx.DiGraph):
         return g
 
 
-class TypedGraph(nx.Graph):
+class TypedGraph(TypedDiGraph):
     """Define simple typed undirected graph."""
 
     def __init__(self, metamodel=None):
-        nx.Graph.__init__(self)
-        self.metamodel_ = metamodel
-        self.hom = {}
-
-    def add_node(self, node_id, node_type, attrs=None):
-        if node_id not in self.nodes():
-            if self.metamodel_ is not None:
-                if node_type not in self.metamodel_.nodes():
-                    raise ValueError(
-                        "Type '%s' is not allowed by metamodel!" % node_type)
-                self.hom[node_id] = node_type
-            nx.Graph.add_node(self, node_id)
-            self.node[node_id] = TypedNode(node_type, attrs)
-        else:
-            raise ValueError("Node %s already exists!" % node_id)
-
-    def add_nodes_from(self, node_list):
-        for node_id, node_type in node_list:
-            self.add_node(node_id, node_type)
+        TypedDiGraph.__init__(self, metamodel)
 
     def add_edge(self, s, t, attrs=None, **attr):
-        # set up attribute dict (from Networkx to preserve the signature)
-        if attrs is None:
-            attrs = attr
-        else:
-            try:
-                attrs.update(attr)
-            except AttributeError:
-                raise ValueError(
-                    "The attr_dict argument must be a dictionary."
-                )
-        if s not in self.nodes():
-            raise ValueError("Node %s is not defined!" % s)
-        if t not in self.nodes():
-            raise ValueError("Node %s is not defined!" % t)
-        source_type = self.node[s].type_
-        target_type = self.node[t].type_
-        if self.metamodel_ is not None:
-            if (source_type, target_type) not in self.metamodel_.edges():
-                if (target_type, source_type) not in self.metamodel_.edges():
-                    raise ValueError(
-                        "Edge from '%s' to '%s' is not allowed by metamodel" %
-                        (source_type, target_type)
-                    )
-        # There is some strange things with edge attributes in NetworkX
-        # for undirected graphs: if I say graph.edge[1][2] = <some attributes>
-        # it will not update value of graph.edge[2][1]
-        normalize_attrs(attrs)
-        nx.Graph.add_edge(self, s, t, attrs)
-        nx.Graph.add_edge(self, t, s, attrs)
+        TypedDiGraph.add_edge(self, s, t, attrs, **attr)
+        TypedDiGraph.add_edge(self, t, s, attrs, **attr)
 
-    def add_edges_from(self, edge_list, attrs=None, **attr):
-        # set up attribute dict (from Networkx to preserve the signature)
-        if attrs is None:
-            attrs = attr
-        else:
-            try:
-                attrs.update(attr)
-            except AttributeError:
-                raise ValueError(
-                    "The attr_dict argument must be a dictionary."
-                )
-        for edge in edge_list:
-            if not edge[0] in self.nodes():
-                raise ValueError("Node %s is not defined!" % edge[0])
-            if not edge[1] in self.nodes():
-                raise ValueError("Node %s is not defined!" % edge[1])
-            source_type = self.node[edge[0]].type_
-            target_type = self.node[edge[1]].type_
-            if self.metamodel_ is not None:
-                if (source_type, target_type) not in self.metamodel_.edges():
-                    if (target_type, source_type) not in self.metamodel_.edges():
-                        raise ValueError(
-                            "Edge from '%s' to '%s' is not allowed by metamodel" %
-                            (source_type, target_type)
-                        )
-        normalize_attrs(attrs)
-        nx.Graph.add_edges_from(self, edge_list, attrs)
+    def remove_edge(self, source, target):
+        TypedDiGraph.remove_edge(self, source, target)
+        TypedDiGraph.remove_edge(self, target, source)
 
-    def get_edge(self, source, target):
-        return self.edge[source][target]
+    def add_edge_attrs(self, node_1, node_2, attrs_dict):
+        TypedDiGraph.add_edge_attrs(self, node_1, node_2, attrs_dict)
+        TypedDiGraph.add_edge_attrs(self, node_2, node_1, attrs_dict)
+
+    def update_edge_attrs(self, node_1, node_2, new_attrs):
+        TypedDiGraph.update_edge_attrs(self, node_1, node_2, new_attrs)
+        TypedDiGraph.update_edge_attrs(self, node_1, node_2, new_attrs)
+
+    def remove_edge_attrs(self, node_1, node_2, attrs_dict):
+        TypedDiGraph.remove_edge_attrs(self, node_1, node_2, attrs_dict)
+        TypedDiGraph.remove_edge_attrs(self, node_2, node_1, attrs_dict)
 
     def set_edge(self, u, v, attrs):
-        if (not (u, v) in self.edges()) and (not (v,u) in self.edges()):
-            raise ValueError(
-                "Edge %s-%s does not exist" % (str(u), str(v)))
-        normalize_attrs(attrs)
-        self.edge[u][v] = attrs
-        self.edge[v][u] = attrs
-
-    def relabel_nodes(self, mapping):
-        """Relabel graph nodes in place.
-
-        Similar to networkx.relabel.relabel_nodes:
-        https://networkx.github.io/documentation/development/_modules/networkx/relabel.html
-        """
-        if self.metamodel_ is not None:
-            g = TypedGraph(self.metamodel_.copy())
-        else:
-            g = TypedGraph()
-
-        old_nodes = set(mapping.keys())
-
-        for old_node in old_nodes:
-            try:
-                new_node = mapping[old_node]
-            except KeyError:
-                continue
-            try:
-                g.add_node(
-                    new_node,
-                    self.node[old_node].type_,
-                    self.node[old_node].attrs_)
-            except KeyError:
-                raise ValueError("Node %s does not exist!" % old_node)
-        new_edges = []
-        attributes = {}
-        for s, t in self.edges():
-            new_edges.append((
-                mapping[s],
-                mapping[t]))
-            attributes[(mapping[s], mapping[t])] =\
-                self.edge[s][t]
-
-        g.add_edges_from(new_edges)
-        for s, t in g.edges():
-            g.set_edge(s, t, attributes[(s, t)])
-        return g
+        TypedDiGraph.set_edge(self, u, v, attrs)
+        TypedDiGraph.set_edge(self, v, u, attrs)
 
 
 def is_valid_homomorphism(source, target, dictionary):
@@ -345,136 +531,6 @@ class Homomorphism:
         """Check if the homomorphism is monic."""
         return len(set(self.mapping_.keys())) ==\
             len(set(self.mapping_.values()))
-
-    def find_final_PBC(self):
-        # edges to remove will be removed automatically upon removal of the nodes
-        nodes = set([n for n in self.target_.nodes()
-                     if n not in self.mapping_.values()])
-        node_attrs = {}
-        for node in self.source_.nodes():
-            if node not in node_attrs.keys():
-                node_attrs.update({node: {}})
-
-            mapped_node = self.mapping_[node]
-            mapped_attrs = self.target_.node[mapped_node].attrs_
-
-            attrs = self.source_.node[node].attrs_
-            if mapped_attrs is not None and attrs is not None:
-                for key, value in mapped_attrs.items():
-                    if key not in attrs.keys():
-                        node_attrs[node].update({key: value})
-                    else:
-                        if type(value) != set:
-                            value = set([value])
-                        else:
-                            node_attrs[node].update(
-                                {key: set([el for el in value if el not in attrs[key]])})
-
-        edge_attrs = {}
-        edges = set()
-        for edge in self.target_.edges():
-            if self.source_.is_directed():
-                sources = keys_by_value(self.mapping_, edge[0])
-                targets = keys_by_value(self.mapping_, edge[1])
-                if len(sources) == 0 or len(targets) == 0:
-                    continue
-                for s in sources:
-                    for t in targets:
-                        if (s, t) not in self.source_.edges():
-                            edges.add((s, t))
-            else:
-                sources = keys_by_value(self.mapping_, edge[0])
-                targets = keys_by_value(self.mapping_, edge[1])
-                if len(sources) == 0 or len(targets) == 0:
-                    continue
-                for s in sources:
-                    for t in targets:
-                        if (s, t) not in self.source_.edges():
-                            if (t, s) not in self.source_.edges():
-                                edges.add((s, t))
-
-        for edge in self.source_.edges():
-            if edge not in edge_attrs.keys():
-                edge_attrs.update({edge: {}})
-
-            mapped_edge = (self.mapping_[edge[0]], self.mapping_[edge[1]])
-            mapped_attrs = self.target_.edge[mapped_edge[0]][mapped_edge[1]]
-
-            attrs = self.source_.edge[edge[0]][edge[1]]
-
-            for key, value in mapped_attrs.items():
-                if key not in attrs.keys():
-                    edge_attrs[edge].update({key: value})
-                else:
-                    if type(value) != set:
-                        value = set([value])
-                    else:
-                        edge_attrs[edge].update(
-                            {key: set([el for el in value if el not in attrs[key]])})
-        return (nodes, edges, node_attrs, edge_attrs)
-
-    def find_PO(self):
-        nodes = set([n for n in self.target_.nodes() if n not in self.mapping_.values()])
-
-        node_attrs = {}
-        for node in self.source_.nodes():
-            if node not in node_attrs.keys():
-                node_attrs.update({node: {}})
-
-            mapped_node = self.mapping_[node]
-            mapped_attrs = self.target_.node[mapped_node].attrs_
-
-            attrs = self.source_.node[node].attrs_
-            if mapped_attrs is not None and attrs is not None:
-                for key, value in mapped_attrs.items():
-                    if key not in attrs.keys():
-                        node_attrs[node].update({key: value})
-                    else:
-                        if type(value) != set:
-                            value = set([value])
-                        else:
-                            node_attrs[node].update(
-                                {key: set([el for el in value if el not in attrs[key]])})
-
-        edges = dict()
-        edge_attrs = {}
-
-        for edge in self.target_.edges():
-            sources = keys_by_value(self.mapping_, edge[0])
-            targets = keys_by_value(self.mapping_, edge[1])
-            if len(sources) == 0 or len(targets) == 0:
-                edges[(edge[0], edge[1])] = self.target_.edge[edge[0]][edge[1]]
-                continue
-            for s in sources:
-                for t in targets:
-                    if (s, t) not in self.source_.edges():
-                        edges[(edge[0], edge[1])] = self.target_.edge[edge[0]][edge[1]]
-
-        for edge in self.source_.edges():
-            if edge not in edge_attrs.keys():
-                edge_attrs.update({edge: {}})
-
-            mapped_edge = (self.mapping_[edge[0]], self.mapping_[edge[1]])
-            mapped_attrs = self.target_.edge[mapped_edge[0]][mapped_edge[1]]
-
-            attrs = self.source_.edge[edge[0]][edge[1]]
-
-            for key, value in mapped_attrs.items():
-                if key not in attrs.keys():
-                    edge_attrs[edge].update({key: value})
-                else:
-                    if type(value) != set:
-                        value = set([value])
-                    else:
-                        if type(attrs[key]) != set:
-                            edge_attrs[edge].update(
-                                {key: set([el for el in value
-                                           if el not in set([attrs[key]])])})
-                        else:
-                            edge_attrs[edge].update(
-                                {key: set([el for el in value
-                                           if el not in attrs[key]])})
-        return (nodes, edges, node_attrs, edge_attrs)
 
     @staticmethod
     def canonic_homomorphism(G, T):

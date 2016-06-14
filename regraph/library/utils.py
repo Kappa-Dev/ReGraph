@@ -1,97 +1,6 @@
 """."""
 
 import networkx as nx
-import matplotlib.pyplot as plt
-
-
-# taken from projx https://github.com/davebshow/projx
-def colors_by_type(graph):
-    """
-    Generate colors for node by types.
-
-    :returns: Dict. Nodes as keys, colors as values.
-    """
-    colors_dict = {}
-    colors = []
-    counter = 1
-    for node in graph.nodes():
-        if graph.node[node].type_ not in colors_dict:
-            colors_dict[graph.node[node].type_] =\
-                float(counter)
-            colors.append(float(counter))
-            counter += 1
-        else:
-            colors.append(colors_dict[graph.node[node].type_])
-    return colors
-
-
-def plot_graph(graph, types=True, filename=None):
-        """Plot graph with node colors corresponding to types."""
-        if types:
-            color_list = colors_by_type(graph)
-        else:
-            color_list = None
-
-        pos = nx.spring_layout(graph)
-        nx.draw_networkx_nodes(graph, pos,
-                               node_color=color_list,
-                               node_size=100, arrows=True)
-        nx.draw_networkx_edges(graph, pos, alpha=0.4)
-
-        labels = {}
-        for node in graph.nodes():
-            labels[node] = node
-        offset = 0.05
-        for p in pos:  # raise text positions
-            pos[p][1] += offset
-        nx.draw_networkx_labels(graph, pos, labels, font_size=11)
-
-        # save to the file
-        if filename is not None:
-            with open(filename, "w") as f:
-                plt.savefig(f)
-                plt.clf()
-        else:
-            plt.show()
-        return
-
-
-def plot_instance(graph, pattern, instance, filename=None):
-        """Plot the graph with instance of pattern highlighted."""
-        new_colors = ["g" if not graph.nodes()[i] in instance.values()
-                      else "r" for i, c in enumerate(graph.nodes())]
-        pos = nx.spring_layout(graph)
-        nx.draw_networkx_nodes(
-            graph, pos, node_color=new_colors,
-            node_size=100, arrows=True)
-        nx.draw_networkx_edges(graph, pos, alpha=0.4)
-
-        # Draw pattern edges highlighted
-        edgelist = [(instance[edge[0]], instance[edge[1]])
-                    for edge in pattern.edges()]
-        nx.draw_networkx_edges(
-            graph, pos,
-            edgelist=edgelist,
-            width=3, alpha=0.5, edge_color='r')
-
-        labels = {}
-        for node in graph.nodes():
-            labels[node] = node
-        offset = 0.05
-        for p in pos:  # raise text positions
-            pos[p][1] += offset
-        nx.draw_networkx_labels(graph, pos, labels, font_size=11)
-
-        # color the instances
-        plt.title("Graph with instance of pattern highlighted")
-        if filename is not None:
-            with open(filename, "w") as f:
-                plt.savefig(f)
-                plt.clf()
-        else:
-            plt.show()
-        return
-
 
 def is_subdict(small_dict, big_dict):
     """Check if the dictionary is a subset of other."""
@@ -137,3 +46,59 @@ def fold_left(f, init, l):
     for x in l:
         res = f(x, res)
     return res
+
+def to_set(value):
+    if type(value) == set | type(value) == list:
+        return set(value)
+    else:
+        return {value}
+
+def normalize_attrs(attrs_):
+    if attrs_ != None:
+        for k,v in attrs_.items():
+            attrs_[k] = to_set(v)
+            
+def merge_attributes(attr1, attr2, method="union"):
+    """Merge two dictionaries of attributes."""
+    result = {}
+    if attr1 is None:
+        attr1 = {}
+    if attr2 is None:
+        attr2 = {}
+    if method == "union":
+        for key1 in attr1.keys():
+            if key1 in attr2.keys():
+                if attr1[key1] == attr2[key1]:
+                    result.update(
+                        {key1: attr1[key1]})
+                else:
+                    attr_set = set()
+                    attr_set.update(attr1[key1])
+                    attr_set.update(attr2[key1])
+                    result.update(
+                        {key1: attr_set})
+            else:
+                result.update({key1: attr1[key1]})
+
+        for key2 in attr2.keys():
+            if key2 not in result:
+                result.update({key2: attr2[key2]})
+    elif method == "intersection":
+        for key1 in attr1.keys():
+            if key1 in attr2.keys():
+                if attr1[key1] == attr2[key1]:
+                    result.update(
+                        {key1: attr1[key1]})
+                else:
+                    attr_set1 = set()
+                    attr_set2 = set()
+                    attr_set1.update(attr1[key1])
+                    attr_set2.update(attr2[key1])
+                    intersect = set.intersection(attr_set1, attr_set2)
+                    if len(intersect) == 1:
+                        result.update({key1: {list(intersect)[0]}})
+                    elif len(intersect) > 1:
+                        result.update({key1: intersect})
+    else:
+        raise ValueError("Merging method %s is not defined!" % method)
+    return result
