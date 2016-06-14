@@ -11,4 +11,5 @@ python-dateutil==2.5.3
 python-termstyle==0.1.10
 pytz==2016.4
 rednose==1.2.1
+ReGraph==0.1
 six==1.10.0
