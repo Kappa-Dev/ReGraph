@@ -471,6 +471,24 @@ class Rewriter:
                 pass
         return RHS_instance
 
+    def typed_rewriting(self, left_h, right_h):
+        """ left_h : P -> L
+            right_h : P -> R
+        """
+        if left_h.source_ != right_h.source_:
+            raise ValueError(
+                "Can't rewrite, homomorphisms don't have the same preserved part"
+            )
+
+        L_G_instances = self.find_matching(left_h.target_)
+        Gprime = self.graph_
+        for L_G in L_G_instances :
+            G-, P_G-, G-_G = pullback_complement(left_h, L_G)
+            Gprime, G-_Gprime, R_Gprime = pushout(P_G-, P_R)
+            Gprime.metamodel_ = self.graph_.metamodel_
+            Gprime.hom = Homomorphism.canonic_homomorphism (Gprime, self.metamodel_)
+        return G-_Gprime, G-_G
+
     def generate_rule(self, LHS, commands):
         """Cast sequence of commands to homomorphisms."""
         command_strings = [c for c in commands.splitlines() if len(c) > 0]

@@ -475,3 +475,14 @@ class Homomorphism:
                                 {key: set([el for el in value
                                            if el not in attrs[key]])})
         return (nodes, edges, node_attrs, edge_attrs)
+
+    @staticmethod
+    def canonic_homomorphism(G, T):
+        hom_dict = {}
+        for n in G.nodes():
+            if not G.node[n].type_ in T.nodes():
+                raise ValueError(
+                    "Type %s not found in typing graph" % str(g.node[n].type_)
+                )
+            hom_dict[n] = G.node[n].type_
+        return Homomorphism(G, T, hom_dict)
