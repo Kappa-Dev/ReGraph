@@ -41,16 +41,21 @@ class TypedDiGraph(nx.DiGraph):
         self.hom = {}
 
     def add_node(self, node_id, node_type, attrs=None):
-        if node_id not in self.nodes():
-            if self.metamodel_ is not None:
-                if node_type not in self.metamodel_.nodes():
-                    raise ValueError(
-                        "Type '%s' is not allowed by metamodel!" % node_type)
-                self.hom[node_id] = node_type
-            nx.DiGraph.add_node(self, node_id)
-            self.node[node_id] = TypedNode(node_type, attrs)
+        if node_id[0] != "_":
+            if node_id not in self.nodes():
+                if self.metamodel_ is not None:
+                    if node_type not in self.metamodel_.nodes():
+                        raise ValueError(
+                            "Type '%s' is not allowed by metamodel!" % node_type)
+                    self.hom[node_id] = node_type
+                nx.DiGraph.add_node(self, node_id)
+                self.node[node_id] = TypedNode(node_type, attrs)
+            else:
+                raise ValueError("Node %s already exists!" % node_id)
         else:
-            raise ValueError("Node %s already exists!" % node_id)
+            raise ValueError(
+                "Name of nodes can't start with an underscore!"
+            )
 
     def remove_node(self, node):
         """Remove node from the self."""

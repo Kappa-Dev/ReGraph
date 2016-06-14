@@ -11,6 +11,174 @@ from regraph.library.utils import (is_subdict)
 from regraph.library.data_structures import (Homomorphism)
 
 
+class Transformer(object):
+
+    def __init__(self, graph):
+        self.directed = type(graph) == TypedDiGraph
+        self.G = graph
+        self.P = TypedDiGraph() if self.directed else TypedGraph()
+        self.R = TypedDiGraph() if self.directed else TypedGraph()
+        self.L = TypedDiGraph() if self.directed else TypedGraph()
+        self.P_L_dict = {}
+        self.P_R_dict = {}
+
+    def get(self):
+        return Homomorphism(P, L, P_L_dict), Homomorphism(P, L, P_R_dict)
+
+    def add_node(self, node_id, node_type, attrs=None):
+        if not node in self.R.nodes():
+            self.R.add_node(node_id, node_type, attrs)
+        else:
+            raise ValueError(
+                "Node %s has already been added!" % str(node_id)
+            )
+
+    def merge_nodes(self, n1, n2, node_name=None):
+        if not n1 in self.P.nodes():
+            self.P.add_node(n1,
+                            self.G.node[n1].type_,
+                            self.G.node[n1].attrs_)
+        if not n2 in self.P.nodes():
+            self.P.add_node(n2,
+                            self.G.node[n2].type_,
+                            self.G.node[n2].attrs_)
+
+        if n1 in self.P_R_dict.keys():
+            if n2 in self.P_R.keys():
+                new_name = self.R.merge_nodes([P_R_dict[n1]; P_R_dict[n2]],
+                                   node_name=node_name)
+            else:
+                self.R.add_node(n2,
+                                self.G.node[n2].type_
+                                self.G.node[n2].attrs_)
+                new_name = self.R.merge_nodes([P_R_dict[n1]; n2],
+                                   node_name=node_name)
+        else:
+            if n2 in self.P_R.keys():
+                self.R.add_node(n1,
+                                self.G.node[n1].type_
+                                self.G.node[n1].attrs_)
+                new_name = self.R.merge_nodes([n1; P_R_dict[n2]],
+                                   node_name=node_name)
+            else:
+                self.R.add_node(n1,
+                                self.G.node[n1].type_
+                                self.G.node[n1].attrs_)
+                self.R.add_node(n2,
+                                self.G.node[n2].type_
+                                self.G.node[n2].attrs_)
+                new_name = self.R.merge_nodes(n1; n2],
+                                   node_name=node_name)
+        P_R_dict[n1] = new_name
+        P_R_dict[n2] = new_name
+
+    def remove_node(self, n):
+        if not node in self.L.nodes():
+            self.L.add_node(n, self.G.node[n].type_, self.G.node[n].attrs_)
+        else:
+            for k,v in self.P_L_dict.items():
+                if v == n:
+                    raise ValueError(
+                        "You cloned %s (or one of its adjacent edges) \
+                        and now you want to delete it.." % str(n)
+                    )
+
+    def clone_node(self, n):
+        if not n in self.P.nodes():
+            self.P.add_node(n,
+                            self.G.node[n].type_,
+                            self.G.node[n].attrs_)
+        if not n in self.L.nodes():
+            self.L.add_node(n,
+                            self.G.node[n].type_,
+                            self.G.node[n].attrs_)
+        else:
+            try:
+                for k,v in self.P_L_dict.items():
+                    if v == n:
+                        return
+                raise ValueError(
+                    "You deleted %s (or one of its adjacent edges) \
+                    and now you want to clone it.." % str(n)
+                )
+            with:
+                raise ValueError(
+                    "You deleted %s (or one of its adjacent edges) \
+                    and now you want to clone it.." % str(n)
+                )
+        i = 1
+        while str(n)+str(i) in self.P.nodes():
+            i+=1
+        self.P.add_node(str(n)+str(i),
+                        self.G.node[n].type_,
+                        self.G.node[n].attrs_)
+        try:
+            if self.P_L_dict[n] != n:
+                raise ValueError(
+                    "Node %s already has an image in L" % str(n)
+                )
+        with:
+            pass
+        self.P_L_dict[n] = n
+        self.P_L_dict[str(n)+str(i)] = n
+
+    def add_edge(self, n1, n2, attrs=None):
+        if not n1 in self.P.nodes():
+            self.P.add_node(n1,
+                            self.G.node[n1].type_,
+                            self.G.node[n1].attrs_)
+        if not n2 in self.P.nodes():
+            self.P.add_node(n2,
+                            self.G.node[n2].type_,
+                            self.G.node[n2].attrs_)
+
+        if n1 in self.P_R_dict.keys():
+            if n2 in self.P_R_dict.keys():
+                if (P_R_dict[n1], P_R_dict[n2]) in self.R.edges():
+                    warnings.warn(
+                        "Edge (%s->%s)-(%s->%s) already exists, \
+                         nothing has been changed!" %
+                            (str(n1), str(P_R_dict[n1]),
+                             str(n2), str(P_R_dict[n2]))
+                    )
+                else:
+                    self.R.add_edge(P_R_dict[n1], P_R_dict[n2], attrs)
+            else:
+                self.R.add_edge(P_R_dict[n1], n2, attrs)
+        else:
+            self.R.add_edge(n1, n2, attrs)
+
+    def remove_edge(self, n1, n2):
+        if not n1 in self.P.nodes():
+            self.P.add_node(n1,
+                            self.G.node[n1].type_,
+                            self.G.node[n1].attrs_)
+        if not n2 in self.P.nodes():
+            self.P.add_node(n2,
+                            self.G.node[n2].type_,
+                            self.G.node[n2].attrs_)
+
+        if n1 in self.L.nodes():
+            self.L.add_node(n1,
+                            self.G.node[n1].type_,
+                            self.G.node[n1].attrs_)
+        if not n2 in self.L.nodes():
+            self.L.add_node(n2,
+                            self.G.node[n2].type_,
+                            self.G.node[n2].attrs_)
+
+        if not (n1, n2) in self.L.edges():
+            self.L.add_edge(n1,
+                            n2,
+                            self.G.get_edge(n1, n2)
+        else:
+            warnings.warn(
+                "You already deleted the edge %s-%s !" %
+                    (str(n1), str(n2))
+            )
+
+
+
 class Rewriter:
     """Class implements the transformation on the graph."""
 
