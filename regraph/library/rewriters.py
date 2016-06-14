@@ -85,7 +85,7 @@ class Transformer(object):
                         and now you want to delete it.." % str(n)
                     )
 
-    def clone_node(self, n):
+    def clone_node(self, n, node_name=None):
         if not n in self.P.nodes():
             self.P.add_node(n,
                             self.G.node[n].type_,
@@ -108,10 +108,14 @@ class Transformer(object):
                     "You deleted %s (or one of its adjacent edges) \
                     and now you want to clone it.." % str(n)
                 )
-        i = 1
-        while str(n)+str(i) in self.P.nodes():
-            i+=1
-        self.P.add_node(str(n)+str(i),
+        if node_name = None:
+            i = 1
+            node_name = str(n)+str(i)
+            while node_name in self.P.nodes():
+                i+=1
+                node_name = str(n)+str(i)
+
+        self.P.add_node(node_name,
                         self.G.node[n].type_,
                         self.G.node[n].attrs_)
         try:
@@ -193,6 +197,11 @@ class Transformer(object):
     def clone_edge(self, n1, n2):
         self.clone_node(n1)
         self.clone_node(n2)
+
+    def merge_nodes_list(self, l, node_name=None):
+        for i in range(1, len(l))
+            self.merge_nodes(l[i-1], l[i], node_name)
+
 
 class Rewriter:
     """Class implements the transformation on the graph."""
@@ -287,7 +296,7 @@ class Rewriter:
         return instances
 
     @staticmethod
-    def generate_rule(LHS, commands):
+    def generate_rule(G, commands):
         """Cast sequence of commands to homomorphisms."""
         command_strings = [c for c in commands.splitlines() if len(c) > 0]
         actions = []
@@ -298,13 +307,8 @@ class Rewriter:
             except:
                 raise ValueError("Cannot parse command '%s'" % command)
 
-        P = LHS.copy()
-        RHS = LHS.copy()
+        trans = Transformer(G)
 
-        pl_mapping = dict(zip(LHS.nodes(), LHS.nodes()))
-        pr_mapping = dict(zip(LHS.nodes(), LHS.nodes()))
-        # We modify P, RHS and respective mapping
-        # in the course of command parsing
         for action in actions:
             if action["keyword"] == "clone":
                 node_name = None
@@ -313,7 +317,7 @@ class Rewriter:
                 cloned_node = clone_node(P, action["node"], node_name)
                 pl_mapping[action["node"]] = action["node"]
                 pl_mapping.update({cloned_node: action["node"]})
-                clone_node(RHS, action["node"], node_name)
+                trans.clone_node(action["node"], node_name)
             elif action["keyword"] == "merge":
                 method = None
                 node_name = None
@@ -324,7 +328,7 @@ class Rewriter:
                     node_name = action["node_name"]
                 if "edges_method" in action.keys():
                     edges_method = action["edges_method"]
-                merged_node = merge_nodes(
+                merged_node = trans.merge_nodes(
                     RHS,
                     action["nodes"],
                     method,
