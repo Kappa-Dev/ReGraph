@@ -530,6 +530,10 @@ class TypedHomomorphism:
             raise ValueError("TypedHomomorphism is not valid!")
 
     @staticmethod
+    def from_untyped(hom):
+        return TypedHomomorphism(hom.source, hom.target, hom.dictionary)
+
+    @staticmethod
     def is_valid_homomorphism(source, target, dictionary):
         """Check if the homomorphism is valid (preserves edges and types)."""
 

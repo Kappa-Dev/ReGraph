@@ -3,35 +3,32 @@ import warnings
 
 from regraph.library.data_structures import (TypedGraph,
                                              TypedDiGraph,
+                                             TypedHomomorphism,
                                              Homomorphism)
-from regraph.library.category_op import (find_PB,
-                                         find_PO,
-                                         find_final_PBC)
+from regraph.library.category_op import (pullback,
+                                         pushout,
+                                         pullback_complement)
 
 class GraphModeler(object):
 
-    def __init__(self, l, homL, names):
+    def __init__(self, l, homL, names=[]):
         """ l : nx.Graph list (directed or not) [G1, G2 ...]
             homL : dict list (starting with [G1->G2 ... ])
             names : str list
         """
         typing_graph = None
-        homL.insert(0, None)
-        self.graph_chain = []
-        self.hom_chain = []
-        self.graph_names = []
-        self.changes = []
+        self.graph_chain = [None for i in range(len(l))]
+        self.hom_chain = [None]+[h for h in homL]
+        self.graph_names = [None for i in range(len(names))]
+        self.changes = [None for i in range(len(l))]
 
         for i in range(len(l)):
-            directed = type(l[î]) == nx.DiGraph
-            typing_graph = self.make_tygraph(l[i][0], typing_graph, hom[i], directed)
+            directed = type(l[i]) == nx.DiGraph
+            typing_graph = self.make_tygraph(l[i], typing_graph, homL[i], directed)
             self.graph_chain[i] = typing_graph
-            self.hom_chain[i] = hom[i]
 
-            if i>len(names):
-                self.graph_names[i] = None
-            else:
-                if names[i] in self.rw_names:
+            for i in range(len(names)):
+                if names[i] in self.graph_names:
                     raise ValueError(
                         "Name %s already used for another graph" % names[i]
                     )
@@ -44,10 +41,16 @@ class GraphModeler(object):
     def make_tygraph(self, G, T, hom, di):
         res = TypedDiGraph(T) if di else TypedGraph(T)
         for n in G.nodes():
-            res.add_node(n, hom[n], G.node[n])
+            if hom == None:
+                res.add_node(n, None, G.node[n])
+            else:
+                res.add_node(n, hom[n], G.node[n])
         for (n1, n2) in G.edges():
             res.add_edge(n1, n2, G.edge[n1][n2])
-        res.hom = TypedHomomorphism(res, T, hom)
+            if hom == None or T == None:
+                res.hom = None
+            else:
+                res.hom = TypedHomomorphism(res, T, hom)
         return res
 
     def get_by_id(self, n):
@@ -69,7 +72,7 @@ class GraphModeler(object):
             "Graph %s is not defined in the modeler" % name
         )
 
-    def rewrite(self, n_i, L_T, left_h, right_h):
+    def rewrite(self, n_i, L_T, trans):
         """ n_i : name or id
             left_h : P -> L
             right_h : P -> R
@@ -85,7 +88,7 @@ class GraphModeler(object):
                 "Undefined identifier of type %s, was expecting int or str" %
                 type(n_i)
             )
-        changes[i] = Rewriter.typed_rewriting(graph, L_T, left_h, right_h)
+        changes[i] = Rewriter.typed_rewriting(graph, L_T, trans)
 
     def propagate_from(self, n_i):
         """ n_i : name or id
@@ -99,19 +102,19 @@ class GraphModeler(object):
                 "Undefined identifier of type %s, was expecting int or str" %
                 type(n_i)
             )
-        if i >= len(self.graph_chain)-1:
+        if i >= 1 and i < len(graph_chain):
             return
         else:
             if changes[i] != None:
-                G = self.graph_chain[i+1].graph_
+                G = self.graph_chain[i-1].graph_
                 T = G.metamodel_
                 Tm_Tprime, Tm_T = changes[i]
                 G, Gm_G, Gm_Tm = pullback(G.hom, Tm_T)
                 Gprime, Gm_Gprime, Gprime_Tprime = pullback_complement(Gm_Tm, Tm_Tprime)
                 Gprime.metamodel_ = Gprime_Tprime.target_
                 Gprime.hom = Gprime_Tprime
-                changes[i+1] = Gm_Gprime, Gm_G, Gprime_Tprime
-                propagate_from(self, i+1)
+                changes[i-1] = Gm_Gprime, Gm_G, Gprime_Tprime
+                propagate_from(self, i-1)
             else:
                 warnings.warn(
                     "Nothing to propagate from here !", RuntimeWarning
@@ -119,11 +122,11 @@ class GraphModeler(object):
 
 
     def propagate_all(self):
-        for i in range(len(changes)-1, -1, -1):
+        for i in range(len(changes)):
             if changes[i] != None:
                 self.propagate_from(i)
 
     def commit_changes(self):
         for i in range(len(changes)):
-            graph_chain[i] = Rewriter(changes[i][0].target_)
+            graph_chain[i] = changes[i][0].target_
             changes[i] = None
