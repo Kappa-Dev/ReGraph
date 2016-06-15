@@ -7,7 +7,9 @@ from copy import deepcopy
 import itertools
 
 from regraph.library.parser import parser
-from regraph.library.utils import (is_subdict)
+from regraph.library.utils import (is_subdict,
+                                   merge_attributes,
+                                   substract_attributes)
 from regraph.library.data_structures import (Homomorphism)
 
 
@@ -40,38 +42,26 @@ class Transformer(object):
             self.P.add_node(n1,
                             self.G.node[n1].type_,
                             self.G.node[n1].attrs_)
+            P_R_dict[n1] = n1
         if not n2 in self.P.nodes():
             self.P.add_node(n2,
                             self.G.node[n2].type_,
                             self.G.node[n2].attrs_)
+            P_R_dict[n2] = n2
 
-        if n1 in self.P_R_dict.keys():
-            if n2 in self.P_R.keys():
-                new_name = self.R.merge_nodes([P_R_dict[n1]; P_R_dict[n2]],
-                                   node_name=node_name)
-            else:
-                self.R.add_node(n2,
-                                self.G.node[n2].type_
-                                self.G.node[n2].attrs_)
-                new_name = self.R.merge_nodes([P_R_dict[n1]; n2],
-                                   node_name=node_name)
-        else:
-            if n2 in self.P_R.keys():
-                self.R.add_node(n1,
-                                self.G.node[n1].type_
-                                self.G.node[n1].attrs_)
-                new_name = self.R.merge_nodes([n1; P_R_dict[n2]],
-                                   node_name=node_name)
-            else:
-                self.R.add_node(n1,
-                                self.G.node[n1].type_
-                                self.G.node[n1].attrs_)
-                self.R.add_node(n2,
-                                self.G.node[n2].type_
-                                self.G.node[n2].attrs_)
-                new_name = self.R.merge_nodes(n1; n2],
-                                   node_name=node_name)
-        P_R_dict[n1] = new_name
+        if not n1 in self.R.nodes():
+            self.R.add_node(n1,
+                            self.G.node[n1].type_,
+                            self.G.node[n1].attrs_)
+        if not n2 in self.R.nodes():
+            self.R.add_node(n2,
+                            self.G.node[n2].type_,
+                            self.G.node[n2].attrs_)
+
+        new_name = self.R.merge_nodes([P_R_dict[n1]; P_R_dict[n2]],
+                           node_name=node_name)
+
+        P_R_dict[n1] = new_name
         P_R_dict[n2] = new_name
 
     def remove_node(self, n):
@@ -90,41 +80,36 @@ class Transformer(object):
             self.P.add_node(n,
                             self.G.node[n].type_,
                             self.G.node[n].attrs_)
+
         if not n in self.L.nodes():
             self.L.add_node(n,
                             self.G.node[n].type_,
                             self.G.node[n].attrs_)
         else:
-            try:
-                for k,v in self.P_L_dict.items():
-                    if v == n:
-                        return
-                raise ValueError(
-                    "You deleted %s (or one of its adjacent edges) \
-                    and now you want to clone it.." % str(n)
-                )
-            with:
-                raise ValueError(
-                    "You deleted %s (or one of its adjacent edges) \
-                    and now you want to clone it.." % str(n)
-                )
-        if node_name = None:
-            i = 1
-            node_name = str(n)+str(i)
-            while node_name in self.P.nodes():
-                i+=1
-                node_name = str(n)+str(i)
+            for k,v in self.P_L_dict.items():
+                if v == n:
+                    if node_name = None:
+                        i = 1
+                        node_name = str(n)+str(i)
+                        while node_name in self.P.nodes():
+                            i+=1
+                            node_name = str(n)+str(i)
 
-        self.P.add_node(node_name,
-                        self.G.node[n].type_,
-                        self.G.node[n].attrs_)
-        try:
-            if self.P_L_dict[n] != n:
-                raise ValueError(
-                    "Node %s already has an image in L" % str(n)
-                )
-        with:
-            pass
+                    self.P.add_node(node_name,
+                                    self.G.node[n].type_,
+                                    self.G.node[n].attrs_)
+                    try:
+                        if self.P_L_dict[n] != n:
+                            raise ValueError(
+                                "Node %s already has an image in L" % str(n)
+                            )
+                    with:
+                        pass
+                    return
+            raise ValueError(
+            "You deleted %s (or one of its adjacent edges) \
+            and now you want to clone it.." % str(n)
+            )
         self.P_L_dict[n] = n
         self.P_L_dict[str(n)+str(i)] = n
 
@@ -133,26 +118,21 @@ class Transformer(object):
             self.P.add_node(n1,
                             self.G.node[n1].type_,
                             self.G.node[n1].attrs_)
+            P_R_dict[n1] = n1
         if not n2 in self.P.nodes():
             self.P.add_node(n2,
                             self.G.node[n2].type_,
                             self.G.node[n2].attrs_)
+            P_R_dict[n2] = n2
 
-        if n1 in self.P_R_dict.keys():
-            if n2 in self.P_R_dict.keys():
-                if (P_R_dict[n1], P_R_dict[n2]) in self.R.edges():
-                    warnings.warn(
-                        "Edge (%s->%s)-(%s->%s) already exists, \
-                         nothing has been changed!" %
-                            (str(n1), str(P_R_dict[n1]),
-                             str(n2), str(P_R_dict[n2]))
-                    )
-                else:
-                    self.R.add_edge(P_R_dict[n1], P_R_dict[n2], attrs)
-            else:
-                self.R.add_edge(P_R_dict[n1], n2, attrs)
+        if (P_R_dict[n1], P_R_dict[n2]) in self.R.edges():
+            warnings.warn(
+                "Edge %s-%s already exists, \
+                 nothing has been changed!" %
+                    (str(n1), str(n2))
+            )
         else:
-            self.R.add_edge(n1, n2, attrs)
+            self.R.add_edge(P_R_dict[n1], P_R_dict[n2], attrs)
 
     def remove_edge(self, n1, n2):
         if not n1 in self.P.nodes():
@@ -164,7 +144,7 @@ class Transformer(object):
                             self.G.node[n2].type_,
                             self.G.node[n2].attrs_)
 
-        if n1 in self.L.nodes():
+        if not n1 in self.L.nodes():
             self.L.add_node(n1,
                             self.G.node[n1].type_,
                             self.G.node[n1].attrs_)
@@ -182,6 +162,90 @@ class Transformer(object):
                 "You already deleted the edge %s-%s !" %
                     (str(n1), str(n2))
             )
+
+        self.P_L_dict[n1] = n1
+        self.P_L_dict[n2] = n2
+
+    def add_node_attrs(self, n, attrs):
+        if not node in self.P.nodes():
+            self.P.add_node(n,
+                            self.G.node[n].type_,
+                            self.G.node[n].attrs_)
+            self.P_R_dict[n] = n
+
+        if not node in self.R.nodes():
+            self.R.add_node(n,
+                            self.G.node[n].type_,
+                            merge_attributes(self.G.node[n].attrs_,
+                                             attrs))
+        else:
+            self.R.add_node_attrs(P_R_dict[n], attrs)
+
+    def add_edge_attrs(self, n1, n2, attrs):
+        if not n1 in self.P.nodes():
+            self.P.add_node(n1,
+                            self.G.node[n1].type_,
+                            self.G.node[n1].attrs_)
+            P_R_dict[n1] = n1
+        if not n2 in self.P.nodes():
+            self.P.add_node(n2,
+                            self.G.node[n2].type_,
+                            self.G.node[n2].attrs_)
+            P_R_dict[n2] = n2
+
+        if (P_R_dict[n1], P_R_dict[n2]) in self.R.edges():
+            self.R.add_edge_attrs(P_R_dict[n1], P_R_dict[n2], attrs)
+        else:
+            raise ValueError(
+                "Edge %s-%s doesn't exist, \
+                 please create it before adding attributes!" %
+                    (str(n1), str(n2))
+            )
+
+    def remove_node_attrs(self, n, attrs):
+        if not node in self.L.nodes():
+            self.L.add_node(n, self.G.node[n].type_, self.G.node[n].attrs_)
+            self.P.add_node(n, self.G.node[n].type_, self.G.node[N].attrs_)
+            self.P.remove_node_attrs(n, attrs)
+        else:
+            for k,v in self.P_L_dict.items():
+                if v == n:
+                    self.P.remove(n, attrs)
+            raise ValueError(
+                "You deleted %s (or one of its adjacent edges) \
+                and now you want to remove an attribute from it.." % str(n)
+            )
+
+    def remove_edge_attrs(self, n1, n2, attrs):
+        if not n1 in self.P.nodes():
+            self.P.add_node(n1,
+                            self.G.node[n1].type_,
+                            self.G.node[n1].attrs_)
+        if not n2 in self.P.nodes():
+            self.P.add_node(n2,
+                            self.G.node[n2].type_,
+                            self.G.node[n2].attrs_)
+
+        if not n1 in self.L.nodes():
+            self.L.add_node(n1,
+                            self.G.node[n1].type_,
+                            self.G.node[n1].attrs_)
+        if not n2 in self.L.nodes():
+            self.L.add_node(n2,
+                            self.G.node[n2].type_,
+                            self.G.node[n2].attrs_)
+
+        if not (n1, n2) in self.L.edges():
+            self.L.add_edge(n1,
+                            n2,
+                            self.G.get_edge(n1, n2))
+
+        if not (n1, n2) in self.P.edges():
+            self.P.add_edge(n1,
+                            n2,
+                            self.G.get_edge(n1, n2))
+
+        self.P.remove_edge_attrs(n1, n2, attrs)
 
         self.P_L_dict[n1] = n1
         self.P_L_dict[n2] = n2
@@ -215,10 +279,13 @@ class Rewriter:
         return
 
     @staticmethod
-    def rewriting(graph, L_G, left_h, right_h):
+    def rewriting(graph, L_G, trans):
         """ left_h : P -> L
             right_h : P -> R
         """
+
+        left_h, right_h = trans.get()
+
         if left_h.source_ != right_h.source_:
             raise ValueError(
                 "Can't rewrite, homomorphisms don't have the same preserved part"
@@ -296,7 +363,6 @@ class Rewriter:
         return instances
 
     @staticmethod
-    def generate_rule(G, commands):
         """Cast sequence of commands to homomorphisms."""
         command_strings = [c for c in commands.splitlines() if len(c) > 0]
         actions = []
@@ -329,11 +395,8 @@ class Rewriter:
                 if "edges_method" in action.keys():
                     edges_method = action["edges_method"]
                 merged_node = trans.merge_nodes(
-                    RHS,
                     action["nodes"],
-                    method,
-                    node_name,
-                    edges_method)
+                    node_name)
                 for node in action["nodes"]:
                     pr_mapping.update({node: merged_node})
             elif action["keyword"] == "add_node":
@@ -346,78 +409,39 @@ class Rewriter:
                     node_type = action["type"]
                 if "attrubutes" in action.keys():
                     attrs = action["attrubutes"]
-                add_node(RHS, node_type, name, attrs)
+                trans.add_node(node_type, name, attrs)
             elif action["keyword"] == "delete_node":
-                remove_node(P, action["node"])
+                trans.remove_node(P, action["node"])
                 del pl_mapping[action["node"]]
                 del pr_mapping[action["node"]]
-                remove_node(RHS, action["node"])
+                trans.remove_node(action["node"])
             elif action["keyword"] == "add_edge":
                 attrs = {}
-                if "attrubutes" in action.keys():
-                    attrs = action["attrubutes"]
-                add_edge(
-                    RHS,
+                if "attributes" in action.keys():
+                    attrs = action["attributes"]
+                trans.add_edge(
                     action["node_1"],
                     action["node_2"],
                     attrs)
             elif action["keyword"] == "delete_edge":
-                remove_edge(
-                    P,
-                    action["node_1"],
-                    action["node_2"])
-                remove_edge(
-                    RHS,
+                trans.remove_edge(
                     action["node_1"],
                     action["node_2"])
             elif action["keyword"] == "add_node_attrs":
-                add_node_attrs(
-                    RHS,
+                trans.add_node_attrs(
                     action["node"],
                     action["attributes"])
             elif action["keyword"] == "add_edge_attrs":
-                add_edge_attrs(
-                    RHS,
+                trans.add_edge_attrs(
                     action["node_1"],
                     action["node_2"],
                     action["attributes"])
             elif action["keyword"] == "delete_node_attrs":
-                remove_node_attrs(
-                    P,
-                    action["node"],
-                    action["attributes"])
-                remove_node_attrs(
-                    RHS,
+                trans.remove_node_attrs(
                     action["node"],
                     action["attributes"])
             elif action["keyword"] == "delete_edge_attrs":
-                remove_edge_attrs(
-                    P,
-                    action["node_1"],
-                    action["node_2"],
-                    action["attributes"])
-                remove_edge_attrs(
-                    RHS,
-                    action["node_1"],
-                    action["node_2"],
-                    action["attributes"])
-            elif action["keyword"] == "update_node_attrs":
-                remove_node_attrs(
-                    P,
-                    action["node"],
-                    P.node[action["node"]].attrs_)
-                update_node_attrs(
-                    RHS,
-                    action["node"],
-                    action["attributes"])
-            elif action["keyword"] == "update_edge_attrs":
-                remove_edge_attrs(
-                    P,
-                    action["node_1"],
-                    action["node_2"],
-                    P.edge[action["node_1"]][action["node_2"]])
-                update_edge_attrs(
-                    RHS,
+                trans.remove_edge_attrs(
                     action["node_1"],
                     action["node_2"],
                     action["attributes"])

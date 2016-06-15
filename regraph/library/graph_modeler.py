@@ -18,6 +18,7 @@ class GraphModeler(object):
         typing_graph = None
         homL.insert(0, None)
         self.graph_chain = []
+        self.hom_chain = []
         self.graph_names = []
         self.changes = []
 
@@ -25,6 +26,7 @@ class GraphModeler(object):
             directed = type(l[î]) == nx.DiGraph
             typing_graph = self.make_tygraph(l[i][0], typing_graph, hom[i], directed)
             self.graph_chain[i] = typing_graph
+            self.hom_chain[i] = hom[i]
 
             if i>len(names):
                 self.graph_names[i] = None
@@ -45,7 +47,7 @@ class GraphModeler(object):
             res.add_node(n, hom[n], G.node[n])
         for (n1, n2) in G.edges():
             res.add_edge(n1, n2, G.edge[n1][n2])
-        res.hom = Homomorphism(res, T, hom)
+        res.hom = TypedHomomorphism(res, T, hom)
         return res
 
     def get_by_id(self, n):

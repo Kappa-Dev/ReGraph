@@ -38,7 +38,6 @@ class TypedDiGraph(nx.DiGraph):
     def __init__(self, metamodel=None):
         nx.DiGraph.__init__(self)
         self.metamodel_ = metamodel
-        self.hom = {}
 
     def add_node(self, node_id, node_type, attrs=None):
         if node_id[0] != "_":
@@ -47,7 +46,6 @@ class TypedDiGraph(nx.DiGraph):
                     if node_type not in self.metamodel_.nodes():
                         raise ValueError(
                             "Type '%s' is not allowed by metamodel!" % node_type)
-                    self.hom[node_id] = node_type
                 nx.DiGraph.add_node(self, node_id)
                 self.node[node_id] = TypedNode(node_type, attrs)
             else:
@@ -497,23 +495,12 @@ class Homomorphism:
             len(set(self.mapping_.values()))
 
     @staticmethod
-    def is_valid_homomorphism(source, target, dictionary):
-        """Check if the homomorphism is valid (preserves edges and types)."""
+    def is_valid_homomorphism(source, target, dictionnary):
+        """Check if the homomorphism is valid (preserves edges)."""
         # check if there is mapping for all the nodes of source graph
         if set(source.nodes()) != set(dictionary.keys()):
             raise ValueError(
                 "Invalid homomorphism: Mapping is not covering all the nodes of source graph!")
-
-        # check nodes match with types and sets of attributes
-        for s, t in dictionary.items():
-            if source.node[s].type_ != target.node[t].type_:
-                raise ValueError(
-                    "Invalid homomorphism: Node type does not match ('%s' and '%s')!" %
-                    (str(source.node[s].type_), str(target.node[t].type_)))
-            if not is_subdict(source.node[s].attrs_, target.node[t].attrs_):
-                raise ValueError(
-                    "Invalid homomorphism: Attributes of nodes source:'%s' and target:'%s' does not match!" %
-                    (str(s), str(t)))
 
         # check connectivity and edges attr matches
         for s_edge in source.edges():
@@ -525,6 +512,34 @@ class Homomorphism:
                 else:
                     raise ValueError(
                         "Invalid homomorphism: Connectivity is not preserved!")
+
+
+class TypedHomomorphism:
+    """Define graph typed homomorphism data structure."""
+
+    def __init__(self, source, target, dictionnary):
+        Homomorphism.__init__(self, source, target, dictionnary)
+
+    @staticmethod
+    def is_valid_homomorphism(source, target, dictionary):
+        """Check if the homomorphism is valid (preserves edges and types)."""
+
+        #check preserving of edges
+        Homomorphism.is_valid_homomorphism(source, target, dictionnary)
+
+        # check nodes match with types and sets of attributes
+        for s, t in dictionary.items():
+            if source.node[s].type_ != t:
+                raise ValueError(
+                    "Invalid homomorphism: Node type does not match ('%s' and '%s')!" %
+                    (str(source.node[s].type_), str(t)))
+            if not is_subdict(source.node[s].attrs_, target.node[t].attrs_):
+                raise ValueError(
+                    "Invalid homomorphism: Attributes of nodes source:'%s' and target:'%s' does not match!" %
+                    (str(s), str(t)))
+
+        # check edges attr matches
+        for s_edge in source.edges():
             source_edge_attrs = source.get_edge(s_edge[0], s_edge[1])
             target_edge_attrs = target.get_edge(dictionary[s_edge[0]],
                                                 dictionary[s_edge[1]])
@@ -537,7 +552,7 @@ class Homomorphism:
         return True
 
     @staticmethod
-    def canonic_homomorphism(G, T):
+    def canonic(G, T):
         hom_dict = {}
         for n in G.nodes():
             if not G.node[n].type_ in T.nodes():
@@ -545,4 +560,4 @@ class Homomorphism:
                     "Type %s not found in typing graph" % str(g.node[n].type_)
                 )
             hom_dict[n] = G.node[n].type_
-        return Homomorphism(G, T, hom_dict)
+        return TypedHomomorphism(G, T, hom_dict)
