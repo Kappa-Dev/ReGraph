@@ -8,9 +8,10 @@ import itertools
 
 from regraph.library.parser import parser
 from regraph.library.utils import (is_subdict,
-                                   merge_attributes,
-                                   substract_attributes)
-from regraph.library.data_structures import (Homomorphism)
+                                   merge_attributes)
+from regraph.library.data_structures import (TypedGraph,
+                                             TypedDiGraph,
+                                             Homomorphism)
 
 
 class Transformer(object):
@@ -58,10 +59,10 @@ class Transformer(object):
                             self.G.node[n2].type_,
                             self.G.node[n2].attrs_)
 
-        new_name = self.R.merge_nodes([P_R_dict[n1]; P_R_dict[n2]],
+        new_name = self.R.merge_nodes([P_R_dict[n1], P_R_dict[n2]],
                            node_name=node_name)
 
-        P_R_dict[n1] = new_name
+        P_R_dict[n1] = new_name
         P_R_dict[n2] = new_name
 
     def remove_node(self, n):
@@ -88,7 +89,7 @@ class Transformer(object):
         else:
             for k,v in self.P_L_dict.items():
                 if v == n:
-                    if node_name = None:
+                    if node_name == None:
                         i = 1
                         node_name = str(n)+str(i)
                         while node_name in self.P.nodes():
@@ -98,13 +99,11 @@ class Transformer(object):
                     self.P.add_node(node_name,
                                     self.G.node[n].type_,
                                     self.G.node[n].attrs_)
-                    try:
+                    if n in self.P_L_dict.keys():
                         if self.P_L_dict[n] != n:
                             raise ValueError(
                                 "Node %s already has an image in L" % str(n)
                             )
-                    with:
-                        pass
                     return
             raise ValueError(
             "You deleted %s (or one of its adjacent edges) \
@@ -127,7 +126,7 @@ class Transformer(object):
 
         if (P_R_dict[n1], P_R_dict[n2]) in self.R.edges():
             warnings.warn(
-                "Edge %s-%s already exists, \
+                "Edge %sm%s already exists, \
                  nothing has been changed!" %
                     (str(n1), str(n2))
             )
@@ -156,10 +155,10 @@ class Transformer(object):
         if not (n1, n2) in self.L.edges():
             self.L.add_edge(n1,
                             n2,
-                            self.G.get_edge(n1, n2)
+                            self.G.get_edge(n1, n2))
         else:
             warnings.warn(
-                "You already deleted the edge %s-%s !" %
+                "You already deleted the edge %sm%s !" %
                     (str(n1), str(n2))
             )
 
@@ -197,7 +196,7 @@ class Transformer(object):
             self.R.add_edge_attrs(P_R_dict[n1], P_R_dict[n2], attrs)
         else:
             raise ValueError(
-                "Edge %s-%s doesn't exist, \
+                "Edge %sm%s doesn't exist, \
                  please create it before adding attributes!" %
                     (str(n1), str(n2))
             )
@@ -263,8 +262,8 @@ class Transformer(object):
         self.clone_node(n2)
 
     def merge_nodes_list(self, l, node_name=None):
-        for i in range(1, len(l))
-            self.merge_nodes(l[i-1], l[i], node_name)
+        for i in range(1, len(l)):
+            self.merge_nodes(l[im1], l[i], node_name)
 
 
 class Rewriter:
@@ -279,9 +278,9 @@ class Rewriter:
         return
 
     @staticmethod
-    def rewriting(graph, L_G, trans):
-        """ left_h : P -> L
-            right_h : P -> R
+    def rewrite(graph, L_G, trans):
+        """ left_h : P m> L
+            right_h : P m> R
         """
 
         left_h, right_h = trans.get()
@@ -291,11 +290,11 @@ class Rewriter:
                 "Can't rewrite, homomorphisms don't have the same preserved part"
             )
 
-        G-, P_G-, G-_G = pullback_complement(left_h, L_G)
-        Gprime, G-_Gprime, R_Gprime = pushout(P_G-, P_R)
+        Gm, P_Gm, Gm_G = pullback_complement(left_h, L_G)
+        Gprime, Gm_Gprime, R_Gprime = pushout(P_Gm, P_R)
         Gprime.metamodel_ = graph.metamodel_
-        Gprime.hom = Homomorphism.canonic_homomorphism (Gprime, graph.metamodel_)
-        return G-_Gprime, G-_G
+        Gprime.hom = TypedHomomorphism.canonic(Gprime, graph.metamodel_)
+        return Gm_Gprime, Gm_G
 
     @staticmethod
     def find_matching(graph, pattern):
@@ -363,6 +362,7 @@ class Rewriter:
         return instances
 
     @staticmethod
+    def transformer_from_command(c):
         """Cast sequence of commands to homomorphisms."""
         command_strings = [c for c in commands.splitlines() if len(c) > 0]
         actions = []

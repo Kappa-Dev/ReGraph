@@ -6,11 +6,8 @@ from nose.tools import assert_equals
 from regraph.library.data_structures import (TypedDiGraph,
                                              TypedGraph,
                                              Homomorphism)
-from regraph.library.rewriters import Rewriter
-
-from regraph.library.utils import plot_graph
-from regraph.library.utils import plot_instance
-from regraph.library.primitives import cast_node
+from regraph.library.rewriters import (Rewriter,
+                                       Transformer)
 
 
 class TestRewrites(object):
@@ -77,4 +74,15 @@ class TestRewrites(object):
         self.LHS_.set_edge(5, 6, {'s': 'p'})
 
         self.rw_ = Rewriter(graph)
-        self.instances_ = self.rw_.find_matching(self.LHS_)
+        self.instances_ = Rewriter.find_matching(graph, self.LHS_)
+
+        self.trans = Transformer(graph)
+
+        self.trans.add_node(14, 'action', {'name' : 'BND'})
+        self.trans.remove_node(2)
+        self.trans.clone_node(4, 15)
+        self.trans.merge_nodes(11, 12)
+
+        self.instances_ = Rewriter.find_matching(graph, self.trans.L)
+
+        Rewriter.rewrite(self.graph, self.instances_[0], self.trans)

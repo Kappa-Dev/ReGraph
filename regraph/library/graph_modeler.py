@@ -26,7 +26,7 @@ class GraphModeler(object):
             directed = type(l[î]) == nx.DiGraph
             typing_graph = self.make_tygraph(l[i][0], typing_graph, hom[i], directed)
             self.graph_chain[i] = typing_graph
-            self.hom_chain[i] = hom[i]
+            self.hom_chain[i] = hom[i]
 
             if i>len(names):
                 self.graph_names[i] = None
@@ -105,12 +105,12 @@ class GraphModeler(object):
             if changes[i] != None:
                 G = self.graph_chain[i+1].graph_
                 T = G.metamodel_
-                T-_Tprime, T-_T = changes[i]
-                G-, G-_G, G-_T- = pullback(G.hom, T-_T)
-                Gprime, G-_Gprime, Gprime_Tprime = pullback_complement(G-_T-, T-_Tprime)
+                Tm_Tprime, Tm_T = changes[i]
+                G, Gm_G, Gm_Tm = pullback(G.hom, Tm_T)
+                Gprime, Gm_Gprime, Gprime_Tprime = pullback_complement(Gm_Tm, Tm_Tprime)
                 Gprime.metamodel_ = Gprime_Tprime.target_
                 Gprime.hom = Gprime_Tprime
-                changes[i+1] = G-_Gprime, G-_G, Gprime_Tprime
+                changes[i+1] = Gm_Gprime, Gm_G, Gprime_Tprime
                 propagate_from(self, i+1)
             else:
                 warnings.warn(

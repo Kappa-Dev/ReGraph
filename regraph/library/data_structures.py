@@ -40,20 +40,15 @@ class TypedDiGraph(nx.DiGraph):
         self.metamodel_ = metamodel
 
     def add_node(self, node_id, node_type, attrs=None):
-        if node_id[0] != "_":
-            if node_id not in self.nodes():
-                if self.metamodel_ is not None:
-                    if node_type not in self.metamodel_.nodes():
-                        raise ValueError(
-                            "Type '%s' is not allowed by metamodel!" % node_type)
-                nx.DiGraph.add_node(self, node_id)
-                self.node[node_id] = TypedNode(node_type, attrs)
-            else:
-                raise ValueError("Node %s already exists!" % node_id)
+        if node_id not in self.nodes():
+            if self.metamodel_ is not None:
+                if node_type not in self.metamodel_.nodes():
+                    raise ValueError(
+                        "Type '%s' is not allowed by metamodel!" % node_type)
+            nx.DiGraph.add_node(self, node_id)
+            self.node[node_id] = TypedNode(node_type, attrs)
         else:
-            raise ValueError(
-                "Name of nodes can't start with an underscore!"
-            )
+            raise ValueError("Node %s already exists!" % node_id)
 
     def remove_node(self, node):
         """Remove node from the self."""
@@ -147,9 +142,17 @@ class TypedDiGraph(nx.DiGraph):
             raise ValueError(
                 "Edge %s->%s does not exist!" % (str(source), str(target)))
 
-    def add_edges_from(self, edge_list, attrs=None, **attr):
-        for (source, target) in edge_list:
-            self.add_edge(source, target, attrs, **attr)
+    def add_edges_from(self, edge_list):
+        for e in edge_list:
+            if len(e) == 2 :
+                self.add_edge(e[0], e[1])
+            elif len(e) == 3 :
+                self.add_edge(e[0], e[1], e[2])
+            else:
+                raise ValueError(
+                    "Was expecting 2 or 3 elements per tuple, got %s." %
+                    str(len(e))
+                )
 
     def add_edge_attrs(self, node_1, node_2, attrs_dict):
         if (node_1, node_2) not in self.edges():
@@ -482,7 +485,7 @@ class Homomorphism:
     """Define graph homomorphism data structure."""
 
     def __init__(self, source, target, dictionary):
-        if is_valid_homomorphism(source, target, dictionary):
+        if Homomorphism.is_valid_homomorphism(source, target, dictionary):
             self.source_ = source
             self.target_ = target
             self.mapping_ = dictionary
@@ -495,7 +498,7 @@ class Homomorphism:
             len(set(self.mapping_.values()))
 
     @staticmethod
-    def is_valid_homomorphism(source, target, dictionnary):
+    def is_valid_homomorphism(source, target, dictionary):
         """Check if the homomorphism is valid (preserves edges)."""
         # check if there is mapping for all the nodes of source graph
         if set(source.nodes()) != set(dictionary.keys()):
@@ -512,20 +515,26 @@ class Homomorphism:
                 else:
                     raise ValueError(
                         "Invalid homomorphism: Connectivity is not preserved!")
+        return True
 
 
 class TypedHomomorphism:
     """Define graph typed homomorphism data structure."""
 
-    def __init__(self, source, target, dictionnary):
-        Homomorphism.__init__(self, source, target, dictionnary)
+    def __init__(self, source, target, dictionary):
+        if TypedHomomorphism.is_valid_homomorphism(source, target, dictionary):
+            self.source_ = source
+            self.target_ = target
+            self.mapping_ = dictionary
+        else:
+            raise ValueError("TypedHomomorphism is not valid!")
 
     @staticmethod
     def is_valid_homomorphism(source, target, dictionary):
         """Check if the homomorphism is valid (preserves edges and types)."""
 
         #check preserving of edges
-        Homomorphism.is_valid_homomorphism(source, target, dictionnary)
+        Homomorphism.is_valid_homomorphism(source, target, dictionary)
 
         # check nodes match with types and sets of attributes
         for s, t in dictionary.items():

@@ -48,7 +48,7 @@ def fold_left(f, init, l):
     return res
 
 def to_set(value):
-    if type(value) == set | type(value) == list:
+    if (type(value) == set) | (type(value) == list):
         return set(value)
     else:
         return {value}
@@ -57,7 +57,7 @@ def normalize_attrs(attrs_):
     if attrs_ != None:
         for k,v in attrs_.items():
             attrs_[k] = to_set(v)
-            
+
 def merge_attributes(attr1, attr2, method="union"):
     """Merge two dictionaries of attributes."""
     result = {}
