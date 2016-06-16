@@ -29,16 +29,31 @@ def pullback(h1, h2):
 
     for n1 in B.nodes():
         for n2 in C.nodes():
-            if not f[n1] in A.nodes():
-                if f[n1] == g[n2]:
-                    A.add_node(f[n1],
-                                       h1.target_.node[f[n1]].type_,
-                                       merge_attributes(B.node[n1].attrs_,
-                                                        C.node[n2].attrs_,
-                                                        'intersection'))
+            if f[n1] == g[n2]:
+                if not n1 in A.nodes():
+                    A.add_node(n1,
+                               B.node[n1].type_,
+                               merge_attributes(B.node[n1].attrs_,
+                                                C.node[n2].attrs_,
+                                                'intersection'))
 
-                    hom1[f[n1]] = n1
-                    hom2[g[n2]] = n2
+                    hom1[n1] = n1
+                    hom2[n1] = n2
+                else:
+                    i=1
+                    new_name = str(n1)+str(i)
+                    while new_name in A.nodes():
+                        i+=1
+                        new_name = str(n1)+str(i)
+                    if not n2 in A.nodes():
+                        A.add_node(new_name,
+                                   n2,
+                                   merge_attributes(B.node[n1].attrs_,
+                                                    C.node[n2].attrs_,
+                                                    'intersection'))
+
+                        hom1[new_name] = n1
+                        hom2[new_name] = n2
 
     for n1 in A.nodes():
         for n2 in A.nodes():
@@ -194,7 +209,7 @@ def pullback_complement(h1, h2):
             mapped_A_nodes = keys_by_value(f, B_node[0])
             for A_node in mapped_A_nodes:
                 C.add_node(
-                    str(A_node) + "_" + str(node),
+                    A_node,
                     D.node[g[f[A_node]]].type_,
                     merge_attributes(
                         A.node[A_node].attrs_,
@@ -202,8 +217,8 @@ def pullback_complement(h1, h2):
                         "intersection"
                     )
                 )
-                hom1[A_node] = str(A_node) + "_" + str(node)
-                hom2[str(A_node) + "_" + str(node)] = g[f[A_node]]
+                hom1[A_node] = A_node
+                hom2[A_node] = g[f[A_node]]
         else:
             C.add_node(
                 str(node) + "_",
@@ -220,28 +235,9 @@ def pullback_complement(h1, h2):
             for A_s in mapped_A_ss:
                 for A_t in mapped_A_ts:
                     if C.is_directed():
-                        if (A_s, A_t) not in A.edges():
-                            C.add_edge(
-                                hom1[A_s],
-                                hom1[A_t],
-                                D.get_edge(
-                                    g[f[A_s]],
-                                    g[f[A_t]])
-                            )
-                        else:
-                            C.add_edge(
-                                hom1[A_s],
-                                hom1[A_t],
-                                merge_attributes(
-                                    A.get_edge(A_s, A_t),
-                                    D.get_edge(
-                                        g[f[A_s]],
-                                        g[f[A_t]]),
-                                    "intersection"
-                                )
-                            )
-                    else:
-                        if (A_s, A_t) not in A.edges() and (A_t, A_s) not in A.edges():
+                        if (A_s, A_t) not in A.edges() or \
+                           (C.is_directed() and ((A_s, A_t) not in A.edges() and \
+                           (A_t, A_s) not in A.edges())):
                             C.add_edge(
                                 hom1[A_s],
                                 hom1[A_t],

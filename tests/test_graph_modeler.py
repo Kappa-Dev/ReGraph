@@ -4,6 +4,8 @@ from regraph.library.data_structures import (TypedDiGraph,
                                              TypedGraph,
                                              Homomorphism,
                                              TypedHomomorphism)
+from regraph.library.rewriters import (Transformer,
+                                       Rewriter)
 from regraph.library.graph_modeler import GraphModeler
 
 class TestGraphModeler(object):
@@ -79,19 +81,32 @@ class TestGraphModeler(object):
     def test_modeler(self):
         modeler = GraphModeler([self.G2, self.G1, self.G0], [self.G1_G2, self.G0_G1])
 
-        trans = Transformer(self.G2)
+        trans = Transformer(modeler.get_by_id(0))
 
         trans.clone_node('square')
 
-        instances = Rewriter.find_matching(trans.L, self.G2)
+        print("")
+        print("P->L : %s \n P->R : %s" % trans.get())
+        print()
 
-        modeler.rewrite(0, instances[0], trans)
+        instances = Rewriter.find_matching(trans.L, modeler.get_by_id(0))
 
-        print(modeler.get_by_id(0).nodes())
-        print(modeler.get_by_id(0).edges())
+        instance = {
+            'square' : 'square'
+        }
+
+        modeler.rewrite(0,
+                        Homomorphism(trans.L, modeler.get_by_id(0), instance),
+                        trans)
+
+        print("Graph after rewriting")
+
+        print(modeler.changes[0][0].target_)
 
         modeler.propagate_all()
+        modeler.commit_changes()
 
-        for g in modeler.graph_chain:
-            print(g.nodes())
-            print(g.edges())
+        print("Graphs after propagation")
+
+        for i in range(len(modeler.graph_chain)):
+            print("%s -> %s" % (i,modeler.graph_chain[i]))

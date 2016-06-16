@@ -39,6 +39,29 @@ class TypedDiGraph(nx.DiGraph):
         nx.DiGraph.__init__(self)
         self.metamodel_ = metamodel
 
+    def __eq__(self, A):
+        if type(A) == type(self):
+            return (A.nodes()==self.nodes()) and (A.edges()==self.edges())
+        else:
+            return False
+
+    def __ne__(self, B):
+        return not self.__eq__(B)
+
+    def __str__(self):
+        res = ""
+        res += "Nodes : \n"
+        for n in self.nodes():
+            res += str(n)+" : "+str(self.node[n].type_)
+            res += " | "+str(self.node[n].attrs_)+"\n"
+        res += "\n"
+        res += "Edges : \n"
+        for n1,n2 in self.edges():
+            res += str((n1,n2))+" : "+str(self.get_edge(n1, n2))+"\n"
+        res += "\n"
+
+        return res
+
     def add_node(self, node_id, node_type, attrs=None):
         if node_id not in self.nodes():
             if self.metamodel_ is not None:
@@ -457,6 +480,15 @@ class TypedGraph(TypedDiGraph):
     def __init__(self, metamodel=None):
         TypedDiGraph.__init__(self, metamodel)
 
+    def __eq__(self, A):
+        if type(A) == type(self):
+            return (A.nodes()==self.nodes()) and (A.edges()==self.edges())
+        else:
+            return False
+
+    def __ne__(self, B):
+        return not self.__eq__(B)
+
     def add_edge(self, s, t, attrs=None, **attr):
         TypedDiGraph.add_edge(self, s, t, attrs, **attr)
         TypedDiGraph.add_edge(self, t, s, attrs, **attr)
@@ -481,7 +513,7 @@ class TypedGraph(TypedDiGraph):
         TypedDiGraph.set_edge(self, u, v, attrs)
         TypedDiGraph.set_edge(self, v, u, attrs)
 
-class Homomorphism:
+class Homomorphism(object):
     """Define graph homomorphism data structure."""
 
     def __init__(self, source, target, dictionary):
@@ -491,6 +523,10 @@ class Homomorphism:
             self.mapping_ = dictionary
         else:
             raise ValueError("Homomorphism is not valid!")
+
+    def __str__(self):
+        return "Source : %s \nTarget : %s \nMapping : %s" % \
+            (str(self.source_),str(self.target_),str(self.mapping_))
 
     def is_monic(self):
         """Check if the homomorphism is monic."""
@@ -518,7 +554,7 @@ class Homomorphism:
         return True
 
 
-class TypedHomomorphism:
+class TypedHomomorphism(Homomorphism):
     """Define graph typed homomorphism data structure."""
 
     def __init__(self, source, target, dictionary):
@@ -529,9 +565,10 @@ class TypedHomomorphism:
         else:
             raise ValueError("TypedHomomorphism is not valid!")
 
+
     @staticmethod
     def from_untyped(hom):
-        return TypedHomomorphism(hom.source, hom.target, hom.dictionary)
+        return TypedHomomorphism(hom.source_, hom.target_, hom.mapping_)
 
     @staticmethod
     def is_valid_homomorphism(source, target, dictionary):
@@ -542,7 +579,7 @@ class TypedHomomorphism:
 
         # check nodes match with types and sets of attributes
         for s, t in dictionary.items():
-            if source.node[s].type_ != t:
+            if (source.node[s].type_ != None) and (source.node[s].type_ != t):
                 raise ValueError(
                     "Invalid homomorphism: Node type does not match ('%s' and '%s')!" %
                     (str(source.node[s].type_), str(t)))

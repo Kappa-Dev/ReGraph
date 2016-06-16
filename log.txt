@@ -8,101 +8,550 @@ test_data_structures.TestDataStructures.test_homomorphism_type_mismatch ... ok
 test_data_structures.TestDataStructures.test_homorphism_init ... ok
 test_data_structures.TestDataStructures.test_init_with_metamodel_directed ... ok
 test_data_structures.TestDataStructures.test_init_with_metamodel_undirected ... ok
-test_parser.TestParser.test_add_edge ... FAIL
-test_parser.TestParser.test_add_node ... FAIL
+test_graph_modeler.TestGraphModeler.test_modeler ... 
+P->L : Source : Nodes : 
+square : None | {'type': {'BND'}}
+square1 : None | {'type': {'BND'}}
+
+Edges : 
+
+ 
+Target : Nodes : 
+square : None | {'type': {'BND'}}
+
+Edges : 
+
+ 
+Mapping : {'square': 'square', 'square1': 'square'} 
+ P->R : Source : Nodes : 
+square : None | {'type': {'BND'}}
+square1 : None | {'type': {'BND'}}
+
+Edges : 
+
+ 
+Target : Nodes : 
+square : None | {'type': {'BND'}}
+square1 : None | {'type': {'BND'}}
+
+Edges : 
+
+ 
+Mapping : {'square': 'square', 'square1': 'square1'}
+
+Graph after rewriting
+Nodes : 
+square_square : None | {'type': {'BND'}}
+circle__ : None | {'type': {1, 2, 3}}
+square1_square1 : None | {'type': {'BND'}}
+
+Edges : 
+('circle__', 'square_square') : {}
+('circle__', 'circle__') : {}
+('circle__', 'square1_square1') : {}
+
+
+Source : Nodes : 
+action : square | {'type': {'BND'}}
+action1 : square1 | {'type': {'BND'}}
+agent : circle | {}
+site : circle | {'type': {1, 2, 3}}
+
+Edges : 
+('site', 'action') : {}
+('site', 'action1') : {}
+('site', 'agent') : {}
+
+ 
+Target : Nodes : 
+square : None | {'type': {'BND'}}
+circle_ : None | {'type': {1, 2, 3}}
+square1 : None | {'type': {'BND'}}
+
+Edges : 
+('circle_', 'square') : {}
+('circle_', 'circle_') : {}
+('circle_', 'square1') : {}
+
+ 
+Mapping : {'action': 'square', 'action1': 'square1', 'agent': 'circle_', 'site': 'circle_'}
+Source : Nodes : 
+square : None | {'type': {'BND'}}
+circle_ : None | {'type': {1, 2, 3}}
+square1 : None | {'type': {'BND'}}
+
+Edges : 
+('circle_', 'square') : {}
+('circle_', 'circle_') : {}
+('circle_', 'square1') : {}
+
+ 
+Target : Nodes : 
+square_square : None | {'type': {'BND'}}
+circle__ : None | {'type': {1, 2, 3}}
+square1_square1 : None | {'type': {'BND'}}
+
+Edges : 
+('circle__', 'square_square') : {}
+('circle__', 'circle__') : {}
+('circle__', 'square1_square1') : {}
+
+ 
+Mapping : {'square': 'square_square', 'circle_': 'circle__', 'square1': 'square1_square1'}
+Propagated from 0
+T : Nodes : 
+square : None | {'type': {'BND'}}
+circle : None | {'type': {1, 2, 3}}
+
+Edges : 
+('circle', 'square') : {}
+('circle', 'circle') : {}
+
+ 
+T- : Nodes : 
+square : None | {'type': {'BND'}}
+circle_ : None | {'type': {1, 2, 3}}
+square1 : None | {'type': {'BND'}}
+
+Edges : 
+('circle_', 'square') : {}
+('circle_', 'circle_') : {}
+('circle_', 'square1') : {}
+
+ 
+Tprime : Nodes : 
+square_square : None | {'type': {'BND'}}
+circle__ : None | {'type': {1, 2, 3}}
+square1_square1 : None | {'type': {'BND'}}
+
+Edges : 
+('circle__', 'square_square') : {}
+('circle__', 'circle__') : {}
+('circle__', 'square1_square1') : {}
+
+
+G : Nodes : 
+action : square | {'type': {'BND'}}
+agent : circle | {}
+site : circle | {'type': {1, 2, 3}}
+
+Edges : 
+('site', 'action') : {}
+('site', 'agent') : {}
+
+ 
+G- : Nodes : 
+action : square | {'type': {'BND'}}
+action1 : square1 | {'type': {'BND'}}
+agent : circle | {}
+site : circle | {'type': {1, 2, 3}}
+
+Edges : 
+('site', 'action') : {}
+('site', 'action1') : {}
+('site', 'agent') : {}
+
+ 
+Gprime : Nodes : 
+action : None | {'type': {'BND'}}
+action1 : None | {'type': {'BND'}}
+agent : None | {}
+site : None | {'type': {1, 2, 3}}
+
+Edges : 
+('agent', 'action') : {}
+('agent', 'action1') : {}
+('agent', 'agent') : {}
+('agent', 'site') : {}
+('site', 'action') : {}
+('site', 'action1') : {}
+('site', 'agent') : {}
+('site', 'site') : {}
+
+
+Source : Nodes : 
+1 : agent | {}
+2 : agent | {}
+3 : action | {'type': {'BND'}}
+1_3 : site | {'type': {3}}
+1_1 : site | {'type': {1}}
+2_2 : site | {'type': {2}}
+2_1 : site | {'type': {1}}
+2_3 : site | {'type': {3}}
+31 : action1 | {'type': {'BND'}}
+1_2 : site | {'type': {2}}
+
+Edges : 
+('1_3', 1) : {}
+('1_1', 1) : {}
+('1_1', 3) : {}
+('1_1', '31') : {}
+('2_2', 2) : {}
+('2_1', '31') : {}
+('2_1', 2) : {}
+('2_1', 3) : {}
+('2_3', 2) : {}
+('1_2', 1) : {}
+
+ 
+Target : Nodes : 
+action : square | {'type': {'BND'}}
+action1 : square1 | {'type': {'BND'}}
+agent : circle | {}
+site : circle | {'type': {1, 2, 3}}
+
+Edges : 
+('site', 'action') : {}
+('site', 'action1') : {}
+('site', 'agent') : {}
+
+ 
+Mapping : {1: 'agent', 2: 'agent', 3: 'action', '1_3': 'site', '1_1': 'site', '2_2': 'site', '2_1': 'site', '2_3': 'site', '31': 'action1', '1_2': 'site'}
+Source : Nodes : 
+action : square | {'type': {'BND'}}
+action1 : square1 | {'type': {'BND'}}
+agent : circle | {}
+site : circle | {'type': {1, 2, 3}}
+
+Edges : 
+('site', 'action') : {}
+('site', 'action1') : {}
+('site', 'agent') : {}
+
+ 
+Target : Nodes : 
+action : None | {'type': {'BND'}}
+action1 : None | {'type': {'BND'}}
+agent : None | {}
+site : None | {'type': {1, 2, 3}}
+
+Edges : 
+('agent', 'action') : {}
+('agent', 'action1') : {}
+('agent', 'agent') : {}
+('agent', 'site') : {}
+('site', 'action') : {}
+('site', 'action1') : {}
+('site', 'agent') : {}
+('site', 'site') : {}
+
+ 
+Mapping : {'action': 'action', 'action1': 'action1', 'agent': 'agent', 'site': 'site'}
+Propagated from 1
+T : Nodes : 
+action : square | {'type': {'BND'}}
+agent : circle | {}
+site : circle | {'type': {1, 2, 3}}
+
+Edges : 
+('site', 'action') : {}
+('site', 'agent') : {}
+
+ 
+T- : Nodes : 
+action : square | {'type': {'BND'}}
+action1 : square1 | {'type': {'BND'}}
+agent : circle | {}
+site : circle | {'type': {1, 2, 3}}
+
+Edges : 
+('site', 'action') : {}
+('site', 'action1') : {}
+('site', 'agent') : {}
+
+ 
+Tprime : Nodes : 
+action : None | {'type': {'BND'}}
+action1 : None | {'type': {'BND'}}
+agent : None | {}
+site : None | {'type': {1, 2, 3}}
+
+Edges : 
+('agent', 'action') : {}
+('agent', 'action1') : {}
+('agent', 'agent') : {}
+('agent', 'site') : {}
+('site', 'action') : {}
+('site', 'action1') : {}
+('site', 'agent') : {}
+('site', 'site') : {}
+
+
+G : Nodes : 
+1 : agent | {}
+2 : agent | {}
+3 : action | {'type': {'BND'}}
+1_3 : site | {'type': {3}}
+1_1 : site | {'type': {1}}
+2_2 : site | {'type': {2}}
+1_2 : site | {'type': {2}}
+2_3 : site | {'type': {3}}
+2_1 : site | {'type': {1}}
+
+Edges : 
+('1_3', 1) : {}
+('1_1', 1) : {}
+('1_1', 3) : {}
+('2_2', 2) : {}
+('1_2', 1) : {}
+('2_3', 2) : {}
+('2_1', 2) : {}
+('2_1', 3) : {}
+
+ 
+G- : Nodes : 
+1 : agent | {}
+2 : agent | {}
+3 : action | {'type': {'BND'}}
+1_3 : site | {'type': {3}}
+1_1 : site | {'type': {1}}
+2_2 : site | {'type': {2}}
+2_1 : site | {'type': {1}}
+2_3 : site | {'type': {3}}
+31 : action1 | {'type': {'BND'}}
+1_2 : site | {'type': {2}}
+
+Edges : 
+('1_3', 1) : {}
+('1_1', 1) : {}
+('1_1', 3) : {}
+('1_1', '31') : {}
+('2_2', 2) : {}
+('2_1', '31') : {}
+('2_1', 2) : {}
+('2_1', 3) : {}
+('2_3', 2) : {}
+('1_2', 1) : {}
+
+ 
+Gprime : Nodes : 
+3 : None | {'type': {'BND'}}
+1 : None | {}
+2 : None | {}
+31 : None | {'type': {'BND'}}
+1_3 : None | {'type': {3}}
+1_1 : None | {'type': {1}}
+2_2 : None | {'type': {2}}
+1_2 : None | {'type': {2}}
+2_3 : None | {'type': {3}}
+2_1 : None | {'type': {1}}
+
+Edges : 
+(1, 3) : {}
+(1, 1) : {}
+(1, 2) : {}
+(1, '31') : {}
+(1, '1_3') : {}
+(1, '1_1') : {}
+(1, '2_2') : {}
+(1, '1_2') : {}
+(1, '2_3') : {}
+(1, '2_1') : {}
+(2, 3) : {}
+(2, 1) : {}
+(2, 2) : {}
+(2, '31') : {}
+(2, '1_3') : {}
+(2, '1_1') : {}
+(2, '2_2') : {}
+(2, '1_2') : {}
+(2, '2_3') : {}
+(2, '2_1') : {}
+('1_3', 3) : {}
+('1_3', 1) : {}
+('1_3', 2) : {}
+('1_3', '31') : {}
+('1_3', '1_3') : {}
+('1_3', '1_1') : {}
+('1_3', '2_2') : {}
+('1_3', '1_2') : {}
+('1_3', '2_3') : {}
+('1_3', '2_1') : {}
+('1_1', 3) : {}
+('1_1', 1) : {}
+('1_1', 2) : {}
+('1_1', '31') : {}
+('1_1', '1_3') : {}
+('1_1', '1_1') : {}
+('1_1', '2_2') : {}
+('1_1', '1_2') : {}
+('1_1', '2_3') : {}
+('1_1', '2_1') : {}
+('2_2', 3) : {}
+('2_2', 1) : {}
+('2_2', 2) : {}
+('2_2', '31') : {}
+('2_2', '1_3') : {}
+('2_2', '1_1') : {}
+('2_2', '2_2') : {}
+('2_2', '1_2') : {}
+('2_2', '2_3') : {}
+('2_2', '2_1') : {}
+('1_2', 3) : {}
+('1_2', 1) : {}
+('1_2', 2) : {}
+('1_2', '31') : {}
+('1_2', '1_3') : {}
+('1_2', '1_1') : {}
+('1_2', '2_2') : {}
+('1_2', '1_2') : {}
+('1_2', '2_3') : {}
+('1_2', '2_1') : {}
+('2_3', 3) : {}
+('2_3', 1) : {}
+('2_3', 2) : {}
+('2_3', '31') : {}
+('2_3', '1_3') : {}
+('2_3', '1_1') : {}
+('2_3', '2_2') : {}
+('2_3', '1_2') : {}
+('2_3', '2_3') : {}
+('2_3', '2_1') : {}
+('2_1', 3) : {}
+('2_1', 1) : {}
+('2_1', 2) : {}
+('2_1', '31') : {}
+('2_1', '1_3') : {}
+('2_1', '1_1') : {}
+('2_1', '2_2') : {}
+('2_1', '1_2') : {}
+('2_1', '2_3') : {}
+('2_1', '2_1') : {}
+
+
+Graphs after propagation
+0 -> Nodes : 
+square_square : None | {'type': {'BND'}}
+circle__ : None | {'type': {1, 2, 3}}
+square1_square1 : None | {'type': {'BND'}}
+
+Edges : 
+('circle__', 'square_square') : {}
+('circle__', 'circle__') : {}
+('circle__', 'square1_square1') : {}
+
+ok
+test_parser.TestParser.test_add_edge ... ok
+test_parser.TestParser.test_add_node ... ok
 test_parser.TestParser.test_clone ... ok
 test_parser.TestParser.test_delete_edge ... ok
 test_parser.TestParser.test_delete_node ... ok
-test_parser.TestParser.test_merge_nodes ... FAIL
-test_primitives.TestPrimitives.test_add_edge ... ok
-test_primitives.TestPrimitives.test_add_edge_attrs ... ok
-test_primitives.TestPrimitives.test_add_edge_exists ... ok
-test_primitives.TestPrimitives.test_add_edge_non_existing_node ... ok
-test_primitives.TestPrimitives.test_add_node ... ok
-test_primitives.TestPrimitives.test_add_node_attrs ... ok
-test_primitives.TestPrimitives.test_add_node_exists ... ok
-test_primitives.TestPrimitives.test_cast_node ... ok
-test_primitives.TestPrimitives.test_clone_node ... ok
-test_primitives.TestPrimitives.test_clone_node_non_existing ... ok
-test_primitives.TestPrimitives.test_merge_attributes ... ok
-test_primitives.TestPrimitives.test_merge_nodes ... ok
-test_primitives.TestPrimitives.test_merge_nodes_method ... ok
-test_primitives.TestPrimitives.test_merge_nodes_name_exists ... ok
-test_primitives.TestPrimitives.test_merge_nodes_type_fail ... ok
-test_primitives.TestPrimitives.test_remove_edge ... ok
-test_primitives.TestPrimitives.test_remove_edge_attrs ... ok
-test_primitives.TestPrimitives.test_remove_edge_non_existing ... ok
-test_primitives.TestPrimitives.test_remove_node ... ok
-test_primitives.TestPrimitives.test_remove_node_attrs ... ok
-test_primitives.TestPrimitives.test_remove_node_non_existing ... ok
-test_primitives.TestPrimitives.test_update_edge_attrs ... ok
-test_primitives.TestPrimitives.test_update_node_attrs ... ok
-test_pullback.TestPullback.test_type ... ok
-test_rewriters.TestRewrites.test_cloning_cases ... ok
-test_rewriters.TestRewrites.test_clonning_merging_sequence ... ok
-test_rewriters.TestRewrites.test_find_matching ... ok
-test_rewriters.TestRewrites.test_merging ... ok
-test_rewriters.TestRewrites.test_rewriting_with_metamodel ... ok
-test_rewriters.TestRewrites.test_rule_to_homomorphism ... ERROR
-test_rewriters.TestRewrites.test_transform_instance ... ok
-test_rewriters.TestRewrites.test_undirected_dec_init ... ok
-test_rewriters.TestRewrites.test_undirected_imp_init ... ok
-
-======================================================================
-ERROR: test_rewriters.TestRewrites.test_rule_to_homomorphism
-----------------------------------------------------------------------
-Traceback (most recent call last):
-  File "/usr/local/lib/python2.7/dist-packages/nose/case.py", line 197, in runTest
-    self.test(*self.arg)
-  File "/home/ismail/Documents/projects/ReGraph/tests/test_rewriters.py", line 311, in test_rule_to_homomorphism
-    add_edge_attrs merged new_node {j: 33}."""
-  File "/home/ismail/Documents/projects/ReGraph/regraph/library/rewriters.py", line 516, in generate_rule
-    edges_method)
-  File "/home/ismail/Documents/projects/ReGraph/regraph/library/primitives.py", line 225, in merge_nodes
-    graph.add_edges_from([(n, node_name) for n in neighbors])
-  File "/home/ismail/Documents/projects/ReGraph/regraph/library/data_structures.py", line 213, in add_edges_from
-    raise ValueError("Node %s is not defined!" % edge[0])
-ValueError: Node 3 is not defined!
-
-======================================================================
-FAIL: test_parser.TestParser.test_add_edge
-----------------------------------------------------------------------
-Traceback (most recent call last):
-  File "/usr/local/lib/python2.7/dist-packages/nose/case.py", line 197, in runTest
-    self.test(*self.arg)
-  File "/home/ismail/Documents/projects/ReGraph/tests/test_parser.py", line 119, in test_add_edge
-    assert_equals(parsed["attributes"], {"a": "v"})
-AssertionError: ([(['a', 'v'], {})], {'a': [('v', 0)]}) != {'a': 'v'}
-
-======================================================================
-FAIL: test_parser.TestParser.test_add_node
-----------------------------------------------------------------------
-Traceback (most recent call last):
-  File "/usr/local/lib/python2.7/dist-packages/nose/case.py", line 197, in runTest
-    self.test(*self.arg)
-  File "/home/ismail/Documents/projects/ReGraph/tests/test_parser.py", line 61, in test_add_node
-    assert False
-AssertionError
-
-======================================================================
-FAIL: test_parser.TestParser.test_merge_nodes
-----------------------------------------------------------------------
-Traceback (most recent call last):
-  File "/usr/local/lib/python2.7/dist-packages/nose/case.py", line 197, in runTest
-    self.test(*self.arg)
-  File "/home/ismail/Documents/projects/ReGraph/tests/test_parser.py", line 155, in test_merge_nodes
-    "edges_method": "union"}
-AssertionError: {'edges_method': 'union', 'nodes': ([6, 'A', 2], {}), 'method': 'union', 'keywor [truncated]... != {'edges_method': 'union', 'nodes': [6, 'A', 2], 'method': 'union', 'keyword': 'm [truncated]...
-  {'edges_method': 'union',
-   'keyword': 'merge',
-   'method': 'union',
-   'node_name': 'mergee',
--  'nodes': ([6, 'A', 2], {})}
-?           -           --- --
-
-+  'nodes': [6, 'A', 2]}
+test_parser.TestParser.test_merge_nodes ... ok
 
 ----------------------------------------------------------------------
-Ran 49 tests in 5.515s
+Ran 17 tests in 0.196s
 
-FAILED (errors=1, failures=3)
+OK
+
+1 -> Nodes : 
+action : None | {'type': {'BND'}}
+action1 : None | {'type': {'BND'}}
+agent : None | {}
+site : None | {'type': {1, 2, 3}}
+
+Edges : 
+('agent', 'action') : {}
+('agent', 'action1') : {}
+('agent', 'agent') : {}
+('agent', 'site') : {}
+('site', 'action') : {}
+('site', 'action1') : {}
+('site', 'agent') : {}
+('site', 'site') : {}
+
+
+2 -> Nodes : 
+3 : None | {'type': {'BND'}}
+1 : None | {}
+2 : None | {}
+31 : None | {'type': {'BND'}}
+1_3 : None | {'type': {3}}
+1_1 : None | {'type': {1}}
+2_2 : None | {'type': {2}}
+1_2 : None | {'type': {2}}
+2_3 : None | {'type': {3}}
+2_1 : None | {'type': {1}}
+
+Edges : 
+(1, 3) : {}
+(1, 1) : {}
+(1, 2) : {}
+(1, '31') : {}
+(1, '1_3') : {}
+(1, '1_1') : {}
+(1, '2_2') : {}
+(1, '1_2') : {}
+(1, '2_3') : {}
+(1, '2_1') : {}
+(2, 3) : {}
+(2, 1) : {}
+(2, 2) : {}
+(2, '31') : {}
+(2, '1_3') : {}
+(2, '1_1') : {}
+(2, '2_2') : {}
+(2, '1_2') : {}
+(2, '2_3') : {}
+(2, '2_1') : {}
+('1_3', 3) : {}
+('1_3', 1) : {}
+('1_3', 2) : {}
+('1_3', '31') : {}
+('1_3', '1_3') : {}
+('1_3', '1_1') : {}
+('1_3', '2_2') : {}
+('1_3', '1_2') : {}
+('1_3', '2_3') : {}
+('1_3', '2_1') : {}
+('1_1', 3) : {}
+('1_1', 1) : {}
+('1_1', 2) : {}
+('1_1', '31') : {}
+('1_1', '1_3') : {}
+('1_1', '1_1') : {}
+('1_1', '2_2') : {}
+('1_1', '1_2') : {}
+('1_1', '2_3') : {}
+('1_1', '2_1') : {}
+('2_2', 3) : {}
+('2_2', 1) : {}
+('2_2', 2) : {}
+('2_2', '31') : {}
+('2_2', '1_3') : {}
+('2_2', '1_1') : {}
+('2_2', '2_2') : {}
+('2_2', '1_2') : {}
+('2_2', '2_3') : {}
+('2_2', '2_1') : {}
+('1_2', 3) : {}
+('1_2', 1) : {}
+('1_2', 2) : {}
+('1_2', '31') : {}
+('1_2', '1_3') : {}
+('1_2', '1_1') : {}
+('1_2', '2_2') : {}
+('1_2', '1_2') : {}
+('1_2', '2_3') : {}
+('1_2', '2_1') : {}
+('2_3', 3) : {}
+('2_3', 1) : {}
+('2_3', 2) : {}
+('2_3', '31') : {}
+('2_3', '1_3') : {}
+('2_3', '1_1') : {}
+('2_3', '2_2') : {}
+('2_3', '1_2') : {}
+('2_3', '2_3') : {}
+('2_3', '2_1') : {}
+('2_1', 3) : {}
+('2_1', 1) : {}
+('2_1', 2) : {}
+('2_1', '31') : {}
+('2_1', '1_3') : {}
+('2_1', '1_1') : {}
+('2_1', '2_2') : {}
+('2_1', '1_2') : {}
+('2_1', '2_3') : {}
+('2_1', '2_1') : {}
+
+
