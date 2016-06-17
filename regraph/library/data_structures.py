@@ -48,6 +48,43 @@ class TypedDiGraph(nx.DiGraph):
     def __ne__(self, B):
         return not self.__eq__(B)
 
+    def add_nodes(self, B, homBA):
+        res = type(self)()
+        for n in B.nodes():
+            res.add_node(n,
+                         B.node[n].type_,
+                         B.node[n].attrs_)
+        for n in self.nodes():
+            if n not in homBA.mapping_.values():
+                res.add_node(n,
+                             n,
+                             self.node[n].attrs_)
+            else:
+                pred = keys_by_value(homBA.mapping_, n)
+                for n0 in pred:
+                    res.add_node_attrs(n0,
+                                       self.node[n].attrs_)
+
+        return res
+
+    def sub(self, B, homBA):
+        res = type(self)()
+        for n in self.nodes():
+            if n not in homBA.mapping_.values():
+                res.add_node(n,
+                             self.node[n].type_,
+                             self.node[n].attrs_)
+
+        for n1 in res.nodes():
+            for n2 in res.nodes():
+                if (n1, n2) in self.edges():
+                    if (n1, n2) not in B.edges():
+                        res.add_edge(n1,
+                                     n2,
+                                     self.get_edge(n1, n2))
+
+        return res
+
     def __str__(self):
         res = ""
         res += "Nodes : \n"
@@ -525,7 +562,7 @@ class Homomorphism(object):
             raise ValueError("Homomorphism is not valid!")
 
     def __str__(self):
-        return "Source : %s \nTarget : %s \nMapping : %s" % \
+        return "Source :\n%sTarget :\n%sMapping :\n%s" % \
             (str(self.source_),str(self.target_),str(self.mapping_))
 
     def is_monic(self):
@@ -552,6 +589,29 @@ class Homomorphism(object):
                     raise ValueError(
                         "Invalid homomorphism: Connectivity is not preserved!")
         return True
+
+    @staticmethod
+    def identity(A, B):
+        dic = {}
+        for n in A.nodes():
+            if n in B.nodes():
+                dic[n] = n
+            else:
+                raise ValueError(
+                    "Node %s not found in the second graph" % n
+                )
+        return Homomorphism(A, B, dic)
+
+    @staticmethod
+    def compose(h1, h2):
+        """ Returns h1.h2 : A -> C given h1 : B -> C and h2 : A -> B"""
+        return type(h1)(
+            h2.source_,
+            h1.target_,
+            dict([(n, h1.mapping_[h2.mapping_[n]]) for n in h2.mapping_.keys()])
+        )
+
+
 
 
 class TypedHomomorphism(Homomorphism):

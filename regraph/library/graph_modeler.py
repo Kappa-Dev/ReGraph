@@ -112,9 +112,8 @@ class GraphModeler(object):
                 Tm_Tprime, Tm_T = self.changes[i]
                 Gm, Gm_G, Gm_Tm = pullback(G.hom, Tm_T)
                 Gprime, Gm_Gprime, Gprime_Tprime = pullback_complement(Gm_Tm, Tm_Tprime)
-                print(Gm_Tm)
-                print(Tm_Tprime)
                 Gprime.metamodel_ = Gprime_Tprime.target_
+                print(Gprime_Tprime)
                 Gprime.hom = TypedHomomorphism.from_untyped(Gprime_Tprime)
                 self.changes[i+1] = Gm_Gprime, Gm_G
                 print("Propagated from %s" % i)

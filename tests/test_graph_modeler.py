@@ -89,8 +89,6 @@ class TestGraphModeler(object):
         print("P->L : %s \n P->R : %s" % trans.get())
         print()
 
-        instances = Rewriter.find_matching(trans.L, modeler.get_by_id(0))
-
         instance = {
             'square' : 'square'
         }
