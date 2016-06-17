@@ -79,17 +79,15 @@ class GraphModeler(object):
             right_h : P -> R
         """
         if type(n_i) == int:
-            graph = self.get_by_id(n_i)
             i = n_i
         elif type(n_i) == str:
-            graph = self.get_by_name(n_i)
             i = self.get_id_from_name(n_i)
         else:
             raise ValueError(
                 "Undefined identifier of type %s, was expecting id:int or \
                  name:str" % type(n_i)
             )
-        self.changes[i] = Rewriter.rewrite(graph, L_T, trans)
+        self.changes[i] = Rewriter.rewrite(L_T, trans)
 
     def propagate_from(self, n_i):
         """ n_i : name or id
@@ -113,14 +111,8 @@ class GraphModeler(object):
                 Gm, Gm_G, Gm_Tm = pullback(G.hom, Tm_T)
                 Gprime, Gm_Gprime, Gprime_Tprime = pullback_complement(Gm_Tm, Tm_Tprime)
                 Gprime.metamodel_ = Gprime_Tprime.target_
-                print(Gprime_Tprime)
                 Gprime.hom = TypedHomomorphism.from_untyped(Gprime_Tprime)
                 self.changes[i+1] = Gm_Gprime, Gm_G
-                print("Propagated from %s" % i)
-                print("T : %s \nT- : %s \nTprime : %s" %
-                      (T, Tm_T.source_, Tm_Tprime.target_))
-                print("G : %s \nG- : %s \nGprime : %s" %
-                      (G, Gm, Gprime))
                 self.propagate_from(i+1)
             else:
                 warnings.warn(

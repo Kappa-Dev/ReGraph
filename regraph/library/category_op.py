@@ -88,114 +88,40 @@ def pushout(h1, h2):
     A = h1.source_
     B = h1.target_
     C = h2.target_
+    D = type(B)()
     f = h1.mapping_
     g = h2.mapping_
 
-    if type(B) == TypedGraph:
-        D = TypedGraph()
-    else:
-        D = TypedDiGraph()
+    for n in C.nodes():
+        D.add_node(n,
+                   C.node[n].type_,
+                   C.node[n].attrs_)
+        hom2[n] = n
 
-    for node in A.nodes():
-        D.add_node(
-            node,
-            A.node[node].type_,
-            merge_attributes(
-                B.node[f[node]].attrs_,
-                C.node[g[node]].attrs_,
-                "union"
-            )
-        )
-        hom1[f[node]] =\
-            node
-        hom2[g[node]] =\
-            node
-
-    for s, t in A.edges():
-        D.add_edge(
-            s,
-            t,
-            merge_attributes(
-                B.get_edge(f[s], f[t]),
-                C.get_edge(g[s], g[t]),
-                "union"
-            )
-        )
-
-    for node in B.nodes():
-        if node not in f.values():
-            if node in D.nodes():
-                D.add_node(
-                    str(node) + "_",
-                    B.node[node].type_,
-                    B.node[node].attrs_
-                )
-                hom1[node] = str(node) + "_"
-            else:
-                D.add_node(
-                    node,
-                    B.node[node].type_,
-                    B.node[node].attrs_
-                )
-                hom1[node] = node
-        else:
-            hom1[node] = keys_by_value(f, node)[0]
-
-    for node in C.nodes():
-        if node not in g.values():
-            new_name = node
+    for n in B.nodes():
+        pred_n = keys_by_value(f, n)
+        if len(pred_n) == 0:
+            new_name = n
             i = 1
             while new_name in D.nodes():
-                new_name = str(node)+str(i)
+                new_name = str(n) + str(i)
                 i += 1
-            D.add_node(
-                new_name,
-                C.node[node].type_,
-                C.node[node].attrs_
-            )
-            hom2[node] = new_name
+            D.add_node(new_name,
+                       B.node[n].type_,
+                       B.node[n].attrs_)
+            hom1[n] = new_name
         else:
-            pred_node = keys_by_value(g, node)
-            if len(pred_node) == 1:
-                hom2[node] = pred_node[0]
-            else:
-                i = 1
-                new_name = node
-                while new_name in D.nodes():
-                    new_name = str(node)+str(i)
-                    i += 1
-                D.merge_nodes(pred_node, node_name = new_name)
-                hom2[node] = new_name
+            hom1[n] = hom2[g[pred_n[0]]]
+            D.add_node_attrs(hom1[n], B.node[n].attrs_)
 
-    for s, t in B.edges():
-        if s not in f.values() or t not in f.values():
-            D.add_edge(
-                hom1[s],
-                hom1[t],
-                B.get_edge(s, t)
-            )
-        if (hom1[s], hom1[t]) not in D.edges() and \
-           (D.is_directed or (hom1[t], hom1[s]) not in D.edges()):
-            D.add_edge(
-                hom1[s],
-                hom1[t],
-                B.get_edge(s, t)
-            )
+    for (n1, n2) in C.edges():
+        D.add_edge(n1, n2, C.get_edge(n1, n2))
 
-    for s, t in C.edges():
-        if s not in g.values() or t not in g.values():
-            D.add_edge(
-                hom2[s],
-                hom2[t],
-                C.get_edge(s, t)
-            )
-        if (hom2[s], hom2[t]) not in D.edges() and \
-           (D.is_directed or (hom2[t], hom2[s]) not in D.edges()):
-            D.add_edge(
-                hom2[s],
-                hom2[t],
-                C.get_edge(s, t)
-            )
+    for (n1, n2) in B.edges():
+        if (hom1[n1], hom1[n2]) in D.edges():
+            D.add_edge_attrs(hom1[n1], hom1[n2], B.get_edge(n1, n2))
+        else:
+            D.add_edge(hom1[n1], hom1[n2], B.get_edge(n1, n2))
 
     return (D, Homomorphism(B, D, hom1), Homomorphism(C, D, hom2))
 
@@ -217,11 +143,35 @@ def pullback_complement(h1, h2):
     A = h1.source_
     B = h1.target_
     D = h2.target_
+    C = type(B)()
     f = h1.mapping_
     g = h2.mapping_
 
+    hom1 = {}
+    hom2 = {}
+
     A_D = Homomorphism.compose(h2, h1)
-    C = (D.sub(B, h2).add_nodes(A, A_D))
+
+    DmB = D.sub(B, h2)
+
+    for n in A.nodes():
+        C.add_node(n,
+                   A.node[n].type_,
+                   A.node[n].attrs_)
+        hom1[n] = n
+        hom2[n] = g[f[n]]
+
+    for n in DmB.nodes():
+        is_in_A = False
+        for n0 in A.nodes():
+            if g[f[n0]] == n:
+                is_in_A = True
+                break;
+        if not is_in_A:
+            C.add_node(n,
+                       DmB.node[n].type_,
+                       DmB.node[n].attrs_)
+            hom2[n] = n
 
     for n1 in C.nodes():
         for n2 in C.nodes():
@@ -255,13 +205,4 @@ def pullback_complement(h1, h2):
                                    n2,
                                    D.get_edge(n1, n2))
 
-
-    hom1 = Homomorphism.identity(A, C)
-    hom2 = {}
-    for n in C.nodes():
-        if n in A.nodes():
-            hom2[n] = A_D.mapping_[n]
-        else:
-            hom2[n] = n
-    hom2 = Homomorphism(C, D, hom2)
-    return C, hom1, hom2
+    return C, Homomorphism(A, C, hom1), Homomorphism(C, D, hom2)

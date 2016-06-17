@@ -36,7 +36,7 @@ class Transformer(object):
                 Homomorphism(self.P, self.R, self.P_R_dict))
 
     def add_node(self, node_id, node_type, attrs=None):
-        if not node in self.R.nodes():
+        if not node_id in self.R.nodes():
             self.R.add_node(node_id, node_type, attrs)
         else:
             raise ValueError(
@@ -83,7 +83,7 @@ class Transformer(object):
         self.P_R_dict[n2] = new_name
 
     def remove_node(self, n):
-        if not node in self.L.nodes():
+        if not n in self.L.nodes():
             self.L.add_node(n, self.G.node[n].type_, self.G.node[n].attrs_)
         else:
             for k,v in self.P_L_dict.items():
@@ -158,6 +158,17 @@ class Transformer(object):
                             self.G.node[n2].attrs_)
             self.P_L_dict[n2] = n2
 
+        if not n1 in self.R.nodes():
+            self.R.add_node(n1,
+                            self.G.node[n1].type_,
+                            self.G.node[n1].attrs_)
+            self.P_R_dict[n1] = n1
+        if not n2 in self.R.nodes():
+            self.R.add_node(n2,
+                            self.G.node[n2].type_,
+                            self.G.node[n2].attrs_)
+            self.P_R_dict[n2] = n2
+
         if (self.P_R_dict[n1], self.P_R_dict[n2]) in self.R.edges():
             warnings.warn(
                 "Edge %s-%s already exists, \
@@ -207,21 +218,23 @@ class Transformer(object):
 
         self.P_L_dict[n1] = n1
         self.P_L_dict[n2] = n2
+        self.P_R_dict[n1] = n1
+        self.P_R_dict[n2] = n2
 
     def add_node_attrs(self, n, attrs):
-        if not node in self.P.nodes():
+        if not n in self.P.nodes():
             self.P.add_node(n,
                             self.G.node[n].type_,
                             self.G.node[n].attrs_)
             self.P_R_dict[n] = n
 
-        if not node in self.L.nodes():
+        if not n in self.L.nodes():
             self.L.add_node(n,
                             self.G.node[n].type_,
                             self.G.node[n].attrs_)
             self.P_L_dict[n] = n
 
-        if not node in self.R.nodes():
+        if not n in self.R.nodes():
             self.R.add_node(n,
                             self.G.node[n].type_,
                             merge_attributes(self.G.node[n].attrs_,
@@ -239,7 +252,7 @@ class Transformer(object):
             self.R.add_node(n2,
                             self.G.node[n1].type_,
                             self.G.node[n1].attrs_)
-            self.P_R_dict[n1] = n2
+            self.P_R_dict[n2] = n2
 
         if not n1 in self.P.nodes():
             self.P.add_node(n1,
@@ -254,19 +267,17 @@ class Transformer(object):
             self.L.add_node(n1,
                             self.G.node[n1].type_,
                             self.G.node[n1].attrs_)
+            self.P_L_dict[n1] = n1
         if not n2 in self.L.nodes():
             self.L.add_node(n2,
                             self.G.node[n2].type_,
                             self.G.node[n2].attrs_)
-        self.P_L_dict[n2] = n2
-        self.P_L_dict[n1] = n1
+            self.P_L_dict[n2] = n2
 
         if (n1, n2) in self.G.edges():
             self.P.add_edge(n1, n2, self.G.get_edge(n1, n2))
-            self.R.add_edge(n1, n2, self.G.get_edge(n1, n2))
-            self.L.add_edge(n1, n2, self.G.get_edge(n1, n2))
-
-        if (self.P_R_dict[n1], self.P_R_dict[n2]) in self.R.edges():
+            self.R.add_edge(self.P_R_dict[n1], self.P_R_dict[n2], self.G.get_edge(n1, n2))
+            self.L.add_edge(self.P_L_dict[n1], self.P_L_dict[n2], self.G.get_edge(n1, n2))
             self.R.add_edge_attrs(self.P_R_dict[n1], self.P_R_dict[n2], attrs)
         else:
             raise ValueError(
@@ -276,21 +287,22 @@ class Transformer(object):
             )
 
     def remove_node_attrs(self, n, attrs):
-        if not node in self.R.nodes():
+        if not n in self.R.nodes():
             self.R.add_node(n,
                             self.G.node[n].type_,
-                            self.G.node[N].attrs_)
-            self.P_R_dict[node] = node
+                            self.G.node[n].attrs_)
+            self.P_R_dict[n] = n
         self.R.remove_node_attrs(n, attrs)
 
-        if not node in self.L.nodes():
+        if not n in self.L.nodes():
             self.L.add_node(n,
                             self.G.node[n].type_,
                             self.G.node[n].attrs_)
             self.P.add_node(n,
                             self.G.node[n].type_,
-                            self.G.node[N].attrs_)
+                            self.G.node[n].attrs_)
             self.P.remove_node_attrs(n, attrs)
+            self.P_L_dict[n] = n
         else:
             for k,v in self.P_L_dict.items():
                 if v == n:
@@ -338,6 +350,11 @@ class Transformer(object):
                             n2,
                             self.G.get_edge(n1, n2))
 
+        if not (n1, n2) in self.R.edges():
+            self.R.add_edge(n1,
+                            n2,
+                            self.G.get_edge(n1, n2))
+
         self.P.remove_edge_attrs(n1, n2, attrs)
         self.R.remove_edge_attrs(n1, n2, attrs)
 
@@ -375,9 +392,10 @@ class Rewriter:
         return
 
     @staticmethod
-    def rewrite(graph, L_G, trans):
+    def rewrite(L_G, trans):
 
         left_h, right_h = trans.get()
+        graph = trans.G
 
         if left_h.source_ != right_h.source_:
             raise ValueError(

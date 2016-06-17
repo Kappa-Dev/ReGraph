@@ -7,7 +7,8 @@ from copy import deepcopy
 from regraph.library.utils import (is_subdict,
                                    keys_by_value,
                                    to_set,
-                                   normalize_attrs)
+                                   normalize_attrs,
+                                   merge_attributes)
 
 
 class TypedNode:
@@ -47,25 +48,6 @@ class TypedDiGraph(nx.DiGraph):
 
     def __ne__(self, B):
         return not self.__eq__(B)
-
-    def add_nodes(self, B, homBA):
-        res = type(self)()
-        for n in B.nodes():
-            res.add_node(n,
-                         B.node[n].type_,
-                         B.node[n].attrs_)
-        for n in self.nodes():
-            if n not in homBA.mapping_.values():
-                res.add_node(n,
-                             n,
-                             self.node[n].attrs_)
-            else:
-                pred = keys_by_value(homBA.mapping_, n)
-                for n0 in pred:
-                    res.add_node_attrs(n0,
-                                       self.node[n].attrs_)
-
-        return res
 
     def sub(self, B, homBA):
         res = type(self)()
@@ -113,7 +95,7 @@ class TypedDiGraph(nx.DiGraph):
     def remove_node(self, node):
         """Remove node from the self."""
         if node in self.nodes():
-            nx.DiGraph.remove_node(node)
+            nx.DiGraph.remove_node(self, node)
         else:
             raise ValueError("Node %s does not exist!" % str(node))
         return
@@ -125,6 +107,10 @@ class TypedDiGraph(nx.DiGraph):
     def add_node_attrs(self, node, attrs_dict):
         if node not in self.nodes():
             raise ValueError("Node %s does not exist" % str(node))
+        elif attrs_dict == None:
+            warnings.warn(
+                "You want to add attrs to %s with an empty attrs_dict" % node
+            )
         else:
             if self.node[node].attrs_ is None:
                 self.node[node].attrs_ = deepcopy(attrs_dict)
@@ -139,6 +125,10 @@ class TypedDiGraph(nx.DiGraph):
     def update_node_attrs(self, node, new_attrs):
         if node not in self.nodes():
             raise ValueError("Node %s does not exist" % str(node))
+        elif new_attrs == None:
+            warnings.warn(
+                "You want to update %s attrs with an empty attrs_dict" % node
+            )
         else:
             normalize_attrs(new_attrs)
             if self.node[node].attrs_ is None:
@@ -151,6 +141,10 @@ class TypedDiGraph(nx.DiGraph):
     def remove_node_attrs(self, node, attrs_dict):
         if node not in self.nodes():
             raise ValueError("Node %s does not exist" % str(node))
+        elif attrs_dict == None:
+            warnings.warn(
+                "You want to remove attrs from %s with an empty attrs_dict" % node
+            )
         else:
             for key, value in attrs_dict.items():
                 if key not in self.node[node].attrs_.keys():
@@ -217,6 +211,11 @@ class TypedDiGraph(nx.DiGraph):
     def add_edge_attrs(self, node_1, node_2, attrs_dict):
         if (node_1, node_2) not in self.edges():
             raise ValueError("Edge %s-%s does not exist" % (str(node_1), str(node_2)))
+        elif attrs_dict == None:
+            warnings.warn(
+                "You want to add attrs to %s-%s attrs with an empty attrs_dict" %\
+                (str(node_1), str(node_2))
+            )
         else:
             for key, value in attrs_dict.items():
                 if key not in self.edge[node_1][node_2].keys():
@@ -227,6 +226,11 @@ class TypedDiGraph(nx.DiGraph):
     def update_edge_attrs(self, node_1, node_2, new_attrs):
         if (node_1, node_2) not in self.edges():
             raise ValueError("Edge %s-%s does not exist" % (str(node_1), str(node_2)))
+        elif new_attrs == None:
+            warnings.warn(
+                "You want to update %s-%s attrs with an empty attrs_dict" %\
+                (str(node_1), str(node_2))
+            )
         else:
             for key, value in new_attrs.items():
                 self.edge[node_1][node_2][key] = to_set(value)
@@ -234,6 +238,11 @@ class TypedDiGraph(nx.DiGraph):
     def remove_edge_attrs(self, node_1, node_2, attrs_dict):
         if (node_1, node_2) not in self.edges():
             raise ValueError("Edge %s-%s does not exist" % (str(node_1), str(node_2)))
+        elif attrs_dict == None:
+            warnings.warn(
+                "You want to remove attrs from %s-%s attrs with an empty attrs_dict" %\
+                (str(node_1), str(node_2))
+            )
         else:
             for key, value in attrs_dict.items():
                 if key not in self.edge[node_1][node_2].keys():
