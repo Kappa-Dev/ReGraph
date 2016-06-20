@@ -42,10 +42,30 @@ class TypedDiGraph(nx.DiGraph):
         self.hom = None
 
     def __eq__(self, A):
-        if type(A) == type(self):
-            return (A.nodes()==self.nodes()) and (A.edges()==self.edges())
-        else:
+        if not (type(A) == type(self)):
             return False
+
+        for n in A.nodes():
+            if not (n in self.nodes() and\
+                   (self.node[n].type_ == A.node[n].type_) and\
+                   (self.node[n].attrs_ == A.node[n].attrs_)):
+                   return False
+        for n in self.nodes():
+            if not (n in A.nodes() and\
+                   (self.node[n].type_ == A.node[n].type_) and\
+                   (self.node[n].attrs_ == A.node[n].attrs_)):
+                   return False
+
+        for e in A.edges():
+            if not (e in self.edges() and\
+                    self.get_edge(e[0],e[1]) == A.get_edge(e[0], e[1])):
+                    return False
+        for e in self.edges():
+            if not (e in A.edges() and\
+                    self.get_edge(e[0],e[1]) == A.get_edge(e[0], e[1])):
+                    return False
+
+        return True
 
     def __ne__(self, B):
         return not self.__eq__(B)
@@ -528,15 +548,6 @@ class TypedGraph(TypedDiGraph):
 
     def __init__(self, metamodel=None):
         TypedDiGraph.__init__(self, metamodel)
-
-    def __eq__(self, A):
-        if type(A) == type(self):
-            return (A.nodes()==self.nodes()) and (A.edges()==self.edges())
-        else:
-            return False
-
-    def __ne__(self, B):
-        return not self.__eq__(B)
 
     def add_edge(self, s, t, attrs=None, **attr):
         TypedDiGraph.add_edge(self, s, t, attrs, **attr)

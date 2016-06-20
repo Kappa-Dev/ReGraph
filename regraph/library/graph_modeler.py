@@ -150,7 +150,6 @@ class GraphModeler(object):
                     "Nothing to propagate from here !", RuntimeWarning
                 )
 
-
     def propagate_all(self):
         for i in range(len(self.changes)-1, -1, -1):
             if self.changes[i] != None:
