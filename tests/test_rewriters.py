@@ -34,6 +34,7 @@ class TestRewrites(object):
         self.graph.add_node(11, 'agent')
         self.graph.add_node(12, 'agent')
         self.graph.add_node(13, 'agent')
+        self.graph.add_node(14, 'agent')
 
         edges = [
             (1, 2),
@@ -49,6 +50,7 @@ class TestRewrites(object):
             (13, 12),
             (11, 13),
             (13, 11),
+            (13, 14),
             (5, 2)
         ]
 
@@ -63,26 +65,26 @@ class TestRewrites(object):
     def test_add_node(self):
         trans = Transformer(self.graph.copy())
 
-        trans.add_node(14, 'agent', {'name' : 'Grb3'})
+        trans.add_node(15, 'agent', {'name' : 'Grb3'})
 
 
         Gprime = Rewriter.rewrite(Homomorphism.identity(trans.L, trans.G), trans)[0].target_
 
-        assert(14 in Gprime.nodes())
-        assert(Gprime.node[14].type_ == 'agent')
-        assert(Gprime.node[14].attrs_ == {'name' : {'Grb3'}})
+        assert(15 in Gprime.nodes())
+        assert(Gprime.node[15].type_ == 'agent')
+        assert(Gprime.node[15].attrs_ == {'name' : {'Grb3'}})
 
     def test_merge_nodes(self):
         trans = Transformer(self.graph.copy())
 
-        trans.merge_nodes(1, 3, 14)
+        trans.merge_nodes(1, 3, 15)
 
 
         Gprime = Rewriter.rewrite(Homomorphism.identity(trans.L, trans.G), trans)[0].target_
 
-        assert(14 in Gprime.nodes())
-        assert(Gprime.node[14].type_ == 'agent')
-        assert(Gprime.node[14].attrs_ ==
+        assert(15 in Gprime.nodes())
+        assert(Gprime.node[15].type_ == 'agent')
+        assert(Gprime.node[15].attrs_ ==
                merge_attributes(self.graph.node[1].attrs_,
                                 self.graph.node[3].attrs_))
 
@@ -169,14 +171,45 @@ class TestRewrites(object):
 
         assert(Gprime.get_edge(1, 2) ==  {'s' : set()})
 
+    def test_merge_edges(self):
+        trans = Transformer(self.graph.copy())
+
+        trans.merge_edges((11,12),(13,14), 15, 16)
+
+        Gprime = Rewriter.rewrite(Homomorphism.identity(trans.L, trans.G), trans)[0].target_
+
+        assert(15 in Gprime.nodes())
+        assert(16 in Gprime.nodes())
+        assert((15,16) in Gprime.edges())
+
+    def test_clone_edge(self):
+        trans = Transformer(self.graph.copy())
+
+        trans.clone_edge(11, 12, 15, 16)
+
+        Gprime = Rewriter.rewrite(Homomorphism.identity(trans.L, trans.G), trans)[0].target_
+
+        assert(15 in Gprime.nodes())
+        assert(16 in Gprime.nodes())
+        assert((15,16) in Gprime.edges())
+
+    def test_merge_nodes_list(self):
+        trans = Transformer(self.graph.copy())
+
+        trans.merge_nodes_list([11,12,13,14], 15)
+
+        Gprime = Rewriter.rewrite(Homomorphism.identity(trans.L, trans.G), trans)[0].target_
+
+        assert(15 in Gprime.nodes())
+
     def test_multiple_rewrites(self):
 
 
         trans = Transformer(self.graph.copy())
 
-        trans.add_node(14, 'action', {'name' : 'BND'})
+        trans.add_node(15, 'action', {'name' : 'BND'})
         trans.remove_node(2)
-        trans.clone_node(4, 15)
+        trans.clone_node(4, 16)
         trans.merge_nodes(11, 12)
 
         instance = Homomorphism.identity(trans.L, trans.G)

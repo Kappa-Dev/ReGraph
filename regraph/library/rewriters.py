@@ -32,6 +32,14 @@ class Transformer(object):
     def identity(self):
         return Homomorphism.identity(self.L, self.G)
 
+    def __str__(self):
+        return "Current graph\n%s\n" % self.G +\
+               "Preserved part\n%s\n" % self.P +\
+               "Left hand side\n%s\n" % self.L +\
+               "P->L Homomorphism : %s\n" % self.P_L_dict +\
+               "Right hand side\n%s\n" % self.R +\
+               "P->R Homomorphism : %s\n" % self.P_R_dict
+
     # Canonic operations
 
     def get(self):
@@ -47,26 +55,27 @@ class Transformer(object):
             )
 
     def merge_nodes(self, n1, n2, node_name=None):
-        if not n1 in self.P.nodes():
-            self.P.add_node(n1,
-                            self.G.node[n1].type_,
-                            self.G.node[n1].attrs_)
+        if n1 in self.G.nodes():
+            if not n1 in self.P.nodes():
+                self.P.add_node(n1,
+                                self.G.node[n1].type_,
+                                self.G.node[n1].attrs_)
+            if not n1 in self.L.nodes():
+                self.L.add_node(n1,
+                                self.G.node[n1].type_,
+                                self.G.node[n1].attrs_)
+                self.P_L_dict[n1] = n1
 
-        if not n2 in self.P.nodes():
-            self.P.add_node(n2,
-                            self.G.node[n2].type_,
-                            self.G.node[n2].attrs_)
-
-        if not n1 in self.L.nodes():
-            self.L.add_node(n1,
-                            self.G.node[n1].type_,
-                            self.G.node[n1].attrs_)
-            self.P_L_dict[n1] = n1
-        if not n2 in self.L.nodes():
-            self.L.add_node(n2,
-                            self.G.node[n2].type_,
-                            self.G.node[n2].attrs_)
-            self.P_L_dict[n2] = n2
+        if n2 in self.G.nodes():
+            if not n2 in self.P.nodes():
+                self.P.add_node(n2,
+                                self.G.node[n2].type_,
+                                self.G.node[n2].attrs_)
+            if not n2 in self.L.nodes():
+                self.L.add_node(n2,
+                                self.G.node[n2].type_,
+                                self.G.node[n2].attrs_)
+                self.P_L_dict[n2] = n2
 
         if not n1 in self.R.nodes():
             self.R.add_node(n1,
@@ -79,11 +88,28 @@ class Transformer(object):
                             self.G.node[n2].attrs_)
             self.P_R_dict[n2] = n2
 
+        del_n1 = False
+        del_n2 = False
+        if not n1 in self.P_R_dict.keys():
+            self.P_R_dict[n1] = n1
+            del_n1 = True
+        if not n2 in self.P_R_dict.keys():
+            self.P_R_dict[n2] = n2
+            del_n2 = True
+
+
         new_name = self.R.merge_nodes([self.P_R_dict[n1], self.P_R_dict[n2]],
                            node_name=node_name)
 
-        self.P_R_dict[n1] = new_name
-        self.P_R_dict[n2] = new_name
+        if del_n1:
+            del self.P_R_dict[n1]
+        if del_n2:
+            del self.P_R_dict[n2]
+
+        if n1 in self.P.nodes():
+            self.P_R_dict[n1] = new_name
+        if n2 in self.P.nodes():
+            self.P_R_dict[n2] = new_name
 
     def remove_node(self, n):
         if not n in self.L.nodes():
@@ -385,18 +411,33 @@ class Transformer(object):
     # Advanced operations
 
     def merge_edges(self, e1, e2, name_n1=None, name_n2=None):
-        n1_1, n2_1 = e1
-        n2_1, n2_1 = e2
-        self.merge_nodes(n1, n2, name_n1)
-        self.merge_nodes(n1, n2, name_n2)
+        n1_1, n1_2 = e1
+        n2_1, n2_2 = e2
+        if (n1_1 == n2_2) or (n1_2 == n2_1):
+            if self.G.is_directed():
+                raise ValueError(
+                    "Can't merge edges with pattern %s->%s and %s->%s" %
+                    (n1_1, n1_2, n2_1, n2_2)
+                )
+            else:
+                if n1_1 == n2_2:
+                    self.merge_nodes(n1_2, n2_1, name_n2)
+                else:
+                    self.merge_nodes(n1_1, n2_2, name_n1)
+        else:
+            self.merge_nodes(n1_1, n2_1, name_n1)
+            self.merge_nodes(n1_2, n2_2, name_n2)
+            self.R.add_edge(name_n1, name_n2)
 
-    def clone_edge(self, n1, n2):
-        self.clone_node(n1)
-        self.clone_node(n2)
+    def clone_edge(self, n1, n2, new_n1, new_n2):
+        self.clone_node(n1, new_n1)
+        self.clone_node(n2, new_n2)
+        self.R.add_edge(new_n1, new_n2)
 
     def merge_nodes_list(self, l, node_name=None):
-        for i in range(1, len(l)):
-            self.merge_nodes(l[im1], l[i], node_name)
+        self.merge_nodes(l[0], l[1], node_name)
+        for i in range(2, len(l)):
+            self.merge_nodes(l[i], node_name, node_name)
 
 
 class Rewriter:

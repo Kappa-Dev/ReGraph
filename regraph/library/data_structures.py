@@ -298,7 +298,7 @@ class TypedDiGraph(nx.DiGraph):
         # Generate name for new node
         if node_name is None:
             node_name = "_".join([str(n) for n in nodes])
-        elif node_name in self.nodes():
+        elif node_name in self.nodes() and (node_name not in nodes):
             raise ValueError(
                 "The node with name '%s' already exists!" % str(node_name))
 
