@@ -168,9 +168,14 @@ def pullback_complement(h1, h2):
                 is_in_A = True
                 break;
         if not is_in_A:
-            C.add_node(n,
-                       DmB.node[n].type_,
-                       DmB.node[n].attrs_)
+            if DmB.node[n].type_ == None:
+                C.add_node(n,
+                           n,
+                           DmB.node[n].attrs_)
+            else:
+                C.add_node(n,
+                           DmB.node[n].type_,
+                           DmB.node[n].attrs_)
             hom2[n] = n
 
     for n1 in C.nodes():

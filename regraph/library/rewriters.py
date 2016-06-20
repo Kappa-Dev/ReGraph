@@ -29,6 +29,9 @@ class Transformer(object):
         self.P_L_dict = {}
         self.P_R_dict = {}
 
+    def identity(self):
+        return Homomorphism.identity(self.L, self.G)
+
     # Canonic operations
 
     def get(self):
@@ -136,27 +139,29 @@ class Transformer(object):
             )
 
     def add_edge(self, n1, n2, attrs=None):
-        if not n1 in self.P.nodes():
-            self.P.add_node(n1,
-                            self.G.node[n1].type_,
-                            self.G.node[n1].attrs_)
-            self.P_R_dict[n1] = n1
-        if not n2 in self.P.nodes():
-            self.P.add_node(n2,
-                            self.G.node[n2].type_,
-                            self.G.node[n2].attrs_)
-            self.P_R_dict[n2] = n2
+        if n1 in self.G:
+            if not n1 in self.P.nodes():
+                self.P.add_node(n1,
+                                self.G.node[n1].type_,
+                                self.G.node[n1].attrs_)
+                self.P_R_dict[n1] = n1
+            if not n1 in self.L.nodes():
+                self.L.add_node(n1,
+                                self.G.node[n1].type_,
+                                self.G.node[n1].attrs_)
+                self.P_L_dict[n1] = n1
 
-        if not n1 in self.L.nodes():
-            self.L.add_node(n1,
-                            self.G.node[n1].type_,
-                            self.G.node[n1].attrs_)
-            self.P_L_dict[n1] = n1
-        if not n2 in self.L.nodes():
-            self.L.add_node(n2,
-                            self.G.node[n2].type_,
-                            self.G.node[n2].attrs_)
-            self.P_L_dict[n2] = n2
+        if n2 in self.G:
+            if not n2 in self.P.nodes():
+                self.P.add_node(n2,
+                                self.G.node[n2].type_,
+                                self.G.node[n2].attrs_)
+                self.P_R_dict[n2] = n2
+            if not n2 in self.L.nodes():
+                self.L.add_node(n2,
+                                self.G.node[n2].type_,
+                                self.G.node[n2].attrs_)
+                self.P_L_dict[n2] = n2
 
         if not n1 in self.R.nodes():
             self.R.add_node(n1,
@@ -169,6 +174,15 @@ class Transformer(object):
                             self.G.node[n2].attrs_)
             self.P_R_dict[n2] = n2
 
+        del_n1 = False
+        del_n2 = False
+        if not n1 in self.P_R_dict.keys():
+            self.P_R_dict[n1] = n1
+            del_n1 = True
+        if not n2 in self.P_R_dict.keys():
+            self.P_R_dict[n2] = n2
+            del_n2 = True
+
         if (self.P_R_dict[n1], self.P_R_dict[n2]) in self.R.edges():
             warnings.warn(
                 "Edge %s-%s already exists, \
@@ -177,6 +191,11 @@ class Transformer(object):
             )
         else:
             self.R.add_edge(self.P_R_dict[n1], self.P_R_dict[n2], attrs)
+
+        if del_n1:
+            del self.P_R_dict[n1]
+        if del_n2:
+            del self.P_R_dict[n2]
 
     def remove_edge(self, n1, n2):
         if not n1 in self.P.nodes():
@@ -404,6 +423,8 @@ class Rewriter:
 
         Gm, P_Gm, Gm_G = pullback_complement(left_h, L_G)
         Gprime, Gm_Gprime, R_Gprime = pushout(P_Gm, right_h)
+        Gprime.metamodel_ = graph.metamodel_
+        Gprime.hom = TypedHomomorphism.canonic(Gprime, graph.metamodel_)
         return Gm_Gprime, Gm_G
 
     @staticmethod

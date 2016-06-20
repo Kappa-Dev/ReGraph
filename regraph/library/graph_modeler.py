@@ -5,7 +5,8 @@ from regraph.library.data_structures import (TypedGraph,
                                              TypedDiGraph,
                                              TypedHomomorphism,
                                              Homomorphism)
-from regraph.library.rewriters import Rewriter
+from regraph.library.rewriters import (Transformer,
+                                       Rewriter)
 from regraph.library.category_op import (pullback,
                                          pushout,
                                          pullback_complement)
@@ -20,7 +21,7 @@ class GraphModeler(object):
         typing_graph = None
         self.graph_chain = [None for i in range(len(l))]
         self.hom_chain = [None]+[h for h in homL]
-        self.graph_names = [None for i in range(len(names))]
+        self.graph_names = [None for i in range(len(l))]
         self.changes = [None for i in range(len(l))]
 
         for i in range(len(l)):
@@ -28,16 +29,40 @@ class GraphModeler(object):
             typing_graph = self.make_tygraph(l[i], typing_graph, self.hom_chain[i], directed)
             self.graph_chain[i] = typing_graph
 
-            for i in range(len(names)):
-                if names[i] in self.graph_names:
-                    raise ValueError(
-                        "Name %s already used for another graph" % names[i]
-                    )
-                if type(names[i]) != str:
-                    raise ValueError(
-                        "Graph names have to be Strings"
-                    )
-                self.graph_names[i] = names[i]
+        for i in range(len(names)):
+            if names[i] in self.graph_names:
+                raise ValueError(
+                    "Name %s already used for another graph" % names[i]
+                )
+            if type(names[i]) != str:
+                raise ValueError(
+                    "Graph names have to be Strings"
+                )
+            self.graph_names[i] = names[i]
+
+    def __str__(self):
+        res = ''
+        for i in range(len(self.graph_chain)-1, -1, -1):
+            res += '--- Graph %s:\n\n' %\
+                    (self.graph_names[i] if self.graph_names[i] != None else i)
+            res += str(self.graph_chain[i])
+            res += '' if self.hom_chain[i] == None else "Mapping :\n"
+            res += '' if self.hom_chain[i] == None else str(self.hom_chain[i])
+            res += '\n\n'
+        return res
+
+    def init_rewriting(self, n_i):
+        if type(n_i) == int:
+            g = self.get_by_id(n_i)
+
+        elif type(n_i) == str:
+            g = self.get_by_name(n_i)
+        else:
+            raise ValueError(
+                "Undefined identifier of type %s, was expecting id:int or \
+                 name:str" % type(n_i)
+            )
+        return Transformer(g)
 
     def make_tygraph(self, G, T, hom, di):
         res = TypedDiGraph(T) if di else TypedGraph(T)
@@ -58,7 +83,7 @@ class GraphModeler(object):
         return self.graph_chain[n]
 
     def get_id_from_name(self, name):
-        for i in range(self.graph_names):
+        for i in range(len(self.graph_names)):
             if self.graph_names[i] == name:
                 return i
         raise ValueError(
@@ -66,7 +91,7 @@ class GraphModeler(object):
         )
 
     def get_by_name(self, name):
-        for i in range(self.rw_names):
+        for i in range(len(self.graph_names)):
             if self.graph_names[i] == name:
                 return self.graph_chain[i]
         raise ValueError(
@@ -102,7 +127,9 @@ class GraphModeler(object):
                 type(n_i)
             )
         if i >= len(self.graph_chain)-1:
-            return
+            self.graph_chain[i] = self.changes[i][0].target_
+            self.graph_chain[i].metamodel_ = self.graph_chain[i-1]
+            self.changes[i] = None
         else:
             if self.changes[i] != None:
                 G = self.graph_chain[i+1]
@@ -113,6 +140,10 @@ class GraphModeler(object):
                 Gprime.metamodel_ = Gprime_Tprime.target_
                 Gprime.hom = TypedHomomorphism.from_untyped(Gprime_Tprime)
                 self.changes[i+1] = Gm_Gprime, Gm_G
+                self.graph_chain[i] = Tm_Tprime.target_
+                if i>0:
+                    self.graph_chain[i].metamodel_ = self.graph_chain[i-1]
+                self.changes[i] = None
                 self.propagate_from(i+1)
             else:
                 warnings.warn(
@@ -124,9 +155,3 @@ class GraphModeler(object):
         for i in range(len(self.changes)-1, -1, -1):
             if self.changes[i] != None:
                 self.propagate_from(i)
-
-    def commit_changes(self):
-        for i in range(len(self.changes)):
-            if self.changes[i] != None:
-                self.graph_chain[i] = self.changes[i][0].target_
-                self.changes[i] = None

@@ -39,6 +39,7 @@ class TypedDiGraph(nx.DiGraph):
     def __init__(self, metamodel=None):
         nx.DiGraph.__init__(self)
         self.metamodel_ = metamodel
+        self.hom = None
 
     def __eq__(self, A):
         if type(A) == type(self):
@@ -108,9 +109,10 @@ class TypedDiGraph(nx.DiGraph):
         if node not in self.nodes():
             raise ValueError("Node %s does not exist" % str(node))
         elif attrs_dict == None:
-            warnings.warn(
-                "You want to add attrs to %s with an empty attrs_dict" % node
-            )
+            # warnings.warn(
+            #     "You want to add attrs to %s with an empty attrs_dict" % node
+            # )
+            pass
         else:
             if self.node[node].attrs_ is None:
                 self.node[node].attrs_ = deepcopy(attrs_dict)
@@ -212,10 +214,11 @@ class TypedDiGraph(nx.DiGraph):
         if (node_1, node_2) not in self.edges():
             raise ValueError("Edge %s-%s does not exist" % (str(node_1), str(node_2)))
         elif attrs_dict == None:
-            warnings.warn(
-                "You want to add attrs to %s-%s attrs with an empty attrs_dict" %\
-                (str(node_1), str(node_2))
-            )
+        #     warnings.warn(
+        #         "You want to add attrs to %s-%s attrs with an empty attrs_dict" %\
+        #         (str(node_1), str(node_2))
+        #     )
+            pass
         else:
             for key, value in attrs_dict.items():
                 if key not in self.edge[node_1][node_2].keys():
@@ -672,11 +675,16 @@ class TypedHomomorphism(Homomorphism):
 
     @staticmethod
     def canonic(G, T):
+        if T == None:
+            return None
         hom_dict = {}
         for n in G.nodes():
-            if not G.node[n].type_ in T.nodes():
-                raise ValueError(
-                    "Type %s not found in typing graph" % str(g.node[n].type_)
-                )
-            hom_dict[n] = G.node[n].type_
+            if G.node[n].type_ == None:
+                hom_dict[n] = n
+            else:
+                if not G.node[n].type_ in T.nodes():
+                    raise ValueError(
+                        "Type %s not found in typing graph" % str(G.node[n].type_)
+                    )
+                hom_dict[n] = G.node[n].type_
         return TypedHomomorphism(G, T, hom_dict)
