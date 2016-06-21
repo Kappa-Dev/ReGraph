@@ -628,7 +628,7 @@ class Homomorphism(object):
     @staticmethod
     def compose(h1, h2):
         """ Returns h1.h2 : A -> C given h1 : B -> C and h2 : A -> B"""
-        return type(h1)(
+        return Homomorphism(
             h2.source_,
             h1.target_,
             dict([(n, h1.mapping_[h2.mapping_[n]]) for n in h2.mapping_.keys()])
@@ -664,8 +664,8 @@ class TypedHomomorphism(Homomorphism):
         for s, t in dictionary.items():
             if (source.node[s].type_ != None) and (source.node[s].type_ != t):
                 raise ValueError(
-                    "Invalid homomorphism: Node type does not match ('%s' and '%s')!" %
-                    (str(source.node[s].type_), str(t)))
+                    "Invalid homomorphism: Node type does not match (%s:%s and %s)!" %
+                    (s, str(source.node[s].type_), str(t)))
             if not is_subdict(source.node[s].attrs_, target.node[t].attrs_):
                 raise ValueError(
                     "Invalid homomorphism: Attributes of nodes source:'%s' and target:'%s' does not match!" %

@@ -1,120 +1,32 @@
 ---------------------- Propagation
 
-Source :
-Nodes : 
-agent : circle | {}
-site : circle | {}
-action : square | {}
-
-Edges : 
-('site', 'action') : {}
-
-Target :
-Nodes : 
-square : None | {}
-circle : None | {}
-
-Edges : 
-('circle', 'square') : {}
-('circle', 'circle') : {'state': {'p'}}
-
-Mapping :
-{'agent': 'circle', 'site': 'circle', 'action': 'square'}
-
-Source :
-Nodes : 
-square : None | {}
-circle : None | {}
-
-Edges : 
-('circle', 'square') : {}
-('circle', 'circle') : {'state': {'p'}}
-
-Target :
-Nodes : 
-square : None | {}
-circle : None | {}
-
-Edges : 
-('circle', 'square') : {}
-('circle', 'circle') : {'state': {'p'}}
-
-Mapping :
-{'square': 'square', 'circle': 'circle'}
-Source :
-Nodes : 
-protein2 : agent | {}
-site2_2 : site | {}
-protein1 : agent | {}
-BND1 : action | {}
-site2_1 : site | {}
-BND : action | {}
-site1_1 : site | {}
-site1_2 : site | {}
-
-Edges : 
-('site2_2', 'BND') : {}
-('site1_1', 'BND') : {}
-
-Target :
-Nodes : 
-agent : circle | {}
-site : circle | {}
-action : square | {}
-
-Edges : 
-('site', 'action') : {}
-
-Mapping :
-{'BND1': 'action', 'BND': 'action', 'protein1': 'agent', 'protein2': 'agent', 'site2_1': 'site', 'site2_2': 'site', 'site1_1': 'site', 'site1_2': 'site'}
-
-Source :
-Nodes : 
-agent : circle | {}
-site : circle | {}
-action : square | {}
-
-Edges : 
-('site', 'action') : {}
-
-Target :
-Nodes : 
-agent : circle | {}
-site : circle | {}
-action : square | {}
-
-Edges : 
-('site', 'action') : {}
-
-Mapping :
-{'agent': 'agent', 'site': 'site', 'action': 'action'}
 --- Graph Rule:
 
 Nodes : 
-dark_square : None | None
-protein2 : agent | {}
+dark_square : dark_square | None
 site2_2 : site | {}
+site1_1 : site | {}
+protein2 : agent | {}
 protein1 : agent | {}
+site1_2 : site | {}
+BND : action | {}
 BND1 : action | {}
 site2_1 : site | {}
-BND : action | {}
-site1_1 : site | {}
-site1_2 : site | {}
 
 Edges : 
 ('site2_2', 'BND') : {}
-('BND1', 'dark_square') : {}
-('BND', 'dark_square') : {}
 ('site1_1', 'BND') : {}
+('BND', 'dark_square') : {}
+('BND1', 'dark_square') : {}
 
 Mapping :
-{'BND1': 'action', 'BND': 'action', 'protein1': 'agent', 'protein2': 'agent', 'site2_1': 'site', 'site2_2': 'site', 'site1_1': 'site', 'site1_2': 'site'}
+{'site2_2': 'site', 'site1_1': 'site', 'protein2': 'agent', 'protein1': 'agent', 'site1_2': 'site', 'BND': 'action', 'BND1': 'action', 'site2_1': 'site'}
 
 --- Graph Model:
 
 Nodes : 
 agent : circle | {}
-dark_square : None | None
+dark_square : dark_square | None
 site : circle | {}
 action : square | {}
 
@@ -123,154 +35,14 @@ Edges :
 ('action', 'dark_square') : {}
 
 Mapping :
-{'agent': 'circle', 'site': 'circle', 'action': 'square'}
+{'site': 'circle', 'agent': 'circle', 'action': 'square'}
 
 --- Graph MMM:
 
 Nodes : 
-dark_square : None | None
 square : None | {}
-circle : None | {}
-
-Edges : 
-('square', 'dark_square') : {}
-('circle', 'square') : {}
-('circle', 'circle') : {'state': {'p'}}
-
-
-
-
-
-Changes :
-
-Source :
-Nodes : 
-agent : circle | {}
 dark_square : None | None
-site : circle | {}
-action : square | {}
-
-Edges : 
-('site', 'action') : {}
-('action', 'dark_square') : {}
-
-Target :
-Nodes : 
-agent : circle | {}
-dark_square : None | None
-site : circle | {}
-action : square | {}
-
-Edges : 
-('site', 'agent') : {}
-('site', 'action') : {}
-('action', 'dark_square') : {}
-
-Mapping :
-{'agent': 'agent', 'dark_square': 'dark_square', 'site': 'site', 'action': 'action'}
-
----------------------- Propagation
-
-Source :
-Nodes : 
-dark_square : None | None
-protein2 : agent | {}
-site2_2 : site | {}
-protein1 : agent | {}
-BND1 : action | {}
-site2_1 : site | {}
-BND : action | {}
-site1_1 : site | {}
-site1_2 : site | {}
-
-Edges : 
-('site2_2', 'BND') : {}
-('BND1', 'dark_square') : {}
-('BND', 'dark_square') : {}
-('site1_1', 'BND') : {}
-
-Target :
-Nodes : 
-agent : circle | {}
-dark_square : None | None
-site : circle | {}
-action : square | {}
-
-Edges : 
-('site', 'action') : {}
-('action', 'dark_square') : {}
-
-Mapping :
-{'dark_square': 'dark_square', 'protein2': 'agent', 'site2_2': 'site', 'protein1': 'agent', 'BND1': 'action', 'site2_1': 'site', 'BND': 'action', 'site1_1': 'site', 'site1_2': 'site'}
-
-Source :
-Nodes : 
-agent : circle | {}
-dark_square : None | None
-site : circle | {}
-action : square | {}
-
-Edges : 
-('site', 'action') : {}
-('action', 'dark_square') : {}
-
-Target :
-Nodes : 
-agent : circle | {}
-dark_square : None | None
-site : circle | {}
-action : square | {}
-
-Edges : 
-('site', 'action') : {}
-('action', 'dark_square') : {}
-
-Mapping :
-{'agent': 'agent', 'dark_square': 'dark_square', 'site': 'site', 'action': 'action'}
---- Graph Rule:
-
-Nodes : 
-dark_square : None | {}
-protein2 : agent | {}
-site2_2 : site | {}
-protein1 : agent | {}
-BND1 : action | {}
-site2_1 : site | {}
-BND : action | {}
-site1_1 : site | {}
-site1_2 : site | {}
-
-Edges : 
-('site2_2', 'BND') : {}
-('BND1', 'dark_square') : {}
-('BND', 'dark_square') : {}
-('site1_1', 'BND') : {}
-
-Mapping :
-{'BND1': 'action', 'BND': 'action', 'protein1': 'agent', 'protein2': 'agent', 'site2_1': 'site', 'site2_2': 'site', 'site1_1': 'site', 'site1_2': 'site'}
-
---- Graph Model:
-
-Nodes : 
-agent : circle | {}
-dark_square : None | None
-site : circle | {}
-action : square | {}
-
-Edges : 
-('site', 'agent') : {}
-('site', 'action') : {}
-('action', 'dark_square') : {}
-
-Mapping :
-{'agent': 'circle', 'site': 'circle', 'action': 'square'}
-
---- Graph MMM:
-
-Nodes : 
-dark_square : None | None
-square : None | {}
-circle : None | {}
+circle : circle | {}
 
 Edges : 
 ('square', 'dark_square') : {}
@@ -285,35 +57,90 @@ Edges :
 --- Graph Rule:
 
 Nodes : 
-dark_square : None | {}
-BND1 : action | {}
-BND : action | {}
-protein1 : agent | {}
-protein2 : agent | {}
+dark_square : dark_square | {}
 site1_1 : site | {}
+protein2 : agent | {}
+protein1 : agent | {}
+site1_2 : site | {}
+BND : action | {}
+BND1 : action | {}
 site2_2 : site | {}
 site2_1 : site | {}
-site1_2 : site | {}
 
 Edges : 
-('BND1', 'dark_square') : {}
-('BND', 'dark_square') : {}
 ('site1_1', 'BND') : {}
-('site1_1', 'protein1') : {}
+('BND', 'dark_square') : {}
+('BND1', 'dark_square') : {}
+('site2_2', 'BND') : {}
+
+Mapping :
+{'site2_2': 'site', 'site1_1': 'site', 'protein2': 'agent', 'protein1': 'agent', 'site1_2': 'site', 'BND': 'action', 'BND1': 'action', 'site2_1': 'site'}
+
+--- Graph Model:
+
+Nodes : 
+site : circle | {}
+dark_square : dark_square | None
+agent : circle | {}
+action : square | {}
+
+Edges : 
+('site', 'agent') : {}
+('site', 'action') : {}
+('action', 'dark_square') : {}
+
+Mapping :
+{'site': 'circle', 'agent': 'circle', 'action': 'square'}
+
+--- Graph MMM:
+
+Nodes : 
+square : None | {}
+dark_square : None | None
+circle : circle | {}
+
+Edges : 
+('square', 'dark_square') : {}
+('circle', 'square') : {}
+('circle', 'circle') : {'state': {'p'}}
+
+
+
+
+---------------------- Propagation
+
+--- Graph Rule:
+
+Nodes : 
+dark_square : dark_square | {}
+site2_2 : site | {}
+site1_1 : site | {}
+protein2 : agent | {}
+protein1 : agent | {}
+site1_2 : site | {}
+BND : action | {}
+BND1 : action | {}
+site2_1 : site | {}
+
+Edges : 
+('site2_2', 'BND') : {}
 ('site2_2', 'protein2') : {}
-('site2_2', 'BND') : {}
-('site2_1', 'protein2') : {}
+('site1_1', 'protein1') : {}
+('site1_1', 'BND') : {}
 ('site1_2', 'protein1') : {}
+('BND', 'dark_square') : {}
+('BND1', 'dark_square') : {}
+('site2_1', 'protein2') : {}
 
 Mapping :
-{'BND1': 'action', 'BND': 'action', 'protein1': 'agent', 'protein2': 'agent', 'site2_1': 'site', 'site2_2': 'site', 'site1_1': 'site', 'site1_2': 'site'}
+{'site2_2': 'site', 'site1_1': 'site', 'protein2': 'agent', 'protein1': 'agent', 'site1_2': 'site', 'BND': 'action', 'BND1': 'action', 'site2_1': 'site'}
 
 --- Graph Model:
 
 Nodes : 
-agent : circle | {}
-dark_square : None | None
 site : circle | {}
+dark_square : dark_square | None
+agent : circle | {}
 action : square | {}
 
 Edges : 
@@ -322,14 +149,14 @@ Edges :
 ('action', 'dark_square') : {}
 
 Mapping :
-{'agent': 'circle', 'site': 'circle', 'action': 'square'}
+{'site': 'circle', 'agent': 'circle', 'action': 'square'}
 
 --- Graph MMM:
 
 Nodes : 
-dark_square : None | None
 square : None | {}
-circle : None | {}
+dark_square : None | None
+circle : circle | {}
 
 Edges : 
 ('square', 'dark_square') : {}
@@ -341,171 +168,60 @@ Edges :
 
 ---------------------- Propagation
 
-Source :
-Nodes : 
-agent : circle | {}
-dark_square : None | None
-site : circle | {}
-action : square | {}
-
-Edges : 
-('site', 'agent') : {}
-('site', 'action') : {}
-('action', 'dark_square') : {}
-
-Target :
-Nodes : 
-dark_square : None | None
-square : None | {}
-circle : None | {}
-
-Edges : 
-('square', 'dark_square') : {}
-('circle', 'square') : {}
-('circle', 'circle') : {'state': {'p'}}
-
-Mapping :
-{'agent': 'circle', 'dark_square': 'dark_square', 'site': 'circle', 'action': 'square'}
-
-Source :
-Nodes : 
-dark_square : None | None
-square : None | {}
-circle : None | {}
-
-Edges : 
-('square', 'dark_square') : {}
-('circle', 'square') : {}
-
-Target :
-Nodes : 
-dark_square : None | None
-square : None | {}
-circle : None | {}
-
-Edges : 
-('square', 'dark_square') : {}
-('circle', 'square') : {}
-('circle', 'circle') : {'state': {'p'}}
-
-Mapping :
-{'dark_square': 'dark_square', 'square': 'square', 'circle': 'circle'}
-Source :
-Nodes : 
-dark_square : None | {}
-BND1 : action | {}
-BND : action | {}
-protein1 : agent | {}
-protein2 : agent | {}
-site1_1 : site | {}
-site2_2 : site | {}
-site2_1 : site | {}
-site1_2 : site | {}
-
-Edges : 
-('BND1', 'dark_square') : {}
-('BND', 'dark_square') : {}
-('site1_1', 'BND') : {}
-('site1_1', 'protein1') : {}
-('site2_2', 'protein2') : {}
-('site2_2', 'BND') : {}
-('site2_1', 'protein2') : {}
-('site1_2', 'protein1') : {}
-
-Target :
-Nodes : 
-agent : circle | {}
-dark_square : None | None
-site : circle | {}
-action : square | {}
-
-Edges : 
-('site', 'agent') : {}
-('site', 'action') : {}
-('action', 'dark_square') : {}
-
-Mapping :
-{'dark_square': 'dark_square', 'protein2': 'agent', 'site2_2': 'site', 'protein1': 'agent', 'BND1': 'action', 'site2_1': 'site', 'BND': 'action', 'site1_1': 'site', 'site1_2': 'site'}
-
-Source :
-Nodes : 
-agent : circle | {}
-dark_square : None | {}
-site : circle | {}
-action : square | {}
-
-Edges : 
-('site', 'action') : {}
-('action', 'dark_square') : {}
-
-Target :
-Nodes : 
-agent : circle | {}
-dark_square : None | None
-site : circle | {}
-action : square | {}
-
-Edges : 
-('site', 'agent') : {}
-('site', 'action') : {}
-('action', 'dark_square') : {}
-
-Mapping :
-{'agent': 'agent', 'dark_square': 'dark_square', 'site': 'site', 'action': 'action'}
 --- Graph Rule:
 
 Nodes : 
-dark_square : None | {}
-BND1 : action | {}
-BND : action | {}
-protein1 : agent | {}
-protein2 : agent | {}
+dark_square : dark_square | {}
 site1_1 : site | {}
-site2_2 : site | {}
-site2_1 : site | {}
+protein2 : agent | {}
+protein1 : agent | {}
 site1_2 : site | {}
-dark_circle : None | None
+BND : action | {}
+BND1 : action | {}
+site2_2 : site | {}
+dark_circle : dark_circle | None
+site2_1 : site | {}
 
 Edges : 
-('BND1', 'dark_square') : {}
-('BND', 'dark_square') : {}
-('protein1', 'dark_circle') : {}
-('protein2', 'dark_circle') : {}
 ('site1_1', 'BND') : {}
 ('site1_1', 'dark_circle') : {}
+('protein2', 'dark_circle') : {}
+('protein1', 'dark_circle') : {}
+('site1_2', 'dark_circle') : {}
+('BND', 'dark_square') : {}
+('BND1', 'dark_square') : {}
 ('site2_2', 'BND') : {}
 ('site2_2', 'dark_circle') : {}
 ('site2_1', 'dark_circle') : {}
-('site1_2', 'dark_circle') : {}
 
 Mapping :
-{'BND1': 'action', 'BND': 'action', 'protein1': 'agent', 'protein2': 'agent', 'site2_1': 'site', 'site2_2': 'site', 'site1_1': 'site', 'site1_2': 'site'}
+{'site2_2': 'site', 'site1_1': 'site', 'protein2': 'agent', 'protein1': 'agent', 'site1_2': 'site', 'BND': 'action', 'BND1': 'action', 'site2_1': 'site'}
 
 --- Graph Model:
 
 Nodes : 
-agent : circle | {}
-dark_square : None | {}
 site : circle | {}
+dark_square : dark_square | {}
+agent : circle | {}
+dark_circle : dark_circle | None
 action : square | {}
-dark_circle : None | None
 
 Edges : 
-('agent', 'dark_circle') : {}
-('site', 'dark_circle') : {}
 ('site', 'action') : {}
+('site', 'dark_circle') : {}
+('agent', 'dark_circle') : {}
 ('action', 'dark_square') : {}
 
 Mapping :
-{'agent': 'circle', 'site': 'circle', 'action': 'square'}
+{'site': 'circle', 'agent': 'circle', 'action': 'square'}
 
 --- Graph MMM:
 
 Nodes : 
-dark_square : None | None
-square : None | {}
+square : square | {}
+circle : circle | {}
+dark_square : dark_square | None
 dark_circle : None | None
-circle : None | {}
 
 Edges : 
 ('square', 'dark_square') : {}
