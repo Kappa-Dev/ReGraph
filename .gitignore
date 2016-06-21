@@ -9,3 +9,5 @@ tests/*.png
 *.pyc
 regraph/library/tmp.py
 tests/example_tests.py
+tests/example_tests_without_pbc.py
+log.txt

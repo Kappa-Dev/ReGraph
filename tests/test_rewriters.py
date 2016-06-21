@@ -154,9 +154,7 @@ class TestRewrites(object):
 
         trans.add_node_attrs(1, {'name' : {'Grb1'}})
 
-
         Gprime = Rewriter.rewrite(Homomorphism.identity(trans.L, trans.G), trans)[0].target_
-
         assert(Gprime.node[1].attrs_ == {'name': {'EGFR','Grb1'}, 'state': {'p'}})
 
     def test_add_edge_attrs(self):
@@ -273,14 +271,12 @@ class TestRewrites(object):
 
         rw = Rewriter(g)
 
-        trans = Rewriter.transformer_from_command(g, 
+        trans = Rewriter.transformer_from_command(g,
             """delete_node 1.
             clone 2 as clone.
             delete_node_attrs clone {u: 0}.
             delete_edge 2 3.
             delete_edge_attrs clone 3 {k: {1}}.
-            update_edge_attrs clone 3 {t: 333}.
-            update_node_attrs 2 {u: {12, 13}}.
             merge [clone, 3] as merged.
             add_node_attrs merged {m: 1}.
             add_node new_node type region.
@@ -289,7 +285,7 @@ class TestRewrites(object):
             add_edge_attrs merged new_node {j: 33}."""
         )
 
-        instances = Rewriter.find_matching(trans.L)
+        instances = Rewriter.find_matching(g, trans.L)
 
         RHS_instance = rw.apply_rule(instances[0], trans)
         plot_instance(

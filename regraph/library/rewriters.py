@@ -290,25 +290,32 @@ class Transformer(object):
         self.P_R_dict[n2] = n2
 
     def add_node_attrs(self, n, attrs):
-        if not n in self.P.nodes():
-            self.P.add_node(n,
-                            self.G.node[n].type_,
-                            self.G.node[n].attrs_)
-            self.P_R_dict[n] = n
+        if n in self.G.nodes():
+            if not n in self.P.nodes():
+                self.P.add_node(n,
+                                self.G.node[n].type_,
+                                self.G.node[n].attrs_)
+                self.P_R_dict[n] = n
 
-        if not n in self.L.nodes():
-            self.L.add_node(n,
-                            self.G.node[n].type_,
-                            self.G.node[n].attrs_)
-            self.P_L_dict[n] = n
+            if not n in self.L.nodes():
+                self.L.add_node(n,
+                                self.G.node[n].type_,
+                                self.G.node[n].attrs_)
+                self.P_L_dict[n] = n
+            if not n in self.R.nodes():
+                self.R.add_node(n,
+                                self.G.node[n].type_,
+                                self.G.node[n].attrs_)
 
-        if not n in self.R.nodes():
-            self.R.add_node(n,
-                            self.G.node[n].type_,
-                            merge_attributes(self.G.node[n].attrs_,
-                                             attrs))
-        else:
+        if n in self.P_R_dict.keys():
             self.R.add_node_attrs(self.P_R_dict[n], attrs)
+        elif n in self.R.nodes():
+            self.R.add_node_attrs(n, attrs)
+        else:
+            raise ValueError(
+                "Node %s doesn't exist" % n
+            )
+
 
     def add_edge_attrs(self, n1, n2, attrs):
         if n1 in self.G:
@@ -366,11 +373,12 @@ class Transformer(object):
                     self.R.add_edge_attrs(self.P_L_dict[n1], n2, attrs)
                 if n2 in self.P_L_dict.keys():
                     self.R.add_edge_attrs(n1, self.P_L_dict[n2], attrs)
-            raise ValueError(
-                "Edge %sm%s doesn't exist, \
-                 please create it before adding attributes!" %
-                    (str(n1), str(n2))
-            )
+                else:
+                    raise ValueError(
+                        "Edge %s-%s doesn't exist, please create it before adding\
+                         attributes!" %
+                            (str(n1), str(n2))
+                    )
 
     def remove_node_attrs(self, n, attrs):
 
@@ -524,7 +532,7 @@ class Rewriter:
 
     def __init__(self, graph):
         """Initialize Rewriter object with input graph."""
-        self.graph_ = graph
+        self.graph__ = graph
         self.fully_expanded_graph = deepcopy(graph)
         self.h_exp = dict([(n,n) for n in graph.nodes()])
         self.parser_ = parser
@@ -648,7 +656,7 @@ class Rewriter:
                     node_name = action["node_name"]
                 if "edges_method" in action.keys():
                     edges_method = action["edges_method"]
-                merged_node = trans.merge_nodes(
+                merged_node = trans.merge_nodes_list(
                     action["nodes"],
                     node_name)
             elif action["keyword"] == "add_node":
@@ -659,9 +667,9 @@ class Rewriter:
                     name = action["node"]
                 if "type" in action.keys():
                     node_type = action["type"]
-                if "attrubutes" in action.keys():
-                    attrs = action["attrubutes"]
-                trans.add_node(node_type, name, attrs)
+                if "attributes" in action.keys():
+                    attrs = action["attributes"]
+                trans.add_node(name, node_type, attrs)
             elif action["keyword"] == "delete_node":
                 trans.remove_node(action["node"])
             elif action["keyword"] == "add_edge":
@@ -695,7 +703,7 @@ class Rewriter:
                     action["node_2"],
                     action["attributes"])
             else:
-                raise ValueError("Unknown command")
+                raise ValueError("Unknown command %s" % action["keyword"])
         return trans
 
     def apply_rule(self, instance, trans):
@@ -723,7 +731,7 @@ class Rewriter:
 
         # 1) Delete nodes/edges
         for node in nodes_to_remove:
-            self.delete_node(instance, node)
+            self.graph__.delete_node(instance, node)
 
         merge_dict = {}
         for n in right_h.target_.nodes():
@@ -750,7 +758,7 @@ class Rewriter:
                         if val in p_nodes:
                             will_be_merged = True
                     if i > 0:
-                        new_name = self.clone(instance, node)
+                        new_name = self.graph__clone(instance, node)
                         P_instance.update(
                             {val: new_name})
                         if not will_be_merged:
@@ -765,7 +773,7 @@ class Rewriter:
                     i += 1
 
         for edge in edges_to_remove:
-            self.delete_edge(
+            self.graph_.delete_edge(
                 P_instance,
                 edge[0],
                 edge[1])
@@ -773,13 +781,13 @@ class Rewriter:
         # 3) Delete attrs
         for node, attrs in node_attrs_to_remove.items():
             if len(attrs) > 0:
-                self.delete_node_attrs(
+                self.graph_.delete_node_attrs(
                     P_instance,
                     node,
                     attrs)
 
         for edge, attrs in edge_attrs_to_remove.items():
-            self.delete_edge_attrs(
+            self.graph_.delete_edge_attrs(
                 P_instance,
                 edge[0],
                 edge[1],
@@ -788,10 +796,10 @@ class Rewriter:
         # 4) Add attrs
         for node, attrs in node_attrs_to_add.items():
             if len(attrs) > 0:
-                self.add_node_attrs(P_instance, node, attrs)
+                self.graph_.add_node_attrs(P_instance, node, attrs)
 
         for edge, attrs in edge_attrs_to_add.items():
-            self.add_edge_attrs(
+            self.graph_.add_edge_attrs(
                 P_instance,
                 edge[0],
                 edge[1],
@@ -799,12 +807,12 @@ class Rewriter:
 
         # 5) Merge
         for rhs_node, nodes in nodes_to_merge.items():
-            new_name = self.merge(P_instance, nodes)
+            new_name = self.graph_.merge(P_instance, nodes)
             RHS_instance.update({rhs_node: new_name})
 
         # 6) Add nodes/edges
         for node in nodes_to_add:
-            new_name = self.add_node(
+            new_name = self.graph_.add_node(
                 instance,
                 right_h.target_.node[node].type_,
                 attrs=right_h.target_.node[node].attrs_)
@@ -812,7 +820,7 @@ class Rewriter:
 
         for edge, attrs in edges_to_add.items():
             try:
-                self.add_edge(
+                self.graph_.add_edge(
                     RHS_instance,
                     edge[0],
                     edge[1],

@@ -23,6 +23,9 @@ class TypedNode:
         normalize_attrs(self.attrs_)
         return
 
+    def __str__(self):
+        return "Node:\nType: %s\nAttributes: %s\n" % (self.type_, self.attrs_)
+
     def set_attrs(self, attrs):
         self.attrs_ = attrs
         normalize_attrs(self.attrs_)
@@ -155,7 +158,8 @@ class TypedDiGraph(nx.DiGraph):
                     if key not in self.node[node].attrs_.keys():
                         self.node[node].attrs_.update({key: to_set(value)})
                     else:
-                        self.node[node].attrs_[key].union(to_set(value))
+                        self.node[node].attrs_[key] =\
+                            self.node[node].attrs_[key].union(to_set(value))
 
     def update_node_attrs(self, node, new_attrs):
         if node not in self.nodes():
