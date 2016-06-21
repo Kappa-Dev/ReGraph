@@ -311,6 +311,9 @@ class TypedDiGraph(nx.DiGraph):
         normalize_attrs(attrs)
         self.edge[source][target] = attrs
 
+    def get_node(self, n):
+        return self.node[n]
+
     def cast_node(self, node, new_type):
         """Changes the node type in the graph"""
         self.node[node].type_ = new_type
@@ -560,6 +563,7 @@ class TypedDiGraph(nx.DiGraph):
         return g
 
     def load(self, filename):
+        """Create graph from JSON file"""
         if os.path.isfile(filename):
             with open(filename, "r+") as f:
                 j_data = json.loads(f.read())
@@ -618,6 +622,7 @@ class TypedDiGraph(nx.DiGraph):
                 filename)
 
     def export(self, filename):
+        """Export graph to JSON file"""
         j_data = {"edges": [], "nodes": []}
         # dump nodes
         for node in self.nodes():
@@ -724,7 +729,7 @@ class Homomorphism(object):
 
     @staticmethod
     def identity(A, B):
-        """ Tries to create the identity homomorphism of A between A and B,
+        """ Tries to create the identity homomorphism of A from A to B,
             fails if some nodes of A aren't found in B
         """
         dic = {}
