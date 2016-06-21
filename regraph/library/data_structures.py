@@ -10,6 +10,9 @@ from regraph.library.utils import (is_subdict,
                                    normalize_attrs,
                                    merge_attributes)
 
+import json
+import os.path
+
 
 class TypedNode:
     """Define the datastructure for typed node."""
@@ -122,8 +125,18 @@ class TypedDiGraph(nx.DiGraph):
         return
 
     def add_nodes_from(self, node_list):
-        for node_id, node_type in node_list:
-            self.add_node(node_id, node_type)
+        for n in node_list:
+            if len(n) == 3:
+                node_id, node_type, node_attrs = n
+                self.add_node(node_id, node_type, node_attrs)
+            elif len(n) == 2:
+                node_id, node_type = n
+                self.add_node(node_id, node_type)
+            else:
+                raise ValueError(
+                    "Each element of the node list should match pattern\
+                    (node_id, node_type) or (node_id, node_type, node_attrs)"
+                )
 
     def add_node_attrs(self, node, attrs_dict):
         if node not in self.nodes():
@@ -542,6 +555,98 @@ class TypedDiGraph(nx.DiGraph):
             g.set_edge(s, t, attributes[(s, t)])
         return g
 
+    def load(self, filename):
+        if os.path.isfile(filename):
+            with open(filename, "r+") as f:
+                j_data = json.loads(f.read())
+                # start graph init
+                loaded_nodes = []
+                if "nodes" in j_data.keys():
+                    j_nodes = j_data["nodes"]
+                    for node in j_nodes:
+                        if "id" in node.keys():
+                            node_id = node["id"]
+                        else:
+                            raise ValueError(
+                                "Error loading graph: node id is not specified!")
+                        if "type" in node.keys():
+                            node_type = node["type"]
+                        else:
+                            raise ValueError(
+                                "Error loading graph: node type is not specified!")
+                        attrs = None
+                        if "attrs" in node.keys():
+                            attrs = node["attrs"]
+                        loaded_nodes.append((node_id, node_type, attrs))
+                else:
+                    raise ValueError(
+                        "Error loading graph: no nodes specified!")
+                loaded_edges = []
+                if "edges" in j_data.keys():
+                    j_edges = j_data["edges"]
+                    for edge in j_edges:
+                        if "from" in edge.keys():
+                            s_node = edge["from"]
+                        else:
+                            raise ValueError(
+                                "Error loading graph: edge source is not specified!")
+                        if "to" in edge.keys():
+                            t_node = edge["to"]
+                        else:
+                            raise ValueError(
+                                "Error loading graph: edge target is not specified!")
+                        if "attrs" in edge.keys():
+                            attrs = edge["attrs"]
+                            if type(attrs) == list:
+                                attrs = set(attrs)
+                            loaded_edges.append((s_node, t_node, attrs))
+                        else:
+                            loaded_edges.append((s_node, t_node))
+                else:
+                    raise ValueError(
+                        "Error loading graph: no edges specified!")
+                nx.DiGraph.clear(self)
+                self.add_nodes_from(loaded_nodes)
+                self.add_edges_from(loaded_edges)
+        else:
+            raise ValueError(
+                "Error loading graph: file '%s' does not exist!" %
+                filename)
+
+    def export(self, filename):
+        j_data = {"edges": [], "nodes": []}
+        # dump nodes
+        for node in self.nodes():
+            node_data = {}
+            node_data["id"] = node
+            node_data["type"] = self.node[node].type_
+            if self.node[node].attrs_ is not None:
+                attrs = {}
+                for key, value in self.node[node].attrs_.items():
+                    if type(value) == set:
+                        attrs[key] = list(value)
+                    else:
+                        attrs[key] = value
+                node_data["attrs"] = attrs
+            j_data["nodes"].append(node_data)
+        # dump edges
+        for s, t in self.edges():
+            edge_data = {}
+            edge_data["from"] = s
+            edge_data["to"] = t
+            if self.edge[s][t] is not None:
+                attrs = {}
+                for key, value in self.edge[s][t].items():
+                    if type(value) == set:
+                        attrs[key] = list(value)
+                    else:
+                        attrs[key] = value
+                edge_data["attrs"] = attrs
+            j_data["edges"].append(edge_data)
+
+        with open(filename, 'w') as f:
+            json.dump(j_data, f)
+
 
 class TypedGraph(TypedDiGraph):
     """Define simple typed undirected graph."""
@@ -636,6 +741,136 @@ class Homomorphism(object):
             h1.target_,
             dict([(n, h1.mapping_[h2.mapping_[n]]) for n in h2.mapping_.keys()])
         )
+
+    def find_final_PBC(self):
+        # edges to remove will be removed automatically upon removal of the nodes
+        nodes = set([n for n in self.target_.nodes()
+                     if n not in self.mapping_.values()])
+        node_attrs = {}
+        for node in self.source_.nodes():
+            if node not in node_attrs.keys():
+                node_attrs.update({node: {}})
+
+            mapped_node = self.mapping_[node]
+            mapped_attrs = self.target_.node[mapped_node].attrs_
+
+            attrs = self.source_.node[node].attrs_
+            if mapped_attrs is not None and attrs is not None:
+                for key, value in mapped_attrs.items():
+                    if key not in attrs.keys():
+                        node_attrs[node].update({key: value})
+                    else:
+                        if type(value) != set:
+                            value = set([value])
+                        else:
+                            node_attrs[node].update(
+                                {key: set([el for el in value if el not in attrs[key]])})
+
+        edge_attrs = {}
+        edges = set()
+        for edge in self.target_.edges():
+            if self.source_.is_directed():
+                sources = keys_by_value(self.mapping_, edge[0])
+                targets = keys_by_value(self.mapping_, edge[1])
+                if len(sources) == 0 or len(targets) == 0:
+                    continue
+                for s in sources:
+                    for t in targets:
+                        if (s, t) not in self.source_.edges():
+                            edges.add((s, t))
+            else:
+                sources = keys_by_value(self.mapping_, edge[0])
+                targets = keys_by_value(self.mapping_, edge[1])
+                if len(sources) == 0 or len(targets) == 0:
+                    continue
+                for s in sources:
+                    for t in targets:
+                        if (s, t) not in self.source_.edges():
+                            if (t, s) not in self.source_.edges():
+                                edges.add((s, t))
+
+        for edge in self.source_.edges():
+            if edge not in edge_attrs.keys():
+                edge_attrs.update({edge: {}})
+
+            mapped_edge = (self.mapping_[edge[0]], self.mapping_[edge[1]])
+            mapped_attrs = self.target_.edge[mapped_edge[0]][mapped_edge[1]]
+
+            attrs = self.source_.edge[edge[0]][edge[1]]
+
+            for key, value in mapped_attrs.items():
+                if key not in attrs.keys():
+                    edge_attrs[edge].update({key: value})
+                else:
+                    if type(value) != set:
+                        value = set([value])
+                    else:
+                        edge_attrs[edge].update(
+                            {key: set([el for el in value if el not in attrs[key]])})
+        return (nodes, edges, node_attrs, edge_attrs)
+
+    def find_PO(self):
+        nodes = set([n for n in self.target_.nodes() if n not in self.mapping_.values()])
+
+        node_attrs = {}
+        for node in self.source_.nodes():
+            if node not in node_attrs.keys():
+                node_attrs.update({node: {}})
+
+            mapped_node = self.mapping_[node]
+            mapped_attrs = self.target_.node[mapped_node].attrs_
+
+            attrs = self.source_.node[node].attrs_
+            if mapped_attrs is not None and attrs is not None:
+                for key, value in mapped_attrs.items():
+                    if key not in attrs.keys():
+                        node_attrs[node].update({key: value})
+                    else:
+                        if type(value) != set:
+                            value = set([value])
+                        else:
+                            node_attrs[node].update(
+                                {key: set([el for el in value if el not in attrs[key]])})
+
+        edges = dict()
+        edge_attrs = {}
+
+        for edge in self.target_.edges():
+            sources = keys_by_value(self.mapping_, edge[0])
+            targets = keys_by_value(self.mapping_, edge[1])
+            if len(sources) == 0 or len(targets) == 0:
+                edges[(edge[0], edge[1])] = self.target_.edge[edge[0]][edge[1]]
+                continue
+            for s in sources:
+                for t in targets:
+                    if (s, t) not in self.source_.edges():
+                        edges[(edge[0], edge[1])] = self.target_.edge[edge[0]][edge[1]]
+
+        for edge in self.source_.edges():
+            if edge not in edge_attrs.keys():
+                edge_attrs.update({edge: {}})
+
+            mapped_edge = (self.mapping_[edge[0]], self.mapping_[edge[1]])
+            mapped_attrs = self.target_.edge[mapped_edge[0]][mapped_edge[1]]
+
+            attrs = self.source_.edge[edge[0]][edge[1]]
+
+            for key, value in mapped_attrs.items():
+                if key not in attrs.keys():
+                    edge_attrs[edge].update({key: value})
+                else:
+                    if type(value) != set:
+                        value = set([value])
+                    else:
+                        if type(attrs[key]) != set:
+                            edge_attrs[edge].update(
+                                {key: set([el for el in value
+                                           if el not in set([attrs[key]])])})
+                        else:
+                            edge_attrs[edge].update(
+                                {key: set([el for el in value
+                                           if el not in attrs[key]])})
+        return (nodes, edges, node_attrs, edge_attrs)
 
 
 

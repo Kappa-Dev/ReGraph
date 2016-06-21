@@ -1,0 +1,12 @@
+{
+	"nodes": [
+		{"id": 1, "type": "agent", "attrs": {"u": 1, "k": 33}},
+		{"id": 2, "type": "agent"},
+		{"id": 3, "type": "action", "attrs": {"x": [33, 55, 66]}}
+	],
+	"edges": [
+		{"from": 1, "to": 2, "attrs": {"r": [23, "smth"]}},
+		{"from": 2, "to": 3},
+		{"from": 3, "to": 1}
+	]
+}

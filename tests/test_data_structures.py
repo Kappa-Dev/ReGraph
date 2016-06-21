@@ -1,5 +1,7 @@
 """Test data structures of graph rewriting."""
 
+import os
+
 from nose.tools import assert_equals
 from nose.tools import raises
 
@@ -8,7 +10,14 @@ from regraph.library.data_structures import TypedGraph
 from regraph.library.data_structures import Homomorphism
 from regraph.library.data_structures import TypedHomomorphism
 
+def assert_edges_undir(edges1, edges2):
 
+    edgeset1 = set(edges1)
+    edgeset2 = set(edges2)
+
+    for edge in edgeset1:
+        if edge not in edgeset2 and (edge[1], edge[0]) not in edgeset2:
+            assert False
 
 class TestDataStructures(object):
     """Class for testing data structures with Python nose tests."""
@@ -235,3 +244,50 @@ class TestDataStructures(object):
         graph.add_edge('6', '3', {'x': 5})
         graph.add_edge('6', '7', {'x': 6})
         assert_equals(graph.edge['1']['2'], graph.edge['2']['1'])
+
+    def test_load_graph_dir(self):
+        __location__ = os.path.realpath(
+            os.path.join(os.getcwd(), os.path.dirname(__file__)))
+        filename = os.path.join(__location__, "graph_example.json")
+        a = TypedDiGraph()
+        a.load(filename)
+
+        assert_equals(a.nodes(), [1, 2, 3])
+        assert_equals(a.edges(), [(1, 2), (2, 3), (3, 1)])
+        assert_equals(a.node[1].type_, "agent")
+        assert_equals(a.node[2].type_, "agent")
+        assert_equals(a.node[3].type_, "action")
+        assert_equals(a.node[1].attrs_, {"u": {1}, "k": {33}})
+        assert_equals(a.node[2].attrs_, None)
+        assert_equals(a.node[3].attrs_, {"x": {33, 55, 66}})
+
+    def test_load_graph_undir(self):
+        __location__ = os.path.realpath(
+            os.path.join(os.getcwd(), os.path.dirname(__file__)))
+        filename = os.path.join(__location__, "graph_example.json")
+        a = TypedGraph()
+        a.load(filename)
+
+        assert_equals(a.nodes(), [1, 2, 3])
+        assert_edges_undir(a.edges(), [(1, 2), (2, 3), (3, 1)])
+        assert_equals(a.node[1].type_, "agent")
+        assert_equals(a.node[2].type_, "agent")
+        assert_equals(a.node[3].type_, "action")
+        assert_equals(a.node[1].attrs_, {"u": {1}, "k": {33}})
+        assert_equals(a.node[2].attrs_, None)
+        assert_equals(a.node[3].attrs_, {"x": {33, 55, 66}})
+
+    def test_load_export(self):
+        __location__ = os.path.realpath(
+            os.path.join(os.getcwd(), os.path.dirname(__file__)))
+        filename = os.path.join(__location__, "graph_example.json")
+        a = TypedGraph()
+        a.load(filename)
+        out_filename = os.path.join(__location__, "output_graph.json")
+        a.export(out_filename)
+        b = TypedGraph()
+        b.load(out_filename)
+
+        assert_equals(a.nodes(), b.nodes())
+        assert_edges_undir(a.edges(), b.edges())
+        assert_equals(a.node[3].attrs_, b.node[3].attrs_)

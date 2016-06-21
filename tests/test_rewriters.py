@@ -62,6 +62,24 @@ class TestRewrites(object):
         self.graph.set_edge(7, 6, {'s': 'u'})
         self.graph.set_edge(5, 2, {'s': 'u'})
 
+        self.LHS_ = TypedDiGraph()
+
+        self.LHS_.add_node(1, 'agent', {'name': 'EGFR'})
+        self.LHS_.add_node(2, 'action', {'name': 'BND'})
+        self.LHS_.add_node(3, 'region')
+        self.LHS_.add_node(4, 'agent', {'name': 'Grb2'})
+        self.LHS_.add_node(5, 'agent', {'name': 'EGFR'})
+        self.LHS_.add_node(6, 'action', {'name': 'BND'})
+        self.LHS_.add_node(7, 'agent', {'name': 'Grb2'})
+
+        self.LHS_.add_edges_from([(1, 2), (3, 2), (3, 4), (5, 6), (7, 6)])
+
+        self.LHS_.set_edge(1, 2, {'s': 'p'})
+        self.LHS_.set_edge(5, 6, {'s': 'p'})
+
+        self.rw_ = Rewriter(self.graph)
+        self.instances_ = Rewriter.find_matching(self.graph, self.LHS_)
+
     def test_add_node(self):
         trans = Transformer(self.graph.copy())
 
@@ -214,3 +232,132 @@ class TestRewrites(object):
 
         instance = Homomorphism.identity(trans.L, trans.G)
         Rewriter.rewrite(instance, trans)
+
+    def test_find_matching(self):
+        assert_equals(self.instances_, [{1: 1, 2: 2, 3: 4, 4: 3, 5: 5, 6: 6, 7: 7}])
+
+        new_pattern = TypedDiGraph()
+        new_pattern.add_node("a", "agent")
+        new_pattern.add_node("b", "agent")
+        new_pattern.add_node("c", "agent")
+
+        new_pattern.add_edges_from([("a", "b"), ("a", "c")])
+
+        graph = self.graph.copy()
+        graph.remove_node(14)
+
+        instances = Rewriter.find_matching(graph, new_pattern)
+        assert_equals(6, len(instances))
+
+    def test_transformer_from_command(self):
+        __location__ = os.path.realpath(
+            os.path.join(os.getcwd(), os.path.dirname(__file__)))
+
+        g = TypedGraph()
+        g.add_node(1, "action")
+        g.add_node(2, "agent", {"u": {0, 1}})
+        g.add_node(3, "agent", {"u": {4}, "name": "Paul"})
+        g.add_node(4, "action")
+        g.add_node(5, "agent", {"u": {0}})
+        g.add_node(6, "agent", {"u": {7}})
+        g.add_node(7, "agent", {"u": {4}})
+
+        g.add_edges_from([
+            (1, 2),
+            (3, 2),
+            (1, 5),
+            (5, 4),
+            (5, 6)])
+        g.set_edge(1, 2, {"a": {0}})
+        g.set_edge(2, 3, {"k": {1, 2, 3}})
+
+        rw = Rewriter(g)
+
+        trans = Rewriter.transformer_from_command(g, 
+            """delete_node 1.
+            clone 2 as clone.
+            delete_node_attrs clone {u: 0}.
+            delete_edge 2 3.
+            delete_edge_attrs clone 3 {k: {1}}.
+            update_edge_attrs clone 3 {t: 333}.
+            update_node_attrs 2 {u: {12, 13}}.
+            merge [clone, 3] as merged.
+            add_node_attrs merged {m: 1}.
+            add_node new_node type region.
+            add_node_attrs new_node {x: 1}.
+            add_edge new_node merged.
+            add_edge_attrs merged new_node {j: 33}."""
+        )
+
+        instances = Rewriter.find_matching(trans.L)
+
+        RHS_instance = rw.apply_rule(instances[0], trans)
+        plot_instance(
+            rw.graph_,
+            h2.target_, RHS_instance,
+            filename=os.path.join(__location__, "undir_rule_to_hom_RHS.png"))
+
+    def test_rewriting_with_metamodel(self):
+        meta_meta = TypedDiGraph()
+        meta_meta.add_node("agent", "node")
+        meta_meta.add_node("action", "node")
+        meta_meta.add_edges_from([
+            ("agent", "agent"),
+            ("action", "action"),
+            ("action", "agent"),
+            ("agent", "action")])
+
+        meta = TypedDiGraph(meta_meta)
+        meta.add_node("protein", "agent")
+        meta.add_node("region", "agent")
+        meta.add_node("action", "agent")
+        meta.add_edges_from([
+            ("protein", "protein"),
+            ("region", "region"),
+            ("action", "action"),
+            ("region", "protein"),
+            ("region", "action"),
+            ("action", "region"),
+        ])
+
+        graph = TypedDiGraph(meta)
+        graph.add_nodes_from([
+            (1, "protein"),
+            (2, "region"),
+            (3, "action"),
+            (4, "region"),
+            (5, "protein"),
+            (6, "region"),
+            (7, "protein")])
+        graph.add_edge(2, 1)
+        graph.add_edge(2, 3)
+        graph.add_edge(4, 3)
+        graph.add_edge(4, 5)
+        graph.add_edge(6, 3)
+        graph.add_edge(6, 7)
+
+        rw = Rewriter(graph)
+
+        LHS = TypedDiGraph()
+        LHS.add_node("a", "protein")
+        LHS.add_node("b", "region")
+        LHS.add_node(33, "action")
+        LHS.add_edges_from([
+            ("b", "a"),
+            ("b", 33)])
+        instances = Rewriter.find_matching(graph, LHS)
+
+        try:
+            trans = Transformer(graph)
+            trans.add_node("new_type", 2)
+            Rewriter.rewrite(instances[0], trans)
+            assert False
+        except:
+            assert True
+        try:
+            trans = Transformer(graph)
+            trans.add_edge("a", 33)
+            Rewriter.rewrite(instances[0], trans)
+            assert False
+        except:
+            assert True
