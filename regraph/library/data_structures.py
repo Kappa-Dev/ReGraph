@@ -230,7 +230,7 @@ class TypedDiGraph(nx.DiGraph):
     def remove_edge(self, source, target):
         """Remove edge from the graph."""
         if (source, target) in self.edges():
-            nx.DiGraph.remove_edge(source, target)
+            nx.DiGraph.remove_edge(self, source, target)
         else:
             raise ValueError(
                 "Edge %s->%s does not exist!" % (str(source), str(target)))

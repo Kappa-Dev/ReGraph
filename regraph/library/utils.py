@@ -1,6 +1,7 @@
 """."""
 
 import networkx as nx
+from matplotlib import pyplot as plt
 
 def is_subdict(small_dict, big_dict):
     """Check if the dictionary is a subset of other."""

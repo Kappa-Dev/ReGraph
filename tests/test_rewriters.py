@@ -9,7 +9,8 @@ from regraph.library.data_structures import (TypedDiGraph,
                                              Homomorphism)
 from regraph.library.rewriters import (Rewriter,
                                        Transformer)
-from regraph.library.utils import (merge_attributes)
+from regraph.library.utils import (merge_attributes,
+                                   plot_instance)
 
 
 class TestRewrites(object):
@@ -285,9 +286,11 @@ class TestRewrites(object):
             add_edge_attrs merged new_node {j: 33}."""
         )
 
+        h1,h2 = trans.get()
         instances = Rewriter.find_matching(g, trans.L)
 
         RHS_instance = rw.apply_rule(instances[0], trans)
+
         plot_instance(
             rw.graph_,
             h2.target_, RHS_instance,

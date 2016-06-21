@@ -468,6 +468,10 @@ class Transformer(object):
             if not (n1, n2) in self.L.edges():
                 self.L.add_edge(n1, n2, self.G.get_edge(n1, n2))
             self.L.remove_edge_attrs(n1, n2, attrs)
+        else:
+            if n1 in self.P_L_dict.keys() and n2 in self.P_L_dict.keys():
+                if (self.P_L_dict[n1], self.P_L_dict[n2]) in self.L.edges():
+                    self.L.remove_edge_attrs(self.P_L_dict[n1], self.P_L_dict[n2], attrs)
 
         if not (n1, n2) in self.R.edges():
             if (n1, n2) in self.G.edges():
@@ -532,7 +536,7 @@ class Rewriter:
 
     def __init__(self, graph):
         """Initialize Rewriter object with input graph."""
-        self.graph__ = graph
+        self.graph_ = graph
         self.fully_expanded_graph = deepcopy(graph)
         self.h_exp = dict([(n,n) for n in graph.nodes()])
         self.parser_ = parser
@@ -716,8 +720,10 @@ class Rewriter:
         if left_h.source_.edges() != right_h.source_.edges():
             raise ValueError("Preserving part does not match!")
 
-        RHS_instance = trans.R
-        P_instance = trans.P
+        RHS_instance =\
+            dict([(r, instance[left_h.mapping_[p]]) for p, r in right_h.mapping_.items()])
+        P_instance =\
+            dict([(p, instance[l]) for p, l in left_h.mapping_.items()])
 
         (nodes_to_remove,
          edges_to_remove,
@@ -731,7 +737,7 @@ class Rewriter:
 
         # 1) Delete nodes/edges
         for node in nodes_to_remove:
-            self.graph__.delete_node(instance, node)
+            self.graph_.remove_node(node)
 
         merge_dict = {}
         for n in right_h.target_.nodes():
@@ -758,12 +764,13 @@ class Rewriter:
                         if val in p_nodes:
                             will_be_merged = True
                     if i > 0:
-                        new_name = self.graph__clone(instance, node)
-                        P_instance.update(
-                            {val: new_name})
-                        if not will_be_merged:
-                            RHS_instance.update(
-                                {right_h.mapping_[val]: new_name})
+                        if node != val:
+                            new_name = self.graph_.clone_node(node, val)
+                            P_instance.update(
+                                {val: new_name})
+                            if not will_be_merged:
+                                RHS_instance.update(
+                                    {right_h.mapping_[val]: new_name})
                     else:
                         P_instance.update(
                             {val: instance[node]})
@@ -772,23 +779,26 @@ class Rewriter:
                                 {right_h.mapping_[val]: instance[node]})
                     i += 1
 
+        if type(self.graph_) == TypedGraph:
+            new_edges_to_remove = set()
+            for n1,n2 in edges_to_remove:
+                if (n2, n1) not in new_edges_to_remove:
+                    new_edges_to_remove.add((n1,n2))
+            edges_to_remove = new_edges_to_remove
         for edge in edges_to_remove:
-            self.graph_.delete_edge(
-                P_instance,
+            self.graph_.remove_edge(
                 edge[0],
                 edge[1])
 
         # 3) Delete attrs
         for node, attrs in node_attrs_to_remove.items():
             if len(attrs) > 0:
-                self.graph_.delete_node_attrs(
-                    P_instance,
+                self.graph_.remove_node_attrs(
                     node,
                     attrs)
 
         for edge, attrs in edge_attrs_to_remove.items():
-            self.graph_.delete_edge_attrs(
-                P_instance,
+            self.graph_.remove_edge_attrs(
                 edge[0],
                 edge[1],
                 attrs)
@@ -796,32 +806,30 @@ class Rewriter:
         # 4) Add attrs
         for node, attrs in node_attrs_to_add.items():
             if len(attrs) > 0:
-                self.graph_.add_node_attrs(P_instance, node, attrs)
+                self.graph_.add_node_attrs(node, attrs)
 
         for edge, attrs in edge_attrs_to_add.items():
             self.graph_.add_edge_attrs(
-                P_instance,
                 edge[0],
                 edge[1],
                 attrs)
 
         # 5) Merge
         for rhs_node, nodes in nodes_to_merge.items():
-            new_name = self.graph_.merge(P_instance, nodes)
+            new_name = self.graph_.merge_nodes(nodes, node_name=rhs_node)
             RHS_instance.update({rhs_node: new_name})
 
         # 6) Add nodes/edges
         for node in nodes_to_add:
-            new_name = self.graph_.add_node(
-                instance,
+            self.graph_.add_node(
+                node,
                 right_h.target_.node[node].type_,
                 attrs=right_h.target_.node[node].attrs_)
-            RHS_instance.update({node: new_name})
+            RHS_instance.update({node: node})
 
         for edge, attrs in edges_to_add.items():
             try:
                 self.graph_.add_edge(
-                    RHS_instance,
                     edge[0],
                     edge[1],
                     attrs)
