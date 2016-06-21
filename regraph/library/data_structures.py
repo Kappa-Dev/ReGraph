@@ -615,6 +615,9 @@ class Homomorphism(object):
 
     @staticmethod
     def identity(A, B):
+        """ Tries to create the identity homomorphism of A between A and B,
+            fails if some nodes of A aren't found in B
+        """
         dic = {}
         for n in A.nodes():
             if n in B.nodes():
@@ -651,6 +654,9 @@ class TypedHomomorphism(Homomorphism):
 
     @staticmethod
     def from_untyped(hom):
+        """ Convert untyped Homomorphism to TypedHomomorphism by checking the
+            types condition on the graphs
+        """
         return TypedHomomorphism(hom.source_, hom.target_, hom.mapping_)
 
     @staticmethod
@@ -686,6 +692,9 @@ class TypedHomomorphism(Homomorphism):
 
     @staticmethod
     def canonic(G, T):
+        """ Tries to create the canonic TypedHomomorphism where each node is
+            mapped to its type in the typing graph
+        """
         if T == None:
             return None
         hom_dict = {}

@@ -1,3 +1,5 @@
+"""Define GraphModeler used by graph rewriting tool."""
+
 import networkx as nx
 import warnings
 
@@ -13,6 +15,10 @@ from regraph.library.category_op import (pullback,
                                          pullback_complement)
 
 class GraphModeler(object):
+    """ Class implements a chain of graph typed by their follower in the list.
+        It allows you to build a system where each graph has a model and where
+        the modification of a model can propagate to the upper graphs
+    """
 
     def __init__(self, l, homL, names=[], do_pbc = False):
         """ l : nx.Graph list (directed or not) [G1, G2 ...]
@@ -53,6 +59,11 @@ class GraphModeler(object):
             res += '' if self.hom_chain[i] == None else str(self.hom_chain[i])
             res += '\n\n'
         return res
+
+    def __doc__(self):
+        return "Class implements a chain of graph typed by their follower in the list.\
+                It allows you to build a system where each graph has a model and where\
+                the modification of a model can propagate to the upper graphs"
 
     def init_rewriting(self, n_i):
         if type(n_i) == int:

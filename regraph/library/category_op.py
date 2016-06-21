@@ -1,3 +1,5 @@
+"""Define category operations used by graph rewriting tool."""
+
 from regraph.library.data_structures import (TypedGraph,
                                              TypedDiGraph,
                                              Homomorphism)
@@ -6,7 +8,7 @@ from regraph.library.utils import keys_by_value, merge_attributes
 
 def pullback(h1, h2):
     """ Given h1 : B -> D; h2 : C -> D returns A, rh1, rh2
-        with rh1 : A -> B; rh2 : A -> C """
+        with rh1 : A -> B; rh2 : A -> C and A the pullback"""
 
     if type(h1.target_) == TypedGraph:
         A = TypedGraph()
@@ -74,7 +76,7 @@ def pullback(h1, h2):
 
 def pushout(h1, h2):
     """ Given h1 : A -> B; h2 : A -> C returns D, rh1, rh2
-        with rh1 : B -> D; rh2 : C -> D """
+        with rh1 : B -> D; rh2 : C -> D and D the pushout"""
 
     if h1.source_ != h2.source_:
         raise ValueError(
@@ -127,7 +129,8 @@ def pushout(h1, h2):
 
 def pullback_complement(h1, h2):
     """ Given h1 : A -> B; h2 : B -> D returns C, rh1, rh2
-        with rh1 : A -> C; rh2 : C -> D """
+        with rh1 : A -> C; rh2 : C -> D and C the pullback_complement.
+        Doesn't work if h2 is not a matching"""
 
     if h1.target_ != h2.source_:
         raise ValueError(

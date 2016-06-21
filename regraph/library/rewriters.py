@@ -1,4 +1,5 @@
-"""."""
+"""Define Transformer and Rewriter used by graph rewriting tool."""
+
 import networkx as nx
 from networkx.algorithms import isomorphism
 import warnings
@@ -19,6 +20,7 @@ from regraph.library.category_op import (pullback,
 
 
 class Transformer(object):
+    """ Class implements P, L, R, P->L and P->R """
 
     def __init__(self, graph):
         self.directed = type(graph) == TypedDiGraph
@@ -40,11 +42,20 @@ class Transformer(object):
                "Right hand side\n%s\n" % self.R +\
                "P->R Homomorphism : %s\n" % self.P_R_dict
 
+    def __doc__(self):
+        return "A Tranformer instance is the representation of an instance of \
+                P, L and R graphs and P->L, P->R homomorphisms. It allows you \
+                stack changes and apply them later on thanks to the Rewriter \
+                or the GraphModeler class"
+
     # Canonic operations
 
     def get(self):
+        """ Gives you the homomorphisms P->L and P->R """
         return (Homomorphism(self.P, self.L, self.P_L_dict),
                 Homomorphism(self.P, self.R, self.P_R_dict))
+
+    # Basic operations
 
     def add_node(self, node_id, node_type, attrs=None):
         if not node_id in self.R.nodes():
@@ -451,9 +462,15 @@ class Rewriter:
         self.parser_ = parser
         return
 
+    def __doc__(self):
+        return "A Rewriter instance alows you to do a horizontal rewrite on \
+                a single graph, it also gives the needed informations (the \
+                G- -> G and G- -> Gprime homomorphisms) to propagate that \
+                change in the GraphModeler"
+
     @staticmethod
     def rewrite(L_G, trans):
-
+        """ Simple rewriting using category operations """
         left_h, right_h = trans.get()
         graph = trans.G
 
