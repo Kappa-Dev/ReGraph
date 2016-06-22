@@ -11,6 +11,7 @@ from regraph.library.utils import (is_subdict,
                                    merge_attributes)
 
 import json
+from xml.dom import minidom
 import os.path
 
 
@@ -42,8 +43,10 @@ class TypedDiGraph(nx.DiGraph):
     between the node if one of them does not exist
     """
 
-    def __init__(self, metamodel=None):
+    def __init__(self, metamodel=None, file=None):
         nx.DiGraph.__init__(self)
+        if file != None:
+            self.load(file)
         self.metamodel_ = metamodel
         self.hom = None
 
@@ -565,57 +568,97 @@ class TypedDiGraph(nx.DiGraph):
     def load(self, filename):
         """Create graph from JSON file"""
         if os.path.isfile(filename):
-            with open(filename, "r+") as f:
-                j_data = json.loads(f.read())
-                # start graph init
+            ext = os.path.splitext(filename)[1]
+            if ext == ".json":
+                with open(filename, "r+") as f:
+                    j_data = json.loads(f.read())
+                    # start graph init
+                    loaded_nodes = []
+                    if "nodes" in j_data.keys():
+                        j_nodes = j_data["nodes"]
+                        for node in j_nodes:
+                            if "id" in node.keys():
+                                node_id = node["id"]
+                            else:
+                                raise ValueError(
+                                    "Error loading graph: node id is not specified!")
+                            if "type" in node.keys():
+                                node_type = node["type"]
+                            else:
+                                raise ValueError(
+                                    "Error loading graph: node type is not specified!")
+                            attrs = None
+                            if "attrs" in node.keys():
+                                attrs = node["attrs"]
+                            loaded_nodes.append((node_id, node_type, attrs))
+                    else:
+                        raise ValueError(
+                            "Error loading graph: no nodes specified!")
+                    loaded_edges = []
+                    if "edges" in j_data.keys():
+                        j_edges = j_data["edges"]
+                        for edge in j_edges:
+                            if "from" in edge.keys():
+                                s_node = edge["from"]
+                            else:
+                                raise ValueError(
+                                    "Error loading graph: edge source is not specified!")
+                            if "to" in edge.keys():
+                                t_node = edge["to"]
+                            else:
+                                raise ValueError(
+                                    "Error loading graph: edge target is not specified!")
+                            if "attrs" in edge.keys():
+                                attrs = edge["attrs"]
+                                if type(attrs) == list:
+                                    attrs = set(attrs)
+                                loaded_edges.append((s_node, t_node, attrs))
+                            else:
+                                loaded_edges.append((s_node, t_node))
+                    nx.DiGraph.clear(self)
+                    self.add_nodes_from(loaded_nodes)
+                    self.add_edges_from(loaded_edges)
+            elif ext == ".xml":
+                g = minidom.parse(filename).documentElement
                 loaded_nodes = []
-                if "nodes" in j_data.keys():
-                    j_nodes = j_data["nodes"]
-                    for node in j_nodes:
-                        if "id" in node.keys():
-                            node_id = node["id"]
-                        else:
-                            raise ValueError(
-                                "Error loading graph: node id is not specified!")
-                        if "type" in node.keys():
-                            node_type = node["type"]
-                        else:
-                            raise ValueError(
-                                "Error loading graph: node type is not specified!")
-                        attrs = None
-                        if "attrs" in node.keys():
-                            attrs = node["attrs"]
-                        loaded_nodes.append((node_id, node_type, attrs))
-                else:
-                    raise ValueError(
-                        "Error loading graph: no nodes specified!")
                 loaded_edges = []
-                if "edges" in j_data.keys():
-                    j_edges = j_data["edges"]
-                    for edge in j_edges:
-                        if "from" in edge.keys():
-                            s_node = edge["from"]
+                for nodes in g.getElementsByTagName("nodes"):
+                    for node in nodes.getElementsByTagName("node"):
+                        node_id = node.getAttribute('id')
+                        node_type = node.getAttribute('type')
+                        node_attrs = {}
+                        for attr in node.getElementsByTagName("attr"):
+                            k = attr.getAttribute('key')
+                            value = []
+                            for val in attr.getElementsByTagName("value"):
+                                value.append(val.firstChild.nodeValue)
+                            node_attrs[k] = set(value)
+                        if node_attrs == {}:
+                            loaded_nodes.append((node_id, node_type))
                         else:
-                            raise ValueError(
-                                "Error loading graph: edge source is not specified!")
-                        if "to" in edge.keys():
-                            t_node = edge["to"]
+                            loaded_nodes.append((node_id, node_type, node_attrs))
+                for edges in g.getElementsByTagName("edges"):
+                    for edge in edges.getElementsByTagName("edge"):
+                        n1 = edge.getAttribute('from')
+                        n2 = edge.getAttribute('to')
+                        edge_attrs = {}
+                        for attr in edge.getElementsByTagName("attr"):
+                            k = attr.getAttribute('key')
+                            value = []
+                            for val in attr.getElementsByTagName("value"):
+                                value.append(val.firstChild.nodeValue)
+                            edge_attrs[k] = set(value)
+                        if edge_attrs == {} :
+                            loaded_edges.append((n1, n2))
                         else:
-                            raise ValueError(
-                                "Error loading graph: edge target is not specified!")
-                        if "attrs" in edge.keys():
-                            attrs = edge["attrs"]
-                            if type(attrs) == list:
-                                attrs = set(attrs)
-                            loaded_edges.append((s_node, t_node, attrs))
-                        else:
-                            loaded_edges.append((s_node, t_node))
-                else:
-                    raise ValueError(
-                        "Error loading graph: no edges specified!")
+                            loaded_edges.append((n1, n2, edge_attrs))
                 nx.DiGraph.clear(self)
                 self.add_nodes_from(loaded_nodes)
                 self.add_edges_from(loaded_edges)
+            else:
+                raise ValueError(
+                    "Imported files should be JSON or XML files"
+                )
         else:
             raise ValueError(
                 "Error loading graph: file '%s' does not exist!" %

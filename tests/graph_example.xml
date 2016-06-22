@@ -1,0 +1,34 @@
+<?xml version = "1.0" encoding="utf8" ?>
+<graph>
+  <nodes>
+    <node id='1' type='agent'>
+      <attr key='u'>
+        <value>1</value>
+      </attr>
+      <attr key='k'>
+        <value>33</value>
+      </attr>
+    </node>
+    <node id='2' type='agent'>
+    </node>
+    <node id='3' type='action'>
+      <attr key='x'>
+        <value>33</value>
+        <value>55</value>
+        <value>66</value>
+      </attr>
+    </node>
+  </nodes>
+  <edges>
+    <edge from='1' to='2'>
+      <attr key='r'>
+        <value>23</value>
+        <value>smth</value>
+      </attr>
+    </edge>
+    <edge from='2' to='3'>
+    </edge>
+    <edge from='3' to='1'>
+    </edge>
+  </edges>
+</graph>

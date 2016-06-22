@@ -245,7 +245,7 @@ class TestDataStructures(object):
         graph.add_edge('6', '7', {'x': 6})
         assert_equals(graph.edge['1']['2'], graph.edge['2']['1'])
 
-    def test_load_graph_dir(self):
+    def test_load_graph_dir_json(self):
         __location__ = os.path.realpath(
             os.path.join(os.getcwd(), os.path.dirname(__file__)))
         filename = os.path.join(__location__, "graph_example.json")
@@ -261,7 +261,7 @@ class TestDataStructures(object):
         assert_equals(a.node[2].attrs_, None)
         assert_equals(a.node[3].attrs_, {"x": {33, 55, 66}})
 
-    def test_load_graph_undir(self):
+    def test_load_graph_undir_json(self):
         __location__ = os.path.realpath(
             os.path.join(os.getcwd(), os.path.dirname(__file__)))
         filename = os.path.join(__location__, "graph_example.json")
@@ -276,6 +276,40 @@ class TestDataStructures(object):
         assert_equals(a.node[1].attrs_, {"u": {1}, "k": {33}})
         assert_equals(a.node[2].attrs_, None)
         assert_equals(a.node[3].attrs_, {"x": {33, 55, 66}})
+
+    def test_load_graph_undir_xml(self):
+        __location__ = os.path.realpath(
+            os.path.join(os.getcwd(), os.path.dirname(__file__)))
+        filename = os.path.join(__location__, "graph_example.xml")
+        a = TypedGraph()
+        a.load(filename)
+
+        assert_equals(set(a.nodes()), {'1', '2', '3'})
+        assert_equals(set(a.edges()), {('1', '2'), ('2', '3'), ('3', '1')})
+        assert_equals(a.node['1'].type_, "agent")
+        assert_equals(a.node['2'].type_, "agent")
+        assert_equals(a.node['3'].type_, "action")
+        assert_equals(a.node['1'].attrs_, {"u": {'1'}, "k": {'33'}})
+        assert_equals(a.node['2'].attrs_, None)
+        assert_equals(a.node['3'].attrs_, {"x": {'33', '55', '66'}})
+
+
+    def test_load_graph_undir_xml(self):
+        __location__ = os.path.realpath(
+            os.path.join(os.getcwd(), os.path.dirname(__file__)))
+        filename = os.path.join(__location__, "graph_example.xml")
+        a = TypedGraph()
+        a.load(filename)
+
+        assert_equals(set(a.nodes()), {'1', '2', '3'})
+        assert_equals(set(a.edges()), {('1', '2'), ('2', '3'), ('3', '1'),\
+                                       ('2', '1'), ('3', '2'), ('1', '3')})
+        assert_equals(a.node['1'].type_, "agent")
+        assert_equals(a.node['2'].type_, "agent")
+        assert_equals(a.node['3'].type_, "action")
+        assert_equals(a.node['1'].attrs_, {"u": {'1'}, "k": {'33'}})
+        assert_equals(a.node['2'].attrs_, None)
+        assert_equals(a.node['3'].attrs_, {"x": {'33', '55', '66'}})
 
     def test_load_export(self):
         __location__ = os.path.realpath(
