@@ -338,3 +338,50 @@ class TestDataStructures(object):
         assert_equals(set(a.nodes()), set(b.nodes()))
         assert_edges_undir(set(a.edges()), set(b.edges()))
         assert_equals(a.node['3'].attrs_, b.node['3'].attrs_)
+
+    def test_random_graph_untyped(self):
+
+        rand = TypedDiGraph.random_graph(n_nodes=50)
+
+        assert_equals(len(rand.nodes()), 50)
+
+
+    def test_random_graph_dir(self):
+
+        meta = TypedDiGraph()
+        meta.add_node("protein", "agent")
+        meta.add_node("region", "agent")
+        meta.add_node("action", "agent")
+        meta.add_edges_from([
+            ("protein", "protein"),
+            ("region", "region"),
+            ("action", "action"),
+            ("region", "protein"),
+            ("region", "action"),
+            ("action", "region"),
+        ])
+
+        rand = TypedDiGraph.random_graph(metamodel=meta, n_nodes=50)
+
+        assert_equals(type(rand), TypedDiGraph)
+        assert_equals(len(rand.nodes()), 50)
+
+    def test_random_graph_undir(self):
+
+        meta = TypedGraph()
+        meta.add_node("protein", "agent")
+        meta.add_node("region", "agent")
+        meta.add_node("action", "agent")
+        meta.add_edges_from([
+            ("protein", "protein"),
+            ("region", "region"),
+            ("action", "action"),
+            ("region", "protein"),
+            ("region", "action"),
+            ("action", "region"),
+        ])
+
+        rand = TypedGraph.random_graph(metamodel=meta, n_nodes=50)
+
+        assert_equals(type(rand), TypedGraph)
+        assert_equals(len(rand.nodes()), 50)

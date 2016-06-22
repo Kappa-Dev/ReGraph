@@ -10,6 +10,8 @@ from regraph.library.utils import (is_subdict,
                                    normalize_attrs,
                                    merge_attributes)
 
+import random
+
 import json
 from xml.dom import minidom
 import os.path
@@ -748,6 +750,62 @@ class TypedDiGraph(nx.DiGraph):
             raise ValueError(
                 "The exported file should be a JSON or an XML file"
             )
+
+    @classmethod
+    def random_graph(cls, metamodel = None, n_nodes=1000, p_edges=0.5,
+                     p_attrs=0.5, p_attr_value=0.5):
+
+        def rand_attrs(attrs):
+            if attrs == None:
+                return None
+
+            new_attrs = {}
+            for k,v in attrs.items():
+                if random.random() <= p_attrs:
+                    value = []
+                    for val in v:
+                        if random.random() <= p_attr_value:
+                            value.append(val)
+                    new_attrs[k] = set(value)
+            return new_attrs if new_attrs != {} else None
+
+        res = cls(metamodel)
+
+        # Preparing allowed type list
+
+        if metamodel is None:
+            types = {None}
+        else:
+            types = set([n for n in metamodel.nodes()])
+
+        # Adding random nodes
+
+        for i in range(n_nodes):
+            node_type = random.sample(types, 1)[0]
+            if metamodel == None:
+                node_attrs = None
+            else:
+                node_attrs = rand_attrs(metamodel.node[node_type].attrs_)
+            res.add_node(str(i), node_type, node_attrs)
+
+        # Adding random edges
+
+        for n1 in res.nodes():
+            for n2 in res.nodes():
+                if random.random() <= p_edges:
+                    if metamodel == None:
+                        res.add_edge(n1, n2)
+                    else:
+                        type1 = res.node[n1].type_
+                        type2 = res.node[n2].type_
+                        if (type1, type2) in metamodel.edges():
+                            edge_attrs = rand_attrs(metamodel.get_edge(
+                                type1,
+                                type2,
+                            ))
+                            res.add_edge(n1, n2, edge_attrs)
+
+        return res
 
 
 class TypedGraph(TypedDiGraph):

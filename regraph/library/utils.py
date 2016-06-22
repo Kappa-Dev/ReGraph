@@ -2,6 +2,7 @@
 
 import networkx as nx
 from matplotlib import pyplot as plt
+import warnings
 
 def is_subdict(small_dict, big_dict):
     """Check if the dictionary is a subset of other."""
@@ -58,6 +59,8 @@ def normalize_attrs(attrs_):
     if attrs_ != None:
         for k,v in attrs_.items():
             attrs_[k] = to_set(v)
+    else:
+        attrs_ = {}
 
 def merge_attributes(attr1, attr2, method="union"):
     """Merge two dictionaries of attributes."""
@@ -190,3 +193,24 @@ def plot_instance(graph, pattern, instance, filename=None):
         else:
             plt.show()
         return
+
+def dict_sub(A, B):
+    res = A.copy()
+    if B == None:
+        return res
+    for key, value in B.items():
+        if key not in A.keys():
+            warnings.warn(
+                "Dict A does not have attribute '%s'" %
+                (str(key)), RuntimeWarning)
+        else:
+            elements_to_remove = []
+            for el in to_set(value):
+                if el in A[key]:
+                    elements_to_remove.append(el)
+                else:
+                    warnings.warn(
+                        "Dict A doesn't have '%s' with key '%s'" %
+                        (str(el), str(key)), RuntimeWarning)
+            for el in elements_to_remove:
+                A[key].remove(el)

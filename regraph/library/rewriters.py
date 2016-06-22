@@ -6,10 +6,12 @@ import warnings
 from copy import deepcopy
 
 import itertools
+import random
 
 from regraph.library.parser import parser
 from regraph.library.utils import (is_subdict,
-                                   merge_attributes)
+                                   merge_attributes,
+                                   dict_sub)
 from regraph.library.data_structures import (TypedGraph,
                                              TypedDiGraph,
                                              Homomorphism,
@@ -834,3 +836,279 @@ class Rewriter:
             except:
                 pass
         return RHS_instance
+
+    @staticmethod
+    def gen_transformations(n, graph, p_opt=0.5, merge_prop_av = 0.2,
+                            merge_prop_dev = 0.05, p_attrs = 0.5, p_attrs_value=0.5):
+
+        def rand_attrs(attrs):
+            if attrs == None:
+                return {}
+
+            new_attrs = {}
+            for k,v in attrs.items():
+                if random.random() <= p_attrs:
+                    value = []
+                    for val in v:
+                        if random.random() <= p_attrs_value:
+                            value.append(val)
+                    new_attrs[k] = set(value)
+            return new_attrs
+
+        trans = []
+        env = graph.copy()
+        if graph.metamodel_ == None:
+            types = ["anything"]
+        else:
+            types = graph.metamodel_.nodes()
+        actions = [
+            "CLONE",
+            "MERGE",
+            "ADD_NODE",
+            "DELETE_NODE",
+            "ADD_EDGE",
+            "DELETE_EDGE",
+            "ADD_NODE_ATTRS",
+            "ADD_EDGE_ATTRS",
+            "DELETE_NODE_ATTRS",
+            "DELETE_EDGE_ATTRS"
+        ]
+
+        def pick_node():
+            if len(env.nodes()) > 0:
+                return random.sample(env.nodes(), 1)[0]
+            else:
+                return None
+
+        def pick_nodes():
+            if env.metamodel_ == None:
+                ty = random.choice([None, "anything"])
+            else:
+                ty = pick_type()
+            node_list = [n for n in env.nodes() if env.node[n].type_ == ty]
+            n = abs(int(random.gauss(merge_prop_av*len(node_list),
+                                     merge_prop_dev*len(node_list))))
+            res = []
+            for node in random.sample(node_list, n):
+                res.append(node)
+            return res
+
+        def pick_edge():
+            if len(env.edges()) > 0:
+                return random.sample(env.edges(), 1)[0]
+            else:
+                return None,None
+
+        def pick_new_edge():
+            i = 500
+            while i > 0:
+                n1 = pick_node()
+                n2 = pick_node()
+                if env.metamodel_ == None or (env.node[n1].type_, env.node[n2].type_) in env.metamodel_.edges():
+                    return (n1, n2)
+                else:
+                    i-=1
+            return None
+
+        def pick_type():
+            return random.sample(types, 1)[0]
+
+        def pick_attrs_from(node):
+            return rand_attrs(env.node[node].attrs_)
+
+        def pick_attrs_for(node):
+            if graph.metamodel_ == None:
+                return {}
+            else:
+                return rand_attrs(graph.metamodel_.node[env.node[node].type_].attrs_)
+
+        def pick_edge_attrs_from(n1, n2):
+            return rand_attrs(env.get_edge(n1, n2))
+
+        def pick_edge_attrs_for(n1, n2):
+            if env.metamodel_ == None:
+                return {}
+            else:
+                return rand_attrs(env.metamodel_.get_edge(
+                    env.node[n1].type_,
+                    env.node[n2].type_
+                ))
+
+        def pick_name():
+            generated_name = 1
+            while str(generated_name) in env.nodes():
+                generated_name += 1
+            return str(generated_name)
+
+        def pick_method():
+            return random.choice(["UNION", "INTERSECTION"])
+
+        def add_req(op, s):
+            op += s
+            return op
+
+        def add_opt(op, s):
+            if random.random() <= p_opt:
+                op += s
+                return True, op
+            else:
+                return False, op
+
+        while len(trans) < n:
+            op = random.choice(actions)
+            if op == "CLONE":
+                node = pick_node()
+                if node == None:
+                    continue
+                name = pick_name()
+
+                op = add_req(op, " "+str(node))
+                opt,op = add_opt(op, " AS "+str(name))
+                if not opt:
+                    name = None
+
+                env.clone_node(node, name)
+            elif op == "MERGE":
+                nodes = pick_nodes()
+                if nodes == []:
+                    continue
+                method = pick_method()
+                new_name = pick_name()
+                edges = pick_method()
+                new_node_attrs = None
+                new_edge_attrs = None
+
+                op = add_req(op, " ["+",".join(nodes)+"]")
+                opt,op = add_opt(op, " METHOD "+str(method))
+                if not opt:
+                    method = "UNION"
+                opt,op = add_opt(op, " AS "+str(new_name))
+                if not opt:
+                    new_name = None
+                opt,op = add_opt(op, " EDGES "+str(edges))
+                if not opt:
+                    edges = "UNION"
+
+                if nodes != []:
+                    env.merge_nodes(nodes,
+                                method.lower(),
+                                new_name,
+                                edges.lower())
+            elif op == "ADD_NODE":
+                name = pick_name()
+                typ = pick_type()
+
+                attrs = rand_attrs(env.metamodel_.node[typ].attrs_)
+
+                op = add_req(op, " "+str(name))
+                op = add_req(op, " TYPE "+str(typ))
+                opt,op = add_opt(op, " "+str(attrs))
+                if not opt:
+                    attrs = None
+
+                env.add_node(name, typ, attrs)
+            elif op == "DELETE_NODE":
+                node = pick_node()
+                if node == None:
+                    continue
+
+                op = add_req(op, " "+str(node))
+
+                env.remove_node(node)
+            elif op == "ADD_EDGE":
+                e = pick_new_edge()
+                if e == None:
+                    continue
+                else:
+                    n1, n2 = e
+                attrs = pick_edge_attrs_for(n1, n2)
+
+                op = add_req(op, " "+str(n1)+" "+str(n2))
+                opt,op = add_opt(op, " "+str(attrs))
+                if not opt:
+                    attrs = None
+
+                env.add_edge(n1, n2, attrs)
+            elif op == "DELETE_EDGE":
+                n1, n2 = pick_edge()
+                if n1 == None or n2 == None:
+                    continue
+
+                op = add_req(op, " "+str(n1)+" "+str(n2))
+
+                env.remove_edge(n1, n2)
+            elif op == "ADD_NODE_ATTRS":
+                node = pick_node()
+                if node == None:
+                    continue
+                if env.metamodel_ == None:
+                    attrs = {}
+                else:
+                    if env.metamodel_.node[env.node[node].type_].attrs_ == None:
+                        attrs = {}
+                    else:
+                        attrs = rand_attrs(dict_sub(env.metamodel_.node[env.node[node].type_].attrs_,
+                                            env.node[node].attrs_))
+
+                op = add_req(op, " "+node)
+                op = add_req(op, " "+str(attrs))
+
+                if attrs == {}:
+                    continue
+
+                env.add_node_attrs(node, attrs)
+            elif op == "ADD_EDGE_ATTRS":
+                n1, n2 = pick_edge()
+                if n1 == None or n2 == None:
+                    continue
+                if env.metamodel_ == None:
+                    attrs = {}
+                else:
+                    attrs = rand_attrs(dict_sub(
+                        env.metamodel_.get_edge(
+                            env.node[n1].type_,
+                            env.node[n2].type_),
+                        env.get_edge(n1, n2)
+                        )
+                    )
+
+                op = add_req(op, " "+n1+" "+n2)
+                op = add_req(op, " "+str(attrs))
+
+                if attrs == {}:
+                    continue
+
+                env.add_edge_attrs(n1, n2, attrs)
+            elif op == "DELETE_NODE_ATTRS":
+                node = pick_node()
+                if node == None:
+                    continue
+                attrs = pick_attrs_from(node)
+
+                if attrs == {} or attrs == None:
+                    continue
+
+                op = add_req(op, " "+node)
+                op = add_req(op, " "+str(attrs))
+
+                env.remove_node_attrs(node, attrs)
+            elif op == "DELETE_EDGE_ATTRS":
+                n1, n2 = pick_edge()
+                if n1 == None or n2 == None:
+                    continue
+                attrs = pick_edge_attrs_from(n1, n2)
+
+                if attrs == {} or attrs == None:
+                    continue
+
+                op = add_req(op, " "+n1+" "+n2)
+                op = add_req(op, " "+str(attrs))
+
+                env.remove_edge_attrs(n1, n2, attrs)
+            else:
+                raise ValueError(
+                    "Unknown action"
+                )
+
+            trans.append(op)
+        return ".\n".join(trans)
