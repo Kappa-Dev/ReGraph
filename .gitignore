@@ -11,3 +11,5 @@ regraph/library/tmp.py
 tests/example_tests.py
 tests/example_tests_without_pbc.py
 log.txt
+tests/output_graph.xml
+tests/output_graph.json
