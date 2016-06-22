@@ -43,12 +43,12 @@ class TypedDiGraph(nx.DiGraph):
     between the node if one of them does not exist
     """
 
-    def __init__(self, metamodel=None, file=None):
+    def __init__(self, metamodel=None, load_file=None):
         nx.DiGraph.__init__(self)
-        if file != None:
-            self.load(file)
         self.metamodel_ = metamodel
         self.hom = None
+        if load_file != None:
+            self.load(load_file)
 
     def __eq__(self, A):
         if not (type(A) == type(self)):
@@ -703,8 +703,8 @@ class TypedDiGraph(nx.DiGraph):
 class TypedGraph(TypedDiGraph):
     """Define simple typed undirected graph."""
 
-    def __init__(self, metamodel=None):
-        TypedDiGraph.__init__(self, metamodel)
+    def __init__(self, metamodel=None, load_file=None):
+        TypedDiGraph.__init__(self, metamodel, load_file)
 
     def add_edge(self, s, t, attrs=None, **attr):
         TypedDiGraph.add_edge(self, s, t, attrs, **attr)

@@ -265,8 +265,7 @@ class TestDataStructures(object):
         __location__ = os.path.realpath(
             os.path.join(os.getcwd(), os.path.dirname(__file__)))
         filename = os.path.join(__location__, "graph_example.json")
-        a = TypedGraph()
-        a.load(filename)
+        a = TypedGraph(load_file=filename)
 
         assert_equals(a.nodes(), [1, 2, 3])
         assert_edges_undir(a.edges(), [(1, 2), (2, 3), (3, 1)])
@@ -277,11 +276,11 @@ class TestDataStructures(object):
         assert_equals(a.node[2].attrs_, None)
         assert_equals(a.node[3].attrs_, {"x": {33, 55, 66}})
 
-    def test_load_graph_undir_xml(self):
+    def test_load_graph_dir_xml(self):
         __location__ = os.path.realpath(
             os.path.join(os.getcwd(), os.path.dirname(__file__)))
         filename = os.path.join(__location__, "graph_example.xml")
-        a = TypedGraph()
+        a = TypedDiGraph()
         a.load(filename)
 
         assert_equals(set(a.nodes()), {'1', '2', '3'})

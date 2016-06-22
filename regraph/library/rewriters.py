@@ -782,16 +782,11 @@ class Rewriter:
                                 {right_h.mapping_[val]: instance[node]})
                     i += 1
 
-        if type(self.graph_) == TypedGraph:
-            new_edges_to_remove = set()
-            for n1,n2 in edges_to_remove:
-                if (n2, n1) not in new_edges_to_remove:
-                    new_edges_to_remove.add((n1,n2))
-            edges_to_remove = new_edges_to_remove
         for edge in edges_to_remove:
-            self.graph_.remove_edge(
-                edge[0],
-                edge[1])
+            if (edge[0],edge[1]) in self.graph_.edges():
+                self.graph_.remove_edge(
+                    edge[0],
+                    edge[1])
 
         # 3) Delete attrs
         for node, attrs in node_attrs_to_remove.items():
