@@ -207,7 +207,7 @@ class GraphModeler(object):
                 "Undefined identifier of type %s, was expecting id:int or \
                  name:str" % type(n_i)
             )
-        self.changes[i] = Rewriter.rewrite(L_T, trans)
+        self.changes[i] = Rewriter.rewrite(L_T, trans, True)
 
     def propagate_from(self, n_i):
         """ n_i : name or id

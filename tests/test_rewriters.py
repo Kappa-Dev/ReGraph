@@ -87,7 +87,7 @@ class TestRewrites(object):
         trans.add_node(15, 'agent', {'name' : 'Grb3'})
 
 
-        Gprime = Rewriter.rewrite(Homomorphism.identity(trans.L, trans.G), trans)[0].target_
+        Gprime = Rewriter.rewrite(Homomorphism.identity(trans.L, trans.G), trans)
 
         assert(15 in Gprime.nodes())
         assert(Gprime.node[15].type_ == 'agent')
@@ -99,7 +99,7 @@ class TestRewrites(object):
         trans.merge_nodes(1, 3, 15)
 
 
-        Gprime = Rewriter.rewrite(Homomorphism.identity(trans.L, trans.G), trans)[0].target_
+        Gprime = Rewriter.rewrite(Homomorphism.identity(trans.L, trans.G), trans)
 
         assert(15 in Gprime.nodes())
         assert(Gprime.node[15].type_ == 'agent')
@@ -113,7 +113,7 @@ class TestRewrites(object):
         trans.remove_node(1)
 
 
-        Gprime = Rewriter.rewrite(Homomorphism.identity(trans.L, trans.G), trans)[0].target_
+        Gprime = Rewriter.rewrite(Homomorphism.identity(trans.L, trans.G), trans)
 
         assert(1 not in Gprime.nodes())
 
@@ -123,7 +123,7 @@ class TestRewrites(object):
         trans.clone_node(1, 111)
 
 
-        Gprime = Rewriter.rewrite(Homomorphism.identity(trans.L, trans.G), trans)[0].target_
+        Gprime = Rewriter.rewrite(Homomorphism.identity(trans.L, trans.G), trans)
 
         assert(1 in Gprime.nodes())
         assert(111 in Gprime.nodes())
@@ -136,7 +136,7 @@ class TestRewrites(object):
         trans.add_edge(8, 10)
 
 
-        Gprime = Rewriter.rewrite(Homomorphism.identity(trans.L, trans.G), trans)[0].target_
+        Gprime = Rewriter.rewrite(Homomorphism.identity(trans.L, trans.G), trans)
 
         assert((8,10) in Gprime.edges())
 
@@ -146,7 +146,7 @@ class TestRewrites(object):
         trans.remove_edge(13, 11)
 
 
-        Gprime = Rewriter.rewrite(Homomorphism.identity(trans.L, trans.G), trans)[0].target_
+        Gprime = Rewriter.rewrite(Homomorphism.identity(trans.L, trans.G), trans)
 
         assert((13,11) not in Gprime.edges())
 
@@ -155,7 +155,7 @@ class TestRewrites(object):
 
         trans.add_node_attrs(1, {'name' : {'Grb1'}})
 
-        Gprime = Rewriter.rewrite(Homomorphism.identity(trans.L, trans.G), trans)[0].target_
+        Gprime = Rewriter.rewrite(Homomorphism.identity(trans.L, trans.G), trans)
         assert(Gprime.node[1].attrs_ == {'name': {'EGFR','Grb1'}, 'state': {'p'}})
 
     def test_add_edge_attrs(self):
@@ -164,7 +164,7 @@ class TestRewrites(object):
         trans.add_edge_attrs(1, 2, {'name' : 'Grb1'})
 
 
-        Gprime = Rewriter.rewrite(Homomorphism.identity(trans.L, trans.G), trans)[0].target_
+        Gprime = Rewriter.rewrite(Homomorphism.identity(trans.L, trans.G), trans)
 
         assert(Gprime.get_edge(1, 2) ==  {'s': {'p'}, 'name' : {'Grb1'}})
 
@@ -174,7 +174,7 @@ class TestRewrites(object):
         trans.remove_node_attrs(1, {'name' : {'EGFR'}})
 
 
-        Gprime = Rewriter.rewrite(Homomorphism.identity(trans.L, trans.G), trans)[0].target_
+        Gprime = Rewriter.rewrite(Homomorphism.identity(trans.L, trans.G), trans)
 
         assert(Gprime.node[1].attrs_ ==  {'state': {'p'}, 'name' : set()})
 
@@ -184,7 +184,7 @@ class TestRewrites(object):
         trans.remove_edge_attrs(1, 2, {'s' : 'p'})
 
 
-        Gprime = Rewriter.rewrite(Homomorphism.identity(trans.L, trans.G), trans)[0].target_
+        Gprime = Rewriter.rewrite(Homomorphism.identity(trans.L, trans.G), trans)
 
         assert(Gprime.get_edge(1, 2) ==  {'s' : set()})
 
@@ -193,7 +193,7 @@ class TestRewrites(object):
 
         trans.merge_edges((11,12),(13,14), 15, 16)
 
-        Gprime = Rewriter.rewrite(Homomorphism.identity(trans.L, trans.G), trans)[0].target_
+        Gprime = Rewriter.rewrite(Homomorphism.identity(trans.L, trans.G), trans)
 
         assert(15 in Gprime.nodes())
         assert(16 in Gprime.nodes())
@@ -204,7 +204,7 @@ class TestRewrites(object):
 
         trans.clone_edge(11, 12, 15, 16)
 
-        Gprime = Rewriter.rewrite(Homomorphism.identity(trans.L, trans.G), trans)[0].target_
+        Gprime = Rewriter.rewrite(Homomorphism.identity(trans.L, trans.G), trans)
 
         assert(15 in Gprime.nodes())
         assert(16 in Gprime.nodes())
@@ -215,7 +215,7 @@ class TestRewrites(object):
 
         trans.merge_nodes_list([11,12,13,14], 15)
 
-        Gprime = Rewriter.rewrite(Homomorphism.identity(trans.L, trans.G), trans)[0].target_
+        Gprime = Rewriter.rewrite(Homomorphism.identity(trans.L, trans.G), trans)
 
         assert(15 in Gprime.nodes())
 

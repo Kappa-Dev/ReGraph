@@ -549,7 +549,7 @@ class Rewriter:
                 change in the GraphModeler"
 
     @staticmethod
-    def rewrite(L_G, trans):
+    def rewrite(L_G, trans, get_details=False):
         """ Simple rewriting using category operations """
         left_h, right_h = trans.get()
         graph = trans.G
@@ -563,7 +563,10 @@ class Rewriter:
         Gprime, Gm_Gprime, R_Gprime = pushout(P_Gm, right_h)
         Gprime.metamodel_ = graph.metamodel_
         Gprime.hom = TypedHomomorphism.canonic(Gprime, graph.metamodel_)
-        return Gm_Gprime, Gm_G
+        if get_details:
+            return Gm_Gprime, Gm_G
+        else:
+            return Gprime
 
     @staticmethod
     def find_matching(graph, pattern):
