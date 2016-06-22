@@ -566,7 +566,7 @@ class TypedDiGraph(nx.DiGraph):
         return g
 
     def load(self, filename):
-        """Create graph from JSON file"""
+        """Create graph from JSON or XML file"""
         if os.path.isfile(filename):
             ext = os.path.splitext(filename)[1]
             if ext == ".json":
@@ -665,39 +665,89 @@ class TypedDiGraph(nx.DiGraph):
                 filename)
 
     def export(self, filename):
-        """Export graph to JSON file"""
-        j_data = {"edges": [], "nodes": []}
-        # dump nodes
-        for node in self.nodes():
-            node_data = {}
-            node_data["id"] = node
-            node_data["type"] = self.node[node].type_
-            if self.node[node].attrs_ is not None:
-                attrs = {}
-                for key, value in self.node[node].attrs_.items():
-                    if type(value) == set:
-                        attrs[key] = list(value)
-                    else:
-                        attrs[key] = value
-                node_data["attrs"] = attrs
-            j_data["nodes"].append(node_data)
-        # dump edges
-        for s, t in self.edges():
-            edge_data = {}
-            edge_data["from"] = s
-            edge_data["to"] = t
-            if self.edge[s][t] is not None:
-                attrs = {}
-                for key, value in self.edge[s][t].items():
-                    if type(value) == set:
-                        attrs[key] = list(value)
-                    else:
-                        attrs[key] = value
-                edge_data["attrs"] = attrs
-            j_data["edges"].append(edge_data)
+        """Export graph to JSON or XML file"""
+        ext = os.path.splitext(filename)[1]
+        if ext == ".json":
+            j_data = {"edges": [], "nodes": []}
+            # dump nodes
+            for node in self.nodes():
+                node_data = {}
+                node_data["id"] = node
+                node_data["type"] = self.node[node].type_
+                if self.node[node].attrs_ is not None:
+                    attrs = {}
+                    for key, value in self.node[node].attrs_.items():
+                        if type(value) == set:
+                            attrs[key] = list(value)
+                        else:
+                            attrs[key] = value
+                    node_data["attrs"] = attrs
+                j_data["nodes"].append(node_data)
+            # dump edges
+            for s, t in self.edges():
+                edge_data = {}
+                edge_data["from"] = s
+                edge_data["to"] = t
+                if self.edge[s][t] is not None:
+                    attrs = {}
+                    for key, value in self.edge[s][t].items():
+                        if type(value) == set:
+                            attrs[key] = list(value)
+                        else:
+                            attrs[key] = value
+                    edge_data["attrs"] = attrs
+                j_data["edges"].append(edge_data)
+            with open(filename, 'w') as f:
+                json.dump(j_data, f)
+        elif ext == ".xml":
+            res_xml = "<?xml version='1.0' encoding='utf8' ?>"
+            res_xml+= "<graph>"
+            res_xml+= "<nodes>"
+            for n in self.nodes():
+                res_xml+= "<node id='%s' type='%s'>" % (n, self.node[n].type_)
+                if self.node[n].attrs_ != {} and self.node[n].attrs_ != None:
+                    for k,v in self.node[n].attrs_.items():
+                        res_xml+= "<attr key='%s'>" % k
+                        for val in v:
+                            res_xml+= "<value>%s</value>" % val
+                        res_xml+= "</attr>"
+                res_xml+= "</node>"
+            res_xml+= "</nodes>"
+            res_xml+= "<edges>"
+            if type(self) == TypedGraph:
+                wrote_edges = []
+            for (n1, n2) in self.edges():
+                if type(self) == TypedGraph:
+                    if (n2, n1) not in wrote_edges:
+                        res_xml+= "<edge from='%s' to='%s'>" % (n1, n2)
+                        wrote_edges.append((n1,n2))
+                        edge_attrs = self.get_edge(n1, n2)
+                        if edge_attrs != {} and edge_attrs != None:
+                            for k,v in edge_attrs.items():
+                                res_xml+= "<attr key='%s'>" % k
+                                for val in v:
+                                    res_xml+= "<value>%s</value>" % val
+                                res_xml+= "</attr>"
+                        res_xml+= "</edge>"
+                else:
+                    res_xml+= "<edge from='%s' to='%s'>" % (n1, n2)
+                    edge_attrs = self.get_edge(n1, n2)
+                    if edge_attrs != {} and edge_attrs != None:
+                        for k,v in edge_attrs.items():
+                            res_xml+= "<attr key='%s'>" % k
+                            for val in v:
+                                res_xml+= "<value>%s</value>" % val
+                            res_xml+= "</attr>"
+                    res_xml+= "</edge>"
+            res_xml+="</edges>"
+            res_xml+="</graph>"
 
-        with open(filename, 'w') as f:
-            json.dump(j_data, f)
+            f = open(filename, 'w')
+            print(res_xml, file=f, end='')
+        else:
+            raise ValueError(
+                "The exported file should be a JSON or an XML file"
+            )
 
 
 class TypedGraph(TypedDiGraph):
@@ -729,6 +779,9 @@ class TypedGraph(TypedDiGraph):
     def set_edge(self, u, v, attrs):
         TypedDiGraph.set_edge(self, u, v, attrs)
         TypedDiGraph.set_edge(self, v, u, attrs)
+
+    def get_edge(self, u, v):
+        return merge_attributes(self.edge[u][v], self.edge[v][u])
 
 class Homomorphism(object):
     """Define graph homomorphism data structure."""

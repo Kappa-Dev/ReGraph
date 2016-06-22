@@ -324,3 +324,17 @@ class TestDataStructures(object):
         assert_equals(a.nodes(), b.nodes())
         assert_edges_undir(a.edges(), b.edges())
         assert_equals(a.node[3].attrs_, b.node[3].attrs_)
+
+    def test_load_export_xml(self):
+        __location__ = os.path.realpath(
+            os.path.join(os.getcwd(), os.path.dirname(__file__)))
+        filename = os.path.join(__location__, "graph_example.xml")
+        a = TypedGraph()
+        a.load(filename)
+        out_filename = os.path.join(__location__, "output_graph.xml")
+        a.export(out_filename)
+        b = TypedGraph(load_file=out_filename)
+
+        assert_equals(set(a.nodes()), set(b.nodes()))
+        assert_edges_undir(set(a.edges()), set(b.edges()))
+        assert_equals(a.node['3'].attrs_, b.node['3'].attrs_)
