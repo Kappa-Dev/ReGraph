@@ -10,7 +10,7 @@ tests/*.png
 regraph/library/tmp.py
 tests/example_tests.py
 tests/example_tests_without_pbc.py
-log.txt
+logs.txt
 tests/output_graph.xml
 tests/output_graph.json
 tests/rand/*
