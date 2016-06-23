@@ -274,16 +274,16 @@ class TestRewrites(object):
 
         trans = Rewriter.transformer_from_command(g,
             """delete_node 1.
-            clone 2 as clone.
-            delete_node_attrs clone {u: 0}.
+            clone 2 as 'clone'.
+            delete_node_attrs 'clone' {'u': 0}.
             delete_edge 2 3.
-            delete_edge_attrs clone 3 {k: {1}}.
-            merge [clone, 3] as merged.
-            add_node_attrs merged {m: 1}.
-            add_node new_node type region.
-            add_node_attrs new_node {x: 1}.
-            add_edge new_node merged.
-            add_edge_attrs merged new_node {j: 33}."""
+            delete_edge_attrs 'clone' 3 {'k': {1}}.
+            merge ['clone', 3] as 'merged'.
+            add_node_attrs 'merged' {'m': 1}.
+            add_node 'new_node' type 'region'.
+            add_node_attrs 'new_node' {'x': 1}.
+            add_edge 'new_node' 'merged'.
+            add_edge_attrs 'merged' 'new_node' {'j': 33}."""
         )
 
         h1,h2 = trans.get()

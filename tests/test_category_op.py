@@ -3,81 +3,106 @@ from nose.tools import assert_equals
 
 from regraph.library.data_structures import (TypedGraph,
                                              Homomorphism)
-from regraph.library.category_op import (pullback,
-                                         pullback_complement,
-                                         pushout)
+from regraph.library.category_op import (pullback, pushout, pullback_complement)
+
+
+def assert_edges_undir(edges1, edges2):
+
+    edgeset1 = set(edges1)
+    edgeset2 = set(edges2)
+
+    for edge in edgeset1:
+        if edge not in edgeset2 and (edge[1], edge[0]) not in edgeset2:
+            assert False
 
 
 class TestCategoryOp:
     def __init__(self):
-        self.D = TypedGraph()
+        D = TypedGraph()
 
-        self.D.add_node('square', 'light')
-        self.D.add_node('circle', 'light')
-        self.D.add_node('dark_square', 'dark')
-        self.D.add_node('dark_circle', 'dark')
+        D.add_node('square', 'square')
+        D.add_node('circle', 'circle')
+        D.add_node('dark_square', 'dark_square')
+        D.add_node('dark_circle', 'dark_circle')
 
-        self.D.add_edge('square', 'circle')
-        self.D.add_edge('circle', 'dark_circle')
-        self.D.add_edge('circle', 'dark_square')
-        self.D.add_edge('circle', 'circle')
+        D.add_edge('square', 'circle')
+        D.add_edge('circle', 'dark_circle')
+        D.add_edge('circle', 'dark_square')
+        D.add_edge('circle', 'circle')
 
-        self.B = TypedGraph()
+        A = TypedGraph(D)
 
-        self.B.add_node('1', 'square')
-        self.B.add_node('2', 'circle')
-        self.B.add_node('3', 'dark_circle')
+        A.add_node(2, 'circle')
+        A.add_node(3, 'dark_circle')
 
-        self.B.add_edge('1', '2')
-        self.B.add_edge('2', '3')
+        A.add_edge(2, 3)
 
-        self.C = TypedGraph(self.D)
+        B = TypedGraph(D)
 
-        self.C.add_node('1', 'circle')
-        self.C.add_node('2', 'circle')
-        self.C.add_node('3', 'dark_circle')
-        self.C.add_node('4', 'dark_square')
+        B.add_node(1, 'square')
+        B.add_node(2, 'circle')
+        B.add_node(3, 'dark_circle')
 
-        self.C.add_edge('1', '2')
-        self.C.add_edge('1', '3')
-        self.C.add_edge('1', '4')
+        B.add_edge(1, 2)
+        B.add_edge(2, 3)
 
-        self.A = TypedGraph()
+        C = TypedGraph(D)
 
-        self.A.add_node('1', 'circle')
-        self.A.add_node('2', 'dark_circle')
+        C.add_node(2, 'circle')
+        C.add_node(3, 'dark_circle')
+        C.add_node('dark_square', 'dark_square')
+
+        C.add_edge(2, 3)
+        C.add_edge(2, 'dark_square')
+        C.add_edge(2, 2)
 
         dic_homAB = {
-            '1' : '1',
-            '2' : '3'
+            2: 2,
+            3: 3
         }
-
         dic_homAC = {
-            '1' : '1',
-            '2' : '3'
+            2: 2,
+            3: 3
         }
-
         dic_homBD = {
-            '1': 'square',
-            '2': 'circle',
-            '3': 'dark_circle'
+            1: 'square',
+            2: 'circle',
+            3: 'dark_circle'
         }
 
         dic_homCD = {
-            '1': 'circle',
-            '2': 'circle',
-            '3': 'dark_circle',
-            '4': 'dark_square'
+            2: 'circle',
+            3: 'dark_circle',
+            'dark_square': 'dark_square'
         }
 
-        self.homAB = Homomorphism(self.A, self.B, dic_homAB)
-        self.homAC = Homomorphism(self.A, self.C, dic_homAC)
-        self.homBD = Homomorphism(self.B, self.D, dic_homBD)
-        self.homCD = Homomorphism(self.C, self.D, dic_homCD)
+        self.homAB = Homomorphism(A, B, dic_homAB)
+        self.homAC = Homomorphism(A, C, dic_homAC)
+        self.homBD = Homomorphism(B, D, dic_homBD)
+        self.homCD = Homomorphism(C, D, dic_homCD)
 
-        self.A_, homAB, homAC = pullback(self.homBD, self.homCD)
-        self.C_, homAC, homCD = pullback_complement(self.homAB, self.homBD)
-        self.D_, homBD, homCD = pushout(self.homAB, self.homAC)
+    def test_pullback(self):
+        A, homAB, homAC = pullback(self.homBD, self.homCD)
+        assert_equals(type(A), TypedGraph)
+        assert_equals(set(A.nodes()), set(self.homAB.source_.nodes()))
+        assert_edges_undir(A.edges(), self.homAB.source_.edges())
+        assert_equals(homAB.mapping_, self.homAB.mapping_)
+        assert_equals(homAC.mapping_, self.homAC.mapping_)
 
-    def test_type(self):
-        assert_equals(type(self.A), TypedGraph)
+    def test_pullback_complement(self):
+        C, homAC, homCD = pullback_complement(self.homAB, self.homBD)
+        assert_equals(type(C), TypedGraph)
+        assert_equals(set(C.nodes()), set(self.homAC.target_.nodes()))
+        assert_edges_undir(C.edges(), self.homAC.target_.edges())
+        assert_equals(homAC.mapping_, self.homAC.mapping_)
+        assert_equals(homCD.mapping_, self.homCD.mapping_)
+
+    def test_pushout(self):
+        D, homBD, homCD = pushout(self.homAB, self.homAC)
+        assert_equals(type(D), TypedGraph)
+
+        assert_equals(len(D.nodes()),
+                      len(self.homBD.target_.nodes()))
+
+        assert_equals(len(D.edges()),
+                      len(self.homBD.target_.edges()))

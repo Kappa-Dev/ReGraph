@@ -12,6 +12,8 @@ plusorminus = (Literal('+') | Literal('-'))
 number = Word(nums).setParseAction(lambda s, l, t: [int(t[0])])
 
 integer = Optional(plusorminus) + Word(nums)
+
+
 def eval_int(s, l, t):
     if len(t) > 1:
         if t[0] == '-' or t[0] == '+':
@@ -45,7 +47,7 @@ var = (QuotedString("'", escChar='\\') | QuotedString("\"", escChar='\\'))
 
 node = (number | var)
 
-type_name = Word(alphanums, "_" + alphanums).setResultsName("type")
+type_name = node
 
 # define here list of nodes
 
@@ -70,7 +72,7 @@ sets = attr_open + delimitedList(set_member_val, delim=r',') +\
 sets.setParseAction(lambda t: set(t))
 
 colon = Suppress(Literal(":"))
-field_name = Word(alphanums)
+field_name = (number | var)
 
 list_member_val = Forward()
 list_member_val << (
@@ -128,7 +130,7 @@ delete_node = delete_node + node.setResultsName("node")
 type_keyword = CaselessKeyword("TYPE")
 type_keyword.setParseAction(lambda t: t[0].lower())
 
-typing = type_keyword + type_name
+typing = type_keyword + type_name.setResultsName("type")
 
 add_node = CaselessKeyword("ADD_NODE")
 add_node.setParseAction(lambda t: t[0].lower())

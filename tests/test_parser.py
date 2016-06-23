@@ -11,7 +11,6 @@ class TestParser(object):
     #     self.commands_ = {}
     #     self.commands_.update({"delete": })
 
-
     def test_delete_node(self):
         parsed = parser.parseString("    delete_node 6\n.").asDict()
         if "keyword" not in parsed.keys():
@@ -29,7 +28,7 @@ class TestParser(object):
         assert_equals(parsed["node"], 6)
 
     def test_add_node(self):
-        parsed = parser.parseString("    add_node 6 type agent\n.").asDict()
+        parsed = parser.parseString("    add_node 6 type 'agent'\n.").asDict()
         if "keyword" not in parsed.keys():
             assert False
 
@@ -51,7 +50,7 @@ class TestParser(object):
             assert False
 
         parsed = parser.parseString(
-            "add_node 6 type agent \n{a:[1,sd], b:bb, c:{c:d, d:c}}\n."
+            "add_node 6 type 3 \n{'a':[1,'sd'], 'b':'bb', 'c':{'c':'d', 'd':'c'}}\n."
         ).asDict()
 
         if "attributes" not in parsed.keys():
@@ -69,7 +68,7 @@ class TestParser(object):
             assert False
 
     def test_delete_edge(self):
-        parsed = parser.parseString("\ndelete_edge 6 ab.    ").asDict()
+        parsed = parser.parseString("\ndelete_edge 6 'ab'.    ").asDict()
 
         if "keyword" not in parsed.keys():
             assert False
@@ -93,7 +92,7 @@ class TestParser(object):
         assert_equals(parsed["node_2"], "ab")
 
     def test_add_edge(self):
-        parsed = parser.parseString("\nadd_edge 6 A {a:v}.    ").asDict()
+        parsed = parser.parseString("\nadd_edge 6 \"A\" {'a':'v'}.    ").asDict()
 
         if "keyword" not in parsed.keys():
             assert False
@@ -120,7 +119,7 @@ class TestParser(object):
 
 
     def test_clone(self):
-        parsed = parser.parseString("\n clone 6 as A.    ").asDict()
+        parsed = parser.parseString("\n clone 6 as 'A'.    ").asDict()
         if "keyword" not in parsed.keys():
             assert False
 
@@ -144,7 +143,7 @@ class TestParser(object):
 
     def test_merge_nodes(self):
         parsed = parser.parseString(
-            "\n merge [6, A, 2] method union as mergee edges union.    "
+            "\n merge [6, 'A', 2] method union as 'mergee' edges union.    "
         ).asDict()
         assert_equals(
             parsed,
