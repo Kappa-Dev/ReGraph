@@ -2,7 +2,7 @@
 
 from pyparsing import (Word, alphanums, nums, CaselessKeyword, Suppress,
                        Literal, delimitedList, Dict, Group,
-                       Optional, Forward, Combine)
+                       Optional, Forward, Combine, QuotedString)
 
 # Definition of literals
 point = Literal('.')
@@ -26,6 +26,8 @@ integer.setParseAction(eval_int)
 floatnumber = Optional(plusorminus).setResultsName("sign") + Combine(
     Word(nums) + point + Optional(number)
 )
+
+
 def eval_float(s, l, t):
     if len(t) > 1:
         if t[0] == '-' or t[0] == '+':
@@ -36,7 +38,10 @@ def eval_float(s, l, t):
         return [float(t[0])]
 floatnumber.setParseAction(eval_float)
 
-var = Word(alphanums, "_" + alphanums)
+double_quote = Suppress(Literal("\""))
+single_quote = Suppress(Literal("\'"))
+
+var = (QuotedString("'", escChar='\\') | QuotedString("\"", escChar='\\'))
 
 node = (number | var)
 

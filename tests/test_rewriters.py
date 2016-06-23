@@ -186,7 +186,7 @@ class TestRewrites(object):
 
         Gprime = Rewriter.rewrite(Homomorphism.identity(trans.L, trans.G), trans)
 
-        assert(Gprime.get_edge(1, 2) ==  {})
+        assert(Gprime.get_edge(1, 2) ==  {'s': set()})
 
     def test_merge_edges(self):
         trans = Transformer(self.graph.copy())

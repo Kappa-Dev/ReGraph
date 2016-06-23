@@ -962,8 +962,8 @@ class Rewriter:
                     continue
                 name = pick_name()
 
-                op = add_req(op, " "+str(node))
-                opt,op = add_opt(op, " AS "+str(name))
+                op = add_req(op, " '%s'" % str(node))
+                opt,op = add_opt(op, " AS '%s'" % str(name))
                 if not opt:
                     name = None
 
@@ -978,11 +978,11 @@ class Rewriter:
                 new_node_attrs = None
                 new_edge_attrs = None
 
-                op = add_req(op, " ["+",".join(nodes)+"]")
+                op = add_req(op, " "+str(nodes))
                 opt,op = add_opt(op, " METHOD "+str(method))
                 if not opt:
                     method = "UNION"
-                opt,op = add_opt(op, " AS "+str(new_name))
+                opt,op = add_opt(op, " AS '%s'" % str(new_name))
                 if not opt:
                     new_name = None
                 opt,op = add_opt(op, " EDGES "+str(edges))
@@ -1000,8 +1000,8 @@ class Rewriter:
 
                 attrs = rand_attrs(env.metamodel_.node[typ].attrs_)
 
-                op = add_req(op, " "+str(name))
-                op = add_req(op, " TYPE "+str(typ))
+                op = add_req(op, " '%s'" % str(name))
+                op = add_req(op, " TYPE '%s'" % str(typ))
                 opt,op = add_opt(op, " "+str(attrs))
                 if not opt:
                     attrs = None
@@ -1012,7 +1012,7 @@ class Rewriter:
                 if node == None:
                     continue
 
-                op = add_req(op, " "+str(node))
+                op = add_req(op, " '%s'" % str(node))
 
                 env.remove_node(node)
             elif op == "ADD_EDGE":
@@ -1023,7 +1023,7 @@ class Rewriter:
                     n1, n2 = e
                 attrs = pick_edge_attrs_for(n1, n2)
 
-                op = add_req(op, " "+str(n1)+" "+str(n2))
+                op = add_req(op, " '%s' '%s'" % (str(n1),str(n2)))
                 opt,op = add_opt(op, " "+str(attrs))
                 if not opt:
                     attrs = None
@@ -1034,7 +1034,7 @@ class Rewriter:
                 if n1 == None or n2 == None:
                     continue
 
-                op = add_req(op, " "+str(n1)+" "+str(n2))
+                op = add_req(op, " '%s' '%s'" % (str(n1),str(n2)))
 
                 env.remove_edge(n1, n2)
             elif op == "ADD_NODE_ATTRS":
@@ -1050,7 +1050,7 @@ class Rewriter:
                         attrs = rand_attrs(dict_sub(env.metamodel_.node[env.node[node].type_].attrs_,
                                             env.node[node].attrs_))
 
-                op = add_req(op, " "+node)
+                op = add_req(op, " '%s'" % node)
                 op = add_req(op, " "+str(attrs))
 
                 if attrs == {}:
@@ -1072,7 +1072,7 @@ class Rewriter:
                         )
                     )
 
-                op = add_req(op, " "+n1+" "+n2)
+                op = add_req(op, " '%s' '%s'" % (n1,n2))
                 op = add_req(op, " "+str(attrs))
 
                 if attrs == {}:
@@ -1088,7 +1088,7 @@ class Rewriter:
                 if attrs == {} or attrs == None:
                     continue
 
-                op = add_req(op, " "+node)
+                op = add_req(op, " '%s'" % node)
                 op = add_req(op, " "+str(attrs))
 
                 env.remove_node_attrs(node, attrs)
@@ -1101,7 +1101,7 @@ class Rewriter:
                 if attrs == {} or attrs == None:
                     continue
 
-                op = add_req(op, " "+n1+" "+n2)
+                op = add_req(op, " '%s' '%s'" % (n1,n2))
                 op = add_req(op, " "+str(attrs))
 
                 env.remove_edge_attrs(n1, n2, attrs)

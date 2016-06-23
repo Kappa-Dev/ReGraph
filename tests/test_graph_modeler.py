@@ -10,6 +10,8 @@ from regraph.library.rewriters import (Transformer,
                                        Rewriter)
 from regraph.library.graph_modeler import GraphModeler
 
+import os
+
 class TestGraphModeler(object):
     """."""
 
@@ -81,6 +83,16 @@ class TestGraphModeler(object):
         }
 
         self.modeler = GraphModeler([self.G2, self.G1, self.G0], [self.G1_G2, self.G0_G1])
+
+    def test_init_with_ty_graphs(self):
+        self.modeler = GraphModeler(self.modeler.graph_chain)
+
+    def test_init_with_files(self):
+        __location__ = os.path.realpath(
+            os.path.join(os.getcwd(), os.path.dirname(__file__)))
+        filename_graph = os.path.join(__location__, "graph_example.xml")
+        filename_meta = os.path.join(__location__, "meta_example.xml")
+        self.modeler = GraphModeler([filename_meta, filename_graph])
 
     def test_init_rewriting(self):
         trans = self.modeler.init_rewriting(0)

@@ -20,34 +20,35 @@ class GraphModeler(object):
         the modification of a model can propagate to the upper graphs
     """
 
-    def __init__(self, l, homL, names=[], do_pbc = False):
+    def __init__(self, l, homL=[], names=[], do_pbc = False, di= True):
         """ l : nx.Graph list (directed or not) [G1, G2 ...]
             homL : dict list (starting with [G1->G2 ... ])
             names : str list
         """
-        typing_graph = None
+        if len(l) == 0:
+            raise ValueError(
+                "Can't create empty modeler"
+            )
         self.graph_chain = [None for i in range(len(l))]
-        self.hom_chain = [None]+[h for h in homL]
+        self.hom_chain = [None for i in range(len(l))]
+        for i in range(len(homL)):
+            self.hom_chain[i+1] = homL[i]
         self.graph_names = [None for i in range(len(l))]
         self.changes = [None for i in range(len(l))]
         self.do_pbc = do_pbc
+        if type(l[0]) == TypedGraph or type(l[0]) == TypedDiGraph:
+            self.load_from_ty_graph(l)
+        elif type(l[0]) == nx.Graph or type(l[0]) == nx.DiGraph:
+            self.load_from_nx_graph(l)
+        elif type(l[0]) == str:
+            self.load_from_files(l, di)
+        else:
+            raise ValueError(
+                "List should be a nx.(Di)Graphs or Typed(Di)Graphs or filenames\
+                 list"
+            )
+        self.make_names(names)
 
-        for i in range(len(l)):
-            directed = type(l[i]) == nx.DiGraph
-            typing_graph = self.make_tygraph(l[i], typing_graph, self.hom_chain[i], directed)
-            self.graph_chain[i] = typing_graph
-            self.hom_chain[i] = self.graph_chain[i].hom
-
-        for i in range(len(names)):
-            if names[i] in self.graph_names:
-                raise ValueError(
-                    "Name %s already used for another graph" % names[i]
-                )
-            if type(names[i]) != str:
-                raise ValueError(
-                    "Graph names have to be Strings"
-                )
-            self.graph_names[i] = names[i]
 
     def __str__(self):
         res = ''
@@ -64,6 +65,52 @@ class GraphModeler(object):
         return "Class implements a chain of graph typed by their follower in the list.\
                 It allows you to build a system where each graph has a model and where\
                 the modification of a model can propagate to the upper graphs"
+
+    def load_from_nx_graph(self, l):
+        typing_graph = None
+        for i in range(len(l)):
+            directed = type(l[i]) == nx.DiGraph
+            if i >= len(self.hom_chain):
+                raise ValueError(
+                    "You didn't give the %s homomorphism, can't type your graph" % i
+                )
+            typing_graph = self.make_tygraph(l[i], typing_graph, self.hom_chain[i], directed)
+            self.graph_chain[i] = typing_graph
+            self.hom_chain[i] = self.graph_chain[i].hom
+
+    def load_from_files(self, l_files, di):
+        graphs = []
+        for fil in l_files:
+            graphs.append(TypedDiGraph(load_file=fil) if di else TypedGraph(load_file=fil))
+        self.load_from_ty_graph(graphs)
+
+
+    def make_names(self, names):
+        for i in range(len(names)):
+            if names[i] in self.graph_names:
+                raise ValueError(
+                    "Name %s already used for another graph" % names[i]
+                )
+            if type(names[i]) != str:
+                raise ValueError(
+                    "Graph names have to be Strings"
+                )
+            self.graph_names[i] = names[i]
+
+    def load_from_ty_graph(self, l):
+        for i in range(len(l)):
+            if i == 0:
+                l[i].metamodel_ = None
+                l[i].hom = None
+            else:
+                l[i].metamodel_ = l[i-1]
+                if self.hom_chain[i] == None:
+                    l[i].hom = TypedHomomorphism.canonic(l[i], l[i-1])
+                else:
+                    l[i].hom = TypedHomomorphism(l[i], l[i-1], self.hom_chain[i])
+            self.graph_chain[i] = l[i]
+            self.hom_chain[i] = l[i].hom
+
 
     def init_rewriting(self, n_i):
         if type(n_i) == int:
