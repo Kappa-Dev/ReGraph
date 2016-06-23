@@ -13,4 +13,4 @@ tests/example_tests_without_pbc.py
 log.txt
 tests/output_graph.xml
 tests/output_graph.json
-tests/alea_gen.json
+tests/rand/*
