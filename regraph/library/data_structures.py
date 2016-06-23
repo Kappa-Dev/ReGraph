@@ -326,167 +326,172 @@ class TypedDiGraph(nx.DiGraph):
     def merge_nodes(self, nodes, method="union",
                     node_name=None, edge_method="union"):
         """Merge list of nodes."""
-        # Type checking
-        node_type = self.node[nodes[0]].type_
-        for node in nodes:
-            if self.node[node].type_ != node_type:
+        if len(nodes) == 1:
+            if node_name!=None:
+                self.relabel_node(nodes[0], node_name)
+                return
+        elif len(nodes) > 1:
+            # Type checking
+            node_type = self.node[nodes[0]].type_
+            for node in nodes:
+                if self.node[node].type_ != node_type:
+                    raise ValueError(
+                        "Merge error: Non consistent node types (%s:%s, %s:%s)!" %
+                        (str(node), str(self.node[node].type_), str(nodes[0]), str(node_type)))
+
+            if method is None:
+                method = "union"
+
+            if edge_method is None:
+                method = "union"
+
+            # Generate name for new node
+            if node_name is None:
+                node_name = "_".join([str(n) for n in nodes])
+            elif node_name in self.nodes() and (node_name not in nodes):
                 raise ValueError(
-                    "Merge error: Non consistent node types ('%s', '%s')!" %
-                    (str(self.node[node].type_), str(node_type)))
+                    "The node with name '%s' already exists!" % str(node_name))
 
-        if method is None:
-            method = "union"
+            # Merge data attached to node according to the method specified
+            # restore proper connectivity
+            if method == "union":
+                attr_accumulator = {}
+            elif method == "intersection":
+                attr_accumulator = deepcopy(self.node[nodes[0]].attrs_)
+            else:
+                raise ValueError("Merging method %s is not defined!" % method)
 
-        if edge_method is None:
-            method = "union"
-
-        # Generate name for new node
-        if node_name is None:
-            node_name = "_".join([str(n) for n in nodes])
-        elif node_name in self.nodes() and (node_name not in nodes):
-            raise ValueError(
-                "The node with name '%s' already exists!" % str(node_name))
-
-        # Merge data attached to node according to the method specified
-        # restore proper connectivity
-        if method == "union":
-            attr_accumulator = {}
-        elif method == "intersection":
-            attr_accumulator = deepcopy(self.node[nodes[0]].attrs_)
-        else:
-            raise ValueError("Merging method %s is not defined!" % method)
-
-        self_loop = False
-        self_loop_attrs = {}
-
-        if self.is_directed():
-            source_nodes = set()
-            target_nodes = set()
-
-            source_dict = {}
-            target_dict = {}
-        else:
-            neighbors = set()
-            neighbors_dict = {}
-
-        for node in nodes:
-
-            attr_accumulator = merge_attributes(
-                attr_accumulator, self.node[node].attrs_, method)
+            self_loop = False
+            self_loop_attrs = {}
 
             if self.is_directed():
-                in_edges = self.in_edges(node)
-                out_edges = self.out_edges(node)
+                source_nodes = set()
+                target_nodes = set()
 
-                # manage self loops
-                for s, t in in_edges:
-                    if s in nodes:
-                        self_loop = True
-                        if len(self_loop_attrs) == 0:
-                            self_loop_attrs = self.edge[s][t]
-                        else:
-                            self_loop_attrs = merge_attributes(
-                                self_loop_attrs,
-                                self.edge[s][t],
-                                edge_method)
-
-                for s, t in out_edges:
-                    if t in nodes:
-                        self_loop = True
-                        if len(self_loop_attrs) == 0:
-                            self_loop_attrs = self.edge[s][t]
-                        else:
-                            self_loop_attrs = merge_attributes(
-                                self_loop_attrs,
-                                self.edge[s][t],
-                                edge_method)
-
-                source_nodes.update(
-                    [n if n not in nodes else node_name
-                     for n, _ in in_edges])
-                target_nodes.update(
-                    [n if n not in nodes else node_name
-                     for _, n in out_edges])
-
-                for edge in in_edges:
-                    if not edge[0] in source_dict.keys():
-                        attrs = self.edge[edge[0]][edge[1]]
-                        source_dict.update({edge[0]: attrs})
-                    else:
-                        attrs = merge_attributes(
-                            source_dict[edge[0]],
-                            self.edge[edge[0]][edge[1]],
-                            edge_method)
-                        source_dict.update({edge[0]: attrs})
-
-                for edge in out_edges:
-                    if not edge[1] in target_dict.keys():
-                        attrs = self.edge[edge[0]][edge[1]]
-                        target_dict.update({edge[1]: attrs})
-                    else:
-                        attrs = merge_attributes(
-                            target_dict[edge[1]],
-                            self.edge[edge[0]][edge[1]],
-                            edge_method)
-                        target_dict.update({edge[1]: attrs})
+                source_dict = {}
+                target_dict = {}
             else:
-                for n in self.neighbors(node):
-                    if n in nodes:
-                        self_loop = True
-                        if len(self_loop_attrs) == 0:
-                            self_loop_attrs = self.edge[n][node]
-                        else:
-                            self_loop_attrs = merge_attributes(
-                                self_loop_attrs,
-                                self.edge[n][node],
-                                edge_method)
+                neighbors = set()
+                neighbors_dict = {}
 
-                neighbors.update(
-                    [n for n in self.neighbors(node) if n not in nodes])
-                for n in self.neighbors(node):
-                    if n not in nodes:
-                        if n not in neighbors_dict.keys():
-                            attrs = self.edge[n][node]
-                            neighbors_dict.update({n: attrs})
+            for node in nodes:
+
+                attr_accumulator = merge_attributes(
+                    attr_accumulator, self.node[node].attrs_, method)
+
+                if self.is_directed():
+                    in_edges = self.in_edges(node)
+                    out_edges = self.out_edges(node)
+
+                    # manage self loops
+                    for s, t in in_edges:
+                        if s in nodes:
+                            self_loop = True
+                            if len(self_loop_attrs) == 0:
+                                self_loop_attrs = self.edge[s][t]
+                            else:
+                                self_loop_attrs = merge_attributes(
+                                    self_loop_attrs,
+                                    self.edge[s][t],
+                                    edge_method)
+
+                    for s, t in out_edges:
+                        if t in nodes:
+                            self_loop = True
+                            if len(self_loop_attrs) == 0:
+                                self_loop_attrs = self.edge[s][t]
+                            else:
+                                self_loop_attrs = merge_attributes(
+                                    self_loop_attrs,
+                                    self.edge[s][t],
+                                    edge_method)
+
+                    source_nodes.update(
+                        [n if n not in nodes else node_name
+                         for n, _ in in_edges])
+                    target_nodes.update(
+                        [n if n not in nodes else node_name
+                         for _, n in out_edges])
+
+                    for edge in in_edges:
+                        if not edge[0] in source_dict.keys():
+                            attrs = self.edge[edge[0]][edge[1]]
+                            source_dict.update({edge[0]: attrs})
                         else:
                             attrs = merge_attributes(
-                                neighbors_dict[n],
-                                self.edge[n][node],
+                                source_dict[edge[0]],
+                                self.edge[edge[0]][edge[1]],
                                 edge_method)
-                            neighbors_dict.update({n: attrs})
+                            source_dict.update({edge[0]: attrs})
 
-            self.remove_node(node)
+                    for edge in out_edges:
+                        if not edge[1] in target_dict.keys():
+                            attrs = self.edge[edge[0]][edge[1]]
+                            target_dict.update({edge[1]: attrs})
+                        else:
+                            attrs = merge_attributes(
+                                target_dict[edge[1]],
+                                self.edge[edge[0]][edge[1]],
+                                edge_method)
+                            target_dict.update({edge[1]: attrs})
+                else:
+                    for n in self.neighbors(node):
+                        if n in nodes:
+                            self_loop = True
+                            if len(self_loop_attrs) == 0:
+                                self_loop_attrs = self.edge[n][node]
+                            else:
+                                self_loop_attrs = merge_attributes(
+                                    self_loop_attrs,
+                                    self.edge[n][node],
+                                    edge_method)
 
-        self.add_node(node_name, node_type, attr_accumulator)
+                    neighbors.update(
+                        [n for n in self.neighbors(node) if n not in nodes])
+                    for n in self.neighbors(node):
+                        if n not in nodes:
+                            if n not in neighbors_dict.keys():
+                                attrs = self.edge[n][node]
+                                neighbors_dict.update({n: attrs})
+                            else:
+                                attrs = merge_attributes(
+                                    neighbors_dict[n],
+                                    self.edge[n][node],
+                                    edge_method)
+                                neighbors_dict.update({n: attrs})
 
-        if self.is_directed():
-            if self_loop:
-                self.add_edges_from([(node_name, node_name)])
-                self.edge[node_name][node_name] = self_loop_attrs
+                self.remove_node(node)
 
-            self.add_edges_from([(n, node_name) for n in source_nodes])
-            self.add_edges_from([(node_name, n) for n in target_nodes])
+            self.add_node(node_name, node_type, attr_accumulator)
 
-            # Attach accumulated attributes to edges
-            for node, attrs in source_dict.items():
-                if node not in nodes:
-                    self.edge[node][node_name] = attrs
-            for node, attrs in target_dict.items():
-                if node not in nodes:
-                    self.edge[node_name][node] = attrs
-        else:
-            if self_loop:
-                self.add_edges_from([(node_name, node_name)])
-                self.set_edge(node_name, node_name, self_loop_attrs)
+            if self.is_directed():
+                if self_loop:
+                    self.add_edges_from([(node_name, node_name)])
+                    self.edge[node_name][node_name] = self_loop_attrs
 
-            self.add_edges_from([(n, node_name) for n in neighbors])
+                self.add_edges_from([(n, node_name) for n in source_nodes])
+                self.add_edges_from([(node_name, n) for n in target_nodes])
 
-            # Attach accumulated attributes to edges
-            for node, attrs in neighbors_dict.items():
-                if node not in nodes:
-                    self.set_edge(node, node_name, attrs)
+                # Attach accumulated attributes to edges
+                for node, attrs in source_dict.items():
+                    if node not in nodes:
+                        self.edge[node][node_name] = attrs
+                for node, attrs in target_dict.items():
+                    if node not in nodes:
+                        self.edge[node_name][node] = attrs
+            else:
+                if self_loop:
+                    self.add_edges_from([(node_name, node_name)])
+                    self.set_edge(node_name, node_name, self_loop_attrs)
 
-        return node_name
+                self.add_edges_from([(n, node_name) for n in neighbors])
+
+                # Attach accumulated attributes to edges
+                for node, attrs in neighbors_dict.items():
+                    if node not in nodes:
+                        self.set_edge(node, node_name, attrs)
+
+            return node_name
 
     def clone_node(self, node, name=None):
         """Clone existing node and all its edges."""
@@ -494,9 +499,11 @@ class TypedDiGraph(nx.DiGraph):
             raise ValueError("Node %s does not exist" % str(node))
 
         if name is None:
-            new_node = "%s_copy" % str(node)
+            i = 1
+            new_node = str(node)+str(i)
             while new_node in self.nodes():
-                new_node = "%s_copy" % new_node
+                i+=1
+                new_node = str(node)+str(i)
         else:
             if name in self.nodes():
                 raise ValueError("Node %s already exist!" % str(name))
@@ -527,6 +534,18 @@ class TypedDiGraph(nx.DiGraph):
                 self.set_edge(new_node, n, deepcopy(self.edge[n][node]))
 
         return new_node
+
+    def relabel_node(self, n, node_name):
+        neighbors = self.neighbors(n)
+        self.add_node(node_name,
+                      self.node[n].type_,
+                      self.node[n].attrs_)
+        for n2 in neighbors:
+            self.add_edge(node_name,
+                          n2,
+                          self.get_edge(n,
+                                        n2))
+        self.remove_node(n)
 
     def relabel_nodes(self, mapping):
         """Relabel graph nodes in place.
@@ -753,7 +772,7 @@ class TypedDiGraph(nx.DiGraph):
 
     @classmethod
     def random_graph(cls, metamodel = None, n_nodes=1000, p_edges=0.5,
-                     p_attrs=0.5, p_attr_value=0.5):
+                     p_attrs=0.5, p_attr_value=0.5, verbose=False):
 
         def rand_attrs(attrs):
             if attrs == None:
@@ -781,6 +800,8 @@ class TypedDiGraph(nx.DiGraph):
         # Adding random nodes
 
         for i in range(n_nodes):
+            if verbose:
+                print("Adding node %s/%s" % (i, n_nodes))
             node_type = random.sample(types, 1)[0]
             if metamodel == None:
                 node_attrs = None
@@ -789,12 +810,15 @@ class TypedDiGraph(nx.DiGraph):
             res.add_node(str(i), node_type, node_attrs)
 
         # Adding random edges
-
+        i = 0
         for n1 in res.nodes():
             for n2 in res.nodes():
                 if random.random() <= p_edges:
                     if metamodel == None:
                         res.add_edge(n1, n2)
+                        if verbose:
+                            print("Added %s edges so far" % i)
+                            i+=1
                     else:
                         type1 = res.node[n1].type_
                         type2 = res.node[n2].type_
@@ -804,6 +828,9 @@ class TypedDiGraph(nx.DiGraph):
                                 type2,
                             ))
                             res.add_edge(n1, n2, edge_attrs)
+                            if verbose:
+                                print("Added %s edges so far" % i)
+                                i+=1
 
         return res
 

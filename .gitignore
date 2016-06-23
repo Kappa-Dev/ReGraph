@@ -14,4 +14,5 @@ logs.txt
 tests/output_graph.xml
 tests/output_graph.json
 tests/rand/*
+tests/big_graph0/*
 tests/gen_big_graph.py
