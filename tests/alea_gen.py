@@ -3,17 +3,17 @@ from regraph.library.data_structures import (TypedDiGraph,
 from regraph.library.rewriters import Rewriter
 
 meta = TypedDiGraph.random_graph(n_nodes = 10)
-print("Meta :\n%s\n" % meta)
+meta.export("tests/rand/meta.json")
 graph = TypedDiGraph.random_graph(metamodel=meta, n_nodes=50)
-print("Graph :\n%s\n" % graph)
-graph.export("graph_test.json")
+graph.export("tests/rand/graph.json")
 transformations = Rewriter.gen_transformations(100, graph)
-print("Transformations :\n%s\n" % transformations)
+f = open("tests/rand/transformations.txt", "w")
+print("Transformations :\n%s\n" % transformations, file = f, end='')
 
 trans = Rewriter.transformer_from_command(graph, transformations)
 
-print("Transformer :\n%s\n" % trans)
+f = open("tests/rand/transformer.txt", "w")
+print("Transformer :\n%s\n" % trans, file = f, end='')
 
 Gprime = Rewriter.rewrite(Homomorphism.identity(trans.L, trans.G), trans)
-
-print("Result :\n%s" % Gprime)
+Gprime.export("tests/rand/result.json")
