@@ -1,5 +1,0 @@
-CLONE '1'.
-DELETE_NODE '8'.
-DELETE_NODE '4'.
-DELETE_EDGE '6' '0'.
-ADD_EDGE '3' '3' {}.

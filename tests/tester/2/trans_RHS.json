@@ -1,1 +1,0 @@
-{"edges": [{"attrs": {}, "to": "5", "from": "1"}, {"attrs": {}, "to": "3", "from": "6"}, {"attrs": {}, "to": "1", "from": "5"}, {"attrs": {}, "to": "6", "from": "3"}], "nodes": [{"id": "8", "type": "0"}, {"id": "1", "type": "1"}, {"id": "7", "type": "5"}, {"id": "6", "type": "2"}, {"id": "5", "type": "6"}, {"attrs": {}, "id": "2.3", "type": "2"}, {"id": "3", "type": "5"}]}
