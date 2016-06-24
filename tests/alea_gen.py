@@ -15,7 +15,7 @@ parser.add_argument('-e', dest='edges', action='store', default=0.5,
                     type=float, help="probability of having an edge")
 parser.add_argument('-t', dest='trans', action='store', default=20,
                     type=int, help="number of transformations to generate")
-parser.add_argument('-meta', dest='meta', type=str, help="metamodel to use",
+parser.add_argument('--meta', dest='meta', type=str, help="metamodel to use",
                     action='store', default=None )
 parser.add_argument('--di', dest='di', action='store_const', const=True,
                     default=False, help='if graph is directed')
@@ -32,15 +32,13 @@ directory = args.out
 if not os.path.exists(directory):
     os.makedirs(directory)
 
-graph_type = TypedDiGRaph if args.di else TypedGraph
+graph_type = TypedDiGraph if args.di else TypedGraph
 
 if args.meta==None:
-    if args.di:
-        meta = graph_type.random_graph(n_nodes = 10)
-    else:
-        meta = graph_type.random_graph(n_nodes = 10)
+    meta = graph_type.random_graph(n_nodes = 10)
 else:
-    meta = graph_type(args.meta)
+    meta = graph_type(load_file=args.meta)
+
 meta.export(directory+"meta.json")
 f = open(directory+"meta.txt", "w")
 print(meta, file = f, end='')

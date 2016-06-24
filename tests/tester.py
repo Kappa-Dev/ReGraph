@@ -31,6 +31,8 @@ parser.add_argument('--meta', dest='meta', type=str, help="metamodel to use",
                     action='store', default=None )
 parser.add_argument('--di', dest='di', action='store_const', const=True,
                     default=False, help='if graph is directed')
+parser.add_argument('-m', dest='method', action='store', type=str,
+                    default="prop", help='method to use : prop or rew or all')
 parser.add_argument('-v', dest='verbose', action='store_const', const=True,
                     default=False, help='verbose')
 
@@ -59,10 +61,14 @@ for n in range(args.tests):
 
     process = subprocess.check_output(("python3 -W ignore "+args.file+" -o %s -n %s -e %s -t %s%s%s%s" %
               (args.input, args.nodes, args.edges, args.trans,
-               "--meta "+args.meta if args.meta != None else '',
+               " --meta "+args.meta if args.meta != None else '',
                ' --di' if args.di else '',
                ' -v' if args.verbose else '')).split(" "))
     print(process.decode("UTF-8"), end='')
+
+    meta = TypedDiGraph(load_file=args.input+'meta'+args.ext) if args.di else TypedGraph(load_file=args.input+'meta'+args.ext)
+    meta.export(directory+"meta"+args.ext)
+    plot_graph(meta, filename = directory+"meta.png")
 
     graph = TypedDiGraph(load_file=args.input+'graph'+args.ext) if args.di else TypedGraph(load_file=args.input+'graph'+args.ext)
     graph.export(directory+"graph"+args.ext)
@@ -84,14 +90,16 @@ for n in range(args.tests):
     plot_graph(trans.L, filename = directory+"trans_LHS.png")
     plot_graph(trans.R, filename = directory+"trans_RHS.png")
 
-    result = TypedDiGraph(load_file=args.input+'result'+args.ext) if args.di else TypedGraph(load_file=args.input+'result'+args.ext)
-    result.export(directory+"result_cat_op"+args.ext)
-    plot_graph(result, filename = directory+"result_cat_op.png")
+    if args.method == "prop" or args.method == "all":
+        result = TypedDiGraph(load_file=args.input+'result'+args.ext) if args.di else TypedGraph(load_file=args.input+'result'+args.ext)
+        result.export(directory+"result_cat_op"+args.ext)
+        plot_graph(result, filename = directory+"result_cat_op.png")
 
-    rw = Rewriter(graph)
-    rw.apply_rule(Homomorphism.identity(trans.L, trans.G), trans)
-    graph.export(directory+"result_rul"+args.ext)
-    plot_graph(graph, filename = directory+"result_rul.png")
+    if args.method == "rew" or args.method == "all":
+        rw = Rewriter(graph)
+        rw.apply_rule(Homomorphism.identity(trans.L, trans.G), trans)
+        graph.export(directory+"result_rul"+args.ext)
+        plot_graph(graph, filename = directory+"result_rul.png")
 
     i += 1
 
