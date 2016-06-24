@@ -1,0 +1,1 @@
+{"nodes": [{"type": "3", "id": "5"}, {"type": "4", "id": "2"}, {"type": "9", "id": "9"}, {"type": "8", "id": "0"}, {"type": "5", "id": "4"}], "edges": [{"attrs": {}, "to": "0", "from": "5"}, {"attrs": {}, "to": "2", "from": "2"}, {"attrs": {}, "to": "5", "from": "0"}, {"attrs": {}, "to": "4", "from": "4"}]}

@@ -327,9 +327,8 @@ class TypedDiGraph(nx.DiGraph):
                     node_name=None, edge_method="union"):
         """Merge list of nodes."""
         if len(nodes) == 1:
-            if node_name!=None:
+            if node_name != None:
                 self.relabel_node(nodes[0], node_name)
-                return
         elif len(nodes) > 1:
             # Type checking
             node_type = self.node[nodes[0]].type_

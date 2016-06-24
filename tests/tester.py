@@ -2,28 +2,97 @@ from regraph.library.data_structures import (TypedDiGraph,
                                              TypedGraph,
                                              Homomorphism)
 from regraph.library.rewriters import Rewriter
+from regraph.library.utils import plot_graph
 import argparse
+import os
+import subprocess
 
-parser = argparse.ArgumentParser(description='Takes G, Transformations and Result and returns True if\
-                                              G after transformations is Result')
-parser.add_argument('graph', metavar='G', type=str, help="the graph G")
-parser.add_argument('transformations', metavar='trans', type=str, help='the transformations')
-parser.add_argument('result', metavar='res', type=str, help='the result')
-parser.add_argument('--di', dest='di', action='store_const', const=True, default=False, help='graph is directed')
+parser = argparse.ArgumentParser(description='Run tests')
+parser.add_argument('-f', dest='file', action='store', default='tests/alea_gen.py',
+                    type=str, help="test script to run.\
+                    Should have arguments -n for nodes number, -e for edge \
+                    probability, -t for transformations number and -meta \
+                    for metamodel. All those args are optional")
+parser.add_argument('-N', dest='tests', action='store',  default=20,
+                    type=int, help="number of tests to run")
+parser.add_argument('-in', dest='input', action='store',  default="tests/rand",
+                    type=str, help="input directory")
+parser.add_argument('-o', dest='out', action='store',  default="tests/tester",
+                    type=str, help="output directory")
+parser.add_argument('-ext', dest='ext', action='store',  default=".json",
+                    type=str, help="extension of graph files")
+parser.add_argument('-n', dest='nodes', action='store',  default=20,
+                    type=int, help="number of nodes of generated graph")
+parser.add_argument('-e', dest='edges', action='store', default=0.5,
+                    type=float, help="probability of having an edge")
+parser.add_argument('-t', dest='trans', action='store', default=20,
+                    type=int, help="number of transformations to generate")
+parser.add_argument('--meta', dest='meta', type=str, help="metamodel to use",
+                    action='store', default=None )
+parser.add_argument('--di', dest='di', action='store_const', const=True,
+                    default=False, help='if graph is directed')
+parser.add_argument('-v', dest='verbose', action='store_const', const=True,
+                    default=False, help='verbose')
 
 args = parser.parse_args()
 
-graph = TypedDiGraph(load_file=args.graph) if args.di else TypedGraph(load_file=args.graph)
+if args.out[-1] != "/":
+    args.out += "/"
+if args.input[-1] != "/":
+    args.input += "/"
+if args.ext[0] != ".":
+    args.ext = "."+args.ext
 
-f = open(args.transformations, 'r')
-f.readline()
-trans_string = f.read()
+if not os.path.exists(args.out):
+    os.makedirs(args.out)
 
-result = TypedDiGraph(load_file=args.result) if args.di else TypedGraph(load_file=args.result)
+os.system("rm -rf "+args.out)
 
-trans = Rewriter.transformer_from_command(graph, trans_string)
+i = 1
+for n in range(args.tests):
+    print("Generating test", i)
 
-rw = Rewriter(graph)
-rw.apply_rule(Homomorphism.identity(trans.L, trans.G), trans)
+    if not os.path.exists(args.out+str(i)+"/"):
+        os.makedirs(args.out+str(i)+"/")
 
-assert(graph==result)
+    directory = args.out+str(i)+"/"
+
+    process = subprocess.check_output(("python3 -W ignore "+args.file+" -o %s -n %s -e %s -t %s%s%s%s" %
+              (args.input, args.nodes, args.edges, args.trans,
+               "--meta "+args.meta if args.meta != None else '',
+               ' --di' if args.di else '',
+               ' -v' if args.verbose else '')).split(" "))
+    print(process.decode("UTF-8"), end='')
+
+    graph = TypedDiGraph(load_file=args.input+'graph'+args.ext) if args.di else TypedGraph(load_file=args.input+'graph'+args.ext)
+    graph.export(directory+"graph"+args.ext)
+    plot_graph(graph, filename = directory+"graph.png")
+
+    f = open(args.input+'transformations.txt', 'r')
+    f.readline()
+    trans_string = f.read()
+    fprime = open(directory+'transformations.txt', 'w')
+    print(trans_string, file=fprime, end='')
+
+    trans = Rewriter.transformer_from_command(graph, trans_string)
+    f = open(directory+"transformer.txt", "w")
+    print(trans, file=f, end='')
+    trans.P.export(directory+"trans_P"+args.ext)
+    trans.L.export(directory+"trans_LHS"+args.ext)
+    trans.R.export(directory+"trans_RHS"+args.ext)
+    plot_graph(trans.P, filename = directory+"trans_P.png")
+    plot_graph(trans.L, filename = directory+"trans_LHS.png")
+    plot_graph(trans.R, filename = directory+"trans_RHS.png")
+
+    result = TypedDiGraph(load_file=args.input+'result'+args.ext) if args.di else TypedGraph(load_file=args.input+'result'+args.ext)
+    result.export(directory+"result_cat_op"+args.ext)
+    plot_graph(result, filename = directory+"result_cat_op.png")
+
+    rw = Rewriter(graph)
+    rw.apply_rule(Homomorphism.identity(trans.L, trans.G), trans)
+    graph.export(directory+"result_rul"+args.ext)
+    plot_graph(graph, filename = directory+"result_rul.png")
+
+    i += 1
+
+    print("Done"+("\n" if args.verbose else ''))

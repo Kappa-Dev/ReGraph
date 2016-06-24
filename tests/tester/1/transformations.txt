@@ -1,0 +1,5 @@
+DELETE_NODE '6'.
+DELETE_NODE '3'.
+DELETE_EDGE '4' '1'.
+ADD_NODE '4.9' TYPE '4' {}.
+ADD_EDGE '4' '5'.

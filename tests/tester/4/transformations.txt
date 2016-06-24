@@ -1,0 +1,5 @@
+ADD_EDGE '2' '2' {}.
+DELETE_NODE '8'.
+ADD_EDGE '0' '5'.
+ADD_EDGE '4' '4' {}.
+DELETE_EDGE '9' '5'.

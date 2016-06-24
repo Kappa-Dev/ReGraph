@@ -189,6 +189,15 @@ def pullback_complement(h1, h2):
                         C.add_edge(n1,
                                    n2,
                                    A.get_edge(n1, n2))
+                    pred_n1 = keys_by_value(hom1, n1)[0]
+                    pred_n2 = keys_by_value(hom1, n2)[0]
+                    n11 = f[n1]
+                    n21 = f[n2]
+                    if ((g[n11], g[n21]) in D.edges() and\
+                        (n11, n21) not in B.edges()):
+                        C.add_edge(n1,
+                                   n2,
+                                   D.get_edge(g[n11], g[n21]))
                 else:
                     if (A_D.mapping_[n1], n2) in D.edges():
                         pred_n2 = keys_by_value(g, n2)

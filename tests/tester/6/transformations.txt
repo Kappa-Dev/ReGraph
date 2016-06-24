@@ -1,0 +1,5 @@
+DELETE_EDGE '4' '3'.
+ADD_NODE '1.2' TYPE '7'.
+CLONE '5'.
+ADD_NODE '0.1.2' TYPE '1'.
+ADD_EDGE '1' '5' {}.

@@ -1,0 +1,5 @@
+DELETE_EDGE '5' '7'.
+ADD_EDGE '2' '6'.
+CLONE '6'.
+ADD_EDGE '2' '8' {}.
+ADD_EDGE '6' '8'.
