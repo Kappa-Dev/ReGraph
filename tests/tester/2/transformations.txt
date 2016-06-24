@@ -1,5 +1,5 @@
-DELETE_EDGE '8' '0'.
-ADD_EDGE '1' '7'.
+DELETE_EDGE '7' '8'.
+ADD_EDGE '1' '5'.
+ADD_NODE '2.3' TYPE '2'.
 DELETE_NODE '9'.
-ADD_NODE '7.0' TYPE '4'.
-DELETE_EDGE '1' '8'.
+ADD_EDGE '6' '3' {}.

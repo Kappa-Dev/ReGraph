@@ -1,5 +1,0 @@
-CLONE '8' AS '2.3'.
-ADD_NODE '0.2.3' TYPE '2'.
-ADD_EDGE '2' '3' {}.
-DELETE_NODE '3'.
-DELETE_NODE '6'.
