@@ -201,6 +201,17 @@ class Transformer(object):
                             self.G.node[n].attrs_)
             self.P_L_dict[node_name] = n
             self.P_R_dict[node_name] = node_name
+
+            for neigh in self.R.in_edges(self.P_R_dict[n]):
+                self.R.add_edge(neigh[0],
+                                node_name,
+                                self.R.get_edge(neigh[0],
+                                                n))
+            for neigh in self.R.out_edges(self.P_R_dict[n]):
+                self.R.add_edge(node_name,
+                                neigh[1],
+                                self.R.get_edge(n,
+                                                neigh[1]))
         elif n in self.P.nodes():
             if node_name == None:
                 i = 1
@@ -220,6 +231,16 @@ class Transformer(object):
             self.P_L_dict[node_name] = self.P_L_dict[n]
             self.P_R_dict[node_name] = node_name
 
+            for neigh in self.R.in_edges(self.P_R_dict[n]):
+                self.R.add_edge(neigh[0],
+                                node_name,
+                                self.R.get_edge(neigh[0],
+                                                n))
+            for neigh in self.R.out_edges(self.P_R_dict[n]):
+                self.R.add_edge(node_name,
+                                neigh[1],
+                                self.R.get_edge(n,
+                                                neigh[1]))
         else:
             if node_name == None:
                 i = 1
@@ -351,6 +372,12 @@ class Transformer(object):
 
             if (n1, n2) in self.R.edges():
                 self.R.remove_edge(n1, n2)
+                pred_n1 = keys_by_value(self.P_R_dict, n1)
+                pred_n2 = keys_by_value(self.P_R_dict, n2)
+                for n11 in pred_n1:
+                    for n21 in pred_n2:
+                        if (n11, n21) in self.P.edges():
+                            self.P.remove_edge(n11, n21)
                 return
 
             if not n1 in self.P.nodes():
@@ -394,40 +421,45 @@ class Transformer(object):
             if (self.P_R_dict[n1], self.P_R_dict[n2]) in self.R.edges():
                 self.R.remove_edge(self.P_R_dict[n1],
                                    self.P_R_dict[n2])
+                pred_n1 = keys_by_value(self.P_R_dict, self.P_R_dict[n1])
+                pred_n2 = keys_by_value(self.P_R_dict, self.P_R_dict[n2])
+                for n11 in pred_n1:
+                    for n21 in pred_n2:
+                        if (n11, n21) in self.P.edges():
+                            self.P.remove_edge(n11, n21)
             else:
-                warnings.warn(
-                    "You already deleted the edge %s-%s !" %
-                        (str(n1), str(n2)), RuntimeWarning
-                )
-
-            other_clones = keys_by_value(self.P_L_dict, self.P_L_dict[n1])
-            if len(other_clones) > 1:
-                for n3 in other_clones:
-                    if n3 != n1:
-                        self.P.add_edge(n3,
-                                        n2,
-                                        self.G.get_edge(self.P_L_dict[n3],
-                                                        self.P_L_dict[n2]))
-                        self.R.add_edge(self.P_R_dict[n3],
-                                        self.P_R_dict[n2],
-                                        self.G.get_edge(self.P_L_dict[n3],
-                                                        self.P_L_dict[n2]))
-            other_clones = keys_by_value(self.P_L_dict, self.P_L_dict[n2])
-            if len(other_clones) > 1:
-                for n3 in other_clones:
-                    if n3 != n2:
-                        self.P.add_edge(n1,
-                                        n3,
-                                        self.G.get_edge(self.P_L_dict[n1],
-                                                        self.P_L_dict[n3]))
-                        self.L.add_edge(self.P_L_dict[n1],
-                                        self.P_L_dict[n3],
-                                        self.G.get_edge(self.P_L_dict[n1],
-                                                        self.P_L_dict[n3]))
-                        self.R.add_edge(self.P_R_dict[n1],
-                                        self.P_R_dict[n3],
-                                        self.G.get_edge(self.P_L_dict[n1],
-                                                        self.P_L_dict[n3]))
+                other_clones = keys_by_value(self.P_L_dict, self.P_L_dict[n1])
+                if len(other_clones) > 1:
+                    for n3 in other_clones:
+                        if n3 != n1:
+                            self.P.add_edge(n3,
+                                            n2,
+                                            self.G.get_edge(self.P_L_dict[n3],
+                                                            self.P_L_dict[n2]))
+                            self.L.add_edge(self.P_L_dict[n3],
+                                            self.P_L_dict[n2],
+                                            self.G.get_edge(self.P_L_dict[n3],
+                                                            self.P_L_dict[n2]))
+                            self.R.add_edge(self.P_R_dict[n3],
+                                            self.P_R_dict[n2],
+                                            self.G.get_edge(self.P_L_dict[n3],
+                                                            self.P_L_dict[n2]))
+                other_clones = keys_by_value(self.P_L_dict, self.P_L_dict[n2])
+                if len(other_clones) > 1:
+                    for n3 in other_clones:
+                        if n3 != n2:
+                            self.P.add_edge(n1,
+                                            n3,
+                                            self.G.get_edge(self.P_L_dict[n1],
+                                                            self.P_L_dict[n3]))
+                            self.L.add_edge(self.P_L_dict[n1],
+                                            self.P_L_dict[n3],
+                                            self.G.get_edge(self.P_L_dict[n1],
+                                                            self.P_L_dict[n3]))
+                            self.R.add_edge(self.P_R_dict[n1],
+                                            self.P_R_dict[n3],
+                                            self.G.get_edge(self.P_L_dict[n1],
+                                                            self.P_L_dict[n3]))
 
         elif n1 in self.base_nodes or n2 in self.base_nodes:
             if n1 in self.base_nodes:
@@ -453,6 +485,26 @@ class Transformer(object):
                 self.P_R_dict[in_G] = in_G
 
             if nin_G in self.P_L_dict.keys():
+
+                if (n1, n2) in self.R.edges():
+                    self.R.remove_edge(n1,n2)
+                    pred_n1 = keys_by_value(self.P_R_dict, n1)
+                    pred_n2 = keys_by_value(self.P_R_dict, n2)
+                    for n11 in pred_n1:
+                        for n21 in pred_n2:
+                            if (n11, n21) in self.P.edges():
+                                self.P.remove_edge(n11, n21)
+                    return
+
+                if (self.P_L_dict[n1], self.P_L_dict[n2]) in self.G.edges():
+                    in_graph = self.G
+                elif (self.P_L_dict[n1], self.P_L_dict[n2]) in self.R.edges():
+                    in_graph = self.R
+                else:
+                    raise ValueError("""Can't add edge %s-%s because edge %s-%s
+                                     doesn't exist in graph""" %
+                                     (n1, n2, self.P_L_dict[n1], self.P_L_dict[n2]))
+
                 if n1 in self.P_L_dict.keys():
                     other_clones = keys_by_value(self.P_L_dict, self.P_L_dict[n1])
                     if len(other_clones) > 1:
@@ -460,15 +512,15 @@ class Transformer(object):
                             if n3 != n1:
                                 self.P.add_edge(n3,
                                                 n2,
-                                                self.G.get_edge(self.P_L_dict[n3],
+                                                in_graph.get_edge(self.P_L_dict[n3],
                                                                 self.P_L_dict[n2]))
                                 self.L.add_edge(self.P_L_dict[n3],
                                                 self.P_L_dict[n2],
-                                                self.G.get_edge(self.P_L_dict[n3],
+                                                in_graph.get_edge(self.P_L_dict[n3],
                                                                 self.P_L_dict[n2]))
                                 self.R.add_edge(self.P_R_dict[n3],
                                                 self.P_R_dict[n2],
-                                                self.G.get_edge(self.P_L_dict[n3],
+                                                in_graph.get_edge(self.P_L_dict[n3],
                                                                 self.P_L_dict[n2]))
 
                 if n2 in self.P_L_dict.keys():
@@ -478,25 +530,31 @@ class Transformer(object):
                             if n3 != n2:
                                 self.P.add_edge(n1,
                                                 n3,
-                                                self.G.get_edge(self.P_L_dict[n1],
+                                                in_graph.get_edge(self.P_L_dict[n1],
                                                                 self.P_L_dict[n3]))
                                 self.L.add_edge(self.P_L_dict[n1],
                                                 self.P_L_dict[n3],
-                                                self.G.get_edge(self.P_L_dict[n1],
+                                                in_graph.get_edge(self.P_L_dict[n1],
                                                                 self.P_L_dict[n3]))
                                 self.R.add_edge(self.P_R_dict[n1],
                                                 self.P_R_dict[n3],
-                                                self.G.get_edge(self.P_L_dict[n1],
+                                                in_graph.get_edge(self.P_L_dict[n1],
                                                                 self.P_L_dict[n3]))
 
                 self.L.add_edge(self.P_L_dict[n1],
                                 self.P_L_dict[n2],
-                                self.G.get_edge(self.P_L_dict[n1],
+                                in_graph.get_edge(self.P_L_dict[n1],
                                                 self.P_L_dict[n2]))
 
         else:
             if (n1, n2) in self.R.edges():
                 self.R.remove_edge(n1, n2)
+                pred_n1 = keys_by_value(self.P_R_dict, n1)
+                pred_n2 = keys_by_value(self.P_R_dict, n2)
+                for n11 in pred_n1:
+                    for n21 in pred_n2:
+                        if (n11, n21) in self.P.edges():
+                            self.P.remove_edge(n11, n21)
             else:
                 if (n1, n2) in self.P.edges():
                     self.P.remove_edge(n1, n2)
@@ -504,11 +562,11 @@ class Transformer(object):
                     if n1 in self.P_L_dict.keys():
                         clone_n1 = keys_by_value(self.P_L_dict, self.P_L_dict[n1])
                     else:
-                        clone_n1 = [n1]
+                        clone_n1 = []
                     if n2 in self.P_L_dict.keys():
                         clone_n2 = keys_by_value(self.P_L_dict, self.P_L_dict[n2])
                     else:
-                        clone_n2 = [n2]
+                        clone_n2 = []
 
                     for n1_ in clone_n1:
                         for n2_ in clone_n2:
@@ -618,7 +676,6 @@ class Transformer(object):
                     )
 
     def remove_node_attrs(self, n, attrs):
-
         if n in self.base_nodes:
             if not n in self.R.nodes():
                 self.R.add_node(n,
@@ -631,30 +688,44 @@ class Transformer(object):
                 self.L.add_node(n,
                                 self.G.node[n].type_,
                                 self.G.node[n].attrs_)
+                self.P_L_dict[n] = n
+
+            if not n in self.P.nodes():
                 self.P.add_node(n,
                                 self.G.node[n].type_,
                                 self.G.node[n].attrs_)
-                self.P.remove_node_attrs(n, attrs)
-                self.P_L_dict[n] = n
-            else:
-                for k,v in self.P_L_dict.items():
-                    if v == n:
-                        self.P.remove_node_attrs(n, attrs)
-                raise ValueError(
-                    "Deleted %s (or one of its adjacent edges) \
-                    and now you want to remove an attribute from it.." % str(n)
-                )
+            self.P.remove_node_attrs(n, attrs)
         else:
             if n in self.R.nodes():
                 self.R.remove_node_attrs(n, attrs)
-            else:
-                raise ValueError(
-                    "Trying to remove attributes from node %s that doesn't \
-                    exist" % n
-                )
+                pred_n = keys_by_value(self.P_R_dict, n)
+                if len(pred_n) > 0:
+                    for pred_n_ in pred_n:
+                        self.P.remove_node_attrs(pred_n_, attrs)
+
+            if n in self.P.nodes():
+                self.P.remove_node_attrs(n, attrs)
+
 
     def remove_edge_attrs(self, n1, n2, attrs):
-        if n1 in self.base_nodes:
+        if n1 in self.base_nodes and n2 in self.base_nodes:
+            if not (n1, n2) in self.G.edges() and\
+               not (n1, n2) in self.R.edges():
+                raise ValueError(
+                    "Edge %s-%s doesn't exist" %
+                    (n1, n2)
+                )
+
+            if (n1, n2) in self.R.edges():
+                self.R.remove_edge_attrs(n1, n2, attrs)
+                pred_n1 = keys_by_value(self.P_R_dict, n1)
+                pred_n2 = keys_by_value(self.P_R_dict, n2)
+                for n11 in pred_n1:
+                    for n21 in pred_n2:
+                        if (n11, n21) in self.P.edges():
+                            self.P.remove_edge_attrs(n11, n21, attrs)
+                return
+
             if not n1 in self.P.nodes():
                 self.P.add_node(n1,
                                 self.G.node[n1].type_,
@@ -670,19 +741,11 @@ class Transformer(object):
                                 self.G.node[n1].type_,
                                 self.G.node[n1].attrs_)
                 self.P_R_dict[n1] = n1
-        else:
-            if not n1 in self.R.nodes():
-                raise ValueError(
-                    "Please add node %s before working on one of its \
-                    adjacent edges" % n1
-                )
 
-        if n2 in self.base_nodes:
             if not n2 in self.P.nodes():
                 self.P.add_node(n2,
                                 self.G.node[n2].type_,
                                 self.G.node[n2].attrs_)
-
             if not n2 in self.L.nodes():
                 self.L.add_node(n2,
                                 self.G.node[n2].type_,
@@ -694,46 +757,181 @@ class Transformer(object):
                                 self.G.node[n2].type_,
                                 self.G.node[n2].attrs_)
                 self.P_R_dict[n2] = n2
-        else:
-            if not n1 in self.R.nodes():
-                raise ValueError(
-                    "Please add node %s before working on one of its \
-                    adjacent edges" % n2
-                )
 
-        if n1 in self.base_nodes and n2 in self.base_nodes:
-            if not (n1, n2) in self.L.edges():
-                self.L.add_edge(n1, n2, self.G.get_edge(n1, n2))
-            self.L.remove_edge_attrs(n1, n2, attrs)
-        else:
-            if n1 in self.P_L_dict.keys() and n2 in self.P_L_dict.keys():
-                if (self.P_L_dict[n1], self.P_L_dict[n2]) in self.L.edges():
-                    self.L.remove_edge_attrs(self.P_L_dict[n1], self.P_L_dict[n2], attrs)
-
-        if not (n1, n2) in self.R.edges():
-            if (n1, n2) in self.G.edges():
-                self.R.add_edge(n1,
-                                n2,
-                                self.G.get_edge(n1, n2))
-            if (n1 in self.P_L_dict.keys() and (self.P_L_dict[n1], n2) in self.G.edges()):
-                self.R.add_edge(n1,
-                                n2,
-                                self.G.get_edge(self.P_L_dict[n1], n2))
-            if (n2 in self.P_L_dict.keys() and (n1, self.P_L_dict[n2]) in self.G.edges()):
-                self.R.add_edge(n1,
-                                n2,
-                                self.G.get_edge(n1, self.P_L_dict[n2]))
-            if (n1 in self.P_L_dict.keys() and n2 in self.P_L_dict.keys() and\
-               (self.P_L_dict[n1], self.P_L_dict[n2]) in self.G.edges()):
-                self.R.add_edge(n1,
-                                n2,
+            if not (self.P_L_dict[n1], self.P_L_dict[n2]) in self.L.edges():
+                self.L.add_edge(self.P_L_dict[n1],
+                                self.P_L_dict[n2],
                                 self.G.get_edge(self.P_L_dict[n1],
                                                 self.P_L_dict[n2]))
-            if not (n1, n2) in self.R.edges():
-                raise ValueError(
-                    "There is no edge %s-%s" % (n1, n2)
+
+            if (self.P_R_dict[n1], self.P_R_dict[n2]) in self.R.edges():
+                self.R.remove_edge_attrs(self.P_R_dict[n1],
+                                         self.P_R_dict[n2],
+                                         attrs)
+                pred_n1 = keys_by_value(self.P_R_dict, self.P_R_dict[n1])
+                pred_n2 = keys_by_value(self.P_R_dict, self.P_R_dict[n2])
+                for n11 in pred_n1:
+                    for n21 in pred_n2:
+                        if (n11, n21) in self.P.edges():
+                            self.P.remove_edge_attrs(n11, n21, attrs)
+            else:
+                warnings.warn(
+                    "You already deleted the edge %s-%s !" %
+                        (str(n1), str(n2)), RuntimeWarning
                 )
-        self.R.remove_edge_attrs(n1, n2, attrs)
+
+            other_clones = keys_by_value(self.P_L_dict, self.P_L_dict[n1])
+            if len(other_clones) > 1:
+                for n3 in other_clones:
+                    self.P.add_edge(n3,
+                                    n2,
+                                    self.G.get_edge(self.P_L_dict[n3],
+                                                    self.P_L_dict[n2]))
+                    self.L.add_edge(self.P_L_dict[n3],
+                                    self.P_L_dict[n2],
+                                    self.G.get_edge(self.P_L_dict[n3],
+                                                    self.P_L_dict[n2]))
+                    self.R.add_edge(self.P_R_dict[n3],
+                                    self.P_R_dict[n2],
+                                    self.G.get_edge(self.P_L_dict[n3],
+                                                    self.P_L_dict[n2]))
+            other_clones = keys_by_value(self.P_L_dict, self.P_L_dict[n2])
+            if len(other_clones) > 1:
+                for n3 in other_clones:
+                    self.P.add_edge(n1,
+                                    n3,
+                                    self.G.get_edge(self.P_L_dict[n1],
+                                                    self.P_L_dict[n3]))
+                    self.L.add_edge(self.P_L_dict[n1],
+                                    self.P_L_dict[n3],
+                                    self.G.get_edge(self.P_L_dict[n1],
+                                                    self.P_L_dict[n3]))
+                    self.R.add_edge(self.P_R_dict[n1],
+                                    self.P_R_dict[n3],
+                                    self.G.get_edge(self.P_L_dict[n1],
+                                                    self.P_L_dict[n3]))
+
+        elif n1 in self.base_nodes or n2 in self.base_nodes:
+            if n1 in self.base_nodes:
+                in_G = n1
+                nin_G = n2
+            else:
+                in_G = n2
+                nin_G = n1
+
+            if not in_G in self.L.nodes():
+                self.L.add_node(in_G,
+                                self.G.node[in_G].type_,
+                                self.G.node[in_G].attrs_)
+                self.P_L_dict[in_G] = in_G
+            if not in_G in self.P.nodes():
+                self.P.add_node(in_G,
+                                self.G.node[in_G].type_,
+                                self.G.node[in_G].attrs_)
+            if not in_G in self.P_R_dict.keys():
+                self.R.add_node(in_G,
+                                self.G.node[in_G].type_,
+                                self.G.node[in_G].attrs_)
+                self.P_R_dict[in_G] = in_G
+
+            if nin_G in self.P_L_dict.keys():
+
+                if (n1, n2) in self.R.edges():
+                    self.R.remove_edge_attrs(n1,n2, attrs)
+                    pred_n1 = keys_by_value(self.P_R_dict, n1)
+                    pred_n2 = keys_by_value(self.P_R_dict, n2)
+                    for n11 in pred_n1:
+                        for n21 in pred_n2:
+                            if (n11, n21) in self.P.edges():
+                                self.P.remove_edge_attrs(n11, n21, attrs)
+                    return
+
+                if (self.P_L_dict[n1], self.P_L_dict[n2]) in self.G.edges():
+                    in_graph = self.G
+                elif (self.P_L_dict[n1], self.P_L_dict[n2]) in self.R.edges():
+                    in_graph = self.R
+                else:
+                    raise ValueError("""Can't add edge %s-%s because edge %s-%s
+                                     doesn't exist in graph""" %
+                                     (n1, n2, self.P_L_dict[n1], self.P_L_dict[n2]))
+
+                if n1 in self.P_L_dict.keys():
+                    other_clones = keys_by_value(self.P_L_dict, self.P_L_dict[n1])
+                    if len(other_clones) > 1:
+                        for n3 in other_clones:
+                            self.P.add_edge(n3,
+                                            n2,
+                                            in_graph.get_edge(self.P_L_dict[n3],
+                                                            self.P_L_dict[n2]))
+                            self.L.add_edge(self.P_L_dict[n3],
+                                            self.P_L_dict[n2],
+                                            in_graph.get_edge(self.P_L_dict[n3],
+                                                            self.P_L_dict[n2]))
+                            self.R.add_edge(self.P_R_dict[n3],
+                                            self.P_R_dict[n2],
+                                            in_graph.get_edge(self.P_L_dict[n3],
+                                                            self.P_L_dict[n2]))
+
+                if n2 in self.P_L_dict.keys():
+                    other_clones = keys_by_value(self.P_L_dict, self.P_L_dict[n2])
+                    if len(other_clones) > 1:
+                        for n3 in other_clones:
+                            self.P.add_edge(n1,
+                                            n3,
+                                            in_graph.get_edge(self.P_L_dict[n1],
+                                                            self.P_L_dict[n3]))
+                            self.L.add_edge(self.P_L_dict[n1],
+                                            self.P_L_dict[n3],
+                                            in_graph.get_edge(self.P_L_dict[n1],
+                                                            self.P_L_dict[n3]))
+                            self.R.add_edge(self.P_R_dict[n1],
+                                            self.P_R_dict[n3],
+                                            in_graph.get_edge(self.P_L_dict[n1],
+                                                            self.P_L_dict[n3]))
+
+                self.L.remove_edge_attrs(self.P_L_dict[n1],
+                                         self.P_L_dict[n2],
+                                         attrs)
+
+        else:
+            if (n1, n2) in self.R.edges():
+                self.R.remove_edge_attrs(n1, n2, attrs)
+                pred_n1 = keys_by_value(self.P_R_dict, n1)
+                pred_n2 = keys_by_value(self.P_R_dict, n2)
+                for n11 in pred_n1:
+                    for n21 in pred_n2:
+                        if (n11, n21) in self.P.edges():
+                            self.P.remove_edge_attrs(n11, n21, attrs)
+            else:
+                if (n1, n2) in self.P.edges():
+                    self.P.remove_edge_attrs(n1, n2, attrs)
+                else:
+                    if n1 in self.P_L_dict.keys():
+                        clone_n1 = keys_by_value(self.P_L_dict, self.P_L_dict[n1])
+                    else:
+                        clone_n1 = []
+                    if n2 in self.P_L_dict.keys():
+                        clone_n2 = keys_by_value(self.P_L_dict, self.P_L_dict[n2])
+                    else:
+                        clone_n2 = []
+
+                    for n1_ in clone_n1:
+                        for n2_ in clone_n2:
+                                self.P.add_edge(n1_,
+                                                n2_,
+                                                self.G.get_edge(self.P_L_dict[n1_],
+                                                                self.P_L_dict[n2_]))
+                                self.L.add_edge(self.P_L_dict[n1_],
+                                                self.P_L_dict[n2_],
+                                                self.P.get_edge(self.P_L_dict[n1],
+                                                                self.P_L_dict[n2]))
+                                self.R.add_edge(self.P_R_dict[n1_],
+                                                self.P_R_dict[n2_],
+                                                self.P.get_edge(self.P_L_dict[n1],
+                                                                self.P_L_dict[n2]))
+                    self.P.remove_edge_attrs(n1,
+                                             n2,
+                                             attrs)
 
 
     # Advanced operations
@@ -1119,6 +1317,12 @@ class Rewriter:
                         if random.random() <= p_attrs_value:
                             value.append(val)
                     new_attrs[k] = set(value)
+            keys_to_remove = []
+            for k,v in new_attrs.items():
+                if v == set():
+                    keys_to_remove.append(k)
+            for k in keys_to_remove:
+                new_attrs.pop(k)
             return new_attrs
 
         trans = []
@@ -1209,7 +1413,10 @@ class Rewriter:
 
         def pick_name():
             i = random.randint(0, 500)
-            generated_name = ".".join(random.sample(base_nodes, 2))
+            if len(env.nodes()) > 1:
+                generated_name = ".".join(random.sample(env.nodes(), 2))
+            else:
+                generated_name = "newNode"
             while str(generated_name) in base_nodes:
                 i = random.randint(0, 500)
                 generated_name = ".".join(random.sample(base_nodes, 2))

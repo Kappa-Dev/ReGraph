@@ -33,8 +33,10 @@ parser.add_argument('--di', dest='di', action='store_const', const=True,
                     default=False, help='if graph is directed')
 parser.add_argument('-m', dest='method', action='store', type=str,
                     default="prop", help='method to use : prop or rew or all')
-parser.add_argument('-v', dest='verbose', action='store_const', const=True,
-                    default=False, help='verbose')
+parser.add_argument('--debug', dest='debug', action='store_const', const=True,
+                    default=False, help='print useful informations')
+parser.add_argument('-p', dest='plot', action='store_const', const=True,
+                    default=False, help='plot')
 
 args = parser.parse_args()
 
@@ -59,11 +61,12 @@ for n in range(args.tests):
 
     directory = args.out+str(i)+"/"
 
-    process = subprocess.check_output(("python3 -W ignore "+args.file+" -o %s -n %s -e %s -t %s%s%s%s" %
+    process = subprocess.check_output(("python3 -W ignore "+args.file+" -o %s -n %s -e %s -t %s%s%s%s%s" %
               (args.input, args.nodes, args.edges, args.trans,
                " --meta "+args.meta if args.meta != None else '',
                ' --di' if args.di else '',
-               ' -v' if args.verbose else '')).split(" "))
+               ' --debug' if args.debug else '',
+               ' -p' if args.plot else '')).split(" "))
     print(process.decode("UTF-8"), end='')
 
     meta = TypedDiGraph(load_file=args.input+'meta'+args.ext) if args.di else TypedGraph(load_file=args.input+'meta'+args.ext)
@@ -72,7 +75,8 @@ for n in range(args.tests):
 
     graph = TypedDiGraph(load_file=args.input+'graph'+args.ext) if args.di else TypedGraph(load_file=args.input+'graph'+args.ext)
     graph.export(directory+"graph"+args.ext)
-    plot_graph(graph, filename = directory+"graph.png")
+    if args.plot:
+        plot_graph(graph, filename = directory+"graph.png")
 
     f = open(args.input+'transformations.txt', 'r')
     f.readline()
@@ -86,21 +90,24 @@ for n in range(args.tests):
     trans.P.export(directory+"trans_P"+args.ext)
     trans.L.export(directory+"trans_LHS"+args.ext)
     trans.R.export(directory+"trans_RHS"+args.ext)
-    plot_graph(trans.P, filename = directory+"trans_P.png")
-    plot_graph(trans.L, filename = directory+"trans_LHS.png")
-    plot_graph(trans.R, filename = directory+"trans_RHS.png")
+    if args.plot:
+        plot_graph(trans.P, filename = directory+"trans_P.png")
+        plot_graph(trans.L, filename = directory+"trans_LHS.png")
+        plot_graph(trans.R, filename = directory+"trans_RHS.png")
 
     if args.method == "prop" or args.method == "all":
         result = TypedDiGraph(load_file=args.input+'result'+args.ext) if args.di else TypedGraph(load_file=args.input+'result'+args.ext)
         result.export(directory+"result_cat_op"+args.ext)
-        plot_graph(result, filename = directory+"result_cat_op.png")
+        if args.plot:
+            plot_graph(result, filename = directory+"result_cat_op.png")
 
     if args.method == "rew" or args.method == "all":
         rw = Rewriter(graph)
         rw.apply_rule(Homomorphism.identity(trans.L, trans.G), trans)
         graph.export(directory+"result_rul"+args.ext)
-        plot_graph(graph, filename = directory+"result_rul.png")
+        if args.plot:
+            plot_graph(graph, filename = directory+"result_rul.png")
 
     i += 1
 
-    print("Done"+("\n" if args.verbose else ''))
+    print("Done"+("\n" if args.debug else ''))

@@ -187,7 +187,11 @@ class TypedDiGraph(nx.DiGraph):
             raise ValueError("Node %s does not exist" % str(node))
         elif attrs_dict == None:
             warnings.warn(
-                "You want to remove attrs from %s with an empty attrs_dict" % node
+                "You want to remove attrs from %s with an empty attrs_dict" % node, RuntimeWarning
+            )
+        elif self.node[node].attrs_ == None:
+            warnings.warn(
+                "Node %s does not have any attribute" % node, RuntimeWarning
             )
         else:
             for key, value in attrs_dict.items():
@@ -535,15 +539,21 @@ class TypedDiGraph(nx.DiGraph):
         return new_node
 
     def relabel_node(self, n, node_name):
-        neighbors = self.neighbors(n)
+        in_neighbors = self.in_edges(n)
+        out_neighbors = self.out_edges(n)
         self.add_node(node_name,
                       self.node[n].type_,
                       self.node[n].attrs_)
-        for n2 in neighbors:
+        for n2 in in_neighbors:
+            self.add_edge(n2[0],
+                          node_name,
+                          self.get_edge(n2[0],
+                                        n))
+        for n2 in out_neighbors:
             self.add_edge(node_name,
-                          n2,
-                          self.get_edge(n,
-                                        n2))
+                          n2[1],
+                          self.get_edge(node_name,
+                                        n2[1]))
         self.remove_node(n)
 
     def relabel_nodes(self, mapping):
