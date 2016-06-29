@@ -61,10 +61,10 @@ gen = 1
 for n in range(args.tests):
     print("Generating test", gen)
 
-    if not os.path.exists(args.out+str(i)+"/"):
-        os.makedirs(args.out+str(i)+"/")
+    if not os.path.exists(args.out+str(gen)+"/"):
+        os.makedirs(args.out+str(gen)+"/")
 
-    directory = args.out+str(i)+"/"
+    directory = args.out+str(gen)+"/"
 
     process = subprocess.check_output(("python3 -W ignore "+args.file+" -o %s -n %s -e %s -t %s -ext %s%s%s%s%s%s" %
               (args.input, args.nodes, args.edges, args.trans, args.ext,
