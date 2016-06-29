@@ -240,10 +240,10 @@ class GraphModeler(object):
             "Graph %s is not defined in the modeler" % name
         )
 
-    def rewrite(self, n_i, L_T, trans):
+    def rewrite(self, n_i, L_G, trans):
         """ n_i : name or id
-            left_h : P -> L
-            right_h : P -> R
+            L_G : L -> G
+            trans : Transformer instance
         """
         if type(n_i) == int:
             i = n_i
@@ -254,7 +254,43 @@ class GraphModeler(object):
                 "Undefined identifier of type %s, was expecting id:int or \
                  name:str" % type(n_i)
             )
-        self.changes[i] = Rewriter.rewrite(L_T, trans, True)
+        self.changes[i] = Rewriter.rewrite(L_G, trans, True)
+
+    def canonical_rewrite_and_propagate(self, n_i, transformations):
+        """ n_i : name or id
+            L_G : L -> G
+            trans : Transformer instance
+        """
+        if type(n_i) == int:
+            i = n_i
+        elif type(n_i) == str:
+            i = self.get_id_from_name(n_i)
+        else:
+            raise ValueError(
+                "Undefined identifier of type %s, was expecting id:int or \
+                 name:str" % type(n_i)
+            )
+        changes = Rewriter.canonical_rewrite(self.graph_chain[i], transformations, True)
+        self.chain_propagation(n_i, changes)
+
+    def chain_propagation(self, n_i, changes_list):
+        """ n_i : name or id
+            L_G : L -> G
+            trans : Transformer instance
+        """
+        if type(n_i) == int:
+            i = n_i
+        elif type(n_i) == str:
+            i = self.get_id_from_name(n_i)
+        else:
+            raise ValueError(
+                "Undefined identifier of type %s, was expecting id:int or \
+                 name:str" % type(n_i)
+            )
+
+        for change in changes_list:
+            self.changes[i] = change
+            self.propagate_from(i)
 
     def propagate_from(self, n_i):
         """ n_i : name or id
@@ -269,7 +305,7 @@ class GraphModeler(object):
                 type(n_i)
             )
         if i >= len(self.graph_chain)-1:
-            if self.do_pbc:
+            if self.changes[i][0] != None:
                 self.graph_chain[i] = self.changes[i][0].target_
             else:
                 self.graph_chain[i] = self.changes[i][1].source_

@@ -10,7 +10,7 @@ from regraph.library.data_structures import (TypedDiGraph,
 from regraph.library.rewriters import (Rewriter,
                                        Transformer)
 from regraph.library.utils import (merge_attributes,
-                                   plot_instance)
+                                   plot_graph)
 
 
 class TestRewrites(object):
@@ -183,10 +183,10 @@ class TestRewrites(object):
 
         trans.remove_edge_attrs(1, 2, {'s' : 'p'})
 
-
         Gprime = Rewriter.rewrite(Homomorphism.identity(trans.L, trans.G), trans)
 
-        assert(Gprime.get_edge(1, 2) ==  {'s': set()})
+        assert(Gprime.get_edge(1, 2) == {'s': set()} or\
+               Gprime.get_edge(1, 2) == {})
 
     def test_merge_edges(self):
         trans = Transformer(self.graph.copy())
@@ -272,7 +272,7 @@ class TestRewrites(object):
 
         rw = Rewriter(g)
 
-        trans = Rewriter.transformer_from_command(g,
+        trans_list = Rewriter.make_canonical_commands(g,
             """delete_node 1.
             clone 2 as 'clone'.
             delete_node_attrs 'clone' {'u': 0}.
@@ -286,15 +286,22 @@ class TestRewrites(object):
             add_edge_attrs 'merged' 'new_node' {'j': 33}."""
         )
 
-        h1,h2 = trans.get()
-        instances = Rewriter.find_matching(g, trans.L)
+        for i in range(len(trans_list)):
+            g = rw.graph_
+            trans = Rewriter.transformer_from_command(g, trans_list[i])
 
-        RHS_instance = rw.apply_rule(instances[0], trans)
+            h1,h2 = trans.get()
+            instances = Rewriter.find_matching(g, trans.L)
 
-        plot_instance(
-            rw.graph_,
-            h2.target_, RHS_instance,
-            filename=os.path.join(__location__, "undir_rule_to_hom_RHS.png"))
+            instance = Homomorphism(trans.L, g, instances[0])
+
+            rw.graph_ = Rewriter.rewrite(instance, trans)
+
+            plot_graph(
+                rw.graph_,
+                filename=os.path.join(__location__, "undir_rule_to_hom_RHS.png"))
+
+            rw = Rewriter(rw.graph_)
 
     def test_rewriting_with_metamodel(self):
         meta_meta = TypedDiGraph()

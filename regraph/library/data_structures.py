@@ -822,7 +822,8 @@ class TypedDiGraph(nx.DiGraph):
         i = 0
         for n1 in res.nodes():
             for n2 in res.nodes():
-                if random.random() <= p_edges:
+                if random.random() <= p_edges and\
+                   n1 != n2:
                     if metamodel == None:
                         res.add_edge(n1, n2)
                         if verbose:

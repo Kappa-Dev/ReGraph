@@ -26,7 +26,8 @@ def pullback(h1, h2):
 
     if h1.target_ != D:
         raise ValueError(
-            "Homomorphisms don't have the same codomain, can't do pullback"
+            "Homomorphisms don't have the same codomain, can't do pullback.\nh1: %s\nh2:%s\n" %
+            (h1, h2)
         )
 
     for n1 in B.nodes():

@@ -6,10 +6,13 @@ from regraph.library.utils import plot_graph
 
 import argparse
 import os
+import sys
 
 parser = argparse.ArgumentParser(description='Generate random examples')
 parser.add_argument('-o', dest='out', action='store',  default="tests/rand",
                     type=str, help="output directory")
+parser.add_argument('-ext', dest='ext', action='store',  default=".json",
+                    type=str, help="extension to use")
 parser.add_argument('-n', dest='nodes', action='store',  default=20,
                     type=int, help="number of nodes of generated graph")
 parser.add_argument('-e', dest='edges', action='store', default=0.5,
@@ -22,6 +25,8 @@ parser.add_argument('--di', dest='di', action='store_const', const=True,
                     default=False, help='if graph is directed')
 parser.add_argument('-p', dest='plot', action='store_const', const=True,
                     default=False, help='plot graphs')
+parser.add_argument('-log', dest='log', action='store', default=None,
+                        help='log file to output')
 parser.add_argument('--debug', dest='debug', action='store_const', const=True,
                     default=False, help='prints useful informations')
 
@@ -31,6 +36,9 @@ if args.out[-1] != "/":
     args.out += "/"
 
 directory = args.out
+
+if args.log != None:
+    sys.stdout = open(args.log, 'w')
 
 if not os.path.exists(directory):
     os.makedirs(directory)
@@ -42,21 +50,23 @@ if args.meta==None:
 else:
     meta = graph_type(load_file=args.meta)
 
-meta.export(directory+"meta.json")
+meta.export(directory+"meta"+args.ext)
 if args.plot:
     plot_graph(meta, filename=directory+"meta.png")
 f = open(directory+"meta.txt", "w")
 print(meta, file = f, end='')
 graph = graph_type.random_graph(metamodel=meta, n_nodes=args.nodes,
                                                   p_edges=args.edges)
-graph.export(directory+"graph.json")
+graph.export(directory+"graph"+args.ext)
 if args.plot:
     plot_graph(graph, filename=directory+"graph.png")
 f = open(directory+"graph.txt", "w")
 print(graph, file = f, end='')
 transformations = Rewriter.gen_transformations(args.trans, graph)
 f = open(directory+"transformations.txt", "w")
-print("Transformations :\n%s\n" % transformations, file = f, end='')
+print("Transformations:\n%s\n" % transformations, file = f, end='')
+transformations = Rewriter.simplify_commands(transformations)
+
 
 trans = Rewriter.transformer_from_command(graph, transformations)
 
@@ -78,11 +88,11 @@ if args.plot:
     plot_graph(trans.L, filename = directory+"trans_LHS.png")
     plot_graph(trans.R, filename = directory+"trans_RHS.png")
 f = open(directory+"transformer.txt", "w")
-print("Transformer :\n%s\n" % trans, file = f, end='')
+print("Transformer:\n%s\n" % trans, file = f, end='')
 
 Gprime = Rewriter.rewrite(Homomorphism.identity(trans.L, trans.G), trans)
 if args.plot:
     plot_graph(Gprime, filename=directory+"result.png")
-Gprime.export(directory+"result.json")
+Gprime.export(directory+"result"+args.ext)
 f = open(directory+"result.txt", "w")
 print(Gprime, file = f, end='')

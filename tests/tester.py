@@ -6,6 +6,7 @@ from regraph.library.utils import plot_graph
 import argparse
 import os
 import subprocess
+import sys
 
 parser = argparse.ArgumentParser(description='Run tests')
 parser.add_argument('-f', dest='file', action='store', default='tests/alea_gen.py',
@@ -31,12 +32,16 @@ parser.add_argument('--meta', dest='meta', type=str, help="metamodel to use",
                     action='store', default=None )
 parser.add_argument('--di', dest='di', action='store_const', const=True,
                     default=False, help='if graph is directed')
-parser.add_argument('-m', dest='method', action='store', type=str,
-                    default="prop", help='method to use : prop or rew or all')
+parser.add_argument('-m', dest='methods', action='store', type=str,
+                    default="prop", help='method to use : prop or rew or canonic or all (can combine them : prop;canonic)')
 parser.add_argument('--debug', dest='debug', action='store_const', const=True,
                     default=False, help='print useful informations')
+parser.add_argument('-log', dest='log', action='store', default=None,
+                    help='log file to output')
 parser.add_argument('-p', dest='plot', action='store_const', const=True,
                     default=False, help='plot')
+parser.add_argument('-comp', dest='compare', action='store_const', const=True,
+                    default=False, help='compare outputs')
 
 args = parser.parse_args()
 
@@ -52,21 +57,22 @@ if not os.path.exists(args.out):
 
 os.system("rm -rf "+args.out)
 
-i = 1
+gen = 1
 for n in range(args.tests):
-    print("Generating test", i)
+    print("Generating test", gen)
 
     if not os.path.exists(args.out+str(i)+"/"):
         os.makedirs(args.out+str(i)+"/")
 
     directory = args.out+str(i)+"/"
 
-    process = subprocess.check_output(("python3 -W ignore "+args.file+" -o %s -n %s -e %s -t %s%s%s%s%s" %
-              (args.input, args.nodes, args.edges, args.trans,
+    process = subprocess.check_output(("python3 -W ignore "+args.file+" -o %s -n %s -e %s -t %s -ext %s%s%s%s%s%s" %
+              (args.input, args.nodes, args.edges, args.trans, args.ext,
                " --meta "+args.meta if args.meta != None else '',
                ' --di' if args.di else '',
                ' --debug' if args.debug else '',
-               ' -p' if args.plot else '')).split(" "))
+               ' -p' if args.plot else '',
+               ' -log '+args.log if args.log != None else '')).split(" "))
     print(process.decode("UTF-8"), end='')
 
     meta = TypedDiGraph(load_file=args.input+'meta'+args.ext) if args.di else TypedGraph(load_file=args.input+'meta'+args.ext)
@@ -81,12 +87,12 @@ for n in range(args.tests):
     f = open(args.input+'transformations.txt', 'r')
     f.readline()
     trans_string = f.read()
+    simplified = Rewriter.simplify_commands(trans_string)
     fprime = open(directory+'transformations.txt', 'w')
     print(trans_string, file=fprime, end='')
 
-    trans = Rewriter.transformer_from_command(graph, trans_string)
+    trans = Rewriter.transformer_from_command(graph, simplified)
     f = open(directory+"transformer.txt", "w")
-    print(trans, file=f, end='')
     trans.P.export(directory+"trans_P"+args.ext)
     trans.L.export(directory+"trans_LHS"+args.ext)
     trans.R.export(directory+"trans_RHS"+args.ext)
@@ -95,19 +101,84 @@ for n in range(args.tests):
         plot_graph(trans.L, filename = directory+"trans_LHS.png")
         plot_graph(trans.R, filename = directory+"trans_RHS.png")
 
-    if args.method == "prop" or args.method == "all":
+    methods = args.methods.split(";")
+    if "prop" in methods or "all" in methods:
         result = TypedDiGraph(load_file=args.input+'result'+args.ext) if args.di else TypedGraph(load_file=args.input+'result'+args.ext)
         result.export(directory+"result_cat_op"+args.ext)
         if args.plot:
             plot_graph(result, filename = directory+"result_cat_op.png")
 
-    if args.method == "rew" or args.method == "all":
-        rw = Rewriter(graph)
+    if "rew" in methods or "all" in methods:
+        g2 = graph.copy()
+        rw = Rewriter(g2)
         rw.apply_rule(Homomorphism.identity(trans.L, trans.G), trans)
-        graph.export(directory+"result_rul"+args.ext)
+        g2.export(directory+"result_rul"+args.ext)
         if args.plot:
-            plot_graph(graph, filename = directory+"result_rul.png")
+            plot_graph(g2, filename = directory+"result_rul.png")
 
-    i += 1
+    if "canonic" in methods or "all" in methods:
+        g3 = graph.copy()
+        print("\nSimplified:\n%s\n" % simplified, file=fprime)
+        print("\nCanonical:\nTrans:\n%s\n" % ("\nTrans:\n".join(Rewriter.make_canonical_commands(g3, simplified, args.di))), file = fprime)
+        result_can = Rewriter.canonical_rewrite(g3, simplified)
+        result_can.export(directory+"result_canonic"+args.ext)
+        if args.plot:
+            plot_graph(result_can, filename = directory+"result_canonic.png")
+
+    if args.compare :
+        f = open(directory+"compare.txt", 'w')
+        for i in range(len(methods)):
+            for j in range(i+1, len(methods)):
+                m1 = methods[i]
+                m2 = methods[j]
+                if m1 != m2:
+                    if m1 == "prop":
+                        r1 = result
+                    elif m1 == "rew":
+                        r1 = g2
+                    elif m1 == "canonic":
+                        r1 = result_can
+
+                    if m2 == "prop":
+                        r2 = result
+                    elif m2 == "rew":
+                        r2 = g2
+                    elif m2 == "canonic":
+                        r2 = result_can
+
+                    if r1 == r2:
+                        print("%s == %s" % (m1, m2), file=f)
+                    else:
+                        print("%s != %s:" % (m1, m2), file=f)
+                        print("Nodes in %s and not in %s:" % (m1,m2), file=f)
+                        print([n for n in r1.nodes() if n not in r2.nodes()], file=f)
+                        print("Nodes in %s and not in %s:" % (m2,m1), file=f)
+                        print([n for n in r2.nodes() if n not in r1.nodes()], file=f)
+                        print("Edges in %s and not in %s:" % (m1,m2), file=f)
+                        print([n for n in r1.edges() if n not in r2.edges()], file=f)
+                        print("Edges in %s and not in %s:" % (m2,m1), file=f)
+                        print([n for n in r2.edges() if n not in r1.edges()], file=f)
+                        print("", file=f)
+
+                        for n in r1.nodes():
+                            if n in r2.nodes():
+                               if r1.node[n].type_ != r2.node[n].type_:
+                                   print("Node %s in %s have type %s while having type %s in %s" %
+                                         (n, m1, r1.node[n].type_, r2.node[n].type_, m2), file=f)
+                               if r1.node[n].attrs_ != r2.node[n].attrs_:
+                                   print("Node %s in %s have attrs %s while having attrs %s in %s" %
+                                         (n, m1, r1.node[n].attrs_, r2.node[n].attrs_, m2), file=f)
+
+                        for e in r1.edges():
+                            if e in r2.edges():
+                                if r1.get_edge(e[0], e[1]) != r2.get_edge(e[0], e[1]):
+                                    print("Edge %s in %s have attrs %s while having attrs %s in %s" %
+                                          (e, m1, r1.get_edge(e[0], e[1]) , r2.get_edge(e[0], e[1]) , m2), file=f)
+
+
+                        print("", file=f)
+                        print("%s:\n%s\n" % (m1,r1), file=f)
+                        print("%s:\n%s\n" % (m2,r2), file=f)
+    gen += 1
 
     print("Done"+("\n" if args.debug else ''))
