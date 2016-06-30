@@ -142,8 +142,8 @@ class TypedDiGraph(nx.DiGraph):
                 self.add_node(node_id, node_type)
             else:
                 raise ValueError(
-                    "Each element of the node list should match pattern\
-                    (node_id, node_type) or (node_id, node_type, node_attrs)"
+                    "Each element of the node list should match pattern "+\
+                    "(node_id, node_type) or (node_id, node_type, node_attrs)"
                 )
 
     def add_node_attrs(self, node, attrs_dict):
@@ -353,7 +353,7 @@ class TypedDiGraph(nx.DiGraph):
                 node_name = "_".join([str(n) for n in nodes])
             elif node_name in self.nodes() and (node_name not in nodes):
                 raise ValueError(
-                    "The node with name '%s' already exists!" % str(node_name))
+                    "Node with name '%s' already exists!" % str(node_name))
 
             # Merge data attached to node according to the method specified
             # restore proper connectivity

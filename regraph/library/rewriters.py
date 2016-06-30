@@ -33,6 +33,9 @@ class Transformer(object):
         self.L = TypedDiGraph() if self.directed else TypedGraph()
         self.P_L_dict = {}
         self.P_R_dict = {}
+
+        # We keep in memory the nodes that are in G at the beginning
+
         self.base_nodes = [n for n in self.G.nodes()]
 
     def identity(self):
@@ -47,10 +50,10 @@ class Transformer(object):
                "P->R Homomorphism : %s\n" % self.P_R_dict
 
     def __doc__(self):
-        return "A Tranformer instance is the representation of an instance of \
-                P, L and R graphs and P->L, P->R homomorphisms. It allows you \
-                stack changes and apply them later on thanks to the Rewriter \
-                or the GraphModeler class"
+        return "A Tranformer instance is an instance of P, L and R graphs "+\
+                "and P->L, P->R homomorphisms. It allows you "+\
+                "stack changes and apply them later on thanks to the Rewriter "+\
+                "or the GraphModeler class"
 
     # Canonic operations
 
@@ -62,10 +65,16 @@ class Transformer(object):
     # Basic operations
 
     def add_node(self, node_id, node_type, attrs=None):
+        """ Adds node to the graph """
         if not node_id in self.R.nodes():
             self.R.add_node(node_id, node_type, attrs)
 
     def merge_nodes(self, n1, n2, node_name=None):
+        """ Merges two nodes of the graph """
+        # If n1 and n2 are in base_nodes, we add them to the graphs and
+        # we map them to the merged equivalent in R
+        # If one of them is not in base_nodes, the nodes are already in R and
+        # we only have to merge them in R
         if n1 in self.base_nodes:
             if not n1 in self.P.nodes():
                 self.P.add_node(n1,
@@ -116,6 +125,8 @@ class Transformer(object):
                 new_name = self.R.merge_nodes([n1, n2],
                                    node_name=node_name)
 
+        # We update the mapping of the nodes in P_R
+
         if n1 in self.P_R_dict.keys():
             pred_n1 = keys_by_value(self.P_R_dict, self.P_R_dict[n1])
         else:
@@ -129,13 +140,13 @@ class Transformer(object):
         for n21 in pred_n2:
             self.P_R_dict[n21] = new_name
 
-
-
-
         return new_name
 
 
     def remove_node(self, n):
+        """ Removes a node in the graph """
+        # If it is a base node, we have to add it in L and remove it from P,
+        # else we have to clear every occurence of the node in the graphs
         if n in self.base_nodes:
             if not n in self.L.nodes():
                 self.L.add_node(n, self.G.node[n].type_, self.G.node[n].attrs_)
@@ -165,6 +176,14 @@ class Transformer(object):
 
 
     def clone_node(self, n, node_name=None):
+        """ Clones a node of the graph """
+        # If it is a base_node we have to create the clone in P and map it to
+        # the original one in L, else we have to clone the added node : if it
+        # is a clone we have to add a new clone in P and map it in L, if it is
+        # an added or a merged node we have to duplicate it in R.
+        # We can't clone a merged node in a single step and keep valid
+        # homomorphisms (we can't map a node in P to two nodes in R) so we just
+        # clone the result node in R and it will be added in the resulting graph
         if n in self.base_nodes:
             if not n in self.P.nodes():
                 self.P.add_node(n,
@@ -202,6 +221,9 @@ class Transformer(object):
             self.P_L_dict[node_name] = n
             self.P_R_dict[node_name] = node_name
 
+            # We add to the clone all the edges we added to the original node
+            # before the cloning
+
             for neigh in self.R.in_edges(self.P_R_dict[n]):
                 self.R.add_edge(neigh[0],
                                 node_name,
@@ -213,6 +235,8 @@ class Transformer(object):
                                 self.R.get_edge(n,
                                                 neigh[1]))
         elif n in self.P.nodes():
+            # If it's not a base node but it's in P, it's a clone, we have to
+            # clone it again
             if node_name == None:
                 i = 1
                 node_name = str(n)+str(i)
@@ -231,6 +255,8 @@ class Transformer(object):
             self.P_L_dict[node_name] = self.P_L_dict[n]
             self.P_R_dict[node_name] = node_name
 
+            # We update the new edges like before
+
             for neigh in self.R.in_edges(self.P_R_dict[n]):
                 self.R.add_edge(neigh[0],
                                 node_name,
@@ -242,6 +268,8 @@ class Transformer(object):
                                 self.R.get_edge(n,
                                                 neigh[1]))
         else:
+            # Else it's an added node or a merged node, we duplicate the node in
+            # R
             if node_name == None:
                 i = 1
                 node_name = str(n)+str(i)
@@ -254,7 +282,10 @@ class Transformer(object):
             self.R.clone_node(n, node_name)
 
     def add_edge(self, n1, n2, attrs=None):
+        """ Adds an edge in the graph """
         if n1 in self.base_nodes and n2 in self.base_nodes:
+            # If both nodes are base nodes, we just have to add them in the
+            # graphs and add the edge between them in R
             if not n1 in self.P.nodes():
                 self.P.add_node(n1,
                                 self.G.node[n1].type_,
@@ -291,8 +322,8 @@ class Transformer(object):
 
             if (self.P_R_dict[n1], self.P_R_dict[n2]) in self.R.edges():
                 warnings.warn(
-                    "Edge %s-%s already exists, \
-                     nothing has been changed!" %
+                    "Edge %s-%s already exists, "+\
+                     "nothing has been changed!" %
                         (str(n1), str(n2)), RuntimeWarning
                 )
             else:
@@ -300,7 +331,15 @@ class Transformer(object):
 
 
         elif n1 in self.base_nodes or n2 in self.base_nodes:
+            # If one of them isn't a base node, we add the one in G in all
+            # the graphs
             in_G, nin_G = (n1, n2) if n1 in self.base_nodes else (n2, n1)
+
+            if not nin_G in self.R.nodes() and not nin_G in self.P.nodes:
+                raise ValueError(
+                    "Node %s doesn't exist" % nin_G
+                )
+
             if not in_G in self.P.nodes():
                 self.P.add_node(in_G,
                                 self.G.node[in_G].type_,
@@ -316,16 +355,8 @@ class Transformer(object):
                                 self.G.node[in_G].attrs_)
                 self.P_R_dict[in_G] = in_G
 
-            if not nin_G in self.R.nodes():
-                if nin_G in self.P.nodes():
-                    self.R.add_node(nin_G,
-                                    self.P.node[nin_G].type_,
-                                    self.P.node[nin_G].attrs_)
-                    self.P_R_dict[nin_G] = nin_G
-                else:
-                    raise ValueError(
-                        "Node %s doesn't exist" % nin_G
-                    )
+            # We then add the edge in R
+
             if n1 in self.base_nodes:
                 if (self.P_R_dict[n1], n2) not in self.R.edges():
                     self.R.add_edge(self.P_R_dict[n1],
@@ -337,6 +368,8 @@ class Transformer(object):
                                     self.P_R_dict[n2],
                                     attrs)
         else:
+            # Else both nodes have been created, they're either added, merged
+            # or cloned nodes and we add the edge in R
             if not n1 in self.R.nodes():
                 if n1 in self.P.nodes():
                     self.R.add_node(n1,
@@ -362,7 +395,9 @@ class Transformer(object):
             self.R.add_edge(n1, n2, attrs)
 
     def remove_edge(self, n1, n2):
+        """ Removes edge from the graph """
         if n1 in self.base_nodes and n2 in self.base_nodes:
+            # Both nodes are base nodes
             if not (n1, n2) in self.G.edges() and\
                not (n1, n2) in self.R.edges():
                 raise ValueError(
@@ -370,15 +405,21 @@ class Transformer(object):
                     (n1, n2)
                 )
 
-            if (n1, n2) in self.R.edges():
-                self.R.remove_edge(n1, n2)
-                pred_n1 = keys_by_value(self.P_R_dict, n1)
-                pred_n2 = keys_by_value(self.P_R_dict, n2)
-                for n11 in pred_n1:
-                    for n21 in pred_n2:
-                        if (n11, n21) in self.P.edges():
-                            self.P.remove_edge(n11, n21)
-                return
+            if n1 in self.P_R_dict.keys() and n2 in self.P_R_dict.keys():
+                if (self.P_R_dict[n1], self.P_R_dict[n2]) in self.R.edges():
+                    # if the edge is in R, it have been added before, we only have
+                    # to delete it from R and from P if it is in P
+                    self.R.remove_edge(self.P_R_dict[n1], self.P_R_dict[n2])
+                    pred_n1 = keys_by_value(self.P_R_dict, n1)
+                    pred_n2 = keys_by_value(self.P_R_dict, n2)
+                    for n11 in pred_n1:
+                        for n21 in pred_n2:
+                            if (n11, n21) in self.P.edges():
+                                self.P.remove_edge(n11, n21)
+                    return
+
+            # Else we add the nodes in the graphs and we put an edge between
+            # them in L
 
             if not n1 in self.P.nodes():
                 self.P.add_node(n1,
@@ -418,50 +459,45 @@ class Transformer(object):
                                 self.G.get_edge(self.P_L_dict[n1],
                                                 self.P_L_dict[n2]))
 
-            if (self.P_R_dict[n1], self.P_R_dict[n2]) in self.R.edges():
-                self.R.remove_edge(self.P_R_dict[n1],
-                                   self.P_R_dict[n2])
-                pred_n1 = keys_by_value(self.P_R_dict, self.P_R_dict[n1])
-                pred_n2 = keys_by_value(self.P_R_dict, self.P_R_dict[n2])
-                for n11 in pred_n1:
-                    for n21 in pred_n2:
-                        if (n11, n21) in self.P.edges():
-                            self.P.remove_edge(n11, n21)
-            else:
-                other_clones = keys_by_value(self.P_L_dict, self.P_L_dict[n1])
-                if len(other_clones) > 1:
-                    for n3 in other_clones:
-                        if n3 != n1:
-                            self.P.add_edge(n3,
-                                            n2,
-                                            self.G.get_edge(self.P_L_dict[n3],
-                                                            self.P_L_dict[n2]))
-                            self.L.add_edge(self.P_L_dict[n3],
-                                            self.P_L_dict[n2],
-                                            self.G.get_edge(self.P_L_dict[n3],
-                                                            self.P_L_dict[n2]))
-                            self.R.add_edge(self.P_R_dict[n3],
-                                            self.P_R_dict[n2],
-                                            self.G.get_edge(self.P_L_dict[n3],
-                                                            self.P_L_dict[n2]))
-                other_clones = keys_by_value(self.P_L_dict, self.P_L_dict[n2])
-                if len(other_clones) > 1:
-                    for n3 in other_clones:
-                        if n3 != n2:
-                            self.P.add_edge(n1,
-                                            n3,
-                                            self.G.get_edge(self.P_L_dict[n1],
-                                                            self.P_L_dict[n3]))
-                            self.L.add_edge(self.P_L_dict[n1],
-                                            self.P_L_dict[n3],
-                                            self.G.get_edge(self.P_L_dict[n1],
-                                                            self.P_L_dict[n3]))
-                            self.R.add_edge(self.P_R_dict[n1],
-                                            self.P_R_dict[n3],
-                                            self.G.get_edge(self.P_L_dict[n1],
-                                                            self.P_L_dict[n3]))
+            # If one of the two nodes have been cloned before, we need to
+            # preserve the edges of the other clones so we add those edges
+            # in P, L and R so the only one to disappear is the one between
+            # our two nodes
+            other_clones = keys_by_value(self.P_L_dict, self.P_L_dict[n1])
+            if len(other_clones) > 1:
+                for n3 in other_clones:
+                    if n3 != n1:
+                        self.P.add_edge(n3,
+                                        n2,
+                                        self.G.get_edge(self.P_L_dict[n3],
+                                                        self.P_L_dict[n2]))
+                        self.L.add_edge(self.P_L_dict[n3],
+                                        self.P_L_dict[n2],
+                                        self.G.get_edge(self.P_L_dict[n3],
+                                                        self.P_L_dict[n2]))
+                        self.R.add_edge(self.P_R_dict[n3],
+                                        self.P_R_dict[n2],
+                                        self.G.get_edge(self.P_L_dict[n3],
+                                                        self.P_L_dict[n2]))
+            other_clones = keys_by_value(self.P_L_dict, self.P_L_dict[n2])
+            if len(other_clones) > 1:
+                for n3 in other_clones:
+                    if n3 != n2:
+                        self.P.add_edge(n1,
+                                        n3,
+                                        self.G.get_edge(self.P_L_dict[n1],
+                                                        self.P_L_dict[n3]))
+                        self.L.add_edge(self.P_L_dict[n1],
+                                        self.P_L_dict[n3],
+                                        self.G.get_edge(self.P_L_dict[n1],
+                                                        self.P_L_dict[n3]))
+                        self.R.add_edge(self.P_R_dict[n1],
+                                        self.P_R_dict[n3],
+                                        self.G.get_edge(self.P_L_dict[n1],
+                                                        self.P_L_dict[n3]))
 
         elif n1 in self.base_nodes or n2 in self.base_nodes:
+            # If one of them is the result of a clone, a merge or an add
             if n1 in self.base_nodes:
                 in_G = n1
                 nin_G = n2
@@ -485,26 +521,29 @@ class Transformer(object):
                 self.P_R_dict[in_G] = in_G
 
             if nin_G in self.P_L_dict.keys():
+                # That means nin_G is a clone
+                if n1 in self.P_R_dict.keys() and n2 in self.P_R_dict.keys():
+                    if (self.P_R_dict[n1], self.P_R_dict[n2]) in self.R.edges():
+                        # If the edge is in R, it's an added edge so we remove
+                        # it from R
+                        self.R.remove_edge(n1,n2)
+                        pred_n1 = keys_by_value(self.P_R_dict, n1)
+                        pred_n2 = keys_by_value(self.P_R_dict, n2)
+                        for n11 in pred_n1:
+                            for n21 in pred_n2:
+                                if (n11, n21) in self.P.edges():
+                                    self.P.remove_edge(n11, n21)
+                        return
 
-                if (n1, n2) in self.R.edges():
-                    self.R.remove_edge(n1,n2)
-                    pred_n1 = keys_by_value(self.P_R_dict, n1)
-                    pred_n2 = keys_by_value(self.P_R_dict, n2)
-                    for n11 in pred_n1:
-                        for n21 in pred_n2:
-                            if (n11, n21) in self.P.edges():
-                                self.P.remove_edge(n11, n21)
-                    return
+                # Else, the edge came from G, or doesn't exist
 
-                if (self.P_L_dict[n1], self.P_L_dict[n2]) in self.G.edges():
-                    in_graph = self.G
-                elif (self.P_L_dict[n1], self.P_L_dict[n2]) in self.R.edges():
-                    in_graph = self.R
-                else:
+                if not (self.P_L_dict[n1], self.P_L_dict[n2]) in self.G.edges():
                     raise ValueError("""Can't add edge %s-%s because edge %s-%s
                                      doesn't exist in graph""" %
                                      (n1, n2, self.P_L_dict[n1], self.P_L_dict[n2]))
 
+                # As we did before, we have to preserve the edges of the
+                # other clones
                 if n1 in self.P_L_dict.keys():
                     other_clones = keys_by_value(self.P_L_dict, self.P_L_dict[n1])
                     if len(other_clones) > 1:
@@ -512,15 +551,15 @@ class Transformer(object):
                             if n3 != n1:
                                 self.P.add_edge(n3,
                                                 n2,
-                                                in_graph.get_edge(self.P_L_dict[n3],
+                                                self.G.get_edge(self.P_L_dict[n3],
                                                                 self.P_L_dict[n2]))
                                 self.L.add_edge(self.P_L_dict[n3],
                                                 self.P_L_dict[n2],
-                                                in_graph.get_edge(self.P_L_dict[n3],
+                                                self.G.get_edge(self.P_L_dict[n3],
                                                                 self.P_L_dict[n2]))
                                 self.R.add_edge(self.P_R_dict[n3],
                                                 self.P_R_dict[n2],
-                                                in_graph.get_edge(self.P_L_dict[n3],
+                                                self.G.get_edge(self.P_L_dict[n3],
                                                                 self.P_L_dict[n2]))
 
                 if n2 in self.P_L_dict.keys():
@@ -530,24 +569,26 @@ class Transformer(object):
                             if n3 != n2:
                                 self.P.add_edge(n1,
                                                 n3,
-                                                in_graph.get_edge(self.P_L_dict[n1],
+                                                self.G.get_edge(self.P_L_dict[n1],
                                                                 self.P_L_dict[n3]))
                                 self.L.add_edge(self.P_L_dict[n1],
                                                 self.P_L_dict[n3],
-                                                in_graph.get_edge(self.P_L_dict[n1],
+                                                self.G.get_edge(self.P_L_dict[n1],
                                                                 self.P_L_dict[n3]))
                                 self.R.add_edge(self.P_R_dict[n1],
                                                 self.P_R_dict[n3],
-                                                in_graph.get_edge(self.P_L_dict[n1],
+                                                self.G.get_edge(self.P_L_dict[n1],
                                                                 self.P_L_dict[n3]))
 
                 self.L.add_edge(self.P_L_dict[n1],
                                 self.P_L_dict[n2],
-                                in_graph.get_edge(self.P_L_dict[n1],
+                                self.G.get_edge(self.P_L_dict[n1],
                                                 self.P_L_dict[n2]))
 
         else:
+            # Else both nodes are new
             if (n1, n2) in self.R.edges():
+                # If the edge is in R, we can remove it (add or merge)
                 self.R.remove_edge(n1, n2)
                 pred_n1 = keys_by_value(self.P_R_dict, n1)
                 pred_n2 = keys_by_value(self.P_R_dict, n2)
@@ -556,6 +597,7 @@ class Transformer(object):
                         if (n11, n21) in self.P.edges():
                             self.P.remove_edge(n11, n21)
             else:
+                # Else one of them is a clone and the edge came from that
                 if (n1, n2) in self.P.edges():
                     self.P.remove_edge(n1, n2)
                 else:
@@ -585,6 +627,8 @@ class Transformer(object):
                                                                 self.P_L_dict[n2]))
 
     def add_node_attrs(self, n, attrs):
+        """ Adds node attributes to a node in the graph """
+        # The attributes are added in R
         if n in self.base_nodes:
             if not n in self.P.nodes():
                 self.P.add_node(n,
@@ -613,6 +657,8 @@ class Transformer(object):
 
 
     def add_edge_attrs(self, n1, n2, attrs):
+        """ Adds edge attributes to an edge in the graph """
+        # Same idea as before, but a little more complex since we have two nodes
         if n1 in self.G:
             if not n1 in self.R.nodes():
                 self.R.add_node(n1,
@@ -670,12 +716,15 @@ class Transformer(object):
                     self.R.add_edge_attrs(n1, self.P_L_dict[n2], attrs)
                 else:
                     raise ValueError(
-                        "Edge %s-%s doesn't exist, please create it before adding\
-                         attributes!" %
+                        "Edge %s-%s doesn't exist, please create it before adding "+\
+                         "attributes!" %
                             (str(n1), str(n2))
                     )
 
     def remove_node_attrs(self, n, attrs):
+        """ Remove nodes attributes from a node in the graph """
+        # Same idea as in the remove_node function but we remove attributes
+        # instead of the node itself
         if n in self.base_nodes:
             if not n in self.R.nodes():
                 self.R.add_node(n,
@@ -708,6 +757,9 @@ class Transformer(object):
 
 
     def remove_edge_attrs(self, n1, n2, attrs):
+        """ Removes edge attributes from an edge in the graph """
+        # Same idea as in the remove_edge function but we remove attributes
+        # instead of the edge itself
         if n1 in self.base_nodes and n2 in self.base_nodes:
             if not (n1, n2) in self.G.edges() and\
                not (n1, n2) in self.R.edges():
@@ -716,15 +768,16 @@ class Transformer(object):
                     (n1, n2)
                 )
 
-            if (n1, n2) in self.R.edges():
-                self.R.remove_edge_attrs(n1, n2, attrs)
-                pred_n1 = keys_by_value(self.P_R_dict, n1)
-                pred_n2 = keys_by_value(self.P_R_dict, n2)
-                for n11 in pred_n1:
-                    for n21 in pred_n2:
-                        if (n11, n21) in self.P.edges():
-                            self.P.remove_edge_attrs(n11, n21, attrs)
-                return
+            if n1 in self.P_R_dict.keys() and n2 in self.P_R_dict.keys():
+                if (self.P_R_dict[n1], self.P_R_dict[n2]) in self.R.edges():
+                    self.R.remove_edge_attrs(n1, n2, attrs)
+                    pred_n1 = keys_by_value(self.P_R_dict, n1)
+                    pred_n2 = keys_by_value(self.P_R_dict, n2)
+                    for n11 in pred_n1:
+                        for n21 in pred_n2:
+                            if (n11, n21) in self.P.edges():
+                                self.P.remove_edge_attrs(n11, n21, attrs)
+                    return
 
             if not n1 in self.P.nodes():
                 self.P.add_node(n1,
@@ -772,22 +825,6 @@ class Transformer(object):
                                 self.G.get_edge(self.P_L_dict[n1],
                                                 self.P_L_dict[n2]))
                 self.P.remove_edge_attrs(n1, n2, attrs)
-
-            if (self.P_R_dict[n1], self.P_R_dict[n2]) in self.R.edges():
-                self.R.remove_edge_attrs(self.P_R_dict[n1],
-                                         self.P_R_dict[n2],
-                                         attrs)
-                pred_n1 = keys_by_value(self.P_R_dict, self.P_R_dict[n1])
-                pred_n2 = keys_by_value(self.P_R_dict, self.P_R_dict[n2])
-                for n11 in pred_n1:
-                    for n21 in pred_n2:
-                        if (n11, n21) in self.P.edges():
-                            self.P.remove_edge_attrs(n11, n21, attrs)
-            else:
-                warnings.warn(
-                    "You already deleted the edge %s-%s !" %
-                        (str(n1), str(n2)), RuntimeWarning
-                )
 
             other_clones = keys_by_value(self.P_L_dict, self.P_L_dict[n1])
             if len(other_clones) > 1:
@@ -844,22 +881,18 @@ class Transformer(object):
                 self.P_R_dict[in_G] = in_G
 
             if nin_G in self.P_L_dict.keys():
+                if n1 in self.P_R_dict.keys() and n2 in self.P_R_dict.keys():
+                    if (self.P_R_dict[n1], self.P_R_dict[n2]) in self.R.edges():
+                        self.R.remove_edge_attrs(n1,n2, attrs)
+                        pred_n1 = keys_by_value(self.P_R_dict, n1)
+                        pred_n2 = keys_by_value(self.P_R_dict, n2)
+                        for n11 in pred_n1:
+                            for n21 in pred_n2:
+                                if (n11, n21) in self.P.edges():
+                                    self.P.remove_edge_attrs(n11, n21, attrs)
+                        return
 
-                if (n1, n2) in self.R.edges():
-                    self.R.remove_edge_attrs(n1,n2, attrs)
-                    pred_n1 = keys_by_value(self.P_R_dict, n1)
-                    pred_n2 = keys_by_value(self.P_R_dict, n2)
-                    for n11 in pred_n1:
-                        for n21 in pred_n2:
-                            if (n11, n21) in self.P.edges():
-                                self.P.remove_edge_attrs(n11, n21, attrs)
-                    return
-
-                if (self.P_L_dict[n1], self.P_L_dict[n2]) in self.G.edges():
-                    in_graph = self.G
-                elif (self.P_L_dict[n1], self.P_L_dict[n2]) in self.R.edges():
-                    in_graph = self.R
-                else:
+                if not (self.P_L_dict[n1], self.P_L_dict[n2]) in self.G.edges():
                     raise ValueError("""Can't add edge %s-%s because edge %s-%s
                                      doesn't exist in graph""" %
                                      (n1, n2, self.P_L_dict[n1], self.P_L_dict[n2]))
@@ -870,15 +903,15 @@ class Transformer(object):
                         for n3 in other_clones:
                             self.P.add_edge(n3,
                                             n2,
-                                            in_graph.get_edge(self.P_L_dict[n3],
+                                            self.G.get_edge(self.P_L_dict[n3],
                                                             self.P_L_dict[n2]))
                             self.L.add_edge(self.P_L_dict[n3],
                                             self.P_L_dict[n2],
-                                            in_graph.get_edge(self.P_L_dict[n3],
+                                            self.G.get_edge(self.P_L_dict[n3],
                                                             self.P_L_dict[n2]))
                             self.R.add_edge(self.P_R_dict[n3],
                                             self.P_R_dict[n2],
-                                            in_graph.get_edge(self.P_L_dict[n3],
+                                            self.G.get_edge(self.P_L_dict[n3],
                                                             self.P_L_dict[n2]))
 
                 if n2 in self.P_L_dict.keys():
@@ -887,15 +920,15 @@ class Transformer(object):
                         for n3 in other_clones:
                             self.P.add_edge(n1,
                                             n3,
-                                            in_graph.get_edge(self.P_L_dict[n1],
+                                            self.G.get_edge(self.P_L_dict[n1],
                                                             self.P_L_dict[n3]))
                             self.L.add_edge(self.P_L_dict[n1],
                                             self.P_L_dict[n3],
-                                            in_graph.get_edge(self.P_L_dict[n1],
+                                            self.G.get_edge(self.P_L_dict[n1],
                                                             self.P_L_dict[n3]))
                             self.R.add_edge(self.P_R_dict[n1],
                                             self.P_R_dict[n3],
-                                            in_graph.get_edge(self.P_L_dict[n1],
+                                            self.G.get_edge(self.P_L_dict[n1],
                                                             self.P_L_dict[n3]))
 
                 self.P.remove_edge_attrs(n1,
@@ -949,6 +982,7 @@ class Transformer(object):
     # Advanced operations
 
     def merge_edges(self, e1, e2, name_n1=None, name_n2=None):
+        """ Merges two edges """
         n1_1, n1_2 = e1
         n2_1, n2_2 = e2
         if (n1_1 == n2_2) or (n1_2 == n2_1):
@@ -968,11 +1002,13 @@ class Transformer(object):
             self.R.add_edge(name_n1, name_n2)
 
     def clone_edge(self, n1, n2, new_n1, new_n2):
+        """ Clones an edge """
         self.clone_node(n1, new_n1)
         self.clone_node(n2, new_n2)
         self.R.add_edge(new_n1, new_n2)
 
     def relabel_node(self, n, node_name):
+        """ Relabels a node """
         if n in self.base_nodes:
             if not n in self.P.nodes():
                 self.P.add_node(n,
@@ -998,6 +1034,7 @@ class Transformer(object):
 
 
     def merge_nodes_list(self, l, node_name=None):
+        """ Merge a list of nodes """
         if len(l)>1:
             node_name = self.merge_nodes(l[0], l[1], node_name)
             for i in range(2, len(l)):
@@ -1019,10 +1056,10 @@ class Rewriter:
         return
 
     def __doc__(self):
-        return "A Rewriter instance alows you to do a horizontal rewrite on \
-                a single graph, it also gives the needed informations (the \
-                G- -> G and G- -> Gprime homomorphisms) to propagate that \
-                change in the GraphModeler"
+        return "A Rewriter instance alows you to do a horizontal rewrite on "+\
+                "a single graph, it also gives the needed informations (the "+\
+                "G- -> G and G- -> Gprime homomorphisms) to propagate that "+\
+                "change in the GraphModeler"
 
     @staticmethod
     def rewrite(L_G, trans, get_details=False):
@@ -1046,6 +1083,7 @@ class Rewriter:
 
     @staticmethod
     def chain_rewrite(G, trans_list, get_details=False):
+        """ Does multiple simple rewritings on G given a list of transformations """
         res = []
         for transformation in trans_list:
             if get_details:
@@ -1056,7 +1094,6 @@ class Rewriter:
                                           get_details)
                 res.append(rw_res)
             else:
-                print(res[-1] if res != [] else '')
                 trans = Rewriter.transformer_from_command(res[-1] if res != [] else G, transformation)
                 rw_res = Rewriter.rewrite(Homomorphism.identity(trans.L,
                                                                 trans.G),
@@ -1070,6 +1107,8 @@ class Rewriter:
 
     @staticmethod
     def canonical_rewrite(G, transformations, get_details=False):
+        """ Does a simple rewriting by decomposing the transformations list
+            into a list of canonical transformations list """
         di = type(G) == TypedDiGraph
         trans_list = Rewriter.make_canonical_commands(G, transformations, di)
         return Rewriter.chain_rewrite(G, trans_list, get_details)
@@ -1347,6 +1386,8 @@ class Rewriter:
                             merge_prop_dev = 0.05, p_attrs = 0.5, p_attrs_value=0.5):
 
         def rand_attrs(attrs):
+            """ Picks random attributes from attrs using the probabilities in
+                the main function arguments """
             if attrs == None:
                 return {}
 
@@ -1387,12 +1428,15 @@ class Rewriter:
         ]
 
         def pick_node():
+            """ Picks a node in the graph if possible """
             if len(base_nodes) > 0:
                 return random.sample(base_nodes, 1)[0]
             else:
                 return None
 
         def pick_nodes():
+            """ Picks multiple node (a random number following a gaussian law
+                with parameters merge_prop_av and merge_prop_dev) if possible """
             if env.metamodel_ == None:
                 ty = random.choice([None, "anything"])
             else:
@@ -1411,6 +1455,7 @@ class Rewriter:
             return res
 
         def pick_edge():
+            """ Picks an existing edge if possible """
             if len(env.edges()) > 0 and len(base_nodes) > 1:
                 edge = random.sample(env.edges(), 1)[0]
                 if edge[0] in base_nodes and edge[1] in base_nodes:
@@ -1418,6 +1463,8 @@ class Rewriter:
             return None,None
 
         def pick_new_edge():
+            """ Picks two nodes that can have an edge between them and don't yet
+                if possible """
             i = 500
             while i > 0:
                 n1 = pick_node()
@@ -1432,21 +1479,26 @@ class Rewriter:
             return None
 
         def pick_type():
+            """ Picks a type """
             return random.sample(types, 1)[0]
 
         def pick_attrs_from(node):
+            """ Picks random attrs from the attrs of node """
             return rand_attrs(env.node[node].attrs_)
 
         def pick_attrs_for(node):
+            """ Picks random attrs from the attrs of the typing node of node """
             if graph.metamodel_ == None:
                 return {}
             else:
                 return rand_attrs(graph.metamodel_.node[env.node[node].type_].attrs_)
 
         def pick_edge_attrs_from(n1, n2):
+            """ Picks random attrs from the attrs of edge """
             return rand_attrs(env.get_edge(n1, n2))
 
         def pick_edge_attrs_for(n1, n2):
+            """ Picks random attrs from the attrs of the typing edge of edge """
             if env.metamodel_ == None:
                 return {}
             else:
@@ -1456,29 +1508,38 @@ class Rewriter:
                 ))
 
         def pick_name():
+            """ Picks a node_name that isn't in the graph yet """
             i = random.randint(0, 500)
             if len(env.nodes()) > 1:
                 generated_name = ".".join(random.sample(env.nodes(), 2))
             else:
-                generated_name = "newNode"
-            while str(generated_name) in base_nodes:
+                generated_name = "newNode"+str(i)
+            while str(generated_name) in env.nodes():
                 i = random.randint(0, 500)
-                generated_name = ".".join(random.sample(base_nodes, 2))
+                if len(env.nodes()) > 1:
+                    generated_name = ".".join(random.sample(env.nodes(), 2))
+                else:
+                    generated_name = "newNode"+str(i)
             return str(generated_name)
 
         def pick_method():
+            """ Picks a method to use for merging """
             return random.choice(["UNION", "INTERSECTION"])
 
         def add_req(op, s):
+            """ Updates the transformation list with a required argument """
             op += s
             return op
 
         def add_opt(op, s):
+            """ Updates the transformation list with an optional argument """
             if random.random() <= p_opt:
                 op += s
                 return True, op
             else:
                 return False, op
+
+        # We pick a random operation each time and try to do it
 
         while len(trans) < n:
             op = random.choice(actions)
@@ -1659,6 +1720,8 @@ class Rewriter:
 
     @staticmethod
     def simplify_commands(commands, di=False):
+        """ Returns a simplified list of transformations that have the same
+            behaviour as commands """
         command_strings = [c for c in commands.splitlines() if len(c) > 0]
         actions = []
         for command in command_strings:
@@ -1668,17 +1731,35 @@ class Rewriter:
           except:
               raise ValueError("Cannot parse command '%s'" % command)
 
+        # We keep updated a list of the element we added, the lines of
+        # transformations that added them or added attributes to them
+        # and the type of addition we did (node or edge)
+
         added = []
         ad_index = []
         ad_type = []
+
+        # We keep updated a list of the element we deleted and the lines of
+        # transformation that deleted them or deleted attributes from them
+
         deleted = []
         del_index = []
+
+        # We keep updated a list of the element we cloned and the line of
+        # transformation that cloned them
+
         cloned = []
         clone_index = []
 
+        # List of elements to remove at the end
+
         elements_to_remove = []
 
-        res = []
+        # For each line of command we change what to remove and what to keep
+        # We update the lists at each step, the only operations that actually
+        # do simplify the commands are the deletion of nodes and edges and the
+        # merges. They try to find the all the operations they can remove
+        # without changing the behaviour
 
         for i in range(len(actions)):
             action = actions[i]
@@ -1688,13 +1769,24 @@ class Rewriter:
                 ad_type.append("node")
             elif action["keyword"] == "delete_node":
                 if action["node"] not in cloned:
+                    # If the node haven't been cloned before
                     rem_el = []
                     for j in range(len(added)):
                         el = added[j]
                         if (type(el) == tuple and (el[0] == action["node"] or\
                                                    el[1] == action["node"])) or\
                             el == action["node"]:
-                                elements_to_remove.append(i)
+                                # If the node have been involved in an addition
+                                # we remove that addition since it has been
+                                # deleted now, if there are not more lines that
+                                # refers to the addition of that node, we can
+                                # remove the deletion of the node
+                                # Finding the node in added is not enough to
+                                # remove the deletion since it can be an
+                                # addition of an edge, we have to check if it
+                                # the node itself that we added
+                                if el == action["node"]:
+                                    elements_to_remove.append(i)
                                 for k in ad_index[j]:
                                     elements_to_remove.append(k)
                                 rem_el.append(j)
@@ -1710,7 +1802,10 @@ class Rewriter:
                         if (type(el) == tuple and (el[0] == action["node"] or\
                                                    el[1] == action["node"])) or\
                             el == action["node"]:
-                                elements_to_remove.append(i)
+                                # If the node have been involved in a deletion
+                                # we can remove that deletion since the deletion
+                                # of the node itself will delete what the deletion
+                                # would have deleted
                                 for k in del_index[j]:
                                     elements_to_remove.append(k)
                                 rem_el.append(j)
@@ -1720,6 +1815,11 @@ class Rewriter:
                         del del_index[j-k]
                         k+=1
                 else:
+                    # If the node have been cloned before, we can't delete the
+                    # transformations that happened before the cloning since
+                    # they affected the clones too. We do so by comparing the
+                    # line of the transformation we are looking at and the line
+                    # of the last cloning operation that happened
                     rem_el = []
                     ind = max([clone_index[i] for i in range(len(cloned)) if cloned[i] == action["node"]])
                     for j in range(len(added)):
@@ -1790,6 +1890,12 @@ class Rewriter:
                 ad_index.append([i])
                 ad_type.append("edge")
             elif action["keyword"] == "delete_edge":
+                # It is the same idea as in the delete_node function, but with
+                # a little bit more complexity since we have two nodes that
+                # can possibly be cloned.
+                # This time, finding the edge in the added list automatically
+                # means we have to remove the deletion and the addition in the
+                # case we didn't clone any of our nodes
                 e = (action["node_1"], action["node_2"])
                 if e[0] not in cloned and e[1] not in cloned:
                     rem_el = []
@@ -1812,7 +1918,6 @@ class Rewriter:
                         el = deleted[j]
                         if type(el) == tuple and\
                            (el == e or (not di and el == (e[1], e[0]))):
-                            elements_to_remove.append(i)
                             for k in del_index[j]:
                                 elements_to_remove.append(k)
                             rem_el.append(j)
@@ -1822,6 +1927,9 @@ class Rewriter:
                         del del_index[j-k]
                         k+=1
                 else:
+                    # Same idea as before if one of the nodes have been cloned,
+                    # but we have to take the max of the line number of all the
+                    # cloning operation on node 0 and node 1
                     ind = 0
                     if e[0] in cloned:
                         ind = max([clone_index[i] for i in range(len(cloned)) if cloned[i] == e[0]])
@@ -1840,6 +1948,9 @@ class Rewriter:
                                 for k in ad_index[j]:
                                     if k > clone_index[ind]:
                                         elements_to_remove.append(k)
+                                        # We remove the delete_edge operation
+                                        # iff the same edge have been added
+                                        # after the last cloning operation
                                         if ad_type[j] == "edge":
                                             elements_to_remove.append(i)
                                         rem_ind.append(k)
@@ -1964,8 +2075,69 @@ class Rewriter:
 
     @staticmethod
     def make_canonical_commands(g, commands, di=False):
+        """ Takes commands and the graph it refers to and returns a list of
+            canonical transformations that have the same behaviour.
+            The canonical form of a transformation follows this pattern :
+                DELETIONS (DELETE_NODE, DELETE_NODE_ATTRS, DELETE_EDGE, DELETE_EDGE_ATTRS)
+                CLONING (CLONE)
+                ADDING and MERGING (ADD_NODE, ADD_NODE_ATTRS, ADD_EDGE, ADD_EDGE_ATTRS, MERGE)
+            eg :
+                commands :
+                DELETE_EDGE_ATTRS '3' '5' {'3': {'1'}}.
+                DELETE_EDGE '14' '1'.
+                DELETE_EDGE '8' '1'.
+                DELETE_NODE_ATTRS '3' {'2': {'17', '16', '7', '1', '2', '13'}, '1': {'3', '7', '8', '1'}}.
+                ADD_EDGE '14' '1' {'3': {'10', '17', '16', '14', '19', '8', '1', '3', '2', '6'}}.
+                DELETE_EDGE '14' '18'.
+                ADD_NODE '8.7' TYPE '10'.
+                DELETE_EDGE '4' '3'.
+                DELETE_NODE '11'.
+                ADD_NODE '10.13' TYPE '8'.
+                DELETE_NODE '10.13'.
+                ADD_EDGE '4' '2'.
+                ADD_NODE '15.1' TYPE '3' {'3': {'0', '3', '2', '1'}, '4': {'0'}, '2': {'5', '7', '14', '8', '15', '3', '11', '0'}}.
+                CLONE '4' AS '8.7.19'.
+                CLONE '19' AS '4.8'.
+                DELETE_EDGE_ATTRS '10' '4' {'2': {'17', '3', '4', '11', '12'}}.
+                ADD_NODE '6.7' TYPE '8' {'3': {'0'}, '1': {'7', '1', '3', '4', '2', '6'}}.
+                CLONE '14'.
+                CLONE '9'.
+                ADD_NODE '5.8.7.19' TYPE '2' {'2': {'10', '22', '5', '14', '8', '23', '15', '25', '27', '24', '29', '0', '6', '13'}}.
+
+                canonical commands :
+
+            0 : DELETE_EDGE_ATTRS '3' '5' {'3': {'1'}}.
+                DELETE_EDGE '14' '1'.
+                DELETE_EDGE '8' '1'.
+                DELETE_NODE_ATTRS '3' {'2': {'17', '16', '7', '1', '2', '13'}, '1': {'3', '7', '8', '1'}}.
+                DELETE_EDGE '14' '18'.
+                DELETE_EDGE '4' '3'.
+                DELETE_NODE '11'.
+                CLONE '19' AS '4.8'.
+                CLONE '9'.
+                ADD_EDGE '14' '1' {'3': {'10', '17', '16', '14', '19', '8', '1', '3', '2', '6'}}.
+                ADD_NODE '8.7' TYPE '10'.
+                ADD_EDGE '4' '2'.
+                ADD_NODE '15.1' TYPE '3' {'3': {'0', '3', '2', '1'}, '4': {'0'}, '2': {'5', '7', '14', '8', '15', '3', '11', '0'}}.
+                ADD_NODE '6.7' TYPE '8' {'3': {'0'}, '1': {'7', '1', '3', '4', '2', '6'}}.
+                ADD_NODE '5.8.7.19' TYPE '2' {'2': {'10', '22', '5', '14', '8', '23', '15', '25', '27', '24', '29', '0', '6', '13'}}.
+
+            1 : CLONE '4' AS '8.7.19'.
+                CLONE '14'.
+
+            2 : DELETE_EDGE_ATTRS '10' '4' {'2': {'17', '3', '4', '11', '12'}}
+        """
         res = []
+
+        # We do multiple steps of simplification, until we found a fixed-point
+
+        aux = commands
         next_step = Rewriter.simplify_commands(commands, di)
+        while next_step != aux:
+            aux = next_step
+            next_step = Rewriter.simplify_commands(aux, di)
+
+        # We keep updated an environment with our nodes and our edges
 
         env_nodes = [n for n in g.nodes()]
         env_edges = [e for e in g.edges()]
@@ -1974,6 +2146,9 @@ class Rewriter:
             for e in g.edges():
                 if not (e[1], e[0]) in env_edges:
                     env_edges.append((e[1], e[0]))
+
+        # For each transformation we choose if we do it in this step or if we
+        # keep it for later
 
         while next_step != '':
             command_strings = [c for c in next_step.splitlines() if len(c) > 0]
@@ -1987,54 +2162,72 @@ class Rewriter:
 
             next_step = ''
 
+            # We have 3 strings for each line of the canonical pattern
+
             add_step = ''
             del_step = ''
             clone_step = ''
 
-            op_queue = []
+            # Added is the list of elements we will add at to our environment
+            # at the end of the step, we add them at the end so they are not
+            # taken into account in the current step
 
             added = []
             cloned = []
+
+            # If a node is in clone_wait, every cloning operation on it will
+            # be delayed to next step. Same for other lists
+
             clone_wait = []
+            merge_wait = []
             del_wait = []
+            ad_wait = []
+
+            # If we can't add a node with name n in this step, we don't want
+            # another node with the same name to be added before it
+
+            protected_names = []
+
+            # For each action we update our lists and we chose what to do
 
             for i in range(len(actions)):
                 action = actions[i]
                 if action["keyword"] == "add_node":
-                    add_step += command_strings[i]+"\n"
-                    added.append(action["node"])
+                    if action["node"] not in protected_names:
+                        add_step += command_strings[i]+"\n"
+                        added.append(action["node"])
                 elif action["keyword"] == "delete_node":
                     if action["node"] in env_nodes and\
-                       action["node"] not in op_queue and\
                        action["node"] not in del_wait:
                         del_step += command_strings[i]+"\n"
                         env_nodes.remove(action["node"])
                     else:
                         next_step += command_strings[i]+"\n"
-                        op_queue.append(action["node"])
+                        ad_wait.append(action["node"])
                 elif action["keyword"] == "add_node_attrs":
                     if action["node"] in env_nodes and\
-                       action["node"] not in op_queue:
+                       action["node"] not in ad_wait:
                         add_step += command_strings[i]+"\n"
                         added.append(action["node"])
                         clone_wait.append(action["node"])
                     else:
                         next_step += command_strings[i]+"\n"
-                        op_queue.append(action["node"])
+                        ad_wait.append(action["node"])
+                        clone_wait.append(action["node"])
                 elif action["keyword"] == "delete_node_attrs":
                     if action["node"] in env_nodes and\
-                       action["node"] not in op_queue and\
                        action["node"] not in del_wait:
                         del_step += command_strings[i]+"\n"
                     else:
                         next_step += command_strings[i]+"\n"
-                        op_queue.append(action["node"])
+                        clone_wait.append(action["node"])
+                        ad_wait.append(action["node"])
                 elif action["keyword"] == "add_edge":
                     e = (action["node_1"], action["node_2"])
                     if e[0] in env_nodes and\
                        e[1] in env_nodes and\
-                       e[0] not in op_queue and\
-                       e[1] not in op_queue:
+                       e[0] not in ad_wait and\
+                       e[1] not in ad_wait:
                        add_step += command_strings[i]+"\n"
                        added.append(e)
                        if not di:
@@ -2043,22 +2236,24 @@ class Rewriter:
                        clone_wait.append(action["node_2"])
                     else:
                         next_step += command_strings[i]+"\n"
-                        op_queue.append(action["node_1"])
-                        op_queue.append(action["node_2"])
+                        clone_wait.append(action["node_1"])
+                        clone_wait.append(action["node_2"])
+                        merge_wait.append(action["node_1"])
+                        merge_wait.append(action["node_2"])
                 elif action["keyword"] == "delete_edge":
                     e = (action["node_1"], action["node_2"])
                     if (e in env_edges or\
                        (not di and (e[1], e[0]) in env_edges)) and\
-                       e[0] not in op_queue and\
-                       e[1] not in op_queue and\
                        e[0] not in del_wait and\
                        e[1] not in del_wait:
                         is_cloned = False
                         for l in cloned:
                             if e[0] in l:
                                 next_step += command_strings[i]+"\n"
-                                op_queue.append(action["node_1"])
-                                op_queue.append(action["node_2"])
+                                clone_wait.append(action["node_1"])
+                                clone_wait.append(action["node_2"])
+                                merge_wait.append(action["node_1"])
+                                merge_wait.append(action["node_2"])
                                 is_cloned = True
                                 break
                         if not is_cloned:
@@ -2070,14 +2265,16 @@ class Rewriter:
                                 env_edges.remove((e[1], e[0]))
                     else:
                         next_step += command_strings[i]+"\n"
-                        op_queue.append(action["node_1"])
-                        op_queue.append(action["node_2"])
+                        clone_wait.append(action["node_1"])
+                        clone_wait.append(action["node_2"])
+                        merge_wait.append(action["node_1"])
+                        merge_wait.append(action["node_2"])
                 elif action["keyword"] == "add_edge_attrs":
                     e = (action["node_1"], action["node_2"])
                     if (e in env_edges or\
                        (not di and (e[1], e[0]) in env_edges)) and\
-                       e[0] not in op_queue and\
-                       e[1] not in op_queue:
+                       e[0] not in ad_wait and\
+                       e[1] not in ad_wait:
                         add_step += command_strings[i]+"\n"
                         added.append(e)
                         if not di:
@@ -2086,27 +2283,31 @@ class Rewriter:
                         clone_wait.append(action["node_2"])
                     else:
                         next_step += command_strings[i]+"\n"
-                        op_queue.append(action["node_1"])
-                        op_queue.append(action["node_2"])
+                        clone_wait.append(action["node_1"])
+                        clone_wait.append(action["node_2"])
+                        merge_wait.append(action["node_1"])
+                        merge_wait.append(action["node_2"])
                 elif action["keyword"] == "delete_edge_attrs":
                     e = (action["node_1"], action["node_2"])
                     if (e in env_edges or\
                        (not di and (e[1], e[0]) in env_edges)) and\
-                       e[0] not in op_queue and\
-                       e[1] not in op_queue and\
                        e[0] not in del_wait and\
                        e[1] not in del_wait:
                         is_cloned = False
                         for l in cloned:
                             if e[0] in l:
                                 next_step += command_strings[i]+"\n"
-                                op_queue.append(action["node_1"])
-                                op_queue.append(action["node_2"])
+                                clone_wait.append(action["node_1"])
+                                clone_wait.append(action["node_2"])
+                                merge_wait.append(action["node_1"])
+                                merge_wait.append(action["node_2"])
                                 is_cloned = True
                             elif e[1] in l:
                                 next_step += command_strings[i]+"\n"
-                                op_queue.append(action["node_1"])
-                                op_queue.append(action["node_2"])
+                                clone_wait.append(action["node_1"])
+                                clone_wait.append(action["node_2"])
+                                merge_wait.append(action["node_1"])
+                                merge_wait.append(action["node_2"])
                                 is_cloned = True
                         if not is_cloned:
                             del_step += command_strings[i]+"\n"
@@ -2114,13 +2315,23 @@ class Rewriter:
                             clone_wait.append(action["node_2"])
                     else:
                         next_step += command_strings[i]+"\n"
-                        op_queue.append(action["node_1"])
-                        op_queue.append(action["node_2"])
+                        clone_wait.append(action["node_1"])
+                        clone_wait.append(action["node_2"])
+                        merge_wait.append(action["node_1"])
+                        merge_wait.append(action["node_2"])
                 elif action["keyword"] == "clone":
                     node = action["node"]
+                    if "node_name" in action.keys():
+                        new_node = action["node_name"]
+                    else:
+                        j = 1
+                        new_node = str(node)+str(j)
+                        while new_node in env_nodes or new_node in added:
+                            j+=1
+                            new_node = str(node)+str(j)
                     if node in env_nodes and\
                        node not in clone_wait and\
-                       node not in op_queue and\
+                       new_node not in protected_names and\
                        fold_left(lambda e, acc : (e != node or\
                                                  (type(e) == tuple and\
                                                  e[1] != node and\
@@ -2128,15 +2339,6 @@ class Rewriter:
                                                  acc,
                                  True,
                                  added):
-                        if "node_name" in action.keys():
-                            new_node = action["node_name"]
-                        else:
-                            j = 1
-                            new_node = str(node)+str(j)
-                            while new_node in env_nodes or new_node in added:
-                                j+=1
-                                new_node = str(node)+str(j)
-
                         clone_step += command_strings[i]+"\n"
                         added.append(new_node)
                         del_wait.append(node)
@@ -2165,17 +2367,21 @@ class Rewriter:
                             added.append(e)
                     else:
                         next_step += command_strings[i]+"\n"
-                        op_queue.append(node)
+                        del_wait.append(node)
+                        merge_wait.append(node)
+                        ad_wait.append(node)
+                        protected_names.append(new_node)
                 elif action["keyword"] == "merge":
                     if "node_name" in actions[i].keys():
                         node_name = actions[i]["node_name"]
                     else:
                         node_name = "_".join(actions[i]["nodes"])
                     if fold_left(lambda n, acc: (n in env_nodes and\
-                                                 n not in op_queue) and\
+                                                 n not in merge_wait) and\
                                                  acc,
                                  True,
-                                 action["nodes"]):
+                                 action["nodes"]) and\
+                        node_name not in protected_names:
                         add_step += command_strings[i]+"\n"
 
                         added.append(node_name)
@@ -2226,8 +2432,7 @@ class Rewriter:
                                     added.remove((e[1], e[0]))
                     else:
                         next_step += command_strings[i]+"\n"
-                        for n in action["nodes"]:
-                            op_queue.append(n)
+                        protected_names.append(node_name)
 
             for el in added:
                 if type(el) == tuple:

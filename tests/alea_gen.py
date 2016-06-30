@@ -1,3 +1,5 @@
+""" Generate random examples """
+
 from regraph.library.data_structures import (TypedDiGraph,
                                              TypedGraph,
                                              Homomorphism)

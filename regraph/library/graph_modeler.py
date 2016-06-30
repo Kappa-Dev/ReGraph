@@ -44,8 +44,8 @@ class GraphModeler(object):
             self.load_from_files(l, di)
         else:
             raise ValueError(
-                "List should be a nx.(Di)Graphs or Typed(Di)Graphs or filenames\
-                 list"
+                "List should be a nx.(Di)Graphs or Typed(Di)Graphs or filenames "+\
+                 "list"
             )
         self.make_names(names)
 
@@ -62,11 +62,16 @@ class GraphModeler(object):
         return res
 
     def __doc__(self):
-        return "Class implements a chain of graph typed by their follower in the list.\
-                It allows you to build a system where each graph has a model and where\
-                the modification of a model can propagate to the upper graphs"
+        return "Class implements a chain of graph typed by their follower in the list. "+\
+                "It allows you to build a system where each graph has a model and where "+\
+                "the modification of a model can propagate to the upper graphs"
 
-    def load_from_nx_graph(self, l):
+    def load_from_nx_graph(self, l, hom_chain=None):
+        """ Load the graph chain from a list of nx.Graphs or nx.DiGraphs
+            If hom_chain (list of dicts) is given, we use is as our
+            list of homomorphisms"""
+        if hom_chain != None:
+            self.hom_chain = hom_chain
         typing_graph = None
         for i in range(len(l)):
             directed = type(l[i]) == nx.DiGraph
@@ -78,14 +83,20 @@ class GraphModeler(object):
             self.graph_chain[i] = typing_graph
             self.hom_chain[i] = self.graph_chain[i].hom
 
-    def load_from_files(self, l_files, di):
+    def load_from_files(self, l_files, di, hom_chain=None):
+        """ Load the graph chain from a list of file_paths. Each file have to be
+            an xml or json file representing the graph (use
+            Typed(Di)Graph.export method to generate the files)
+            If hom_chain (list of dicts) is given, we use is as our
+            list of homomorphisms"""
         graphs = []
         for fil in l_files:
             graphs.append(TypedDiGraph(load_file=fil) if di else TypedGraph(load_file=fil))
-        self.load_from_ty_graph(graphs)
+        self.load_from_ty_graph(graphs, hom_chain=hom_chain)
 
 
     def make_names(self, names):
+        """ Updates self.names """
         for i in range(len(names)):
             if names[i] in self.graph_names:
                 raise ValueError(
@@ -97,7 +108,15 @@ class GraphModeler(object):
                 )
             self.graph_names[i] = names[i]
 
-    def load_from_ty_graph(self, l):
+    def load_from_ty_graph(self, l, hom_chain=None):
+        """ Load the graph chain from a list of TypedGraphs or TypedDiGraphs
+            If hom_chain (list of dicts) is given, we use is as our
+            list of homomorphisms
+            If neither hom_chain nor self.hom_chain are defined, we try to
+            create canonic homomorphisms between our graphs (the type of a node
+            is the name of its typing node in the typing graph)"""
+        if hom_chain != None:
+            self.hom_chain = hom_chain
         for i in range(len(l)):
             if i == 0:
                 l[i].metamodel_ = None
@@ -113,6 +132,7 @@ class GraphModeler(object):
 
 
     def init_rewriting(self, n_i):
+        """ Returns a Transformer instance of the graph you want """
         if type(n_i) == int:
             g = self.get_by_id(n_i)
 
@@ -120,12 +140,14 @@ class GraphModeler(object):
             g = self.get_by_name(n_i)
         else:
             raise ValueError(
-                "Undefined identifier of type %s, was expecting id:int or \
-                 name:str" % type(n_i)
+                "Undefined identifier of type %s, was expecting id:int or "+\
+                 "name:str" % type(n_i)
             )
         return Transformer(g)
 
     def make_tygraph(self, G, T, hom, di):
+        """ Create a Typed(Di)Graph representing G and typed by T with the
+            homomorphism hom """
         res = TypedDiGraph(T) if di else TypedGraph(T)
         for n in G.nodes():
             if hom == None:
@@ -150,14 +172,16 @@ class GraphModeler(object):
         return res
 
     def remove_layer(self, n_i):
+        """ Removes a layer from the modeler, updates our graph_chain and our
+            homomorphisms list """
         if type(n_i) == int:
             i = n_i
         elif type(n_i) == str:
             i = self.get_id_from_name(n_i)
         else:
             raise ValueError(
-                "Undefined identifier of type %s, was expecting id:int or \
-                 name:str" % type(n_i)
+                "Undefined identifier of type %s, was expecting id:int or "+\
+                 "name:str" % type(n_i)
             )
         if (i < len(self.graph_chain)-1) and i >= 0:
 
@@ -185,6 +209,8 @@ class GraphModeler(object):
 
     def insert_layer(self, graph, name=None, i=None,
                   hup=None, hdown=None):
+        """ Adds a new layer to the modeler, updates the hom chain with either
+            the given Homomorphism or canonic ones """
         if name in self.graph_names:
             raise ValueError(
                 "Name %s already used for another graph" % names[i]
@@ -222,9 +248,11 @@ class GraphModeler(object):
         self.graph_names.insert(i, name)
 
     def get_by_id(self, n):
+        """ Get a graph by its id in the modeler """
         return self.graph_chain[n]
 
     def get_id_from_name(self, name):
+        """ Get the id of the graph with name name in the modeler """
         for i in range(len(self.graph_names)):
             if self.graph_names[i] == name:
                 return i
@@ -233,6 +261,7 @@ class GraphModeler(object):
         )
 
     def get_by_name(self, name):
+        """ Get a graph by its name in the modeler """
         for i in range(len(self.graph_names)):
             if self.graph_names[i] == name:
                 return self.graph_chain[i]
@@ -244,6 +273,8 @@ class GraphModeler(object):
         """ n_i : name or id
             L_G : L -> G
             trans : Transformer instance
+            Does a simple rewrite on the selected graph using the commands
+            and stores the necessary informations to propagate that change
         """
         if type(n_i) == int:
             i = n_i
@@ -251,8 +282,8 @@ class GraphModeler(object):
             i = self.get_id_from_name(n_i)
         else:
             raise ValueError(
-                "Undefined identifier of type %s, was expecting id:int or \
-                 name:str" % type(n_i)
+                "Undefined identifier of type %s, was expecting id:int or "+\
+                 "name:str" % type(n_i)
             )
         self.changes[i] = Rewriter.rewrite(L_G, trans, True)
 
@@ -260,6 +291,9 @@ class GraphModeler(object):
         """ n_i : name or id
             L_G : L -> G
             trans : Transformer instance
+            Does multiple simple rewritings on the selected graph using the
+            canonical form of the commands and stores the necessary
+            informations to propagate those changes
         """
         if type(n_i) == int:
             i = n_i
@@ -267,16 +301,17 @@ class GraphModeler(object):
             i = self.get_id_from_name(n_i)
         else:
             raise ValueError(
-                "Undefined identifier of type %s, was expecting id:int or \
-                 name:str" % type(n_i)
+                "Undefined identifier of type %s, was expecting id:int or "+\
+                 "name:str" % type(n_i)
             )
         changes = Rewriter.canonical_rewrite(self.graph_chain[i], transformations, True)
         self.chain_propagation(n_i, changes)
 
     def chain_propagation(self, n_i, changes_list):
         """ n_i : name or id
-            L_G : L -> G
-            trans : Transformer instance
+            changes_list : List of transformations to propagate the change
+            Does the multiple propagations after the multiple simple rewritings
+            of the canonical_rewrite_and_propagate function
         """
         if type(n_i) == int:
             i = n_i
@@ -284,8 +319,8 @@ class GraphModeler(object):
             i = self.get_id_from_name(n_i)
         else:
             raise ValueError(
-                "Undefined identifier of type %s, was expecting id:int or \
-                 name:str" % type(n_i)
+                "Undefined identifier of type %s, was expecting id:int or "+\
+                 "name:str" % type(n_i)
             )
 
         for change in changes_list:
@@ -294,6 +329,7 @@ class GraphModeler(object):
 
     def propagate_from(self, n_i):
         """ n_i : name or id
+            Propagate the changes from the selected graph
         """
         if type(n_i) == int:
             i = n_i
@@ -344,6 +380,7 @@ class GraphModeler(object):
                 )
 
     def propagate_all(self):
+        """ Propagate every possible change """
         for i in range(len(self.changes)-1, -1, -1):
             if self.changes[i] != None:
                 self.propagate_from(i)

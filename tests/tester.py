@@ -1,3 +1,5 @@
+""" Run tests using different methods and compare the results """
+
 from regraph.library.data_structures import (TypedDiGraph,
                                              TypedGraph,
                                              Homomorphism)
@@ -8,7 +10,7 @@ import os
 import subprocess
 import sys
 
-parser = argparse.ArgumentParser(description='Run tests')
+parser = argparse.ArgumentParser(description='Run tests using different methods and compare the results')
 parser.add_argument('-f', dest='file', action='store', default='tests/alea_gen.py',
                     type=str, help="test script to run.\
                     Should have arguments -n for nodes number, -e for edge \
