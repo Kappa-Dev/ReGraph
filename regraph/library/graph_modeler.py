@@ -271,10 +271,13 @@ class GraphModeler(object):
 
     def rewrite(self, n_i, L_G, trans):
         """ n_i : name or id
-            L_G : L -> G
+            L_G : L -> G homomorphism
             trans : Transformer instance
             Does a simple rewrite on the selected graph using the commands
             and stores the necessary informations to propagate that change
+            If you used the Transformer class properly to generate the
+            transformations, L_G = Homomorphism.identity(trans.L, trans.G)
+            should work just fine
         """
         if type(n_i) == int:
             i = n_i
@@ -287,13 +290,13 @@ class GraphModeler(object):
             )
         self.changes[i] = Rewriter.rewrite(L_G, trans, True)
 
-    def canonical_rewrite_and_propagate(self, n_i, transformations):
+    def rewrite_and_propagate(self, n_i, transformations):
         """ n_i : name or id
-            L_G : L -> G
-            trans : Transformer instance
-            Does multiple simple rewritings on the selected graph using the
-            canonical form of the commands and stores the necessary
-            informations to propagate those changes
+            L_G : L -> G homomorphism
+            trans : Transformation string
+            Does a simple rewriting on the selected graph and then propagates it
+            The L -> G homomorphism used for the rewritings is identity, so
+            nodes of L should be named like nodes of G
         """
         if type(n_i) == int:
             i = n_i
@@ -304,7 +307,30 @@ class GraphModeler(object):
                 "Undefined identifier of type %s, was expecting id:int or "+\
                  "name:str" % type(n_i)
             )
-        changes = Rewriter.canonical_rewrite(self.graph_chain[i], transformations, True)
+
+        trans = Rewriter.transformer_from_command(self.get_by_id(i),
+                                                  transformations)
+        self.rewrite(n_i, Homomorphism.identity(trans.L, trans.G), trans)
+        self.propagate_from(n_i)
+
+    def canonical_rewrite_and_propagate(self, n_i, transformations):
+        """ n_i : name or id
+            transformations : Transformation string
+            Does multiple simple rewritings on the selected graph using the
+            canonical form of the commands and propagates those changes
+            The L -> G homomorphism used for the rewritings is identity, so
+            nodes of L should be named like nodes of G
+        """
+        if type(n_i) == int:
+            i = n_i
+        elif type(n_i) == str:
+            i = self.get_id_from_name(n_i)
+        else:
+            raise ValueError(
+                "Undefined identifier of type %s, was expecting id:int or "+\
+                 "name:str" % type(n_i)
+            )
+        changes = Rewriter.do_canonical_rewrite(self.graph_chain[i], transformations, True)
         self.chain_propagation(n_i, changes)
 
     def chain_propagation(self, n_i, changes_list):

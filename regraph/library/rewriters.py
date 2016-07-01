@@ -1082,6 +1082,19 @@ class Rewriter:
             return Gprime
 
     @staticmethod
+    def do_canonical_rewrite(G, transformations, get_details=False):
+        """ Does a simple rewriting by decomposing the transformations string
+            into a list of canonical transformations strings """
+        di = type(G) == TypedDiGraph
+        trans_list = Rewriter.make_canonical_commands(G, transformations, di)
+        return Rewriter.chain_rewrite(G, trans_list, get_details)
+
+    def do_rewrite(G, transformations, get_details=False):
+        trans = Rewriter.transformer_from_command(G, transformations)
+        L_G = Homomorphism.identity(trans.L, trans.G)
+        return Rewriter.rewrite(L_G, trans, get_details)
+
+    @staticmethod
     def chain_rewrite(G, trans_list, get_details=False):
         """ Does multiple simple rewritings on G given a list of transformations """
         res = []
@@ -1104,14 +1117,6 @@ class Rewriter:
             return res
         else:
             return res[0]
-
-    @staticmethod
-    def canonical_rewrite(G, transformations, get_details=False):
-        """ Does a simple rewriting by decomposing the transformations list
-            into a list of canonical transformations list """
-        di = type(G) == TypedDiGraph
-        trans_list = Rewriter.make_canonical_commands(G, transformations, di)
-        return Rewriter.chain_rewrite(G, trans_list, get_details)
 
 
     @staticmethod
