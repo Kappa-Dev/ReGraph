@@ -27,36 +27,36 @@ parser.add_argument('--di', dest='di', action='store_const', const=True,
                     default=False, help='if graph is directed')
 parser.add_argument('-p', dest='plot', action='store_const', const=True,
                     default=False, help='plot graphs')
-parser.add_argument('-log', dest='log', action='store', default=None,
-                        help='log file to output')
+parser.add_argument('--result', dest='result', action='store_const', const=True,
+                    default=False, help='compute the resulting graph')
 parser.add_argument('--debug', dest='debug', action='store_const', const=True,
                     default=False, help='prints useful informations')
 
 args = parser.parse_args()
-
 if args.out[-1] != "/":
     args.out += "/"
-
 directory = args.out
-
-if args.log != None:
-    sys.stdout = open(args.log, 'w')
 
 if not os.path.exists(directory):
     os.makedirs(directory)
 
 graph_type = TypedDiGraph if args.di else TypedGraph
 
+
+
+# Create or import a meta-model
 if args.meta==None:
     meta = graph_type.random_graph(n_nodes = 10)
 else:
     meta = graph_type(load_file=args.meta)
-
 meta.export(directory+"meta"+args.ext)
+
 if args.plot:
     plot_graph(meta, filename=directory+"meta.png")
 f = open(directory+"meta.txt", "w")
 print(meta, file = f, end='')
+
+# Create a random graph respecting the meta-model
 graph = graph_type.random_graph(metamodel=meta, n_nodes=args.nodes,
                                                   p_edges=args.edges)
 graph.export(directory+"graph"+args.ext)
@@ -64,37 +64,28 @@ if args.plot:
     plot_graph(graph, filename=directory+"graph.png")
 f = open(directory+"graph.txt", "w")
 print(graph, file = f, end='')
+
+# Create random transformations on the graph we created
 transformations = Rewriter.gen_transformations(args.trans, graph)
-f = open(directory+"transformations.txt", "w")
-print("Transformations:\n%s\n" % transformations, file = f, end='')
-transformations = Rewriter.simplify_commands(transformations)
+print(transformations, file = open(directory+'trans.txt', 'w'), end='')
 
+if args.result:
+    # Compute the result of the transformations on the graph
 
-trans = Rewriter.transformer_from_command(graph, transformations)
+    f = open(directory+"transformations.txt", "w")
+    print("Transformations:\n%s\n" % transformations, file = f, end='')
 
-if args.debug:
-    edges_in_R = [(trans.P_R_dict[n1], trans.P_R_dict[n2]) for (n1, n2) in trans.P.edges()]
-    edges_in_L = [(trans.P_L_dict[n1], trans.P_L_dict[n2]) for (n1, n2) in trans.P.edges()]
-    print("\nMapping:\nn_P\\n_P-R: %s\nn_P\\n_P-L: %s\nn_P-R\\n_P: %s\nn_P-L\\n_P: %s\n" %\
-          (str([n for n in trans.P.nodes() if n not in trans.P_R_dict.keys()])+"\n",
-          str([n for n in trans.P.nodes() if n not in trans.P_L_dict.keys()])+"\n",
-          str([n for n in trans.P_R_dict.keys() if n not in trans.P.nodes()])+"\n",
-          str([n for n in trans.P_L_dict.keys() if n not in trans.P.nodes()])))
-    print("Connectivity:\ne_P\\e_R: %s\ne_P\\e_L: %s\ne_L\\e_G: %s\n" %\
-          (str([e for e in edges_in_R if e not in trans.R.edges()])+"\n",
-          str([e for e in edges_in_L if e not in trans.L.edges()])+"\n",
-          str([e for e in trans.L.edges() if e not in trans.G.edges()])))
+    transformations = Rewriter.simplify_commands(transformations)
+    print("\n\nSimplified:\n%s\n" % transformations, file=f, end='')
 
-if args.plot:
-    plot_graph(trans.P, filename = directory+"trans_P.png")
-    plot_graph(trans.L, filename = directory+"trans_LHS.png")
-    plot_graph(trans.R, filename = directory+"trans_RHS.png")
-f = open(directory+"transformer.txt", "w")
-print("Transformer:\n%s\n" % trans, file = f, end='')
+    trans_list = Rewriter.make_canonical_commands(graph,
+                                                  transformations,
+                                                  args.di)
+    print("\n\nCanonical:\nTrans:\n"+"\nTrans:\n".join(trans_list), file=f, end='')
 
-Gprime = Rewriter.rewrite(Homomorphism.identity(trans.L, trans.G), trans)
-if args.plot:
-    plot_graph(Gprime, filename=directory+"result.png")
-Gprime.export(directory+"result"+args.ext)
-f = open(directory+"result.txt", "w")
-print(Gprime, file = f, end='')
+    Gprime = Rewriter.do_canonical_rewrite(graph, transformations)
+    if args.plot:
+        plot_graph(Gprime, filename=directory+"result.png")
+    Gprime.export(directory+"result"+args.ext)
+    f = open(directory+"result.txt", "w")
+    print(Gprime, file = f, end='')

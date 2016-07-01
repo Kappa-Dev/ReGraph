@@ -72,13 +72,12 @@ for n in range(args.tests):
     directory = args.out+str(gen)+"/"
 
     # Generate a random graph and transformations with alea_gen.py
-    process = subprocess.check_output(("python3 -W ignore "+args.file+" -o %s -n %s -e %s -t %s -ext %s%s%s%s%s%s" %
+    process = subprocess.check_output(("python3 -W ignore "+args.file+" -o %s -n %s -e %s -t %s -ext %s%s%s%s%s" %
               (args.input, args.nodes, args.edges, args.trans, args.ext,
                " --meta "+args.meta if args.meta != None else '',
                ' --di' if args.di else '',
                ' --debug' if args.debug else '',
-               ' -p' if args.plot else '',
-               ' -log '+args.log if args.log != None else '')).split(" "))
+               ' -p' if args.plot else '')).split(" "))
     print(process.decode("UTF-8"), end='')
 
     # Import the meta-model, by default alea_gen.py creates a random graph without attributes
@@ -93,8 +92,7 @@ for n in range(args.tests):
         plot_graph(graph, filename = directory+"graph.png")
 
     # Import the random transformations
-    f = open(args.input+'transformations.txt', 'r')
-    f.readline()
+    f = open(args.input+'trans.txt', 'r')
     trans_string = f.read()
 
     # Simplify the random transformations
@@ -121,7 +119,9 @@ for n in range(args.tests):
     if "prop" in methods or "all" in methods:
         # Tries to do all the transformations in one step
         g1 = graph.copy()
+
         result = Rewriter.do_rewrite(g1, simplified)
+
         result.export(directory+"result_cat_op"+args.ext)
         if args.plot:
             plot_graph(result, filename = directory+"result_cat_op.png")
@@ -131,7 +131,9 @@ for n in range(args.tests):
         # propagation of changes
         g2 = graph.copy()
         rw = Rewriter(g2)
+
         rw.apply_rule(Homomorphism.identity(trans.L, trans.G), trans)
+
         g2.export(directory+"result_rul"+args.ext)
         if args.plot:
             plot_graph(g2, filename = directory+"result_rul.png")
@@ -141,9 +143,12 @@ for n in range(args.tests):
         # by doing multiple steps of rewriting while keeping the necessary
         # informations for the propagation
         g3 = graph.copy()
+
         print("\nSimplified:\n%s\n" % simplified, file=fprime)
         print("\nCanonical:\nTrans:\n%s\n" % ("\nTrans:\n".join(Rewriter.make_canonical_commands(g3, simplified, args.di))), file = fprime)
+
         result_can = Rewriter.do_canonical_rewrite(g3, simplified)
+
         result_can.export(directory+"result_canonic"+args.ext)
         if args.plot:
             plot_graph(result_can, filename = directory+"result_canonic.png")
