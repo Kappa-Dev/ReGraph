@@ -1,6 +1,6 @@
 """ Run tests using different methods and compare the results
     Example of command line :
-      > python3 -W ignore tests/tester.py -N 10 -n 20 -e 0.1 -t 500 --meta tests/big_graph/metametameta.xml -m 'prop;canonic' -log logs.txt -comp
+      > python3 -W ignore tests/tester.py -N 10 -n 20 -e 0.1 -t 500 --meta tests/big_graph/metametameta.xml -m 'prop;canonic' -comp
 """
 
 from regraph.library.data_structures import (TypedDiGraph,
@@ -41,8 +41,6 @@ parser.add_argument('-m', dest='methods', action='store', type=str,
                     default="prop", help='method to use : prop or rew or canonic or all (can combine them eg. prop;canonic)')
 parser.add_argument('--debug', dest='debug', action='store_const', const=True,
                     default=False, help='print useful informations')
-parser.add_argument('-log', dest='log', action='store', default=None,
-                    help='log file to output')
 parser.add_argument('-p', dest='plot', action='store_const', const=True,
                     default=False, help='plot')
 parser.add_argument('-comp', dest='compare', action='store_const', const=True,
