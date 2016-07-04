@@ -893,6 +893,21 @@ class Homomorphism(object):
         return "Source :\n%sTarget :\n%sMapping :\n%s" % \
             (str(self.source_),str(self.target_),str(self.mapping_))
 
+    def __getitem__(self, index):
+        return self.mapping_.__getitem__(index)
+
+    def __setitem__(self, index, value):
+        self.mapping_.__setitem__(index, value)
+
+    def __delitem__(self, index):
+        self.mapping_.__delitem__(index)
+
+    def __len__(self):
+        return self.mapping_.__len__()
+
+    def __missing__(self, index):
+        self.mapping_.__missing__(index)
+
     def is_monic(self):
         """Check if the homomorphism is monic."""
         return len(set(self.mapping_.keys())) ==\
