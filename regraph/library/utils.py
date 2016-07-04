@@ -56,7 +56,7 @@ def to_set(value):
         return {value}
 
 def normalize_attrs(attrs_):
-    if attrs_ != None:
+    if attrs_ is not None:
         for k,v in attrs_.items():
             attrs_[k] = to_set(v)
     else:
@@ -196,7 +196,7 @@ def plot_instance(graph, pattern, instance, filename=None):
 
 def dict_sub(A, B):
     res = A.copy()
-    if B == None:
+    if B is None:
         return res
     for key, value in B.items():
         if key not in A.keys():

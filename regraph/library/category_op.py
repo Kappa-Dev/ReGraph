@@ -172,7 +172,7 @@ def pullback_complement(h1, h2):
                 is_in_A = True
                 break;
         if not is_in_A:
-            if DmB.node[n].type_ == None:
+            if DmB.node[n].type_ is None:
                 C.add_node(n,
                            n,
                            DmB.node[n].attrs_)

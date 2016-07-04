@@ -201,7 +201,7 @@ class Transformer(object):
                                 self.G.node[n].attrs_)
                 self.P_R_dict[n] = n
 
-            if node_name == None:
+            if node_name is None:
                 i = 1
                 node_name = str(n)+str(i)
                 while node_name in self.G.nodes() or\
@@ -237,7 +237,7 @@ class Transformer(object):
         elif n in self.P.nodes():
             # If it's not a base node but it's in P, it's a clone, we have to
             # clone it again
-            if node_name == None:
+            if node_name is None:
                 i = 1
                 node_name = str(n)+str(i)
                 while node_name in self.G.nodes() or\
@@ -270,7 +270,7 @@ class Transformer(object):
         else:
             # Else it's an added node or a merged node, we duplicate the node in
             # R
-            if node_name == None:
+            if node_name is None:
                 i = 1
                 node_name = str(n)+str(i)
                 while node_name in self.G.nodes() or\
@@ -825,6 +825,9 @@ class Transformer(object):
                                 self.G.get_edge(self.P_L_dict[n1],
                                                 self.P_L_dict[n2]))
                 self.P.remove_edge_attrs(n1, n2, attrs)
+                self.R.remove_edge_attrs(self.P_R_dict[n1],
+                                         self.P_R_dict[n2],
+                                         attrs)
 
             other_clones = keys_by_value(self.P_L_dict, self.P_L_dict[n1])
             if len(other_clones) > 1:
@@ -1393,7 +1396,7 @@ class Rewriter:
         def rand_attrs(attrs):
             """ Picks random attributes from attrs using the probabilities in
                 the main function arguments """
-            if attrs == None:
+            if attrs is None:
                 return {}
 
             new_attrs = {}
@@ -1415,7 +1418,7 @@ class Rewriter:
         trans = []
         env = graph.copy()
         base_nodes = [n for n in graph.nodes()]
-        if graph.metamodel_ == None:
+        if graph.metamodel_ is None:
             types = ["anything"]
         else:
             types = graph.metamodel_.nodes()
@@ -1442,7 +1445,7 @@ class Rewriter:
         def pick_nodes():
             """ Picks multiple node (a random number following a gaussian law
                 with parameters merge_prop_av and merge_prop_dev) if possible """
-            if env.metamodel_ == None:
+            if env.metamodel_ is None:
                 ty = random.choice([None, "anything"])
             else:
                 ty = pick_type()
@@ -1474,8 +1477,8 @@ class Rewriter:
             while i > 0:
                 n1 = pick_node()
                 n2 = pick_node()
-                if n1 != None and n2 != None:
-                    if env.metamodel_ == None or\
+                if n1 is not None and n2 is not None:
+                    if env.metamodel_ is None or\
                        (env.node[n1].type_, env.node[n2].type_) in env.metamodel_.edges() and\
                        (n1, n2) not in env.edges() and n1 != n2:
                         return (n1, n2)
@@ -1493,7 +1496,7 @@ class Rewriter:
 
         def pick_attrs_for(node):
             """ Picks random attrs from the attrs of the typing node of node """
-            if graph.metamodel_ == None:
+            if graph.metamodel_ is None:
                 return {}
             else:
                 return rand_attrs(graph.metamodel_.node[env.node[node].type_].attrs_)
@@ -1504,7 +1507,7 @@ class Rewriter:
 
         def pick_edge_attrs_for(n1, n2):
             """ Picks random attrs from the attrs of the typing edge of edge """
-            if env.metamodel_ == None:
+            if env.metamodel_ is None:
                 return {}
             else:
                 return rand_attrs(env.metamodel_.get_edge(
@@ -1550,7 +1553,7 @@ class Rewriter:
             op = random.choice(actions)
             if op == "CLONE":
                 node = pick_node()
-                if node == None or "_" in node:
+                if node is None or "_" in node:
                     continue
                 name = pick_name()
 
@@ -1612,7 +1615,7 @@ class Rewriter:
                 trans.append(op)
             elif op == "DELETE_NODE":
                 node = pick_node()
-                if node == None:
+                if node is None:
                     continue
 
                 op = add_req(op, " '%s'" % str(node))
@@ -1622,7 +1625,7 @@ class Rewriter:
                 trans.append(op)
             elif op == "ADD_EDGE":
                 e = pick_new_edge()
-                if e == None:
+                if e is None:
                     continue
                 else:
                     n1, n2 = e
@@ -1637,7 +1640,7 @@ class Rewriter:
                 trans.append(op)
             elif op == "DELETE_EDGE":
                 n1, n2 = pick_edge()
-                if n1 == None or n2 == None:
+                if n1 is None or n2 is None:
                     continue
 
                 op = add_req(op, " '%s' '%s'" % (str(n1),str(n2)))
@@ -1646,12 +1649,12 @@ class Rewriter:
                 trans.append(op)
             elif op == "ADD_NODE_ATTRS":
                 node = pick_node()
-                if node == None:
+                if node is None:
                     continue
-                if env.metamodel_ == None:
+                if env.metamodel_ is None:
                     attrs = {}
                 else:
-                    if env.metamodel_.node[env.node[node].type_].attrs_ == None:
+                    if env.metamodel_.node[env.node[node].type_].attrs_ is None:
                         attrs = {}
                     else:
                         attrs = rand_attrs(dict_sub(env.metamodel_.node[env.node[node].type_].attrs_,
@@ -1667,9 +1670,9 @@ class Rewriter:
                 trans.append(op)
             elif op == "ADD_EDGE_ATTRS":
                 n1, n2 = pick_edge()
-                if n1 == None or n2 == None:
+                if n1 is None or n2 is None:
                     continue
-                if env.metamodel_ == None:
+                if env.metamodel_ is None:
                     attrs = {}
                 else:
                     attrs = rand_attrs(dict_sub(
@@ -1690,11 +1693,11 @@ class Rewriter:
                 trans.append(op)
             elif op == "DELETE_NODE_ATTRS":
                 node = pick_node()
-                if node == None:
+                if node is None:
                     continue
                 attrs = pick_attrs_from(node)
 
-                if attrs == {} or attrs == None:
+                if attrs == {} or attrs is None:
                     continue
 
                 op = add_req(op, " '%s'" % node)
@@ -1704,11 +1707,11 @@ class Rewriter:
                 trans.append(op)
             elif op == "DELETE_EDGE_ATTRS":
                 n1, n2 = pick_edge()
-                if n1 == None or n2 == None:
+                if n1 is None or n2 is None:
                     continue
                 attrs = pick_edge_attrs_from(n1, n2)
 
-                if attrs == {} or attrs == None:
+                if attrs == {} or attrs is None:
                     continue
 
                 op = add_req(op, " '%s' '%s'" % (n1,n2))

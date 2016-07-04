@@ -184,7 +184,7 @@ class TestRewrites(object):
         trans.remove_edge_attrs(1, 2, {'s' : 'p'})
 
         Gprime = Rewriter.rewrite(Homomorphism.identity(trans.L, trans.G), trans)
-
+        
         assert(Gprime.get_edge(1, 2) == {'s': set()} or\
                Gprime.get_edge(1, 2) == {})
 

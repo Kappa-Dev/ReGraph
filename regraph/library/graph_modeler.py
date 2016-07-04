@@ -54,10 +54,10 @@ class GraphModeler(object):
         res = ''
         for i in range(len(self.graph_chain)-1, -1, -1):
             res += '--- Graph %s:\n\n' %\
-                    (self.graph_names[i] if self.graph_names[i] != None else i)
+                    (self.graph_names[i] if self.graph_names[i] is not None else i)
             res += str(self.graph_chain[i])
-            res += '' if self.hom_chain[i] == None else "Mapping :\n"
-            res += '' if self.hom_chain[i] == None else str(self.hom_chain[i])
+            res += '' if self.hom_chain[i] is None else "Mapping :\n"
+            res += '' if self.hom_chain[i] is None else str(self.hom_chain[i])
             res += '\n\n'
         return res
 
@@ -70,7 +70,7 @@ class GraphModeler(object):
         """ Load the graph chain from a list of nx.Graphs or nx.DiGraphs
             If hom_chain (list of dicts) is given, we use is as our
             list of homomorphisms"""
-        if hom_chain != None:
+        if hom_chain is not None:
             self.hom_chain = hom_chain
         typing_graph = None
         for i in range(len(l)):
@@ -115,7 +115,7 @@ class GraphModeler(object):
             If neither hom_chain nor self.hom_chain are defined, we try to
             create canonic homomorphisms between our graphs (the type of a node
             is the name of its typing node in the typing graph)"""
-        if hom_chain != None:
+        if hom_chain is not None:
             self.hom_chain = hom_chain
         for i in range(len(l)):
             if i == 0:
@@ -123,7 +123,7 @@ class GraphModeler(object):
                 l[i].hom = None
             else:
                 l[i].metamodel_ = l[i-1]
-                if self.hom_chain[i] == None:
+                if self.hom_chain[i] is None:
                     l[i].hom = TypedHomomorphism.canonic(l[i], l[i-1])
                 else:
                     l[i].hom = TypedHomomorphism(l[i], l[i-1], self.hom_chain[i])
@@ -150,7 +150,7 @@ class GraphModeler(object):
             homomorphism hom """
         res = TypedDiGraph(T) if di else TypedGraph(T)
         for n in G.nodes():
-            if hom == None:
+            if hom is None:
                 if type(G.node[n]) == TypedNode:
                     res.add_node(n, None, G.node[n].attrs_)
                 else:
@@ -165,7 +165,7 @@ class GraphModeler(object):
                 res.add_edge(n1, n2, G.get_edge(n1, n2))
             else:
                 res.add_edge(n1, n2, G.edge[n1][n2])
-            if hom == None or T == None:
+            if hom is None or T is None:
                 res.hom = None
             else:
                 res.hom = TypedHomomorphism(res, T, hom)
@@ -367,7 +367,7 @@ class GraphModeler(object):
                 type(n_i)
             )
         if i >= len(self.graph_chain)-1:
-            if self.changes[i][0] != None:
+            if self.changes[i][0] is not None:
                 self.graph_chain[i] = self.changes[i][0].target_
             else:
                 self.graph_chain[i] = self.changes[i][1].source_
@@ -375,7 +375,7 @@ class GraphModeler(object):
 
             self.changes[i] = None
         else:
-            if self.changes[i] != None:
+            if self.changes[i] is not None:
                 G = self.graph_chain[i+1]
                 T = G.metamodel_
                 Tm_Tprime, Tm_T = self.changes[i]
@@ -387,7 +387,7 @@ class GraphModeler(object):
                     self.changes[i+1] = Gm_Gprime, Gm_G
                     self.graph_chain[i] = Tm_Tprime.target_
                 else:
-                    if self.changes[i][0] == None:
+                    if self.changes[i][0] is None:
                         Gm.metamodel_ = Tm_T.source_
                         Gm.hom = Gm_Tm
                         self.graph_chain[i] = Tm_T.source_
@@ -408,5 +408,5 @@ class GraphModeler(object):
     def propagate_all(self):
         """ Propagate every possible change """
         for i in range(len(self.changes)-1, -1, -1):
-            if self.changes[i] != None:
+            if self.changes[i] is not None:
                 self.propagate_from(i)
