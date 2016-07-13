@@ -556,6 +556,25 @@ class TypedDiGraph(nx.DiGraph):
                                         n2[1]))
         self.remove_node(n)
 
+    def subgraph(self, nbunch):
+        res = type(self)()
+
+        for n in nbunch:
+            res.add_node(n, self.node[n].type_, self.node[n].attrs_)
+
+        for e in self.edges():
+            if e[0] in nbunch and e[1] in nbunch:
+                res.add_edge(e[0], e[1], self.get_edge(e[0], e[1]))
+
+        res.metamodel_ = self.metamodel_
+        res.hom = TypedHomomorphism(
+                        res,
+                        self.metamodel_,
+                        dict([(n, self.hom[n]) for n in res.nodes()])
+                  )
+
+        return res
+
     def relabel_nodes(self, mapping):
         """Relabel graph nodes in place.
 
@@ -927,10 +946,14 @@ class Homomorphism(object):
                 if not target.is_directed():
                     if not (dictionary[s_edge[1]], dictionary[s_edge[0]]) in target.edges():
                         raise ValueError(
-                            "Invalid homomorphism: Connectivity is not preserved!")
+                            "Invalid homomorphism: Connectivity is not preserved!"+\
+                            " Was expecting an edge between %s and %s" %
+                            (dictionary[s_edge[1]], dictionary[s_edge[0]]))
                 else:
                     raise ValueError(
-                        "Invalid homomorphism: Connectivity is not preserved!")
+                        "Invalid homomorphism: Connectivity is not preserved!"+\
+                        " Was expecting an edge between %s and %s" %
+                        (dictionary[s_edge[0]], dictionary[s_edge[1]]))
         return True
 
     @staticmethod

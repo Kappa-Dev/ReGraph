@@ -142,7 +142,9 @@ def plot_graph(graph, types=True, filename=None):
 
         labels = {}
         for node in graph.nodes():
-            labels[node] = str(node)+":"+str(graph.node[node].type_)
+            labels[node] = str(node)
+            if types:
+                labels[node]+= ":"+str(graph.node[node].type_)
         offset = 0.05
         for p in pos:  # raise text positions
             pos[p][1] += offset
