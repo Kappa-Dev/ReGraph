@@ -1,6 +1,6 @@
 # ReGraph
 
-Graph Rewriting Library
+A graph rewriting library
 
 ## About project
 
