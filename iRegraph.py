@@ -11,7 +11,7 @@ from regraph.library.utils import plot_graph, plot_instance
 import readline
 
 class MakeRuleCmd(cmd.Cmd):
-    def __init__(self, name, fullname, pattern, parent):
+    def __init__(self, name, fullname, pattern, parent, png_viewer_location):
         super().__init__()
         readline.set_completer_delims(' ')
         self.name = name
@@ -26,7 +26,7 @@ class MakeRuleCmd(cmd.Cmd):
         self.absolute_start_image_filename_ = os.path.join(self.location_, self.start_image_fileName_)
         self.end_image_fileName_ = self.fullname.replace("/","__")+"_end.png"
         self.absolute_end_image_filename_ = os.path.join(self.location_, self.end_image_fileName_)
-        self.image_reader_ = "/usr/bin/gqview"
+        self.image_reader_ = png_viewer_location
         self.transformer = Transformer(self.pattern)
         self.transformer.L = copy.deepcopy(self.pattern)
         self.transformer.P = copy.deepcopy(self.pattern)
@@ -373,7 +373,6 @@ class MyCmd(cmd.Cmd):
             os.path.join(os.getcwd(), os.path.dirname(__file__)))
         self.image_fileName_ = self.fullname.replace("/","__")+".png"
         self.absolute_image_filename_ = os.path.join(self.location_, self.image_fileName_)
-        #self.image_reader_ = "/usr/bin/gqview"
         self.image_reader_ = png_viewer_location
         if parent is not None: 
             self.graph = TypedDiGraph(metamodel=parent.graph)
@@ -874,7 +873,7 @@ class MyCmd(cmd.Cmd):
 
 
     def _do_new_rule(self, name, pattern):
-        self.subRules[name]=MakeRuleCmd(name, self.fullname+name+"/",self.subCmds[pattern].graph, self)
+        self.subRules[name]=MakeRuleCmd(name, self.fullname+name+"/",self.subCmds[pattern].graph, self, self.png_viewer_location)
         self.subRules[name].open_end()
         self.subRules[name].open_start()
         

@@ -49,7 +49,7 @@ source venv/bin/activate
 
 To install required dependencies
 ```
-pip install -r requirement.txt
+pip install -r requirements.txt
 ```
 
 ## Installation
