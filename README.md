@@ -17,20 +17,7 @@ Every graph can have a meta-model, so it is possible to construct a cascade of g
 
 ### Requirement
 
-The following `Python 3` packages are required
-
-```
-cycler==0.10.0
-decorator==4.0.9
-matplotlib==1.5.1
-networkx==1.11
-numpy==1.11.0
-pyparsing==2.1.4
-python-dateutil==2.5.3
-pytz==2016.4
-six==1.10.0
-wheel==0.24.0
-```
+The required `Python 3` packages are given inside the requirements.txt file
 
 To avoid manual installation and to easily set up development environment you may consider following the instructions below:
 

@@ -873,7 +873,7 @@ class MyCmd(cmd.Cmd):
 
 
     def _do_new_rule(self, name, pattern):
-        self.subRules[name]=MakeRuleCmd(name, self.fullname+name+"/",self.subCmds[pattern].graph, self, self.png_viewer_location)
+        self.subRules[name]=MakeRuleCmd(name, self.fullname+name+"/",self.subCmds[pattern].graph, self, self.image_reader_)
         self.subRules[name].open_end()
         self.subRules[name].open_start()
         
