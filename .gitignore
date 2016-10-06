@@ -18,3 +18,5 @@ tests/big_graph0/*
 tests/gen_big_graph.py
 tests/tester/*
 tests/looper.py
+*.png
+script

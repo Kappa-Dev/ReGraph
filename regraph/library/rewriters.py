@@ -37,7 +37,50 @@ class Transformer(object):
         # We keep in memory the nodes that are in G at the beginning
 
         self.base_nodes = [n for n in self.G.nodes()]
-
+        
+        
+    def appendToNodesNames(self,token):
+        self.P = self.P.appendToNodesNames(token)
+        self.R = self.R.appendToNodesNames(token)
+        self.L = self.L.appendToNodesNames(token)
+        self.P_R_dict = {(str(k)+"_"+str(token)):(str(v)+"_"+str(token)) for (k,v) in self.P_R_dict.items()}
+        self.P_L_dict = {(str(k)+"_"+str(token)):(str(v)+"_"+str(token)) for (k,v) in self.P_L_dict.items()}
+        
+        
+    def validNewMetamodel(self,new_meta_model):
+        return(all([g.validNewMetamodel for g in [self.G,self.P,self.R,self.L]])) 
+       
+    def updateMetaModel(self,new_meta_model):
+        self.G.updateMetamodel(new_meta_model)            
+        self.P.updateMetamodel(new_meta_model)            
+        self.R.updateMetamodel(new_meta_model)            
+        self.L.updateMetamodel(new_meta_model)            
+        
+        
+    def removeType(self,type_to_remove):
+        self.G.removeType(type_to_remove)
+        nodes_removed_from_p = self.P.removeType(type_to_remove)
+        for n in nodes_removed_from_p:
+            del self.P_L_dict[n]
+            del self.P_R_dict[n]
+        self.R.removeType(type_to_remove)            
+        self.L.removeType(type_to_remove)           
+        
+        
+    def convertType(self,old_type,new_type):
+        self.G.convertType(old_type,new_type)
+        self.P.convertType(old_type,new_type)
+        self.R.convertType(old_type,new_type)
+        self.L.convertType(old_type,new_type)
+        
+        
+    def removeEdgesByType(self,source_type,target_type): 
+        self.G.removeEdgesByType(source_type,target_type) 
+        self.P.removeEdgesByType(source_type,target_type) 
+        self.R.removeEdgesByType(source_type,target_type) 
+        self.L.removeEdgesByType(source_type,target_type) 
+       
+     
     def identity(self):
         return Homomorphism.identity(self.L, self.G)
 
@@ -68,6 +111,8 @@ class Transformer(object):
         """ Adds node to the graph """
         if not node_id in self.R.nodes():
             self.R.add_node(node_id, node_type, attrs)
+        else :
+            raise ValueError("Node already in R")
 
     def merge_nodes(self, n1, n2, node_name=None):
         """ Merges two nodes of the graph """
@@ -335,7 +380,7 @@ class Transformer(object):
             # the graphs
             in_G, nin_G = (n1, n2) if n1 in self.base_nodes else (n2, n1)
 
-            if not nin_G in self.R.nodes() and not nin_G in self.P.nodes:
+            if not nin_G in self.R.nodes() and not nin_G in self.P.nodes():
                 raise ValueError(
                     "Node %s doesn't exist" % nin_G
                 )
@@ -1065,6 +1110,10 @@ class Rewriter:
                 "change in the GraphModeler"
 
     @staticmethod
+    def rewrite_simple(trans, get_details=False):
+       return(Rewriter.rewrite(Homomorphism.identity(trans.L,trans.G),trans,get_details))
+       
+    @staticmethod
     def rewrite(L_G, trans, get_details=False):
         """ Simple rewriting using category operations """
         left_h, right_h = trans.get()
@@ -1074,7 +1123,6 @@ class Rewriter:
             raise ValueError(
                 "Can't rewrite, homomorphisms don't have the same preserved part"
             )
-
         Gm, P_Gm, Gm_G = pullback_complement(left_h, L_G)
         Gprime, Gm_Gprime, R_Gprime = pushout(P_Gm, right_h)
         Gprime.metamodel_ = graph.metamodel_

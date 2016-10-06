@@ -174,7 +174,7 @@ def pullback_complement(h1, h2):
         if not is_in_A:
             if DmB.node[n].type_ is None:
                 C.add_node(n,
-                           n,
+                           None,
                            DmB.node[n].attrs_)
             else:
                 C.add_node(n,

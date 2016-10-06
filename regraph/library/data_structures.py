@@ -313,6 +313,12 @@ class TypedDiGraph(nx.DiGraph):
     def get_edge(self, source, target):
         return self.edge[source][target]
 
+    def exists_edge(self, source, target):
+        return(source in self.edge and target in self.edge[source])
+
+    def exists_outgoing_edge(self, source):
+        return(source in self.edge and self.edge[source]) 
+
     def set_edge(self, source, target, attrs):
         if not (source, target) in self.edges():
             raise ValueError(
@@ -567,14 +573,20 @@ class TypedDiGraph(nx.DiGraph):
                 res.add_edge(e[0], e[1], self.get_edge(e[0], e[1]))
 
         res.metamodel_ = self.metamodel_
-        res.hom = TypedHomomorphism(
-                        res,
-                        self.metamodel_,
-                        dict([(n, self.hom[n]) for n in res.nodes()])
-                  )
+        if (self.hom) :
+            res.hom = TypedHomomorphism(
+                            res,
+                            self.metamodel_,
+                            dict([(n, self.hom[n]) for n in res.nodes()])
+                    )
 
         return res
-
+        
+        
+    def appendToNodesNames(self,token):
+        return(self.relabel_nodes({n:(str(n)+"_"+str(token)) for n in self.nodes()}))
+        
+        
     def relabel_nodes(self, mapping):
         """Relabel graph nodes in place.
 
@@ -614,6 +626,40 @@ class TypedDiGraph(nx.DiGraph):
             g.set_edge(s, t, attributes[(s, t)])
         return g
 
+
+    def convertType(self,old_type,new_type):
+        nodes_to_convert = {n for (n,v) in self.node.items() if v.type_==old_type}
+        for n in nodes_to_convert :
+            self.node[n].type_=new_type
+
+
+    def removeType(self,type_to_remove):
+        nodes_to_remove = {n for (n,v) in self.node.items() if v.type_==type_to_remove}
+        for n in nodes_to_remove : 
+            self.remove_node(n)
+        return(nodes_to_remove)    
+        
+        
+    def removeEdgesByType(self,source_type,target_type):
+        for (n1,n2) in self.edges():
+            if (self.node[n1].type_ == source_type  
+                    and self.node[n2].type_ == target_type):
+                self.remove_edge(n1,n2)
+            
+            
+    def validNewMetamodel(self, new_metamodel):
+        typing = {node_id: self.node[node_id].type_ for node_id in self.nodes()}
+        return(Homomorphism.is_valid_homomorphism(self,new_metamodel,typing))
+        
+
+    def updateMetamodel(self, new_metamodel):
+        # typing = {node_id: self.node[node_id].type_ for node_id in self.nodes()}
+        # if Homomorphism.is_valid_homomorphism(self,new_metamodel,typing):
+        if self.validNewMetamodel(new_metamodel):    
+            self.metamodel_=new_metamodel
+        else :
+            raise ValueError("metamodel update did not work")
+    
     def load(self, filename):
         """Create graph from JSON or XML file"""
         if os.path.isfile(filename):
@@ -939,7 +985,10 @@ class Homomorphism(object):
         if set(source.nodes()) != set(dictionary.keys()):
             raise ValueError(
                 "Invalid homomorphism: Mapping is not covering all the nodes of source graph!")
-
+        if not set(dictionary.values()).issubset(target.nodes()):
+            raise ValueError(
+                "invalid homomorphism: image not in target graph"
+            )
         # check connectivity and edges attr matches
         for s_edge in source.edges():
             if not (dictionary[s_edge[0]], dictionary[s_edge[1]]) in target.edges():
