@@ -758,6 +758,37 @@ class TypedDiGraph(nx.DiGraph):
             raise ValueError(
                 "Error loading graph: file '%s' does not exist!" %
                 filename)
+    def to_json_like(self):
+        j_data = {"edges": [], "nodes": []}
+        # dump nodes
+        for node in self.nodes():
+            node_data = {}
+            node_data["id"] = node
+            node_data["type"] = self.node[node].type_
+            if self.node[node].attrs_ is not None:
+                attrs = {}
+                for key, value in self.node[node].attrs_.items():
+                    if type(value) == set:
+                        attrs[key] = list(value)
+                    else:
+                        attrs[key] = value
+                node_data["attrs"] = attrs
+            j_data["nodes"].append(node_data)
+        # dump edges
+        for s, t in self.edges():
+            edge_data = {}
+            edge_data["from"] = s
+            edge_data["to"] = t
+            if self.edge[s][t] is not None:
+                attrs = {}
+                for key, value in self.edge[s][t].items():
+                    if type(value) == set:
+                        attrs[key] = list(value)
+                    else:
+                        attrs[key] = value
+                edge_data["attrs"] = attrs
+            j_data["edges"].append(edge_data)
+        return(j_data)    
 
     def export(self, filename):
         """Export graph to JSON or XML file"""

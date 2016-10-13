@@ -1,0 +1,212 @@
+# this is an example of the Uber API
+# as a demonstration of an API spec in YAML
+swagger: '2.0'
+info:
+  title: iRegraph http api
+  description: Manipulate graph on the server
+  version: "1.0.0"
+# the domain of the service
+host: 127.0.0.1:5000
+# array of all schemes that your API supports
+schemes:
+  - http
+# will be prefixed to all paths
+basePath: /
+produces:
+  - application/json
+paths:
+  /{graph_id}:
+    get:
+      summary: get a graph in json format
+      description: get a graph in json format
+      parameters:
+        - name: graph_id
+          in: path
+          description: The path to the graph in the hierarchy
+          required: true
+          type: string
+          
+        - name: type_of_get
+          in: query
+          description: single, hierarchy, hierarchy_only_names 
+          required: true
+          type: string
+      responses:
+        200:
+          description: a graph in json format
+          schema:
+            $ref: '#/definitions/Graph'
+        210:
+          description: the hierarchy of graph starting from graph_id
+          schema:
+            $ref: '#/definitions/GraphHierarchy'
+        211:
+          description: the hierarchy with only the names starting from graph_id
+          schema:
+            $ref: '#/definitions/NameHierarchy'
+        404:
+          description: graph not found
+        default:
+          description: Unexpected error
+
+    post:
+      summary: create a new_graph or a new rule
+      parameters:
+        - name: graph_id
+          in: path
+          description: The path to the graph or the rule in the hierarchy
+          required: true
+          type: string
+        - name: creation_type
+          in: query
+          description: new_graph, new_rule or apply_rule
+          required: true
+          type: string
+        - name: pattern_name
+          in: query
+          description: with new_rule; the name of the graph used as a left hand size for the rule
+          type: string
+        - name: target_graph
+          in: query
+          description: with apply_rule; the name of the graph from which the new one is created
+          type: string
+        - name: rule_name
+          in: query
+          description: with apply_rule; the name of the rule
+          type: string
+        - name: matching
+          in: body
+          description: with apply_rule; the matching used to apply the rule
+          schema:
+            $ref: '#/definitions/Matching'
+          
+      responses:
+        200:
+          description: the graph was created
+        409:
+          description: the graph already exists
+        404:
+          description: the father of the graph was not found or argument missing
+        default:
+          description: Unexpected error
+          
+    put:
+      summary: modify a graph in place
+      parameters:
+        - name: graph_id
+          in: path
+          description: The path to the graph in the hierarchy
+          required: true
+          type: string
+        - name: type_of_put
+          in: query
+          description: add_node, add_edge, rm_node, merge_nodes, clone_node, rm_edge
+          required: true
+          type: string
+        - name: force
+          in: query
+          description: with rm_node, merge_nodes, rm_edge; force operation and modify children graphs
+          type: boolean
+        - name: node_id
+          in: query
+          description: with add_node, remove_node and clone_node; id of node to manipulate
+          type: string
+        - name: node_type
+          in: query
+          description: with add_node; type of node to create 
+          type: string  
+        - name: source_node
+          in: query
+          description: with add_edge and rm_edge; id of source node
+          type: string
+        - name: target_node
+          in: query
+          description: with add_edge and rm_edge; id of target node
+          type: string
+        - name: node1
+          in: query
+          description: with merge_node; id of first node to merge
+          type: string  
+        - name: node2
+          in: query
+          description: with merge_node; id of second node to merge
+          type: string  
+        - name: new_node_id
+          in: query
+          description: with merge_nodes and clone_node; new name for the node resulting of the merge
+          type: string
+      responses:
+        200:
+          description: modification worked
+        404: 
+          description: graph was not found
+        412:
+          description: modification failed
+          schema:
+            type: string
+definitions:
+
+  Node:
+    type: object
+    properties:
+      id:
+        type: string
+      ttype:
+        type: string
+      
+  Edge:
+    type: object
+    properties:
+      from:
+        type: string
+      to:
+        type: string
+        
+        
+  Graph:
+    type: object
+    properties:
+      edges:
+        type: array
+        items: 
+          $ref: '#/definitions/Edge'
+      nodes:
+        type: array
+        items: 
+          $ref: '#/definitions/Node'
+  
+  GraphHierarchy:
+    type: object
+    properties:
+      name:
+        type: string
+      top_graph:
+        $ref: '#/definitions/Graph'
+      children:
+        type: array
+        items:
+          $ref: '#/definitions/GraphHierarchy'
+          
+  NameHierarchy:
+    type: object
+    properties:
+      name:
+        type: string
+      children:
+        type: array
+        items:
+          $ref: '#/definitions/NameHierarchy'
+          
+  Couple:
+    type: object
+    properties:
+      left:
+        type: string
+      right:
+        type: string
+        
+  Matching:
+    type: array
+    items: 
+      $ref: '#/definitions/Couple' 
+      

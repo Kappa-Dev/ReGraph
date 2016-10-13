@@ -9,6 +9,7 @@ from regraph.library.rewriters import Rewriter
 from subprocess import Popen,STDOUT
 from regraph.library.utils import plot_graph, plot_instance
 import readline
+import json
 
 class MakeRuleCmd(cmd.Cmd):
     def __init__(self, name, fullname, pattern, parent, png_viewer_location):
@@ -123,6 +124,9 @@ class MakeRuleCmd(cmd.Cmd):
     def do_cat(self,arguments):
         self.open_start() 
         self.open_end() 
+    
+    def main_graph(self):
+        return(self.transformer.R)    
         
     ######################################################################    
     
@@ -133,7 +137,15 @@ class MakeRuleCmd(cmd.Cmd):
     def do_script(self,arguments):
         for (com,_) in self.history:
             print(com)
-            
+    
+    def _do_add_not_catched(self, node_id, node_type):
+        t2 = copy.deepcopy(self.transformer)
+        t2.add_node(node_id,node_type)
+        new_graph = Rewriter.rewrite_simple(t2)
+        self.transformer = t2
+        self.history.append(("add "+node_id+":"+node_type,
+                            lambda t: t.add_node(node_id,node_type)))
+
     def _do_add_node(self, node_id, node_type):
         t2 = copy.deepcopy(self.transformer)
         #t2 = self.transformer
@@ -164,17 +176,17 @@ class MakeRuleCmd(cmd.Cmd):
         if (argc == 2 and line[-1]==" ") or (argc == 3 and line[-1]!= " "):
             return([n for n in self.pattern.metamodel_.nodes() if n.startswith(text)])
         
-        
-    def _do_ln(self,node1,node2):
+    def _do_ln_not_catched(self, node1, node2):
         t2 = copy.deepcopy(self.transformer)
-        #t2 = self.transformer
+        t2.add_edge(node1,node2)
+        new_graph = Rewriter.rewrite_simple(t2)
+        self.transformer = t2
+        self.history.append(("ln "+node1+" "+node2,
+                            lambda t: t.add_edge(node1,node2)))
+
+    def _do_ln(self,node1,node2):
         try:
-            t2.add_edge(node1,node2)
-            #print(t2)
-            new_graph = Rewriter.rewrite_simple(t2)
-            self.transformer = t2
-            self.history.append(("ln "+node1+" "+node2,
-                                lambda t: t.add_edge(node1,node2)))
+            self._do_ln_not_catched(node1, node2)
             print("script:",[com for (com,fun) in self.history])
         except ValueError as error_message:
             print(error_message)
@@ -205,17 +217,21 @@ class MakeRuleCmd(cmd.Cmd):
         else:
             return([])
             
-            
-    def _do_rm_node(self,node_id):
-        t2 = copy.deepcopy(self.transformer)
-        #t2 = self.transformer
-        try:
+    def _do_rm_node_not_catched(self, node_id):
+            t2 = copy.deepcopy(self.transformer)
             t2.remove_node(node_id)
             # print(t2)
             new_graph = Rewriter.rewrite_simple(t2)
             self.transformer = t2
             self.history.append(("rm_node "+node_id,
                                 lambda t: t.remove_node(node_id)))
+
+    def _do_rm_node_force_not_catched(self, node_id):
+        self._do_rm_node_not_catched(node_id)
+        
+    def _do_rm_node(self,node_id):
+        try:
+            self._do_rm_node_not_catched(node_id)
             print("script:",[com for (com,fun) in self.history])
         except ValueError as error_message:
             print(error_message)
@@ -240,7 +256,9 @@ class MakeRuleCmd(cmd.Cmd):
         if argc == 1 or (argc == 2 and line[-1]!=" "):
             return([s for s in self.transformer.R.nodes() 
                     if s.startswith(text)])
-        
+
+    #def _do_merge_nodes_not_catched(self, node1, node2, new_name)        
+    
     def _do_merge_nodes(self,node1,node2,new_name):
         t2 = copy.deepcopy(self.transformer)
         try:
@@ -378,8 +396,34 @@ class MyCmd(cmd.Cmd):
             self.graph = TypedDiGraph(metamodel=parent.graph)
         else :
             self.graph = TypedDiGraph(metamodel=None) 
+            
+            
+    def main_graph(self):
+        return(self.graph)
+        
 
-
+    def hierarchy_to_json(self):
+        return({"name": self.name,
+                "top_graph":self.graph.to_json_like(),
+                "children": [sub.hierarchy_to_json() for sub in self.subCmds.values()]}) 
+                
+    def hierarchy_of_names(self):
+        return({"name": self.name,
+                "children":[sub.hierarchy_of_names() for sub in self.subCmds.values()]})
+                
+    def valid_new_name(self, new_name):
+        return(new_name not in self.subCmds.keys() and new_name not in self.subRules.keys())
+        
+    def subCmd(self,path):
+        if path == [] :
+            return(self) 
+        elif path[0] == "":
+            return(self.subCmd(path[1:]))
+        elif path[0] in self.subCmds.keys():
+            return(self.subCmds[path[0]].subCmd(path[1:]))
+        else : 
+            raise KeyError("Path does not corespond to an existing graph")
+            
     def updateMetamodel(self,new_typing_graph):
         self.graph.updateMetamodel(new_typing_graph)
 
@@ -461,6 +505,8 @@ class MyCmd(cmd.Cmd):
         else :
             print("This graph is not typed")
 
+    def _do_mkdir(self,name):
+                self.subCmds[name] = MyCmd(name,self.fullname+name+"/",self,self.image_reader_)
 
     def do_mkdir(self, arguments):
         argv = arguments.split() # arguments start at position 0
@@ -471,7 +517,7 @@ class MyCmd(cmd.Cmd):
             if name in self.subCmds.keys() or name in self.subRules.keys() : 
                 print("One graph already named that way")
             else : 
-                self.subCmds[name] = MyCmd(name,self.fullname+name+"/",self,self.image_reader_)
+                self._do_mkdir(name)
                 self.subCmds[name].do_cat("")
 
     def do_cd(self, name):
@@ -490,15 +536,17 @@ class MyCmd(cmd.Cmd):
 
     def _do_add(self,nodeId,nodeType) :
         try:
+            self._do_add_not_catched(nodeId,nodeType)
+        except ValueError as error_message:
+            print(error_message)
+
+    def _do_add_not_catched(self,nodeId,nodeType):
             tr = Transformer(self.graph)
             tr.add_node(nodeId,nodeType)
-            # print(tr)
             self.graph = Rewriter.rewrite_simple(tr)
             self._do_cat()
             print(self.graph.nodes())
             self.updateSubMetamodels(self.graph)
-        except ValueError as error_message:
-            print(error_message)
 
 
     def do_add(self, arguments):
@@ -530,15 +578,20 @@ class MyCmd(cmd.Cmd):
         if (argc == 2 and line[-1]==" ") or (argc == 3 and line[-1]!= " "):
             return([n for n in self.graph.metamodel_.nodes() if n.startswith(text)])
 
-    def _do_ln(self,node1,node2):
+    def _do_ln(self, node1, node2):
         try:
+            self._do_ln_not_catched(node1,node2)
+        except ValueError as error_message:
+            print(error_message)
+            
+            
+    def _do_ln_not_catched(self, node1, node2):
             tr = Transformer(self.graph)
             tr.add_edge(node1,node2)
             self.graph = Rewriter.rewrite_simple(tr)
             self.updateSubMetamodels(self.graph)
             self._do_cat()
-        except ValueError as error_message:
-            print(error_message)
+        
 
     def do_ln(self,arguments):
         argv = arguments.split()
@@ -566,19 +619,28 @@ class MyCmd(cmd.Cmd):
 
     def _do_rm_node(self,nodeId):
         try:
-            tr = Transformer(self.graph)
-            tr.remove_node(nodeId)
-            new_graph = Rewriter.rewrite_simple(tr)
-            self.updateSubMetamodels(new_graph)
-            self.graph = new_graph
-            self._do_cat()
-            print(self.graph.nodes())
+            self._do_rm_node_not_catched(nodeId)
         except ValueError as error_message:
             print(error_message)
             print("Use rm_node -f to delete all nodes of this type")
-        
+
+    def _do_rm_node_not_catched(self, nodeId):    
+        tr = Transformer(self.graph)
+        tr.remove_node(nodeId)
+        new_graph = Rewriter.rewrite_simple(tr)
+        self.updateSubMetamodels(new_graph)
+        self.graph = new_graph
+        self._do_cat()
+        print(self.graph.nodes())
+
+
     def _do_rm_node_force(self,nodeId):
         try:
+            self._do_rm_node_force_not_catched(nodeId)
+        except ValueError as error_message:
+            print(error_message)
+
+    def _do_rm_node_force_not_catched(self, nodeId):
             for sub in self.subCmds.values():
                 for n in sub.graph.nodes():
                     if sub.graph.node[n].type_ == nodeId:
@@ -593,9 +655,7 @@ class MyCmd(cmd.Cmd):
             self.graph = new_graph
             self._do_cat()
             print(self.graph.nodes())
-        except ValueError as error_message:
-            print(error_message)
-
+        
     def do_rm_node(self,arguments):
         argv = arguments.split()
         if len(argv) == 1 :
@@ -630,9 +690,16 @@ class MyCmd(cmd.Cmd):
                     if s.startswith(text)])
         else:
             return([])
-        
-    def _do_merge_nodes(self,node1,node2,newName):
+            
+    def _do_merge_nodes(self, node1, node2, newName):
         try:
+            self._do_merge_nodes_not_catched(node1, node2, newName)
+        except ValueError as error_message:
+            print(error_message)
+            if  "image not in target graph" in str(error_message) :
+                print("Use merge_node -f : nodes typed by",node1,"or",node2,"will then be typed by",newName)
+        
+    def _do_merge_nodes_not_catched(self, node1, node2, newName):
             tr = Transformer(self.graph)
             tr.merge_nodes(node1,node2,node_name=newName)
             new_graph = Rewriter.rewrite_simple(tr)
@@ -640,14 +707,14 @@ class MyCmd(cmd.Cmd):
             self.graph = new_graph
             self._do_cat()
             print(self.graph.nodes())
-        except ValueError as error_message:
-            print(error_message)
-            if  "image not in target graph" in str(error_message) :
-                print("Use merge_node -f : nodes typed by",node1,"or",node2,"will then be typed by",newName)
-        
-    
+
     def _do_merge_nodes_force(self,node1,node2,newName):
         try:
+            self._do_merge_nodes_force_not_catched(node1, node2, newName)
+        except ValueError as error_message:
+            print(error_message)
+
+    def _do_merge_nodes_force_not_catched(self, node1, node2, newName):
             tr = Transformer(self.graph)
             tr.merge_nodes(node1,node2,node_name=newName)
             new_graph = Rewriter.rewrite_simple(tr)
@@ -658,15 +725,10 @@ class MyCmd(cmd.Cmd):
             for rule in self.subRules.values():
                 rule.convertType(node1,newName)
                 rule.convertType(node2,newName)
-                
             self.updateSubMetamodels(new_graph)
             self.graph = new_graph
             self._do_cat()
             print(self.graph.nodes())
-        except ValueError as error_message:
-            print(error_message)
-            print("Use merge_node -f : nodes typed by",node1,"or",node2,"will then be typed by",newName)
-
 
     def do_merge_nodes(self,arguments):
         argv=arguments.split()
@@ -725,15 +787,18 @@ class MyCmd(cmd.Cmd):
 
     def _do_clone_node(self,node1,clone_name):
         try:
-            tr = Transformer(self.graph)
-            tr.clone_node(node1,clone_name)
-            self.graph = Rewriter.rewrite_simple(tr)
-            self._do_cat()
-            print(self.graph.nodes())
-            self.updateSubMetamodels(self.graph)
+            self._do_clone_node_not_catched(node1, clone_name)
         except ValueError as error_message:
             print(error_message)
-         
+    
+    def _do_clone_node_not_catched(self, node1, clone_name):
+        tr = Transformer(self.graph)
+        tr.clone_node(node1,clone_name)
+        self.graph = Rewriter.rewrite_simple(tr)
+        self._do_cat()
+        print(self.graph.nodes())
+        self.updateSubMetamodels(self.graph)
+
     def do_clone_node(self,arguments):
         argv=arguments.split()
         if len(argv) == 2 : 
@@ -752,33 +817,32 @@ class MyCmd(cmd.Cmd):
 
     def _do_rm_edge(self,node1,node2):
         try:
-            tr = Transformer(self.graph)
-            tr.remove_edge(node1,node2)
-            new_graph = Rewriter.rewrite_simple(tr)
-            self.updateSubMetamodels(new_graph)
-            self.graph = new_graph
-            self._do_cat()
+            self._do_rm_edge_uncatched(node1, node2, force=False)
         except ValueError as error_message:
             print(error_message)
             print("Use rm_edge -f to delete all edges between type",node1,"and type",node2)
 
     def _do_rm_edge_force(self,node1,node2):
         try:
-            for sub in self.subCmds.values():
-                for (n1,n2) in sub.graph.edges():
-                    if (sub.graph.node[n1].type_ == node1  
-                    and sub.graph.node[n2].type_ == node2):
-                        sub.do_rm_edge("-f "+ n1 +" "+n2)
-            for rule in self.subRules.values():
-                rule.removeEdgesByType(node1,node2)
+            self._do_rm_edge_uncatched(node1, node2, force=True)
+        except ValueError as error_message:
+            print(error_message)
+            
+    def _do_rm_edge_uncatched(self, node1, node2, force):
+            if force:
+                for sub in self.subCmds.values():
+                    for (n1,n2) in sub.graph.edges():
+                        if (sub.graph.node[n1].type_ == node1  
+                        and sub.graph.node[n2].type_ == node2):
+                            sub.do_rm_edge("-f "+ n1 +" "+n2)
+                for rule in self.subRules.values():
+                    rule.removeEdgesByType(node1,node2)
             tr = Transformer(self.graph)
             tr.remove_edge(node1,node2)
             new_graph = Rewriter.rewrite_simple(tr)
             self.updateSubMetamodels(new_graph)
             self.graph = new_graph
             self._do_cat()
-        except ValueError as error_message:
-            print(error_message)
 
     def do_rm_edge(self,arguments):
         argv=arguments.split()
@@ -843,29 +907,31 @@ class MyCmd(cmd.Cmd):
 
 
     def _do_cat(self):
-        __location__ = os.path.realpath(
-            os.path.join(os.getcwd(), os.path.dirname(__file__)))
-        fileName = self.fullname.replace("/","__")+".png"
-        plot_graph(
-            self.graph,
-            types = self.parent,
-            filename=os.path.join(__location__, fileName))
+        if self.image_reader_ != None :
+            __location__ = os.path.realpath(
+                os.path.join(os.getcwd(), os.path.dirname(__file__)))
+            fileName = self.fullname.replace("/","__")+".png"
+            plot_graph(
+                self.graph,
+                types = self.parent,
+                filename=os.path.join(__location__, fileName))
             
             
     def do_cat(self,arguments):           
-        argv = arguments.split()
-        if len(argv)==0:
-            self._do_cat()
-            self.open_image_reader()
-        if len(argv)==1:
-            subGraphName = argv[0]
-            if subGraphName in self.subCmds.keys():
-                self.subCmds[subGraphName].do_cat("") 
-            elif subGraphName in self.subRules.keys():
-                self.subRules[subGraphName].open_end()
-                self.subRules[subGraphName].open_start()
-            else :
-                print(subGraphName,"is not a subgraph or rule of",self.name)
+        if self.image_reader_ != None :
+            argv = arguments.split()
+            if len(argv)==0:
+                self._do_cat()
+                self.open_image_reader()
+            if len(argv)==1:
+                subGraphName = argv[0]
+                if subGraphName in self.subCmds.keys():
+                    self.subCmds[subGraphName].do_cat("") 
+                elif subGraphName in self.subRules.keys():
+                    self.subRules[subGraphName].open_end()
+                    self.subRules[subGraphName].open_start()
+                else :
+                    print(subGraphName,"is not a subgraph or rule of",self.name)
 
 
     def complete_cat(self, text, line, begidx, endidx):
@@ -874,18 +940,22 @@ class MyCmd(cmd.Cmd):
 
     def _do_new_rule(self, name, pattern):
         self.subRules[name]=MakeRuleCmd(name, self.fullname+name+"/",self.subCmds[pattern].graph, self, self.image_reader_)
-        self.subRules[name].open_end()
-        self.subRules[name].open_start()
+        if self.image_reader_ :
+            self.subRules[name].open_end()
+            self.subRules[name].open_start()
         
         
     def do_new_rule(self, arguments):
         argv = arguments.split()
         if len(argv)==2 :
             [name, subgraph] = arguments.split()
-            if subgraph in self.subCmds.keys():
-                 self._do_new_rule(name, subgraph)
-            else :
-                print(subgraph,"is not a subgraph of",self.name)
+            if self.valid_new_name(name):
+                if subgraph in self.subCmds.keys():
+                    self._do_new_rule(name, subgraph)
+                else :
+                    print(subgraph,"is not a subgraph of",self.name)
+            else:
+                print("the name ",name, "is already taken")        
         else :
             print("Usage: new_rule rule_name pattern_name")
 
@@ -896,7 +966,25 @@ class MyCmd(cmd.Cmd):
         if argc == 2 or (argc==3 and line[-1]!=" ") :
             return([s for s in self.subCmds.keys() if s.startswith(text)])
         
+    def get_matchings(self, rule, graphName):
+        graph = self.subCmds[graphName].graph
+        pattern = self.subRules[rule].transformer.L
+        matchings = Rewriter.find_matching(graph,pattern)
         
+
+    def _do_apply_rule_no_catching(self, rule, graph_name, new_name, matching):
+        graph = self.subCmds[graph_name].graph
+        trans = copy.deepcopy(self.subRules[rule].transformer)
+        trans.appendToNodesNames(MyCmd.suffix_node_name)
+        new_matching = {(str(k)+"_"+str(MyCmd.suffix_node_name)):v for (k,v) in matching.items()}
+        MyCmd.suffix_node_name += 1
+        pattern = trans.L
+        trans.G = graph
+        L_G = Homomorphism(pattern,graph,new_matching)
+        new_graph = Rewriter.rewrite(L_G,trans)
+        self.subCmds[new_name]=MyCmd(new_name,self.fullname+new_name+"/",self,self.image_reader_)
+        self.subCmds[new_name].graph = new_graph 
+
     def _do_apply_rule(self,rule,graphName,newName):
         graph = self.subCmds[graphName].graph
         trans = copy.deepcopy(self.subRules[rule].transformer)

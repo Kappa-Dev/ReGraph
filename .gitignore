@@ -20,3 +20,5 @@ tests/tester/*
 tests/looper.py
 *.png
 script
+todo.txt
+.vscode/*
