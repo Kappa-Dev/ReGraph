@@ -22,3 +22,4 @@ tests/looper.py
 script
 todo.txt
 .vscode/*
+js_tests/node_modules/*

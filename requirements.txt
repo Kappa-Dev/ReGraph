@@ -12,3 +12,4 @@ python-termstyle==0.1.10
 pytz==2016.4
 rednose==1.2.1
 six==1.10.0
+flask==0.11.1
