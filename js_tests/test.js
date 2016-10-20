@@ -31,6 +31,7 @@ var opts_post = {
 //var opts1 = Object.assign({}, opts);
 opts.nodeId='a'
 api.graphIdPut(" ", "add_node", opts, callback);
+
 opts.nodeId='b'
 api.graphIdPut(" ", "add_node", opts, callback);
 opts.nodeId='c'
@@ -70,3 +71,196 @@ api.graphIdPost("r1","new_rule",opts_post,callback)
 api.graphIdPut("r1", "add_edge", opts, callback);
 opts.sourceNode='y'
 opts.targetNode='x'
+
+var hierarchy_test={
+  "name": "tyty",
+  "top_graph": {
+    "nodes": [
+      {
+        "id": "c",
+        "type": "c" 
+      },
+      {
+        "id": "b",
+        "type": "b"
+      },
+      {
+        "id": "a",
+        "type": "a"
+      }
+    ],
+    "edges": [
+      {
+        "to": "c",
+        "from": "b",
+        "attrs": {}
+      },
+      {
+        "to": "b",
+        "from": "a",
+        "attrs": {}
+      }
+    ]
+  },
+  "children": [
+    {
+      "name": "subgraph2",
+      "top_graph": {
+        "nodes": [],
+        "edges": []
+      },
+      "children": [
+        {
+          "name": "subgraph12",
+          "top_graph": {
+            "nodes": [],
+            "edges": []
+          },
+          "children": []
+        }
+      ]
+    },
+    {
+      "name": "subgraph1",
+      "top_graph": {
+        "nodes": [
+          {
+            "id": "z",
+            "type": "b"
+          },
+          {
+            "id": "y",
+            "type": "b"
+          },
+          {
+            "id": "x",
+            "type": "a"
+          }
+        ],
+        "edges": [
+          {
+            "to": "y",
+            "from": "x",
+            "attrs": {}
+          }
+        ]
+      },
+      "children": [
+        {
+          "name": "subgraph12",
+          "top_graph": {
+            "nodes": [],
+            "edges": []
+          },
+          "children": [
+            {
+              "name": "toto",
+              "top_graph": {
+                "nodes": [],
+                "edges": []
+              },
+              "children": []
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
+api.hierarchyHierarchyPathPost("tyty",hierarchy_test,callback)
+var hierarchy_test2={
+  "name": "/",
+  "top_graph": {
+    "nodes": [
+      {
+        "id": "c",
+        "type": null
+      },
+      {
+        "id": "b",
+        "type": null
+      },
+      {
+        "id": "a",
+        "type": null
+      }
+    ],
+    "edges": [
+      {
+        "to": "c",
+        "from": "b",
+        "attrs": {}
+      },
+      {
+        "to": "b",
+        "from": "a",
+        "attrs": {}
+      }
+    ]
+  },
+  "children": [
+    {
+      "name": "subgraph2",
+      "top_graph": {
+        "nodes": [],
+        "edges": []
+      },
+      "children": [
+        {
+          "name": "subgraph12",
+          "top_graph": {
+            "nodes": [],
+            "edges": []
+          },
+          "children": []
+        }
+      ]
+    },
+    {
+      "name": "subgraph1",
+      "top_graph": {
+        "nodes": [
+          {
+            "id": "z",
+            "type": "b"
+          },
+          {
+            "id": "y",
+            "type": "b"
+          },
+          {
+            "id": "x",
+            "type": "a"
+          }
+        ],
+        "edges": [
+          {
+            "to": "y",
+            "from": "x",
+            "attrs": {}
+          }
+        ]
+      },
+      "children": [
+        {
+          "name": "subgraph12",
+          "top_graph": {
+            "nodes": [],
+            "edges": []
+          },
+          "children": [
+            {
+              "name": "toto",
+              "top_graph": {
+                "nodes": [],
+                "edges": []
+              },
+              "children": []
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
+api.hierarchyHierarchyPathPut("",hierarchy_test2,callback)

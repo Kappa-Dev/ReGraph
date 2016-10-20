@@ -3,21 +3,63 @@ from iRegraph import MyCmd
 from flask_cors import CORS, cross_origin
 import json
 
+
 class MyFlask(Flask):
     def __init__(self,name):
         super().__init__(name)
         self.cmd=MyCmd("/","/",None,None)
     
-    
 app = MyFlask(__name__)
 CORS(app)
 #app = Flask(__name__)
 
+def parse_path(path_to_graph):
+    l = [s for s in path_to_graph.split("/") if s and not s.isspace()]        
+    if l == []:
+        graph_name = None
+        parent_cmd = app.cmd
+    else :
+        graph_name = l[-1]
+        parent_cmd =  app.cmd.subCmd(l[:-1])
+    return (parent_cmd, graph_name)
+
 def get_cmd(path):
-    if path.isspace():
-        return(app.cmd)
-    path_list = path.split("/")
+    # if path.isspace():
+    #     return(app.cmd)
+    path_list = [s for s in path.split("/") if s and not s.isspace()]        
     return(app.cmd.subCmd(path_list))
+
+
+@app.route("/hierarchy/", methods=["POST"])
+@app.route("/hierarchy/<path:path_to_graph>", methods=["POST"])
+def import_sub_hierachy(path_to_graph=""):
+    (parent_cmd, graph_name) = parse_path(path_to_graph)
+    sub_hierarchy = request.json
+    top_graph_name = sub_hierarchy["name"]
+    if graph_name is not None and top_graph_name != graph_name :
+        return("the name of the top graph must be the same as the url" ,404)
+    try:
+        parent_cmd.add_subHierarchy(sub_hierarchy)
+        return("Hierarchy added successfully",200)
+    except (ValueError, KeyError) as e:
+        return (str(e), 404)
+
+@app.route("/hierarchy/", methods=["PUT"])
+@app.route("/hierarchy/<path:path_to_graph>", methods=["PUT"])
+def merge_hierachy(path_to_graph=""):
+    try:
+        cmd = get_cmd(path_to_graph)
+        hierarchy = request.json
+        top_graph_name = hierarchy["name"]
+        (_,graph_name) = parse_path(path_to_graph)
+        if graph_name is not None and top_graph_name != graph_name :
+            return ("the name of the top graph must be the same as the url" ,404)
+        if cmd.merge_conflict(hierarchy):
+            return ("some different graphs have the same name", 404)    
+        cmd.merge_hierarchy(hierarchy)
+        return("merge was succesfull",200)
+    except (ValueError, KeyError) as e:
+        return (str(e), 404)
 
 @app.route("/", methods=["GET"])
 @app.route("/<path:path_to_graph>", methods=["GET"])
@@ -73,9 +115,14 @@ def dispatch_post(path_to_graph=""):
         return(create_rule(path_to_graph))
     elif creation_type == "apply_rule":
         return(apply_rule(path_to_graph))
+    # elif create_graph == "new_hierarchy":
+    #     return(import_sub_hierarchy(path_to_graph))
+    # elif create_graph == "merge_hierarchy":
+    #     return(import_sub_hierarchy(path_to_graph))
     else:
         return("bad creation_type argument", 404)
-        
+
+
 def apply_rule(path_to_graph):
     path_list = path_to_graph.split("/") 
     parent_path = path_list[:-1]

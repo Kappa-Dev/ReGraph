@@ -659,7 +659,56 @@ class TypedDiGraph(nx.DiGraph):
             self.metamodel_=new_metamodel
         else :
             raise ValueError("metamodel update did not work")
-    
+
+
+    def from_json_like(self, j_data):
+        """ Create a graph from a python dictionary """
+        loaded_nodes = []
+        if "nodes" in j_data.keys():
+            j_nodes = j_data["nodes"]
+            for node in j_nodes:
+                if "id" in node.keys():
+                    node_id = node["id"]
+                else:
+                    raise ValueError(
+                        "Error loading graph: node id is not specified!")
+                if "type" in node.keys():
+                    node_type = node["type"]
+                else:
+                    raise ValueError(
+                        "Error loading graph: node type is not specified!")
+                attrs = None
+                if "attrs" in node.keys():
+                    attrs = node["attrs"]
+                loaded_nodes.append((node_id, node_type, attrs))
+        else:
+            raise ValueError(
+                "Error loading graph: no nodes specified!")
+        loaded_edges = []
+        if "edges" in j_data.keys():
+            j_edges = j_data["edges"]
+            for edge in j_edges:
+                if "from" in edge.keys():
+                    s_node = edge["from"]
+                else:
+                    raise ValueError(
+                        "Error loading graph: edge source is not specified!")
+                if "to" in edge.keys():
+                    t_node = edge["to"]
+                else:
+                    raise ValueError(
+                        "Error loading graph: edge target is not specified!")
+                if "attrs" in edge.keys():
+                    attrs = edge["attrs"]
+                    if type(attrs) == list:
+                        attrs = set(attrs)
+                    loaded_edges.append((s_node, t_node, attrs))
+                else:
+                    loaded_edges.append((s_node, t_node))
+        nx.DiGraph.clear(self)
+        self.add_nodes_from(loaded_nodes)
+        self.add_edges_from(loaded_edges)
+
     def load(self, filename):
         """Create graph from JSON or XML file"""
         if os.path.isfile(filename):
@@ -758,6 +807,7 @@ class TypedDiGraph(nx.DiGraph):
             raise ValueError(
                 "Error loading graph: file '%s' does not exist!" %
                 filename)
+
     def to_json_like(self):
         j_data = {"edges": [], "nodes": []}
         # dump nodes

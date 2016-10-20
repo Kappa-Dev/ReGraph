@@ -1018,6 +1018,49 @@ class MyCmd(cmd.Cmd):
             self._do_apply_rule(*argv) 
             
         
+    def _add_subgraph_no_catching(self, graph, name):     
+       if name not in self.subCmds.keys():
+           self.subCmds[name]= MyCmd(name,self.fullname+name+"/",self,self.image_reader_)
+           self.subCmds[name].graph = graph
+       else :
+           raise(KeyError("name already exists"))
+
+
+    def merge_conflict(self, hierarchy):
+        top_graph = TypedDiGraph(metamodel=self.graph.metamodel_)
+        top_graph.from_json_like(hierarchy["top_graph"])
+        if top_graph != self.graph:
+            print(self.name,hierarchy["name"])
+            return(True)
+        return any((self.subCmds[child["name"]].merge_conflict(child)
+                      for child in hierarchy["children"] 
+                      if child["name"] in self.subCmds.keys()))
+
+
+    def merge_hierarchy(self, hierarchy):
+        top_graph = TypedDiGraph(metamodel=self.graph.metamodel_)
+        top_graph.from_json_like(hierarchy["top_graph"])
+        if top_graph != self.graph:
+            raise ValueError("the top graph of the hierarchy is not the same as the selected graph")
+        for child in hierarchy["children"]:
+            if child["name"] in self.subCmds.keys():
+                self.subCmds[child["name"]].merge_hierarchy(child)
+            else:
+                self.add_subHierarchy(child)
+
+    def add_subHierarchy(self, subHierarchy, force = False):
+        g = TypedDiGraph(metamodel=self.graph)
+        g.from_json_like(subHierarchy["top_graph"])
+        if subHierarchy["name"] in self.subCmds.keys():
+            raise(KeyError("name already exists"))
+        
+        #self._add_subgraph_no_catching(g,subHierarchy["name"])
+        cmd = MyCmd(subHierarchy["name"],self.fullname+subHierarchy["name"]+"/",self,self.image_reader_)
+        cmd.graph = g
+        for child in subHierarchy["children"]:
+                cmd.add_subHierarchy(child)
+        self.subCmds[subHierarchy["name"]] = cmd
+
     def postloop(self):
         print()
 
