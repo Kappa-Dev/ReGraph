@@ -59,3 +59,8 @@ python setup.py install
 ```
 python tests/test.py
 ```
+
+## REST API
+
+Launch the webserver in the venv using: `python webserver.py`
+[Browse the API](http://petstore.swagger.io/?url=https://raw.githubusercontent.com/Kappa-Dev/ReGraph/master/iRegraph_api.yaml)
