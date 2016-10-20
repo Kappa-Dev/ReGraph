@@ -1,5 +1,3 @@
-# this is an example of the Uber API
-# as a demonstration of an API spec in YAML
 swagger: '2.0'
 info:
   title: iRegraph http api
@@ -15,6 +13,45 @@ basePath: /
 produces:
   - application/json
 paths:
+  /hierarchy/{hierarchy_path}:
+    post:
+      summary: post a new hierarchy 
+      parameters:
+        - name: hierarchy_path
+          in: path
+          description: The path to place the top of the hierarchy
+          required: true
+          type: string
+        - name: new_hierarchy
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/GraphHierarchy'
+      responses:
+        404:
+          description: the hierarchy was not valid
+        200: 
+          description: the hierarchy was correctly added
+    put:
+      summary: merge the new hierarchy
+      parameters:
+        - name: hierarchy_path
+          in: path
+          description: The path to the graph which is the top of the new hierarchy
+          required: true
+          type: string
+        - name: new_hierarchy
+          description: The top graph of the hierarchy must be the same than the one on the server
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/GraphHierarchy'
+      responses:
+        404:
+          description: the merge failed
+        200:
+          description: the merge was succesfull
+      
   /{graph_id}:
     get:
       summary: get a graph in json format
@@ -59,7 +96,7 @@ paths:
           type: string
         - name: creation_type
           in: query
-          description: new_graph, new_rule or apply_rule
+          description: new_graph, new_rule, apply_rule
           required: true
           type: string
         - name: pattern_name
@@ -79,6 +116,11 @@ paths:
           description: with apply_rule; the matching used to apply the rule
           schema:
             $ref: '#/definitions/Matching'
+        #- name: hierarchy
+        #  in: body
+        #  description: wi
+        #  schema:
+        #    $ref: '#/definitions/GraphHierarchy'
           
       responses:
         200:
@@ -89,7 +131,7 @@ paths:
           description: the father of the graph was not found or argument missing
         default:
           description: Unexpected error
-          
+    
     put:
       summary: modify a graph in place
       parameters:
