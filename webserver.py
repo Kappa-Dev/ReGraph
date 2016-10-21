@@ -7,14 +7,18 @@ import json
 class MyFlask(Flask):
     def __init__(self,name):
         super().__init__(name)
-        self.cmd=MyCmd("/","/",None,None)
+        self.cmd = MyCmd("/","/",None,None)
+        self.cmd.graph = None
     
 app = MyFlask(__name__)
+#app.url_map.strict_slashes = True
+app.config['DEBUG'] = True
 CORS(app)
 #app = Flask(__name__)
 
 def parse_path(path_to_graph):
     l = [s for s in path_to_graph.split("/") if s and not s.isspace()]        
+    print(l)
     if l == []:
         graph_name = None
         parent_cmd = app.cmd
@@ -33,10 +37,15 @@ def get_cmd(path):
 @app.route("/hierarchy/", methods=["POST"])
 @app.route("/hierarchy/<path:path_to_graph>", methods=["POST"])
 def import_sub_hierachy(path_to_graph=""):
-    (parent_cmd, graph_name) = parse_path(path_to_graph)
+    try:
+        (parent_cmd, graph_name) = parse_path(path_to_graph)
+    except KeyError as e:
+        return("the path is not valid", 404)
+    if graph_name is None:
+        return("the empty path is not valid" ,404)
     sub_hierarchy = request.json
     top_graph_name = sub_hierarchy["name"]
-    if graph_name is not None and top_graph_name != graph_name :
+    if top_graph_name != graph_name :
         return("the name of the top graph must be the same as the url" ,404)
     try:
         parent_cmd.add_subHierarchy(sub_hierarchy)
@@ -48,10 +57,12 @@ def import_sub_hierachy(path_to_graph=""):
 @app.route("/hierarchy/<path:path_to_graph>", methods=["PUT"])
 def merge_hierachy(path_to_graph=""):
     try:
+        (_,graph_name) = parse_path(path_to_graph)
         cmd = get_cmd(path_to_graph)
         hierarchy = request.json
         top_graph_name = hierarchy["name"]
-        (_,graph_name) = parse_path(path_to_graph)
+        if graph_name is None and top_graph_name != "/":
+            return ("the name of the top graph must be '/'",404)
         if graph_name is not None and top_graph_name != graph_name :
             return ("the name of the top graph must be the same as the url" ,404)
         if cmd.merge_conflict(hierarchy):
@@ -61,21 +72,55 @@ def merge_hierachy(path_to_graph=""):
     except (ValueError, KeyError) as e:
         return (str(e), 404)
 
-@app.route("/", methods=["GET"])
-@app.route("/<path:path_to_graph>", methods=["GET"])
-def dispach_get_graph(path_to_graph=""):
-    type_of_get = request.args.get("type_of_get")
-    if type_of_get == "single":
-        return(get_graph(path_to_graph))
-    elif type_of_get == "hierarchy":
+@app.route("/hierarchy/", methods=["GET"])
+@app.route("/hierarchy/<path:path_to_graph>", methods=["GET"])
+def get_hierarchy(path_to_graph=""):
+    include_rules = request.args.get("rules")
+    include_graphs = request.args.get("include_graphs")
+    if include_graphs:
         return(get_graph_hierarchy(path_to_graph))
-    elif type_of_get == "hierarchy_only_names":
+    else:
         return(get_graph_hierarchy_only_names(path_to_graph))
-    else : 
-        return("unknown type of get request",404)
+
+@app.route("/hierarchy/", methods=["DELETE"])
+@app.route("/hierarchy/<path:path_to_graph>", methods=["DELETE"])
+def delete_hierarchy(path_to_graph=""):
+    try : 
+        (parent_cmd,graph_name) = parse_path(path_to_graph)
+        if graph_name is None: 
+            parent_cmd.subCmds={}
+            parent_cmd.subRules={}
+            return("hierarchy deleted", 200)
+        else:
+            del parent_cmd.subCmds[graph_name]
+            return("hierarchy deleted", 200)
+    except KeyError as e:
+        return("Path not valid", 404)    
+
+@app.route("/graph/", methods=["DELETE"])
+@app.route("/graph/<path:path_to_graph>/", methods=["DELETE"])
+def delete_graph(path_to_graph=""):
+    (parent_cmd,graph_name) = parse_path(path_to_graph)
+    if graph_name is None:
+        return("The empty path does not contain a graph",404)
+    try:
+         parent_cmd.deleteSubCmd(graph_name)
+         return("graph deleted",200)    
+    except ValueError as e:
+        return(str(e),409)
+    except KeyError as e:
+        return(str(e),404)     
+
+@app.route("/graph/", methods=["GET"])
+@app.route("/graph/<path:path_to_graph>", methods=["GET"])
+def dispach_get_graph(path_to_graph=""):
+    return(get_graph(path_to_graph))
 
 def get_graph(path_to_graph):
     try:
+        (_,graph_name)=parse_path(path_to_graph)
+        if graph_name is None:
+            return("the empty path does not contain a top graph", 404)
         cmd = get_cmd(path_to_graph)
         resp = Response(response=json.dumps(cmd.graph.to_json_like()),
                         status=200, 
@@ -104,26 +149,51 @@ def get_graph_hierarchy_only_names(path_to_graph):
     except KeyError as e:
         return(Response(response="graph not found : "+str(e),status=404))
         
-        
-@app.route("/", methods=["POST"])
-@app.route("/<path:path_to_graph>", methods=["POST"])
-def dispatch_post(path_to_graph=""):
-    creation_type = request.args.get('creation_type')
-    if creation_type == "new_graph" :
-        return(create_graph(path_to_graph))
-    elif creation_type == "new_rule" :
-        return(create_rule(path_to_graph))
-    elif creation_type == "apply_rule":
-        return(apply_rule(path_to_graph))
-    # elif create_graph == "new_hierarchy":
-    #     return(import_sub_hierarchy(path_to_graph))
-    # elif create_graph == "merge_hierarchy":
-    #     return(import_sub_hierarchy(path_to_graph))
-    else:
-        return("bad creation_type argument", 404)
+
+@app.route("/rule/", methods=["POST"])
+@app.route("/rule/<path:path_to_graph>", methods=["POST"])
+def create_rule(path_to_graph=""):
+    path_list = path_to_graph.split("/") 
+    parent_path = path_list[:-1]
+    new_name = path_list[-1]
+    (parent_com,rule_name)=parse_path(path_to_graph)
+    if rule_name is None:
+        return ("the empty path is not valid to create a rule", 404)
+    pattern_name = request.args.get("pattern_name")
+    if not pattern_name:
+        return("the pattern_name argument is required", 404)
+    try : 
+        parent_cmd = app.cmd.subCmd(parent_path) 
+        if not parent_cmd.valid_new_name(new_name):
+            return("Graph or rule already exists with this name", 409)
+        elif pattern_name not in parent_cmd.subCmds.keys():
+            return("The pattern graph does not exist", 409)
+        else:    
+            parent_cmd._do_new_rule(new_name,pattern_name)
+            return("rule created", 200)
+    except KeyError as e:
+        return(str(e),404)        
+
+@app.route("/graph/", methods=["POST"])
+@app.route("/graph/<path:path_to_graph>", methods=["POST"])
+def create_graph(path_to_graph=""):
+   (parent_cmd, graph_name) = parse_path(path_to_graph)
+   if graph_name is None:
+       return("the empty path is not valid for graph creation",404)
+   try : 
+       #parent_cmd = app.cmd.subCmd(parent_path) 
+       if not parent_cmd.valid_new_name(graph_name):
+           return("Graph or rule already exists with this name",409)
+       else : 
+            parent_cmd._do_mkdir(graph_name)
+            return("Graph created",200) 
+   except KeyError as e : 
+       return(str(e),404)
 
 
-def apply_rule(path_to_graph):
+@app.route("/graph/apply/", methods=["POST"])
+@app.route("/graph/apply/<path:path_to_graph>", methods=["POST"])
+def apply_rule(path_to_graph=""):
     path_list = path_to_graph.split("/") 
     parent_path = path_list[:-1]
     new_name = path_list[-1]
@@ -154,78 +224,87 @@ def apply_rule(path_to_graph):
         return(str(e),404)        
         
         
-def create_rule(path_to_graph):
-    path_list = path_to_graph.split("/") 
-    parent_path = path_list[:-1]
-    new_name = path_list[-1]
-    pattern_name = request.args.get("pattern_name")
-    if not pattern_name:
-        return("the pattern_name argument is required", 404)
-    try : 
-        parent_cmd = app.cmd.subCmd(parent_path) 
-        if not parent_cmd.valid_new_name(new_name):
-            return("Graph or rule already exists with this name", 409)
-        elif pattern_name not in parent_cmd.subCmds.keys():
-            return("The pattern graph does not exist", 409)
-        else:    
-            parent_cmd._do_new_rule(new_name,pattern_name)
-            return("rule created", 200)
-    except KeyError as e:
-        return(str(e),404)        
+def get_command(path_to_graph, callback):
+    try :
+        (parent_cmd, child_name) = parse_path(path_to_graph)
+        if child_name in parent_cmd.subCmds.keys():
+            command = parent_cmd.subCmds[child_name] 
+            return(callback(command))
+        elif child_name in parent_cmd.subRules.keys():
+            command = parent_cmd.subRules[child_name]
+            return("rules update not supported yet", 404)
+        else :
+            raise(KeyError)    
+    except KeyError:
+        return("Graph not found", 404)
 
-def create_graph(path_to_graph):
-   if path_to_graph.isspace():
-       return("graph already exists", 409) 
-   path_list = path_to_graph.split("/") 
-   parent_path = path_list[:-1]
-   new_name = path_list[-1]
-   try : 
-       parent_cmd = app.cmd.subCmd(parent_path) 
-       if not parent_cmd.valid_new_name(new_name):
-           return("Graph or rule already exists with this name",409)
-       else : 
-            parent_cmd._do_mkdir(new_name)
-            return("Graph created",200) 
-   except KeyError as e : 
-       return(str(e),404)
+@app.route("/graph/add_node/", methods=["PUT"])
+@app.route("/graph/add_node/<path:path_to_graph>", methods=["PUT"])
+def add_node_graph(path_to_graph=""):
+    return(get_command(path_to_graph, add_node))
 
-@app.route("/", methods=["PUT"])
-@app.route("/<path:path_to_graph>", methods=["PUT"])
-def dispatch_put_graph(path_to_graph=""):
-    if path_to_graph.isspace() : 
-        command = app.cmd
-    else :
-        path_list = path_to_graph.split("/") 
-        parent_path = path_list[:-1]
-        child_name = path_list[-1]
-        try :
-            parent_cmd = app.cmd.subCmd(parent_path)
-            if child_name in parent_cmd.subCmds.keys():
-                command = parent_cmd.subCmds[child_name] 
-            elif child_name in parent_cmd.subRules.keys():
-                command = parent_cmd.subRules[child_name]
-                return("rules update not supported yet", 404)
-            else :
-                raise(KeyError)    
-        except KeyError as e:
-            return("the graph is not found",404)
-    type_of_put = request.args.get("type_of_put")
-    if type_of_put == "add_node" :
-        return(add_node(command))
-    if type_of_put == "add_edge" : 
-        return(add_edge(command))
-    if type_of_put == "rm_node" : 
-        return(rm_node(command))
-    if type_of_put == "merge_nodes" : 
-        return(merge_nodes(command))
-    if type_of_put == "clone_node" : 
-        return(clone_node(command))
-    if type_of_put == "rm_edge" : 
-        return(rm_edge(command))    
-    else :
-        return("unknown modification",412)  
-        
-        
+@app.route("/graph/add_edge/", methods=["PUT"])
+@app.route("/graph/add_edge/<path:path_to_graph>", methods=["PUT"])
+def add_edge_graph(path_to_graph=""):
+    return(get_command(path_to_graph, add_edge))
+
+@app.route("/graph/rm_node/", methods=["PUT"])
+@app.route("/graph/rm_node/<path:path_to_graph>", methods=["PUT"])
+def rm_node_graph(path_to_graph=""):
+    return(get_command(path_to_graph, rm_node))
+
+
+@app.route("/graph/merge_node/", methods=["PUT"])
+@app.route("/graph/merge_node/<path:path_to_graph>", methods=["PUT"])
+def merge_node_graph(path_to_graph=""):
+    return(get_command(path_to_graph, merge_node))
+
+
+@app.route("/graph/clone_node/", methods=["PUT"])
+@app.route("/graph/clone_node/<path:path_to_graph>", methods=["PUT"])
+def clone_node_graph(path_to_graph=""):
+    return(get_command(path_to_graph, clone_node))
+
+
+@app.route("/graph/rm_edge/", methods=["PUT"])
+@app.route("/graph/rm_edge/<path:path_to_graph>", methods=["PUT"])
+def rm_edge_graph(path_to_graph=""):
+    return(get_command(path_to_graph, rm_edge))
+
+
+@app.route("/rule/add_node/", methods=["PUT"])
+@app.route("/rule/add_node/<path:path_to_rule>", methods=["PUT"])
+def add_node_rule(path_to_rule=""):
+    return(get_command(path_to_rule, add_node))
+
+@app.route("/rule/add_edge/", methods=["PUT"])
+@app.route("/rule/add_edge/<path:path_to_rule>", methods=["PUT"])
+def add_edge_rule(path_to_rule=""):
+    return(get_command(path_to_rule, add_edge))
+
+@app.route("/rule/rm_node/", methods=["PUT"])
+@app.route("/rule/rm_node/<path:path_to_rule>", methods=["PUT"])
+def rm_node_rule(path_to_rule=""):
+    return(get_command(path_to_rule, rm_node))
+
+
+@app.route("/rule/merge_node/", methods=["PUT"])
+@app.route("/rule/merge_node/<path:path_to_rule>", methods=["PUT"])
+def merge_node_rule(path_to_rule=""):
+    return(get_command(path_to_rule, merge_node))
+
+
+@app.route("/rule/clone_node/", methods=["PUT"])
+@app.route("/rule/clone_node/<path:path_to_rule>", methods=["PUT"])
+def clone_node_rule(path_to_rule=""):
+    return(get_command(path_to_rule, clone_node))
+
+
+@app.route("/rule/rm_edge/", methods=["PUT"])
+@app.route("/rule/rm_edge/<path:path_to_rule>", methods=["PUT"])
+def rm_edge_rule(path_to_rule=""):
+    return(get_command(path_to_rule, rm_edge))
+
 def add_node(command):
     node_id = request.args.get("node_id")
     if not node_id:
@@ -332,7 +411,6 @@ def rm_edge(command):
     except ValueError as e:
         error_message = str(e) if force_flag else str(e)+", use the force flag if there are some sub edges"    
         return(error_message, 412)
-        
         
 if __name__ == "__main__":
     app.run()

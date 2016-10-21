@@ -392,7 +392,7 @@ class MyCmd(cmd.Cmd):
         self.image_fileName_ = self.fullname.replace("/","__")+".png"
         self.absolute_image_filename_ = os.path.join(self.location_, self.image_fileName_)
         self.image_reader_ = png_viewer_location
-        if parent is not None: 
+        if parent is not None and parent.graph is not None: 
             self.graph = TypedDiGraph(metamodel=parent.graph)
         else :
             self.graph = TypedDiGraph(metamodel=None) 
@@ -404,7 +404,7 @@ class MyCmd(cmd.Cmd):
 
     def hierarchy_to_json(self):
         return({"name": self.name,
-                "top_graph":self.graph.to_json_like(),
+                "top_graph": (self.graph.to_json_like() if self.graph is not None else None),
                 "children": [sub.hierarchy_to_json() for sub in self.subCmds.values()]}) 
                 
     def hierarchy_of_names(self):
@@ -1027,10 +1027,15 @@ class MyCmd(cmd.Cmd):
 
 
     def merge_conflict(self, hierarchy):
-        top_graph = TypedDiGraph(metamodel=self.graph.metamodel_)
-        top_graph.from_json_like(hierarchy["top_graph"])
+        if "top_graph" in hierarchy.keys() and hierarchy["top_graph"] is not None:
+            top_graph = TypedDiGraph(metamodel=self.graph.metamodel_ if self.graph is not None else None)
+            top_graph.from_json_like(hierarchy["top_graph"])
+        else : 
+            top_graph = None    
         if top_graph != self.graph:
             print(self.name,hierarchy["name"])
+            print("top_graph :",top_graph)
+            print("self.graph :",self.graph)
             return(True)
         return any((self.subCmds[child["name"]].merge_conflict(child)
                       for child in hierarchy["children"] 
@@ -1038,8 +1043,11 @@ class MyCmd(cmd.Cmd):
 
 
     def merge_hierarchy(self, hierarchy):
-        top_graph = TypedDiGraph(metamodel=self.graph.metamodel_)
-        top_graph.from_json_like(hierarchy["top_graph"])
+        if "top_graph" in hierarchy.keys() and hierarchy["top_graph"] is not None:
+            top_graph = TypedDiGraph(metamodel=self.graph.metamodel_)
+            top_graph.from_json_like(hierarchy["top_graph"])
+        else:
+            top_graph = None
         if top_graph != self.graph:
             raise ValueError("the top graph of the hierarchy is not the same as the selected graph")
         for child in hierarchy["children"]:
@@ -1060,6 +1068,11 @@ class MyCmd(cmd.Cmd):
         for child in subHierarchy["children"]:
                 cmd.add_subHierarchy(child)
         self.subCmds[subHierarchy["name"]] = cmd
+
+    def deleteSubCmd(self, name):
+        if self.subCmds[name].subCmds or self.subCmds[name].subRules:
+            raise ValueError("The graph to delete has children")
+        del self.subCmds[name]
 
     def postloop(self):
         print()

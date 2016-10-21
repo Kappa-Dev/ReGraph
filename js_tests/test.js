@@ -11,67 +11,6 @@ var callback = function(error, data, response) {
   }
 };
 
-var opts = { 
-  'force': true, // Boolean | with rm_node, merge_nodes, rm_edge; force operation and modify children graphs
-  'nodeId': "nodeId_example", // String | with add_node, remove_node and clone_node; id of node to manipulate
-  'nodeType': "nodeType_example", // String | with add_node; type of node to create
-  'sourceNode': "sourceNode_example", // String | with add_edge and rm_edge; id of source node
-  'targetNode': "targetNode_example", // String | with add_edge and rm_edge; id of target node
-  'node1': "node1_example", // String | with merge_node; id of first node to merge
-  'node2': "node2_example", // String | with merge_node; id of second node to merge
-  'newNodeId': "newNodeId_example" // String | with merge_nodes and clone_node; new name for the node resulting of the merge
-};
-
-var opts_post = { 
-  'patternName': "",
-  'targetGraph': "",
-  'ruleName': "",
-  'matching': "",
-};
-//var opts1 = Object.assign({}, opts);
-opts.nodeId='a'
-api.graphIdPut(" ", "add_node", opts, callback);
-
-opts.nodeId='b'
-api.graphIdPut(" ", "add_node", opts, callback);
-opts.nodeId='c'
-api.graphIdPut(" ", "add_node", opts, callback);
-opts.sourceNode='a'
-opts.targetNode='b'
-api.graphIdPut(" ", "add_edge", opts, callback);
-opts.sourceNode='b'
-opts.targetNode='c'
-api.graphIdPut(" ", "add_edge", opts, callback);
-api.graphIdGet(' ', 'single',callback);
-api.graphIdPost("subgraph1","new_graph",opts_post,callback)
-api.graphIdPost("subgraph2","new_graph",opts_post,callback)
-opts.nodeId='x'
-opts.nodeType='a'
-api.graphIdPut("subgraph1", "add_node", opts, callback);
-opts.nodeId='y'
-opts.nodeType='b'
-api.graphIdPut("subgraph1", "add_node", opts, callback);
-opts.nodeId='z'
-opts.nodeType='b'
-api.graphIdPut("subgraph1", "add_node", opts, callback);
-opts.nodeId='t'
-opts.nodeType='g'
-api.graphIdPut("subgraph1", "add_node", opts, callback);
-opts.sourceNode='x'
-opts.targetNode='y'
-api.graphIdPut("subgraph1", "add_edge", opts, callback);
-opts.sourceNode='y'
-opts.targetNode='x'
-api.graphIdPut("subgraph1", "add_edge", opts, callback);
-api.graphIdPost("subgraph1/subgraph12","new_graph",opts_post,callback)
-api.graphIdPost("subgraph2/subgraph12","new_graph",opts_post,callback)
-api.graphIdPost("subgraph1/subgraph12/toto","new_graph",opts_post,callback)
-opts_post.patternName = "subgraph1"
-api.graphIdPost("r1","new_rule",opts_post,callback)
-api.graphIdPut("r1", "add_edge", opts, callback);
-opts.sourceNode='y'
-opts.targetNode='x'
-
 var hierarchy_test={
   "name": "tyty",
   "top_graph": {
@@ -167,7 +106,6 @@ var hierarchy_test={
     }
   ]
 }
-api.hierarchyHierarchyPathPost("tyty",hierarchy_test,callback)
 var hierarchy_test2={
   "name": "/",
   "top_graph": {
@@ -262,5 +200,39 @@ var hierarchy_test2={
       ]
     }
   ]
-}
-api.hierarchyHierarchyPathPut("",hierarchy_test2,callback)
+};
+
+api.graphgraphIdPost("/toto/",callback);
+api.graphgraphIdPost("/tutu/",callback);
+api.graphgraphIdPost("/toto/titi/",callback);
+api.graphAddNodegraphIdPut("/toto/","a",null,callback);
+api.graphAddNodegraphIdPut("/toto/","b",null,callback);
+api.graphAddNodegraphIdPut("/toto/tutu/","x","a",callback);
+api.graphAddNodegraphIdPut("/toto/titi/","x",{nodeType:"a"},callback);
+api.graphAddNodegraphIdPut("/toto/titi/","y",{nodeType:"b"},callback);
+api.graphAddNodegraphIdPut("/toto/titi/","y",{nodeType:"b"},callback);
+api.graphAddEdgegraphIdPut("/toto/titi/", "x", "y", callback);
+api.graphAddEdgegraphIdPut("/toto/titi/", "asdasdsadx", "y", callback);
+api.graphAddEdgegraphIdPut("/toto/", "a", "b", callback);
+api.graphAddEdgegraphIdPut("/toto/titi/", "x", "y", callback);
+api.graphgraphIdGet("/toto",callback);
+api.graphAddEdgegraphIdPut("/toto/titi/", "y", "x", callback);
+api.graphgraphIdGet("/toto/titi/",callback);
+api.graphgraphIdGet("/toto/titi///",callback);
+api.graphgraphIdGet("/toto///titi///",callback);
+api.hierarchyhierarchyPathGet("/",{},callback);
+api.hierarchyhierarchyPathGet("/",{includeGraphs:true},callback);
+
+h1 =  {"name":"/","children":[{"children":[],"name":"tutu","top_graph":{"edges":[],"nodes":[]}},{"children":[{"children":[],"name":"titi","top_graph":{"edges":[{"to":"y","attrs":{},"from":"x"}],"nodes":[{"id":"x","type":"a"},{"id":"y","type":"b"}]}}],"name":"toto","top_graph":{"edges":[{"to":"b","attrs":{},"from":"a"}],"nodes":[{"id":"b","type":null},{"id":"a","type":null}]}}]}
+h2 =  {"name":"/","children":[{"children":[],"name":"test","top_graph":{"edges":[],"nodes":[]}},{"children":[{"children":[],"name":"titi","top_graph":{"edges":[{"to":"y","attrs":{},"from":"x"}],"nodes":[{"id":"x","type":"a"},{"id":"y","type":"b"}]}}],"name":"toto","top_graph":{"edges":[{"to":"b","attrs":{},"from":"a"}],"nodes":[{"id":"b","type":null},{"id":"a","type":null}]}}]}
+h3 =  {"name":"/","children":[{"children":[],"name":"test","top_graph":{"edges":[],"nodes":[]}},{"children":[{"children":[],"name":"titi2","top_graph":{"edges":[{"to":"y","attrs":{},"from":"x"}],"nodes":[{"id":"x","type":"a"},{"id":"y","type":"b"}]}}],"name":"toto","top_graph":{"edges":[{"to":"b","attrs":{},"from":"a"}],"nodes":[{"id":"b","type":null},{"id":"a","type":null}]}}]}
+
+api.hierarchyhierarchyPathPut("/", h1, callback);
+api.hierarchyhierarchyPathPut("/", h2, callback);
+api.hierarchyhierarchyPathPut("/", h3, callback);
+api.hierarchyhierarchyPathGet("/",{includeGraphs:true},callback);
+
+h4 =  {"children":[{"children":[],"name":"titi2","top_graph":{"edges":[{"to":"y","attrs":{},"from":"x"}],"nodes":[{"id":"x","type":"a"},{"id":"y","type":"b"}]}}],"name":"toadd","top_graph":{"edges":[{"to":"b","attrs":{},"from":"a"}],"nodes":[{"id":"b","type":null},{"id":"a","type":null}]}}
+api.hierarchyhierarchyPathPost("/toadd/",h4,callback);
+// api.graphgraphIdPost("/tutu/",callback);
+// api.hierarchyhierarchyPathGet("/",{includeGraphs:true},callback);
