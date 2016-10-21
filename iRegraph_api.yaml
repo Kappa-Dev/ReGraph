@@ -13,7 +13,7 @@ basePath: /
 produces:
   - application/json
 paths:
-  /hierarchy/{hierarchy_path}:
+  /hierarchy{hierarchy_path}:
     post:
       summary: post a new hierarchy 
       parameters:
@@ -51,8 +51,115 @@ paths:
           description: the merge failed
         200:
           description: the merge was succesfull
-      
-  /{graph_id}:
+    get:  
+      summary: get all the hierarchy starting from a graph
+      parameters: 
+        - name: hierarchy_path
+          in: path
+          description: The path to the graph which is the top of the new hierarchy
+          required: true
+          type: string
+          
+        - name: include_graphs
+          in: query
+          description: if true return the full hierarchy and not noly the names
+          default: false
+          type: boolean
+          
+        - name: rules
+          in: query
+          description: TODO,if true return the rules defined on the server and not only the graphs
+          default: false
+          type: boolean
+          
+      responses:
+        404:
+          description: hierarchy not found
+        210:
+          description: the hierarchy of graph starting from graph_id
+          schema:
+            $ref: '#/definitions/GraphHierarchy'
+        211:
+          description: the hierarchy with only the names starting from graph_id
+          schema:
+            $ref: '#/definitions/NameHierarchy'  
+        default:
+          description: Unexpected error
+    delete:
+      summary: delete a graph and all its children
+      parameters:
+        - name: hierarchy_path
+          in: path
+          description: The path to the graph which is the top of the hierarchy to delete
+          required: true
+          type: string
+      responses:
+        200:
+          description: the graph was deleted
+        404:
+          description: the hierarchy is not valid
+        default:  
+          description: Unexpected error
+  /rule{rule_id}:
+    post:
+      summary: create a new rule
+      parameters:
+        - name: rule_id
+          in: path
+          description: The path to the graph in the hierarchy
+          required: true
+          type: string
+        - name: pattern_name
+          in: query
+          required: true
+          description: the name of the graph used as a left hand size for the rule
+          type: string
+      responses:
+        200:
+          description: the rule was created
+        409:
+          description: a rule or graph already exists with this name
+        404:
+          description: father of the rule not found or argument missing
+        default:
+          description: Unexpected error 
+  
+  /graph/apply{graph_id}:
+    post:
+      summary: create a new graph by applying a rule
+      parameters:
+        - name: graph_id
+          in: path
+          description: The path to the new graph in the hierarchy
+          required: true
+          type: string
+        - name: target_graph
+          in: query
+          description: the name of the graph from which the new one is created
+          type: string
+          required: true
+        - name: rule_name
+          in: query
+          description: the name of the rule
+          type: string
+          required: true
+        - name: matching
+          in: body
+          required: true
+          description: the matching used to apply the rule
+          schema:
+            $ref: '#/definitions/Matching'
+      responses:
+        200:
+          description: the graph was created
+        409:
+          description: the graph already exists
+        404:
+          description: the father of the graph was not found or argument missing
+        default:
+          description: Unexpected error
+          
+  /graph{graph_id}:
     get:
       summary: get a graph in json format
       description: get a graph in json format
@@ -63,64 +170,23 @@ paths:
           required: true
           type: string
           
-        - name: type_of_get
-          in: query
-          description: single, hierarchy, hierarchy_only_names 
-          required: true
-          type: string
       responses:
         200:
           description: a graph in json format
           schema:
             $ref: '#/definitions/Graph'
-        210:
-          description: the hierarchy of graph starting from graph_id
-          schema:
-            $ref: '#/definitions/GraphHierarchy'
-        211:
-          description: the hierarchy with only the names starting from graph_id
-          schema:
-            $ref: '#/definitions/NameHierarchy'
         404:
           description: graph not found
         default:
           description: Unexpected error
-
     post:
-      summary: create a new_graph or a new rule
+      summary: create a new empty graph 
       parameters:
         - name: graph_id
           in: path
-          description: The path to the graph or the rule in the hierarchy
+          description: The path to the graph in the hierarchy
           required: true
           type: string
-        - name: creation_type
-          in: query
-          description: new_graph, new_rule, apply_rule
-          required: true
-          type: string
-        - name: pattern_name
-          in: query
-          description: with new_rule; the name of the graph used as a left hand size for the rule
-          type: string
-        - name: target_graph
-          in: query
-          description: with apply_rule; the name of the graph from which the new one is created
-          type: string
-        - name: rule_name
-          in: query
-          description: with apply_rule; the name of the rule
-          type: string
-        - name: matching
-          in: body
-          description: with apply_rule; the matching used to apply the rule
-          schema:
-            $ref: '#/definitions/Matching'
-        #- name: hierarchy
-        #  in: body
-        #  description: wi
-        #  schema:
-        #    $ref: '#/definitions/GraphHierarchy'
           
       responses:
         200:
@@ -131,51 +197,136 @@ paths:
           description: the father of the graph was not found or argument missing
         default:
           description: Unexpected error
-    
+    delete:
+      parameters:
+        - name: graph_id
+          in: path
+          description: The path to the graph to delete
+          required: true
+          type: string
+      summary: delete a graph
+      responses:
+        200:
+          description: the graph was deleted
+        409:
+          description: the graph has children, use hierarchy deletion
+        404:
+          description: the graph was not found
+        default:
+          description: Unexpected error
+      
+  /graph/add_node{graph_id}: 
     put:
-      summary: modify a graph in place
+      summary: add a node to a graph
+      parameters: 
+        - name: graph_id
+          in: path
+          description: The path to the graph in the hierarchy
+          required: true
+          type: string
+        - name: node_id
+          in: query
+          description: id of node to create
+          type: string
+          required: true
+        - name: node_type
+          in: query
+          description: type of node to create, 
+          type: string
+      responses:
+        200:
+          description: modification worked
+        404: 
+          description: graph was not found
+        412:
+          description: modification failed
+          schema:
+            type: string    
+            
+  /graph/add_edge{graph_id}: 
+    put:
+      summary: add an edge to a graph
+      parameters: 
+        - name: graph_id
+          in: path
+          description: The path to the graph in the hierarchy
+          required: true
+          type: string
+        - name: source_node
+          in: query
+          description: id of source node
+          type: string
+          required: true
+        - name: target_node
+          in: query
+          description: id of target node
+          type: string
+          required: true
+      responses:
+        200:
+          description: modification worked
+        404: 
+          description: graph was not found
+        412:
+          description: modification failed
+          schema:
+            type: string
+            
+  /graph/rm_node{graph_id}: 
+    put:
+      summary: remove a node from a graph
+      parameters: 
+        - name: graph_id
+          in: path
+          description: The path to the graph in the hierarchy
+          required: true
+          type: string
+        - name: node_id
+          in: query
+          description: id of node to delete
+          type: string
+          required: true
+        - name: force
+          in: query
+          description: force operation and delete all the nodes typed by this one in children graphs
+          type: boolean  
+      responses:
+        200:
+          description: modification worked
+        404: 
+          description: graph was not found
+        412:
+          description: modification failed
+          schema:
+            type: string    
+            
+  /graph/merge_node{graph_id}: 
+    put:
+      summary: merge two nodes
       parameters:
         - name: graph_id
           in: path
           description: The path to the graph in the hierarchy
           required: true
           type: string
-        - name: type_of_put
-          in: query
-          description: add_node, add_edge, rm_node, merge_nodes, clone_node, rm_edge
-          required: true
-          type: string
         - name: force
           in: query
-          description: with rm_node, merge_nodes, rm_edge; force operation and modify children graphs
+          description: force the merging, nodes type by either one will be typed by the new node
           type: boolean
-        - name: node_id
-          in: query
-          description: with add_node, remove_node and clone_node; id of node to manipulate
-          type: string
-        - name: node_type
-          in: query
-          description: with add_node; type of node to create 
-          type: string  
-        - name: source_node
-          in: query
-          description: with add_edge and rm_edge; id of source node
-          type: string
-        - name: target_node
-          in: query
-          description: with add_edge and rm_edge; id of target node
-          type: string
         - name: node1
           in: query
-          description: with merge_node; id of first node to merge
+          description: id of first node to merge
+          required: true
           type: string  
         - name: node2
           in: query
-          description: with merge_node; id of second node to merge
+          description: id of second node to merge
+          required: true
           type: string  
         - name: new_node_id
           in: query
-          description: with merge_nodes and clone_node; new name for the node resulting of the merge
+          description: new name for the node resulting of the merge
+          required : true
           type: string
       responses:
         200:
@@ -186,6 +337,68 @@ paths:
           description: modification failed
           schema:
             type: string
+  /graph/clone_node{graph_id}:
+    put:
+      summary: clone a node
+      parameters:
+        - name: graph_id
+          in: path
+          description: The path to the graph in the hierarchy
+          required: true
+          type: string
+        - name: node_id
+          in: query
+          description: id of the node to clone
+          type: string
+          required: true
+        - name: new_node_id
+          in: query
+          description: name for the node resulting of the clone
+          required: true
+          type: string
+      responses:
+        200:
+          description: modification worked
+        404: 
+          description: graph was not found
+        412:
+          description: modification failed
+          schema:
+            type: string
+            
+  /graph/rm_edge{graph_id}: 
+    put:
+      summary: remove an edge
+      parameters:
+        - name: graph_id
+          in: path
+          description: The path to the graph in the hierarchy
+          required: true
+          type: string
+        - name: force
+          in: query
+          description: force the deletion and propagate to children
+          type: boolean
+        - name: source_node
+          in: query
+          description: id of source node of the edge
+          type: string
+          required: true
+        - name: target_node
+          in: query
+          description: id of target node of the edge
+          type: string
+          required: true
+      responses:
+        200:
+          description: modification worked
+        404: 
+          description: graph was not found
+        412:
+          description: modification failed
+          schema:
+            type: string
+            
 definitions:
 
   Node:
