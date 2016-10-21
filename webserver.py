@@ -156,7 +156,11 @@ def create_rule(path_to_graph=""):
     path_list = path_to_graph.split("/") 
     parent_path = path_list[:-1]
     new_name = path_list[-1]
-    (parent_com,rule_name)=parse_path(path_to_graph)
+    try :
+        (parent_com,rule_name)=parse_path(path_to_graph)
+    except KeyError as e:
+        return(str(e),404)        
+        
     if rule_name is None:
         return ("the empty path is not valid to create a rule", 404)
     pattern_name = request.args.get("pattern_name")
@@ -177,16 +181,16 @@ def create_rule(path_to_graph=""):
 @app.route("/graph/", methods=["POST"])
 @app.route("/graph/<path:path_to_graph>", methods=["POST"])
 def create_graph(path_to_graph=""):
-   (parent_cmd, graph_name) = parse_path(path_to_graph)
-   if graph_name is None:
-       return("the empty path is not valid for graph creation",404)
-   try : 
-       #parent_cmd = app.cmd.subCmd(parent_path) 
+   try: 
+       (parent_cmd, graph_name) = parse_path(path_to_graph)
+       if graph_name is None:
+           return("the empty path is not valid for graph creation",404)
+           #parent_cmd = app.cmd.subCmd(parent_path) 
        if not parent_cmd.valid_new_name(graph_name):
            return("Graph or rule already exists with this name",409)
        else : 
-            parent_cmd._do_mkdir(graph_name)
-            return("Graph created",200) 
+               parent_cmd._do_mkdir(graph_name)
+               return("Graph created",200) 
    except KeyError as e : 
        return(str(e),404)
 
