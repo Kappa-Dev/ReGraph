@@ -77,7 +77,7 @@ def merge_hierachy(path_to_graph=""):
 def get_hierarchy(path_to_graph=""):
     include_rules = request.args.get("rules")
     include_graphs = request.args.get("include_graphs")
-    if include_graphs:
+    if include_graphs == "true":
         return(get_graph_hierarchy(path_to_graph))
     else:
         return(get_graph_hierarchy_only_names(path_to_graph))
@@ -160,7 +160,7 @@ def create_rule(path_to_graph=""):
         (parent_com,rule_name)=parse_path(path_to_graph)
     except KeyError as e:
         return(str(e),404)        
-        
+
     if rule_name is None:
         return ("the empty path is not valid to create a rule", 404)
     pattern_name = request.args.get("pattern_name")
@@ -189,8 +189,8 @@ def create_graph(path_to_graph=""):
        if not parent_cmd.valid_new_name(graph_name):
            return("Graph or rule already exists with this name",409)
        else : 
-               parent_cmd._do_mkdir(graph_name)
-               return("Graph created",200) 
+           parent_cmd._do_mkdir(graph_name)
+           return("Graph created",200) 
    except KeyError as e : 
        return(str(e),404)
 
