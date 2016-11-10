@@ -4,12 +4,12 @@ info:
   description: Manipulate graph on the server
   version: "1.0.0"
 # the domain of the service
-host: api.executableknowledge.org
+host: 127.0.0.1:5000
 # array of all schemes that your API supports
 schemes:
-  - https
+  - http
 # will be prefixed to all paths
-basePath: /iregraph
+basePath: /
 produces:
   - application/json
 paths:
@@ -68,7 +68,7 @@ paths:
           
         - name: rules
           in: query
-          description: TODO,if true return the rules defined on the server and not only the graphs
+          description: if true return the rules defined on the server and not only the graphs
           default: false
           type: boolean
           
@@ -83,6 +83,14 @@ paths:
           description: the hierarchy with only the names starting from graph_id
           schema:
             $ref: '#/definitions/NameHierarchy'  
+        212:
+          description: the hierarchy with only the names, rule names included
+          schema: 
+            $ref: '#/definitions/NameHierarchyRules'
+        213:
+          description: the hierarchy of graphs, rules included
+          schema: 
+            $ref: '#/definitions/GraphHierarchyRules'    
         default:
           description: Unexpected error
     delete:
@@ -100,19 +108,22 @@ paths:
           description: the hierarchy is not valid
         default:  
           description: Unexpected error
+          
   /rule{rule_id}:
     post:
       summary: create a new rule
       parameters:
         - name: rule_id
           in: path
-          description: The path to the graph in the hierarchy
+          description: The path to the rule in the hierarchy
           required: true
           type: string
         - name: pattern_name
           in: query
           required: true
-          description: the name of the graph used as a left hand size for the rule
+          description: |
+            the name of the graph used as a left hand size for the rule,
+            (not the absolute path)
           type: string
       responses:
         200:
@@ -214,7 +225,35 @@ paths:
           description: the graph was not found
         default:
           description: Unexpected error
-      
+  
+  /graph/matchings{graph_id}:
+    get:
+      summary: returns the possible matching for a rule on the graph
+      parameters: 
+        - name: graph_id
+          in: path
+          description: the path to the graph
+          required: true
+          type: string
+        - name: rule_name
+          in: query
+          description: the name of the rule (which must have the same parent as the graph)
+          type: string
+          required: true
+      responses:
+        200:
+          description: search of matchings worked
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/Matching'
+        404: 
+          description: graph was not found
+        412:
+          description: modification failed
+          schema:
+            type: string
+            
   /graph/add_node{graph_id}: 
     put:
       summary: add a node to a graph
@@ -365,6 +404,7 @@ paths:
           description: modification failed
           schema:
             type: string
+  
             
   /graph/rm_edge{graph_id}: 
     put:
@@ -399,6 +439,304 @@ paths:
           schema:
             type: string
             
+  /rule/add_node{rule_id}: 
+    put:
+      summary: modify rule to add a node
+      parameters: 
+        - name: rule_id
+          in: path
+          description: The path to the rule in the hierarchy
+          required: true
+          type: string
+        - name: node_id
+          in: query
+          description: id of node to create
+          type: string
+          required: true
+        - name: node_type
+          in: query
+          description: type of node to create, 
+          type: string
+      responses:
+        200:
+          description: modification worked
+        404: 
+          description: graph was not found
+        412:
+          description: modification failed
+          schema:
+            type: string    
+            
+  /rule/add_edge{rule_id}: 
+    put:
+      summary: modify rule to add an edge 
+      parameters: 
+        - name: rule_id
+          in: path
+          description: The path to the rule in the hierarchy
+          required: true
+          type: string
+        - name: source_node
+          in: query
+          description: id of source node
+          type: string
+          required: true
+        - name: target_node
+          in: query
+          description: id of target node
+          type: string
+          required: true
+      responses:
+        200:
+          description: modification worked
+        404: 
+          description: graph was not found
+        412:
+          description: modification failed
+          schema:
+            type: string
+            
+  /rule/rm_node{rule_id}: 
+    put:
+      summary: remove a node from a graph
+      parameters: 
+        - name: rule_id
+          in: path
+          description: The path to the rule in the hierarchy
+          required: true
+          type: string
+        - name: node_id
+          in: query
+          description: id of node to delete
+          type: string
+          required: true
+      responses:
+        200:
+          description: modification worked
+        404: 
+          description: graph was not found
+        412:
+          description: modification failed
+          schema:
+            type: string    
+            
+  /rule/merge_node{rule_id}: 
+    put:
+      summary: merge two nodes
+      parameters:
+        - name: rule_id
+          in: path
+          description: The path to the rule in the hierarchy
+          required: true
+          type: string
+        - name: force
+          in: query
+          description: force the merging, nodes type by either one will be typed by the new node
+          type: boolean
+        - name: node1
+          in: query
+          description: id of first node to merge
+          required: true
+          type: string  
+        - name: node2
+          in: query
+          description: id of second node to merge
+          required: true
+          type: string  
+        - name: new_node_id
+          in: query
+          description: new name for the node resulting of the merge
+          required : true
+          type: string
+      responses:
+        200:
+          description: modification worked
+        404: 
+          description: graph was not found
+        412:
+          description: modification failed
+          schema:
+            type: string
+  /rule/clone_node{rule_id}:
+    put:
+      summary: clone a node
+      parameters:
+        - name: rule_id
+          in: path
+          description: The path to the rule in the hierarchy
+          required: true
+          type: string
+        - name: node_id
+          in: query
+          description: id of the node to clone
+          type: string
+          required: true
+        - name: new_node_id
+          in: query
+          description: name for the node resulting of the clone
+          required: true
+          type: string
+      responses:
+        200:
+          description: modification worked
+        404: 
+          description: graph was not found
+        412:
+          description: modification failed
+          schema:
+            type: string
+  
+            
+  /rule/rm_edge{rule_id}: 
+    put:
+      summary: remove an edge
+      parameters:
+        - name: rule_id
+          in: path
+          description: The path to the rule in the hierarchy
+          required: true
+          type: string
+        - name: source_node
+          in: query
+          description: id of source node of the edge
+          type: string
+          required: true
+        - name: target_node
+          in: query
+          description: id of target node of the edge
+          type: string
+          required: true
+      responses:
+        200:
+          description: modification worked
+        404: 
+          description: graph was not found
+        412:
+          description: modification failed
+          schema:
+            type: string
+
+  /graph/add_constraint{graph_id}:
+    put:
+      summary: add a constraint to a node
+      description: |
+        adding the output constraint t2 <= 3 on node t1 means that any node typed by t1 
+        may not have more than 3 edges going to nodes typed by t2
+      parameters:
+        - name: graph_id
+          in: path
+          description: The path to the graph in the hierarchy
+          required: true
+          type: string
+        - name: node_id
+          in: query
+          description: id of the node on which to add a constraint
+          type: string
+          required: true
+        - name: input_or_output
+          in: query
+          description: does the constraint concerns input or output edges
+          type: string
+          required: true
+          enum: ["input","output"]
+        - name: constraint_node
+          in: query
+          description: id of the node referenced by the constraint
+          required: true
+          type: string
+        - name: bound
+          in: query
+          description: the bound of the contraint
+          required: true
+          minimum: 1
+          type: integer 
+        - name: le_or_ge
+          in: query
+          description: constraint_node <= bound or constraint_node >= bound
+          required: true
+          type: string  
+          enum: ["le","ge"]
+          
+      responses:
+        200:
+          description: modification worked
+        404: 
+          description: graph was not found
+        412:
+          description: modification failed
+          schema:
+            type: string
+  /graph/delete_constraint{graph_id}:
+    put:
+      summary: delete a constraint from a node
+      parameters:
+        - name: graph_id
+          in: path
+          description: The path to the graph in the hierarchy
+          required: true
+          type: string
+        - name: node_id
+          in: query
+          description: id of the node on which to add a constraint
+          type: string
+          required: true
+        - name: input_or_output
+          in: query
+          description: does the constraint concerns input or output edges
+          type: string
+          required: true
+          enum: ["input","output"]
+        - name: constraint_node
+          in: query
+          description: id of the node referenced by the constraint
+          required: true
+          type: string
+        - name: bound
+          in: query
+          description: the bound of the contraint
+          required: true
+          type: integer 
+          minimum: 1
+        - name: le_or_ge
+          in: query
+          description: constraint_node <= bound or constraint_node >= bound
+          required: true
+          type: string  
+          enum: ["le","ge"]
+          
+      responses:
+        200:
+          description: modification worked
+        404: 
+          description: graph was not found
+        412:
+          description: modification failed
+          schema:
+            type: string 
+            
+  /graph/validate_constraints{graph_id}:
+    put:
+      summary: check the constraints to validate a graph
+      description: |
+        tries to validate the graph, returns all the nodes that failed at least one constraint
+      parameters:
+        - name: graph_id
+          in: path
+          description: The path to the graph in the hierarchy
+          required: true
+          type: string
+      responses:
+        200:
+          description: graph validated
+        404: 
+          description: graph was not found
+        412:
+          description: some nodes did not pass the tests, return the names of these nodes
+          schema:
+            type: array
+            items: 
+              type: string
+            
 definitions:
 
   Node:
@@ -408,7 +746,14 @@ definitions:
         type: string
       ttype:
         type: string
-      
+      input_constraints: 
+        type: array
+        items:
+          type: string
+      output_constraints: 
+        type: array
+        items:
+          type: string
   Edge:
     type: object
     properties:
@@ -442,6 +787,21 @@ definitions:
         items:
           $ref: '#/definitions/GraphHierarchy'
           
+  GraphHierarchyRules:
+    type: object
+    properties:
+      name:
+        type: string
+      rules:
+        type: array
+        items:
+          $ref: '#/definitions/Rule'
+      top_graph:
+        $ref: '#/definitions/Graph'
+      children:
+        type: array
+        items:
+          $ref: '#/definitions/GraphHierarchyRules'       
   NameHierarchy:
     type: object
     properties:
@@ -452,6 +812,34 @@ definitions:
         items:
           $ref: '#/definitions/NameHierarchy'
           
+  NameHierarchyRules:
+    type: object
+    properties:
+      name:
+        type: string
+      children:
+        type: array
+        items:
+          $ref: '#/definitions/NameHierarchyRules'      
+      rules:
+        type: array
+        items: 
+          type : string
+          
+  Rule:
+    type: object
+    properties:
+      L:
+        $ref: '#/definitions/Graph'
+      P:
+        $ref: '#/definitions/Graph'
+      R:
+        $ref: '#/definitions/Graph'
+      PL:
+        $ref: '#/definitions/Matching'
+      PR:
+        $ref: '#/definitions/Matching'
+        
   Couple:
     type: object
     properties:

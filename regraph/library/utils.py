@@ -62,6 +62,7 @@ def normalize_attrs(attrs_):
     else:
         attrs_ = {}
 
+
 def merge_attributes(attr1, attr2, method="union"):
     """Merge two dictionaries of attributes."""
     result = {}
@@ -216,3 +217,7 @@ def dict_sub(A, B):
                         (str(el), str(key)), RuntimeWarning)
             for el in elements_to_remove:
                 A[key].remove(el)
+
+
+def listOr(*l):
+    return(lambda x: any([f(x) for f in l]))

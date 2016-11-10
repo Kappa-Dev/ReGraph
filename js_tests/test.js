@@ -1,7 +1,7 @@
 
 var IRegraphHttpApi = require('i_regraph_http_api');
 
-var api = new IRegraphHttpApi.DefaultApi()
+var api = new IRegraphHttpApi.DefaultApi();
 
 var callback = function(error, data, response) {
   if (error) {
@@ -223,16 +223,35 @@ api.graphgraphIdGet("/toto///titi///",callback);
 api.hierarchyhierarchyPathGet("/",{},callback);
 api.hierarchyhierarchyPathGet("/",{includeGraphs:true},callback);
 
-h1 =  {"name":"/","children":[{"children":[],"name":"tutu","top_graph":{"edges":[],"nodes":[]}},{"children":[{"children":[],"name":"titi","top_graph":{"edges":[{"to":"y","attrs":{},"from":"x"}],"nodes":[{"id":"x","type":"a"},{"id":"y","type":"b"}]}}],"name":"toto","top_graph":{"edges":[{"to":"b","attrs":{},"from":"a"}],"nodes":[{"id":"b","type":null},{"id":"a","type":null}]}}]}
-h2 =  {"name":"/","children":[{"children":[],"name":"test","top_graph":{"edges":[],"nodes":[]}},{"children":[{"children":[],"name":"titi","top_graph":{"edges":[{"to":"y","attrs":{},"from":"x"}],"nodes":[{"id":"x","type":"a"},{"id":"y","type":"b"}]}}],"name":"toto","top_graph":{"edges":[{"to":"b","attrs":{},"from":"a"}],"nodes":[{"id":"b","type":null},{"id":"a","type":null}]}}]}
-h3 =  {"name":"/","children":[{"children":[],"name":"test","top_graph":{"edges":[],"nodes":[]}},{"children":[{"children":[],"name":"titi2","top_graph":{"edges":[{"to":"y","attrs":{},"from":"x"}],"nodes":[{"id":"x","type":"a"},{"id":"y","type":"b"}]}}],"name":"toto","top_graph":{"edges":[{"to":"b","attrs":{},"from":"a"}],"nodes":[{"id":"b","type":null},{"id":"a","type":null}]}}]}
+h1 =  {"name":"/","children":[{"children":[],"name":"tutu","top_graph":{"edges":[],"nodes":[]}},{"children":[{"children":[],"name":"titi","top_graph":{"edges":[{"to":"y","attrs":{},"from":"x"}],"nodes":[{"id":"x","type":"a"},{"id":"y","type":"b"}]}}],"name":"toto","top_graph":{"edges":[{"to":"b","attrs":{},"from":"a"}],"nodes":[{"id":"b","type":null},{"id":"a","type":null}]}}]};
+h2 =  {"name":"/","children":[{"children":[],"name":"test","top_graph":{"edges":[],"nodes":[]}},{"children":[{"children":[],"name":"titi","top_graph":{"edges":[{"to":"y","attrs":{},"from":"x"}],"nodes":[{"id":"x","type":"a"},{"id":"y","type":"b"}]}}],"name":"toto","top_graph":{"edges":[{"to":"b","attrs":{},"from":"a"}],"nodes":[{"id":"b","type":null},{"id":"a","type":null}]}}]};
+h3 =  {"name":"/","children":[{"children":[],"name":"test","top_graph":{"edges":[],"nodes":[]}},{"children":[{"children":[],"name":"titi2","top_graph":{"edges":[{"to":"y","attrs":{},"from":"x"}],"nodes":[{"id":"x","type":"a"},{"id":"y","type":"b"}]}}],"name":"toto","top_graph":{"edges":[{"to":"b","attrs":{},"from":"a"}],"nodes":[{"id":"b","type":null},{"id":"a","type":null}]}}]};
 
 api.hierarchyhierarchyPathPut("/", h1, callback);
 api.hierarchyhierarchyPathPut("/", h2, callback);
 api.hierarchyhierarchyPathPut("/", h3, callback);
 api.hierarchyhierarchyPathGet("/",{includeGraphs:true},callback);
 
-h4 =  {"children":[{"children":[],"name":"titi2","top_graph":{"edges":[{"to":"y","attrs":{},"from":"x"}],"nodes":[{"id":"x","type":"a"},{"id":"y","type":"b"}]}}],"name":"toadd","top_graph":{"edges":[{"to":"b","attrs":{},"from":"a"}],"nodes":[{"id":"b","type":null},{"id":"a","type":null}]}}
+h4 =  {"children":[{"children":[],"name":"titi2","top_graph":{"edges":[{"to":"y","attrs":{},"from":"x"}],"nodes":[{"id":"x","type":"a"},{"id":"y","type":"b"}]}}],"name":"toadd","top_graph":{"edges":[{"to":"b","attrs":{},"from":"a"}],"nodes":[{"id":"b","type":null},{"id":"a","type":null}]}};
 api.hierarchyhierarchyPathPost("/toadd/",h4,callback);
 // api.graphgraphIdPost("/tutu/",callback);
 // api.hierarchyhierarchyPathGet("/",{includeGraphs:true},callback);
+api.graphValidateConstraintsgraphIdPut("/toto/titi/", callback);
+api.graphAddConstraintgraphIdPut("/toto/","a","output","b","3","le",callback);
+api.graphAddConstraintgraphIdPut("/toto/","a","output","b","2","ge",callback);
+api.graphValidateConstraintsgraphIdPut("/toto/titi/", callback);
+api.graphCloneNodegraphIdPut("/toto/titi/","y","y1");
+api.graphValidateConstraintsgraphIdPut("/toto/titi/", callback);
+api.graphCloneNodegraphIdPut("/toto/titi/","y","y2");
+api.graphValidateConstraintsgraphIdPut("/toto/titi/", callback);
+api.graphCloneNodegraphIdPut("/toto/titi/","y","y3");
+api.graphValidateConstraintsgraphIdPut("/toto/titi/", callback);
+api.graphgraphIdGet("/toto/",callback);
+api.ruleruleIdPost("/r/", "toto", callback);
+api.ruleAddNoderuleIdPut("/r/","added",{},callback);
+api.ruleAddEdgeruleIdPut("/r/","added","a",callback);
+api.ruleCloneNoderuleIdPut("/r/","a","a1",callback);
+api.ruleMergeNoderuleIdPut("/r/","a","b","ab",callback);
+api.ruleRmEdgeruleIdPut("/r/","added","ab",callback);
+api.ruleCloneNoderuleIdPut("/r/","ab","ab1",callback);	
+api.ruleRmNoderuleIdPut("/r/","ab",callback);
