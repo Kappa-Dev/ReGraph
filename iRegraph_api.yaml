@@ -4,12 +4,12 @@ info:
   description: Manipulate graph on the server
   version: "1.0.0"
 # the domain of the service
-host: 127.0.0.1:5000
+host: api.executableknowledge.org 
 # array of all schemes that your API supports
 schemes:
-  - http
+  - https
 # will be prefixed to all paths
-basePath: /
+basePath: /iregraph
 produces:
   - application/json
 paths:
