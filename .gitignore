@@ -23,3 +23,4 @@ script
 todo.txt
 .vscode/*
 js_tests/node_modules/*
+push.js

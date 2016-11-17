@@ -38,7 +38,15 @@ class Transformer(object):
 
         self.base_nodes = [n for n in self.G.nodes()]
         
-        
+    def __eq__(self, t):
+        return(
+            self.G == t.G and
+            self.R == t.R and
+            self.P == t.P and
+            self.L == t.L and
+            self.P_L_dict == t.P_L_dict and
+            self.P_R_dict == t.P_R_dict)
+            
     def appendToNodesNames(self,token):
         self.P = self.P.appendToNodesNames(token)
         self.R = self.R.appendToNodesNames(token)

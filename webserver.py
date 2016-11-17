@@ -1,7 +1,11 @@
 from flask import Flask, Response, request
 from iRegraph import MyCmd
 from flask_cors import CORS, cross_origin
+from flex.loading.schema.paths.path_item.operation.responses.single.schema import (
+    schema_validator,
+)
 import json
+import flex
 
 
 class MyFlask(Flask):
@@ -12,10 +16,9 @@ class MyFlask(Flask):
         self.cmd.graph = None
 
 app = MyFlask(__name__)
-#app.url_map.strict_slashes = True
 app.config['DEBUG'] = True
 CORS(app)
-#app = Flask(__name__)
+json_schema_context = flex.load('iRegraph_api.yaml')
 
 
 def parse_path(path_to_graph):
@@ -46,6 +49,12 @@ def import_sub_hierachy(path_to_graph=""):
     if graph_name is None:
         return("the empty path is not valid", 404)
     sub_hierarchy = request.json
+    try:
+        schema = schema_validator({'$ref': '#/definitions/GraphHierarchy'},
+                                  context=json_schema_context)
+        flex.core.validate(schema, sub_hierarchy, context=json_schema_context)
+    except ValueError as e:
+        return(str(e), 404)
     top_graph_name = sub_hierarchy["name"]
     if top_graph_name != graph_name:
         return("the name of the top graph must be the same as the url", 404)
@@ -67,7 +76,8 @@ def merge_hierachy(path_to_graph=""):
         if graph_name is None and top_graph_name != "/":
             return ("the name of the top graph must be '/'", 404)
         if graph_name is not None and top_graph_name != graph_name:
-            return ("the name of the top graph must be the same as the url", 404)
+            return ("the name of the top graph must be the same as the url",
+                    404)
         if cmd.merge_conflict(hierarchy):
             return ("some different graphs have the same name", 404)
         cmd.merge_hierarchy(hierarchy)
@@ -213,7 +223,6 @@ def create_graph(path_to_graph=""):
         (parent_cmd, graph_name) = parse_path(path_to_graph)
         if graph_name is None:
             return("the empty path is not valid for graph creation", 404)
-            #parent_cmd = app.cmd.subCmd(parent_path)
         if not parent_cmd.valid_new_name(graph_name):
             return("Graph or rule already exists with this name", 409)
         else:
@@ -238,9 +247,11 @@ def get_matchings(path_to_graph=""):
         if graph_name not in parent_cmd.subCmds.keys():
             return("the graph does not exists", 404)
 
-        resp = Response(response=json.dumps(parent_cmd.get_matchings(rule_name, graph_name)),
-                        status=200,
-                        mimetype="application/json")
+        resp = Response(
+                 response=json.dumps(parent_cmd.get_matchings(rule_name,
+                                                              graph_name)),
+                 status=200,
+                 mimetype="application/json")
         return resp
     except KeyError as e:
         return Response(response="graph not found : " + str(e), status=404)
@@ -249,22 +260,15 @@ def get_matchings(path_to_graph=""):
 @app.route("/graph/apply/", methods=["POST"])
 @app.route("/graph/apply/<path:path_to_graph>", methods=["POST"])
 def apply_rule(path_to_graph=""):
-    #path_list = path_to_graph.split("/")
-    #parent_path = path_list[:-1]
-    #new_name = path_list[-1]
     rule_name = request.args.get("rule_name")
     target_graph = request.args.get("target_graph")
     try:
-        #matching = json.load(request.form["matching morphism"])
-        #matching = json.load(request.data)
         matching = {d["left"]: d["right"] for d in request.json}
-        # print(matching)
     except KeyError as e:
         return("the matching argument is necessary", 404)
     if not (rule_name and target_graph):
         return("the rule_name and target_graph arguments are necessary", 404)
     try:
-        #parent_cmd = app.cmd.subCmd(parent_path)
         (parent_cmd, new_name) = parse_path(path_to_graph)
         if not parent_cmd.valid_new_name(new_name):
             return("Graph or rule already exists with this name", 409)
@@ -286,10 +290,10 @@ def get_command(path_to_graph, callback):
         (parent_cmd, child_name) = parse_path(path_to_graph)
         if child_name in parent_cmd.subCmds.keys():
             command = parent_cmd.subCmds[child_name]
-            return(callback(command))
+            return callback(command)
         elif child_name in parent_cmd.subRules.keys():
             command = parent_cmd.subRules[child_name]
-            return(callback(command))
+            return callback(command)
             # return("rules update not supported yet", 404)
         else:
             raise(KeyError)
@@ -333,6 +337,24 @@ def rm_edge_graph(path_to_graph=""):
     return(get_command(path_to_graph, rm_edge))
 
 
+@app.route("/graph/add_attr/", methods=["PUT"])
+@app.route("/graph/add_attr/<path:path_to_graph>", methods=["PUT"])
+def add_attr_graph(path_to_graph=""):
+    return(get_command(path_to_graph, add_attr))
+
+
+@app.route("/graph/update_attr/", methods=["PUT"])
+@app.route("/graph/update_attr/<path:path_to_graph>", methods=["PUT"])
+def update_attr_graph(path_to_graph=""):
+    return(get_command(path_to_graph, update_attr))
+
+
+@app.route("/graph/rm_attr/", methods=["PUT"])
+@app.route("/graph/rm_attr/<path:path_to_graph>", methods=["PUT"])
+def rm_attr_graph(path_to_graph=""):
+    return(get_command(path_to_graph, remove_attr))
+
+
 @app.route("/rule/add_node/", methods=["PUT"])
 @app.route("/rule/add_node/<path:path_to_rule>", methods=["PUT"])
 def add_node_rule(path_to_rule=""):
@@ -373,12 +395,13 @@ def add_node(command):
     node_id = request.args.get("node_id")
     if not node_id:
         return("the node_id argument is necessary")
-    if command.main_graph().metamodel_ == None:
+    if command.main_graph().metamodel_ is None:
         node_type = None
     else:
         node_type = request.args.get("node_type")
-        if node_type == None:
-            return("this graph is typed, the node_type argument is necessary", 412)
+        if node_type is None:
+            return("this graph is typed, the node_type argument is necessary",
+                   412)
     if node_id in command.main_graph().nodes():
         return(Response("the node already exists", 412))
     try:
@@ -386,6 +409,30 @@ def add_node(command):
         return("node added", 200)
     except ValueError as e:
         return("error: " + str(e), 412)
+
+
+def modify_attr(f):
+    node_id = request.args.get("node_id")
+    if not node_id:
+        return("the node_id argument is necessary")
+    try:
+        attributes = request.json
+        f(node_id, attributes)
+        return("attributes modified", 200)
+    except ValueError as e:
+        return("error: " + str(e), 412)
+
+
+def update_attr(command):
+    return modify_attr(command.graph.update_node_attrs)
+
+
+def remove_attr(command):
+    return modify_attr(command.graph.remove_node_attrs)
+
+
+def add_attr(command):
+    return modify_attr(command.graph.add_node_attrs)
 
 
 def add_edge(command):
@@ -412,7 +459,8 @@ def rm_node(command):
             command._do_rm_node_not_catched(node_id)
             return("node deleted", 200)
         except ValueError as e:
-            return("node was not deleted, set the force argument to true to delete all nodes of this type from subgraphs", 412)
+            return("node was not deleted, set the force argument to true\
+                    to delete all nodes of this type from subgraphs", 412)
     else:
         try:
             command._do_rm_node_force_not_catched(node_id)
@@ -447,7 +495,8 @@ def merge_nodes(command):
             return("nodes merged", 200)
         except ValueError as e:
             if "image not in target graph" in str(e):
-                return("nodes were not merged, the force argument must be set", 412)
+                return("nodes were not merged, the force argument must be set",
+                       412)
             else:
                 return(str(e), 412)
 
@@ -491,7 +540,8 @@ def add_constraint(path_to_graph=""):
     constraint_node = request.args.get("constraint_node")
     le_or_ge = request.args.get("le_or_ge")
     bound = request.args.get("bound")
-    if not (input_or_output and node_id and constraint_node and le_or_ge and bound):
+    if not (input_or_output and node_id and
+            constraint_node and le_or_ge and bound):
         return("argument missing", 404)
     try:
         int_bound = int(bound)
@@ -499,10 +549,12 @@ def add_constraint(path_to_graph=""):
         return("could not convert bound to integer", 404)
 
     if le_or_ge == "le":
-        condition = lambda x: x <= int_bound
+        def condition(x):
+            return x <= int_bound
         viewableCondition = constraint_node + " <= " + bound
     elif le_or_ge == "ge":
-        condition = lambda x: x >= int_bound
+        def condition(x):
+            return x >= int_bound
         viewableCondition = constraint_node + " >= " + bound
     else:
         return ("uncorrect value for argument ge_or_le", 404)
@@ -537,7 +589,8 @@ def delete_constraint(path_to_graph=""):
     constraint_node = request.args.get("constraint_node")
     le_or_ge = request.args.get("le_or_ge")
     bound = request.args.get("bound")
-    if not (input_or_output and node_id and constraint_node and le_or_ge and bound):
+    if not (input_or_output and node_id and
+            constraint_node and le_or_ge and bound):
         return("argument missing", 404)
     try:
         int_bound = int(bound)
@@ -581,6 +634,38 @@ def validate_constraint(path_to_graph=""):
         else:
             return("graph validated", 200)
     return(get_command(path_to_graph, check_constraint))
+
+
+@app.route("/graph/rename_graph/", methods=["PUT"])
+@app.route("/graph/rename_graph/<path:path_to_graph>", methods=["PUT"])
+def rename_graph(path_to_graph=""):
+    return rename(path_to_graph)
+
+
+@app.route("/rule/rename_rule/", methods=["PUT"])
+@app.route("/rule/rename_rule/<path:path_to_graph>", methods=["PUT"])
+def rename_rule(path_to_graph=""):
+    return rename(path_to_graph, rename_rule=True)
+
+
+def rename(path_to_graph, rename_rule=False):
+    try:
+        (parent_cmd, child_name) = parse_path(path_to_graph)
+        if child_name is None:
+            return ("/ cannot be renamed", 412)
+        new_name = request.args.get("new_name")
+        if not new_name:
+            return ("The argument new_name is necessary", 404)
+        if rename_rule:
+            parent_cmd._do_rename_rule_no_catching(child_name, new_name)
+            return ("rule renamed", 200)
+        else:
+            parent_cmd._do_rename_graph_no_catching(child_name, new_name)
+            return ("graph renamed", 200)
+    except KeyError:
+        return ("Graph not found", 404)
+    except ValueError as e:
+        return (str(e), 412)
 
 if __name__ == "__main__":
     app.run()

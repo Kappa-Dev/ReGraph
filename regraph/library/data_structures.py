@@ -698,8 +698,10 @@ class TypedDiGraph(nx.DiGraph):
                     raise ValueError(
                         "Error loading graph: node id is not specified!")
                 if "type" in node.keys():
-                    node_type = node["type"]
-                else:
+                    node_type = node["type"] if node["type"]!="" else None
+                elif self.metamodel_ is None:
+                    node_type = None
+                else:    
                     raise ValueError(
                         "Error loading graph: node type is not specified!")
                 attrs = None
@@ -841,7 +843,7 @@ class TypedDiGraph(nx.DiGraph):
             node_data["id"] = node
             node_data["input_constraints"] = [viewableCond for (_,(_,viewableCond)) in self.input_constraints.get(node,[])] 
             node_data["output_constraints"] =  [viewableCond for (_,(_,viewableCond)) in self.output_constraints.get(node,[])] 
-            node_data["type"] = self.node[node].type_
+            node_data["type"] = self.node[node].type_ if self.node[node].type_ else ""
             if self.node[node].attrs_ is not None:
                 attrs = {}
                 for key, value in self.node[node].attrs_.items():

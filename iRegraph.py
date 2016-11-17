@@ -45,6 +45,9 @@ class MakeRuleCmd(cmd.Cmd):
             self.transformer.identity().mapping_)
         self.initTransformer = copy.deepcopy(self.transformer)
         self.history = []
+    
+    def __eq__(self, value):
+        return(self.transformer == value.transformer)
 
     def to_json_like(self):
         h = dict()
@@ -54,6 +57,13 @@ class MakeRuleCmd(cmd.Cmd):
         h["PL"] = self.transformer.P_L_dict
         h["PR"] = self.transformer.P_R_dict
         return h
+
+    def from_json_like(self, rule):
+        self.transformer.L.from_json_like(rule["L"])
+        self.transformer.P.from_json_like(rule["P"])
+        self.transformer.R.from_json_like(rule["R"])
+        self.transformer.P_L_dict = rule["PL"]
+        self.transformer.P_R_dict = rule["PR"]
 
     def validNewMetamodel(self, new_metamodel):
         return(self.pattern.validNewMetamodel(new_metamodel) and
@@ -536,8 +546,10 @@ class MyCmd(cmd.Cmd):
     def do_cd(self, name):
         if name == "..":
             return(True)
-        if name not in self.subCmds.keys() and name not in self.subRules.keys():
-            print("The graph is not a direct subgraph or rule of", self.fullname)
+        if (name not in self.subCmds.keys() and
+           name not in self.subRules.keys()):
+            print("The graph is not a direct subgraph or rule of",
+                  self.fullname)
         elif name in self.subCmds.keys():
             self.subCmds[name].cmdloop()
         else:
@@ -588,7 +600,8 @@ class MyCmd(cmd.Cmd):
         argv = line.split()
         argc = len(argv)
         if (argc == 2 and line[-1] == " ") or (argc == 3 and line[-1] != " "):
-            return([n for n in self.graph.metamodel_.nodes() if n.startswith(text)])
+            return([n for n in self.graph.metamodel_.nodes()
+                    if n.startswith(text)])
 
     def _do_ln(self, node1, node2):
         try:
@@ -621,8 +634,8 @@ class MyCmd(cmd.Cmd):
         elif (argc == 2) or (argc == 3 and line[-1] != " "):
             node1 = argv[1]
             return([s for s in self.graph.nodes()
-                    if (s.startswith(text) and self.possibleEdge(node1, s))
-                    and not self.graph.exists_edge(node1, s)])
+                    if (s.startswith(text) and self.possibleEdge(node1, s)) and
+                    not self.graph.exists_edge(node1, s)])
         else:
             return([])
 
@@ -690,7 +703,8 @@ class MyCmd(cmd.Cmd):
                     if s.startswith(text) and not self.nodesTypedBy(s)] +
                    (["-f"] if "-f".startswith(text) else []))
 
-        elif argv[1] == "-f" and ((argc == 2) or (argc == 3 and line[-1] != " ")):
+        elif (argv[1] == "-f" and ((argc == 2) or
+              (argc == 3 and line[-1] != " "))):
             return([s for s in self.graph.nodes()
                     if s.startswith(text)])
         else:
@@ -772,7 +786,8 @@ class MyCmd(cmd.Cmd):
             return([s for s in self.graph.nodes()
                     if (s.startswith(text) and (not self.nodesTypedBy(s)))] +
                    (["-f"] if "-f".startswith(text) else []))
-        elif (argc == 2 or (argc == 3 and line[-1] != " ")) and argv[1] != "-f":
+        elif ((argc == 2 or (argc == 3 and line[-1] != " ")) and
+              argv[1] != "-f"):
             return([s for s in self.graph.nodes()
                     if s.startswith(text) and
                     (not self.nodesTypedBy(s)) and
@@ -1032,6 +1047,15 @@ class MyCmd(cmd.Cmd):
             top_graph = None
         if top_graph != self.graph:
             return(True)
+        if "rules" in hierarchy.keys():
+            for r in hierarchy["rules"]:
+                if r["name"] in self.subRules.keys():
+                    new_rule = MakeRuleCmd(r["name"], "",
+                                           TypedDiGraph(metamodel=top_graph),
+                                           self, self.png_viewer_location)
+                    new_rule.from_json_like(r)
+                    if new_rule != self.subRules[r["name"]]:
+                        return True
         return any((self.subCmds[child["name"]].merge_conflict(child)
                     for child in hierarchy["children"]
                     if child["name"] in self.subCmds.keys()))
@@ -1043,18 +1067,28 @@ class MyCmd(cmd.Cmd):
         else:
             top_graph = None
         if top_graph != self.graph:
-            raise ValueError(
-                "the top graph of the hierarchy is not the same as the selected graph")
+            raise ValueError("the top graph of the hierarchy\
+                              is not the same as the selected graph")
         for child in hierarchy["children"]:
             if child["name"] in self.subCmds.keys():
                 self.subCmds[child["name"]].merge_hierarchy(child)
             else:
                 self.add_subHierarchy(child)
+        if "rules" in hierarchy.keys():
+            for r in hierarchy["rules"]:
+                if r["name"] not in self.subRules.keys():
+                    new_rule = MakeRuleCmd(r["name"],
+                                           self.fullname+r["name"]+"/",
+                                           TypedDiGraph(metamodel=top_graph),
+                                           self, self.png_viewer_location)
+                    new_rule.from_json_like(r)
+                    self.subRules[r["name"]] = new_rule
 
     def add_subHierarchy(self, subHierarchy, force=False):
         g = TypedDiGraph(metamodel=self.graph)
         g.from_json_like(subHierarchy["top_graph"])
-        if subHierarchy["name"] in self.subCmds.keys():
+        if (subHierarchy["name"] in self.subCmds.keys() or
+           subHierarchy["name"] in self.subRules.keys()):
             raise(KeyError("name already exists"))
 
         # self._add_subgraph_no_catching(g,subHierarchy["name"])
@@ -1063,6 +1097,16 @@ class MyCmd(cmd.Cmd):
         cmd.graph = g
         for child in subHierarchy["children"]:
             cmd.add_subHierarchy(child)
+        if "rules" in subHierarchy.keys():
+            for r in subHierarchy["rules"]:
+                if (r["name"] in cmd.subCmds.keys() or
+                   r["name"] in cmd.subRules.keys()):
+                    raise(KeyError("name " + r["name"] + " already exists"))
+                new_rule = MakeRuleCmd(r["name"], self.fullname+r["name"]+"/",
+                                       TypedDiGraph(metamodel=g), cmd,
+                                       self.png_viewer_location)
+                new_rule.from_json_like(r)
+                cmd.subCmds[r["name"]] = new_rule
         self.subCmds[subHierarchy["name"]] = cmd
 
     def deleteSubCmd(self, name):
@@ -1098,6 +1142,24 @@ class MyCmd(cmd.Cmd):
     def deleteOutputConstraint(self, n1, viewableCond):
         self.graph.deleteOutputConstraint(n1, viewableCond)
         self.checkConstraintsOfTypes({n1})
+
+    def _do_rename_graph_no_catching(self, old_name, new_name):
+        if old_name not in self.subCmds.keys():
+            raise ValueError("The graph "+old_name+" does not exist")
+        if not self.valid_new_name(new_name):
+            raise ValueError("a rule or graph named " +
+                             new_name + " already exists")
+        self.subCmds[new_name] = self.subCmds.pop(old_name)
+        self.subCmds[new_name].name = new_name
+
+    def _do_rename_rule_no_catching(self, old_name, new_name):
+        if old_name not in self.subRules.keys():
+            raise ValueError("The rule "+old_name+" does not exist")
+        if not self.valid_new_name(new_name):
+            raise ValueError("a rule or graph named " +
+                             new_name + " already exists")
+        self.subRules[new_name] = self.subRules.pop(old_name)
+        self.subRules[new_name].name = new_name
 
     def postloop(self):
         print()
