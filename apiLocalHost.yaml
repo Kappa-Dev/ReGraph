@@ -871,7 +871,35 @@ paths:
             type: array
             items: 
               type: string
-            
+  
+  /graph/get_kappa{graph_id}:
+    get:
+      summary: submit a list and nugget and recieve the corresponding kappa code
+      parameters:
+        - name: graph_id
+          in: path
+          description: the id of the action_graph typing the nuggets
+          required: true
+          type: string
+        - name: nugget_names
+          in: body
+          description: the names of the nuggets to compile
+          required: true
+          schema:
+            type: object
+            properties: 
+              names:
+                type: array
+                items: 
+                  type: string
+      responses:
+        200:
+          description: returns the kappa model
+          schema:
+            type: object
+        404:
+          description: the action graph or one nugget was not found
+          
 definitions:
 
   Node:
