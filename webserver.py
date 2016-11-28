@@ -1,11 +1,12 @@
 from flask import Flask, Response, request
 from iRegraph import MyCmd
 from flask_cors import CORS, cross_origin
-from flex.loading.schema.paths.path_item.operation.responses.single.schema import (
-    schema_validator,
-)
+from flex.loading.schema.paths.path_item.operation.responses.single.schema\
+    import schema_validator
 import json
 import flex
+from metamodels import (base_metamodel, metamodel_kappa)
+from exporters import KappaExporter
 
 
 class MyFlask(Flask):
@@ -15,10 +16,23 @@ class MyFlask(Flask):
         self.cmd = MyCmd("/", "/", None, None)
         self.cmd.graph = None
 
+def include_kappa_metamodel(app, base_name, metamodel_name):
+    try:
+        app.cmd._do_mkdir(base_name)
+        app.cmd.subCmds[base_name].graph = base_metamodel
+        app.cmd.subCmds[base_name]._do_mkdir(metamodel_name)
+        app.cmd.subCmds[base_name].subCmds[metamodel_name].graph = metamodel_kappa
+    except KeyError as e:
+        return (str(e), 404)
+
 app = MyFlask(__name__)
 app.config['DEBUG'] = True
 CORS(app)
 json_schema_context = flex.load('iRegraph_api.yaml')
+base_name = "kappa_base_metamodel"
+metamodel_name = "kappa_metamodel"
+include_kappa_metamodel(app, base_name, metamodel_name)
+
 
 
 def parse_path(path_to_graph):
@@ -322,7 +336,7 @@ def rm_node_graph(path_to_graph=""):
 @app.route("/graph/merge_node/", methods=["PUT"])
 @app.route("/graph/merge_node/<path:path_to_graph>", methods=["PUT"])
 def merge_node_graph(path_to_graph=""):
-    return(get_command(path_to_graph, merge_node))
+    return(get_command(path_to_graph, merge_nodes))
 
 
 @app.route("/graph/clone_node/", methods=["PUT"])
@@ -667,5 +681,39 @@ def rename(path_to_graph, rename_rule=False):
     except ValueError as e:
         return (str(e), 412)
 
+
+@app.route("/graph/get_kappa/", methods=["POST"])
+@app.route("/graph/get_kappa/<path:path_to_graph>", methods=["POST"])
+def get_kappa(path_to_graph=""):
+    def get_kappa_aux(command):
+        if "names" not in request.json.keys():
+            return ("the nugget names object does not contain a field names",
+                    404)
+        nuggets_names = request.json["names"]
+        if command.graph.metamodel_ != metamodel_kappa:
+            return("not a valid action graph", 404)
+        for n in nuggets_names:
+            if n not in command.subCmds.keys():
+                return ("Nugget " + n + " does not exist in action graph: " +
+                        path_to_graph, 404)
+        nugget_list = [command.subCmds[n].graph for n in nuggets_names]
+        try:
+            (agent_dec, rules) = KappaExporter.compile_nugget_list(nugget_list)
+            json_rep = {}
+            json_rep["agent_decl"] = agent_dec
+            json_rep["rules"] = rules
+            resp = Response(response=json.dumps(json_rep),
+                            status=200,
+                            mimetype="application/json")
+            return (resp)
+        except ValueError as e:
+            return (str(e), 412)
+    return get_command(path_to_graph, get_kappa_aux)
+
+
+@app.route("/version/", methods=["GET"])
+def get_version():
+    return ("0.0", 200)
+
 if __name__ == "__main__":
-    app.run()
+    app.run(host='0.0.0.0')

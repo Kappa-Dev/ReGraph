@@ -1310,3 +1310,34 @@ sos =
 }
 
 api.hierarchyhierarchyPathPost("/agrogroo/", sos, callback);
+
+api.graphgraphIdPost("/kappa_base_metamodel/kappa_metamodel/action_graph/",callback);
+api.graphgraphIdPost("/kappa_base_metamodel/kappa_metamodel/action_graph/nugget1/",callback);
+api.graphgraphIdPost("/kappa_base_metamodel/kappa_metamodel/action_graph/nugget2/",callback);
+api.graphAddNodegraphIdPut("/kappa_base_metamodel/kappa_metamodel/action_graph/","A1",{nodeType:"agent"},callback);
+api.graphAddNodegraphIdPut("/kappa_base_metamodel/kappa_metamodel/action_graph/","A2",{nodeType:"agent"},callback);
+api.graphAddNodegraphIdPut("/kappa_base_metamodel/kappa_metamodel/action_graph/","s1",{nodeType:"site"},callback);
+api.graphAddNodegraphIdPut("/kappa_base_metamodel/kappa_metamodel/action_graph/","s2",{nodeType:"site"},callback);
+api.graphAddNodegraphIdPut("/kappa_base_metamodel/kappa_metamodel/action_graph/","Bind1",{nodeType:"BND"},callback);
+api.graphAddNodegraphIdPut("/kappa_base_metamodel/kappa_metamodel/action_graph/","s_Bind1",{nodeType:"s_BND"},callback);
+api.graphAddNodegraphIdPut("/kappa_base_metamodel/kappa_metamodel/action_graph/","s_Bind2",{nodeType:"s_BND"},callback);
+api.graphAddNodegraphIdPut("/kappa_base_metamodel/kappa_metamodel/action_graph/nugget1/","A1",{nodeType:"A1"},callback);
+api.graphAddNodegraphIdPut("/kappa_base_metamodel/kappa_metamodel/action_graph/nugget1/","A2",{nodeType:"A2"},callback);
+api.graphAddNodegraphIdPut("/kappa_base_metamodel/kappa_metamodel/action_graph/nugget1/","s1",{nodeType:"s1"},callback);
+api.graphAddNodegraphIdPut("/kappa_base_metamodel/kappa_metamodel/action_graph/nugget1/","s2",{nodeType:"s2"},callback);
+api.graphAddNodegraphIdPut("/kappa_base_metamodel/kappa_metamodel/action_graph/nugget1/","Bind1",{nodeType:"Bind1"},callback);
+api.graphAddNodegraphIdPut("/kappa_base_metamodel/kappa_metamodel/action_graph/nugget1/","s_Bind1",{nodeType:"s_Bind1"},callback);
+api.graphAddNodegraphIdPut("/kappa_base_metamodel/kappa_metamodel/action_graph/nugget1/","s_Bind2",{nodeType:"s_Bind2"},callback);
+api.graphAddEdgegraphIdPut("/kappa_base_metamodel/kappa_metamodel/action_graph/", "s1", "A1", callback);
+api.graphAddEdgegraphIdPut("/kappa_base_metamodel/kappa_metamodel/action_graph/", "s2", "s_Bind2", callback);
+api.graphAddEdgegraphIdPut("/kappa_base_metamodel/kappa_metamodel/action_graph/", "s1", "s_Bind1", callback);
+api.graphAddEdgegraphIdPut("/kappa_base_metamodel/kappa_metamodel/action_graph/", "s_Bind1", "Bind1", callback);
+api.graphAddEdgegraphIdPut("/kappa_base_metamodel/kappa_metamodel/action_graph/", "s_Bind2", "Bind1", callback);
+api.graphAddEdgegraphIdPut("/kappa_base_metamodel/kappa_metamodel/action_graph/nugget1/", "s1", "A1", callback);
+api.graphAddEdgegraphIdPut("/kappa_base_metamodel/kappa_metamodel/action_graph/nugget1/", "s2", "s_Bind2", callback);
+api.graphAddEdgegraphIdPut("/kappa_base_metamodel/kappa_metamodel/action_graph/nugget1/", "s1", "s_Bind1", callback);
+api.graphAddEdgegraphIdPut("/kappa_base_metamodel/kappa_metamodel/action_graph/nugget1/", "s_Bind1", "Bind1", callback);
+api.graphAddEdgegraphIdPut("/kappa_base_metamodel/kappa_metamodel/action_graph/nugget1/", "s_Bind2", "Bind1", callback);
+api.graphAddEdgegraphIdPut("/kappa_base_metamodel/kappa_metamodel/action_graph/nugget1/", "s1", "A1", callback);
+api.graphAddEdgegraphIdPut("/kappa_base_metamodel/kappa_metamodel/action_graph/", "s2", "A2", callback);
+api.graphAddEdgegraphIdPut("/kappa_base_metamodel/kappa_metamodel/action_graph/nugget1/", "s2", "A2", callback);
