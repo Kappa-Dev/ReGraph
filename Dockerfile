@@ -4,7 +4,7 @@
 ############################################################
 
 # Set the base image to Ubuntu
-FROM ubuntu
+FROM ylecornec/regraph_base
 
 # File Author / Maintainer
 MAINTAINER Le Cornec Yves-Stan
@@ -12,25 +12,11 @@ MAINTAINER Le Cornec Yves-Stan
 # Add the application resources URL
 #RUN echo "deb http://archive.ubuntu.com/ubuntu/ $(lsb_release -sc) main universe" >> /etc/apt/sources.list
 
-# Update the sources list
-RUN apt-get update
-
-# Install basic applications
-RUN apt-get install -y tar git curl nano wget dialog net-tools build-essential
-
-# Install Python and Basic Python Tools
-RUN apt-get install -y python3 python3-dev python3-pip
-
-RUN apt-get build-dep -y python3-matplotlib
-
-# Copy the application folder inside the container
-RUN git clone https://github.com/Kappa-Dev/ReGraph.git
-# Get pip to download and install requirements:
-RUN pip3 install -r ReGraph/requirements.txt
+COPY . ReGraph
+#RUN pip3 install -r ReGraph/requirements.txt
 
 RUN git clone https://github.com/Kappa-Dev/RegraphGui.git
 RUN ln -s ../RegraphGui ReGraph/RegraphGui
-
 
 # Expose ports
 EXPOSE 5000
