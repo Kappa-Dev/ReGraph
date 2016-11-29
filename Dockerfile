@@ -21,13 +21,16 @@ RUN apt-get install -y tar git curl nano wget dialog net-tools build-essential
 # Install Python and Basic Python Tools
 RUN apt-get install -y python3 python3-dev python3-pip
 
-# Copy the application folder inside the container
-RUN git clone https://github.com/Kappa-Dev/ReGraph.git
-
 RUN apt-get build-dep -y python3-matplotlib
 
+# Copy the application folder inside the container
+RUN git clone https://github.com/Kappa-Dev/ReGraph.git
 # Get pip to download and install requirements:
 RUN pip3 install -r ReGraph/requirements.txt
+
+RUN git clone https://github.com/Kappa-Dev/RegraphGui.git
+RUN ln -s RegraphGui ReGraph/RegraphGui
+
 
 # Expose ports
 EXPOSE 5000

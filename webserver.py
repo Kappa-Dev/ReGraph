@@ -1,4 +1,4 @@
-from flask import Flask, Response, request
+from flask import Flask, Response, request, send_from_directory, redirect, url_for
 from iRegraph import MyCmd
 from flask_cors import CORS, cross_origin
 from flex.loading.schema.paths.path_item.operation.responses.single.schema\
@@ -7,12 +7,13 @@ import json
 import flex
 from metamodels import (base_metamodel, metamodel_kappa)
 from exporters import KappaExporter
+import os
 
 
 class MyFlask(Flask):
 
     def __init__(self, name):
-        super().__init__(name)
+        super().__init__(name, static_url_path="")
         self.cmd = MyCmd("/", "/", None, None)
         self.cmd.graph = None
 
@@ -714,6 +715,19 @@ def get_kappa(path_to_graph=""):
 @app.route("/version/", methods=["GET"])
 def get_version():
     return ("0.0", 200)
+
+
+@app.route("/", methods=["GET"])
+def goto_gui():
+    return redirect(url_for("get_gui"))
+
+@app.route("/gui/", methods=["GET"])
+@app.route("/gui/<path:path>", methods=["GET"])
+def get_gui(path="index.html"):
+    if os.path.isdir("RegraphGui"):
+        return send_from_directory('RegraphGui', path)
+    else:
+        return ("The gui is not in the directory", 404)
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0')
