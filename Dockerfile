@@ -29,7 +29,7 @@ RUN git clone https://github.com/Kappa-Dev/ReGraph.git
 RUN pip3 install -r ReGraph/requirements.txt
 
 RUN git clone https://github.com/Kappa-Dev/RegraphGui.git
-RUN ln -s RegraphGui ReGraph/RegraphGui
+RUN ln -s ../RegraphGui ReGraph/RegraphGui
 
 
 # Expose ports
