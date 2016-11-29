@@ -715,7 +715,8 @@ def get_kappa(path_to_graph=""):
 
 @app.route("/version/", methods=["GET"])
 def get_version():
-    return ("0.0", 200)
+    commit_hash = subprocess.check_output(["git", "rev-parse", "HEAD"])
+    return("https://github.com/Kappa-Dev/ReGraph/commit/"+commit_hash.decode(), 200)
 
 
 @app.route("/", methods=["GET"])

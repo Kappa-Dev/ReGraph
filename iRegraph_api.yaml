@@ -4,7 +4,7 @@ info:
   description: Manipulate graph on the server
   version: "1.0.0"
 # the domain of the service
-host: api.executableknowledge.org 
+host: api.executableknowledge.org
 # array of all schemes that your API supports
 schemes:
   - https
@@ -871,7 +871,46 @@ paths:
             type: array
             items: 
               type: string
-            
+  
+  /graph/get_kappa{graph_id}:
+    post:
+      summary: submit a list and nugget and recieve the corresponding kappa code
+      parameters:
+        - name: graph_id
+          in: path
+          description: the id of the action_graph typing the nuggets
+          required: true
+          type: string
+        - name: nugget_names
+          in: body
+          description: the names of the nuggets to compile
+          required: true
+          schema:
+            type: object
+            properties: 
+              names:
+                type: array
+                items: 
+                  type: string
+      responses:
+        200:
+          description: returns the kappa model
+          schema:
+            type: object
+        404:
+          description: the action graph or one nugget was not found
+        412:
+          description: one nugget is not valid
+          
+  /version/:
+    get:
+      summary: returns the version of the regraph server
+      responses:
+        200:
+          description: the version
+          schema:
+            type: string
+          
 definitions:
 
   Node:

@@ -873,7 +873,7 @@ paths:
               type: string
   
   /graph/get_kappa{graph_id}:
-    get:
+    post:
       summary: submit a list and nugget and recieve the corresponding kappa code
       parameters:
         - name: graph_id
@@ -899,6 +899,17 @@ paths:
             type: object
         404:
           description: the action graph or one nugget was not found
+        412:
+          description: one nugget is not valid
+          
+  /version/:
+    get:
+      summary: returns the version of the regraph server
+      responses:
+        200:
+          description: the version
+          schema:
+            type: string
           
 definitions:
 
