@@ -8,6 +8,7 @@ import flex
 from metamodels import (base_metamodel, metamodel_kappa)
 from exporters import KappaExporter
 import os
+import subprocess
 
 
 class MyFlask(Flask):
@@ -719,7 +720,12 @@ def get_version():
 
 @app.route("/", methods=["GET"])
 def goto_gui():
+    if os.path.isdir("RegraphGui"):
+        subprocess.call(["sed", "-i",
+                         "s#server_url\ *=\ *.*;#server_url = \""+request.url_root[:-1]+"\";#",
+                         "RegraphGui/index.js"])
     return redirect(url_for("get_gui"))
+
 
 @app.route("/gui/", methods=["GET"])
 @app.route("/gui/<path:path>", methods=["GET"])
