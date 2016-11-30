@@ -902,6 +902,68 @@ paths:
         412:
           description: one nugget is not valid
           
+  /graph/get_graph_attr{graph_id}:
+    get:
+      summary: get the attributes dictionnary of a graph
+      parameters:
+        - name: graph_id
+          in: path
+          description: the id of the graph
+          required: true
+          type: string
+      responses:
+        200:
+          description: returns the dict
+          schema:
+            type: object
+        404:
+          description: the graph was not found
+        
+  /graph/update_graph_attr{graph_id}:
+    put:
+      summary: update the dictionnary of graph attributes
+      parameters:
+        - name: graph_id
+          in: path
+          description: the id of the action_graph typing the nuggets
+          required: true
+          type: string
+        - name: update_dict
+          in: body
+          description: the dictionnay used to update the graph attributes
+          required: true
+          schema:
+            type: object
+      responses:
+        200:
+          description: the update was successful
+        404:
+          description: the graph was not found      
+      
+  /graph/delete_graph_attr{graph_id}:
+    put:
+      summary: delete an element from the dictionnary of graph attributes
+      parameters:
+        - name: graph_id
+          in: path
+          description: the id of the action_graph typing the nuggets
+          required: true
+          type: string
+        - name: keypath
+          in: body
+          description: a list of keys representing the path to the element to delete
+          required: true
+          schema:
+            type: array
+            items:
+              type: string
+              
+      responses:
+        200:
+          description: the update was successful
+        404:
+          description: the graph was not found  
+          
   /version/:
     get:
       summary: returns the version of the regraph server

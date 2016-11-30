@@ -54,6 +54,7 @@ class TypedDiGraph(nx.DiGraph):
         self.unckecked_nodes = set()
         self.wrong_nodes = set()
         self.hom = None
+        self.graph_attr = {}
         if load_file != None:
             self.load(load_file)
 
@@ -117,7 +118,8 @@ class TypedDiGraph(nx.DiGraph):
         res += "\n"
 
         return res
-
+     
+    
     def add_node(self, node_id, node_type, attrs=None):
         if node_id not in self.nodes():
             if self.metamodel_ is not None:

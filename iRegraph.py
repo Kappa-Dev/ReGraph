@@ -448,7 +448,7 @@ class MyCmd(cmd.Cmd):
         elif path[0] in self.subCmds.keys():
             return(self.subCmds[path[0]].subCmd(path[1:]))
         else:
-            raise KeyError("Path does not corespond to an existing graph")
+            raise KeyError("Path does not correspond to an existing graph")
 
     def updateMetamodel(self, new_typing_graph):
         self.graph.updateMetamodel(new_typing_graph)

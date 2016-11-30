@@ -159,7 +159,7 @@ def get_graph(path_to_graph):
         resp = Response(response=json.dumps(cmd.graph.to_json_like()),
                         status=200,
                         mimetype="application/json")
-        return (resp)
+        return resp
     except KeyError as e:
         return(Response(response="graph not found : " + str(e), status=404))
 
@@ -735,6 +735,59 @@ def get_gui(path="index.html"):
         return send_from_directory('RegraphGui', path)
     else:
         return ("The gui is not in the directory", 404)
+
+
+@app.route("/graph/get_graph_attr/", methods=["GET"])
+@app.route("/graph/get_graph_attr/<path:path_to_graph>", methods=["GET"])
+def get_graph_attr(path_to_graph=""):
+    def get_graph_attr_aux(command):
+        resp = Response(response=json.dumps(command.graph.graph_attr),
+                        status=200,
+                        mimetype="application/json")
+        return resp
+    return get_command(path_to_graph, get_graph_attr_aux)
+
+
+@app.route("/graph/update_graph_attr/", methods=["PUT"])
+@app.route("/graph/update_graph_attr/<path:path_to_graph>", methods=["PUT"])
+def update_graph_attr(path_to_graph=""):
+    def update_graph_attr_aux(command):
+        if not isinstance(request.json, dict):
+            return("the body must be a json object", 404)
+        recursive_merge(command.graph.graph_attr, request.json)
+        return ("merge successful", 200)
+    return get_command(path_to_graph, update_graph_attr_aux)
+
+
+def recursive_merge(dict1, dict2):
+    for k, v in dict2.items():
+        if k in dict1.keys() and isinstance(dict1[k], dict) and isinstance(v, dict):
+                recursive_merge(dict1[k], v)
+        else:
+            dict1[k] = v
+
+
+@app.route("/graph/delete_graph_attr/", methods=["PUT"])
+@app.route("/graph/delete_graph_attr/<path:path_to_graph>", methods=["PUT"])
+def delete_graph_attr(path_to_graph=""):
+    def delete_graph_attr_aux(command):
+        if not isinstance(request.json, list):
+            return("the body must be a list of keys", 412)
+        if request.json == []:
+            return("the body must not be the empty list", 412)
+        keypath = list(request.json)
+        current_dict = command.graph.graph_attr
+        while len(keypath) < 1:
+            k = keypath.pop(0)
+            if k in current_dict.keys() and isinstance(current_dict[k], dict):
+                current_dict = current_dict[k]
+            else:
+                return("the key "+str(k) +
+                       " does not correspond to a dictionnary", 412)
+        del current_dict[keypath[0]]
+        return ("deletion successful", 200)
+    return get_command(path_to_graph, delete_graph_attr_aux)
+
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0')
