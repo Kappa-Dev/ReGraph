@@ -134,7 +134,25 @@ paths:
           description: father of the rule not found or argument missing
         default:
           description: Unexpected error 
-  
+    get:
+      summary: returns the rule
+      parameters:
+        - name: rule_id
+          in: path
+          description: The path to the rule in the hierarchy
+          required: true
+          type: string
+       
+      responses:
+        200:
+          description: the rule 
+          schema:
+            $ref: '#/definitions/Rule'
+        404:
+          description: the rule was not found
+        default:
+          description: Unexpected error 
+          
   /graph/apply{graph_id}:
     post:
       summary: create a new graph by applying a rule
@@ -750,6 +768,66 @@ paths:
           description: renaming failed
           schema:
             type: string
+    
+  /rule/add_attr{rule_id}: 
+    put:
+      summary: add a dictionnary of attributes
+      parameters:
+        - name: rule_id
+          in: path
+          description: The path to the graph in the hierarchy
+          required: true
+          type: string
+        - name: node_id
+          in: query
+          description: the id of the node to modify
+          type: string
+        - name: attributes_dictionnary
+          in: body
+          description: the dictionnary of attributes
+          schema:
+            type: object
+          required: true
+          
+      responses:
+        200:
+          description: modification worked
+        404: 
+          description: graph was not found
+        412:
+          description: modification failed
+          schema:
+            type: string
+            
+  /rule/rm_attr{rule_id}: 
+    put:
+      summary: remove a dictionnary of attributes
+      parameters:
+        - name: rule_id
+          in: path
+          description: The path to the rule in the hierarchy
+          required: true
+          type: string
+        - name: node_id
+          in: query
+          description: the id of the node to modify
+          type: string
+        - name: attributes_dictionnary
+          in: body
+          description: the dictionnary of attributes
+          schema:
+            type: object
+          required: true
+          
+      responses:
+        200:
+          description: modification worked
+        404: 
+          description: graph was not found
+        412:
+          description: modification failed
+          schema:
+            type: string      
             
   /graph/add_constraint{graph_id}:
     put:
@@ -962,8 +1040,8 @@ paths:
         200:
           description: the update was successful
         404:
-          description: the graph was not found  
-          
+          description: the graph was not found   
+
   /version/:
     get:
       summary: returns the version of the regraph server

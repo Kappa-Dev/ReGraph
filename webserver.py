@@ -205,6 +205,19 @@ def create_rule(path_to_graph=""):
             return("rule created", 200)
     except KeyError as e:
         return(str(e), 404)
+
+
+@app.route("/rule/", methods=["GET"])
+@app.route("/rule/<path:path_to_graph>", methods=["GET"])
+def get_rule(path_to_graph=""):
+    def get_rule_aux(command):
+        resp = Response(
+                 response=json.dumps(command.to_json_like()),
+                 status=200,
+                 mimetype="application/json")
+        return (resp)
+    return get_command(path_to_graph, get_rule_aux)
+
 # def create_rule(path_to_graph=""):
 #     path_list = path_to_graph.split("/")
 #     parent_path = path_list[:-1]
@@ -407,6 +420,18 @@ def rm_edge_rule(path_to_rule=""):
     return(get_command(path_to_rule, rm_edge))
 
 
+@app.route("/rule/add_attr/", methods=["PUT"])
+@app.route("/rule/add_attr/<path:path_to_graph>", methods=["PUT"])
+def add_attr_rule(path_to_graph=""):
+    return(get_command(path_to_graph, add_attr))
+
+
+@app.route("/rule/rm_attr/", methods=["PUT"])
+@app.route("/rule/rm_attr/<path:path_to_graph>", methods=["PUT"])
+def rm_attr_rule(path_to_graph=""):
+    return(get_command(path_to_graph, remove_attr))
+
+
 def add_node(command):
     node_id = request.args.get("node_id")
     if not node_id:
@@ -444,11 +469,11 @@ def update_attr(command):
 
 
 def remove_attr(command):
-    return modify_attr(command.graph.remove_node_attrs)
+    return modify_attr(command.main_graph().remove_node_attrs)
 
 
 def add_attr(command):
-    return modify_attr(command.graph.add_node_attrs)
+    return modify_attr(command.main_graph().add_node_attrs)
 
 
 def add_edge(command):
@@ -784,7 +809,8 @@ def delete_graph_attr(path_to_graph=""):
             else:
                 return("the key "+str(k) +
                        " does not correspond to a dictionnary", 412)
-        del current_dict[keypath[0]]
+        if keypath[0] in current_dict :
+            del current_dict[keypath[0]]
         return ("deletion successful", 200)
     return get_command(path_to_graph, delete_graph_attr_aux)
 
