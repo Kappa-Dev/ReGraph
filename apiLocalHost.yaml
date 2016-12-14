@@ -151,7 +151,23 @@ paths:
         404:
           description: the rule was not found
         default:
-          description: Unexpected error 
+          description: Unexpected error
+          
+    delete:
+      summary: delete a rule
+      parameters:
+        - name: rule_id
+          in: path
+          description: The path to the rule to delete
+          required: true
+          type: string
+      responses:
+        200:
+          description: the rule was deleted
+        404:
+          description: the rule was not found
+        default:  
+          description: Unexpected error   
           
   /graph/apply{graph_id}:
     post:
@@ -467,6 +483,7 @@ paths:
           required: true
           type: string
         - name: node_id
+          required: true
           in: query
           description: the id of the node to modify
           type: string
@@ -496,6 +513,7 @@ paths:
           required: true
           type: string
         - name: node_id
+          required: true
           in: query
           description: the id of the node to modify
           type: string
@@ -525,6 +543,7 @@ paths:
           required: true
           type: string
         - name: node_id
+          required: true
           in: query
           description: the id of the node to modify
           type: string
@@ -543,7 +562,115 @@ paths:
         412:
           description: modification failed
           schema:
-            type: string          
+            type: string
+            
+  /graph/add_edge_attr{graph_id}: 
+    put:
+      summary: add a dictionnary of attributes
+      parameters:
+        - name: graph_id
+          in: path
+          description: The path to the graph in the hierarchy
+          required: true
+          type: string
+        - name: source
+          required: true
+          in: query
+          description: the source of the edge to modify
+          type: string
+        - name: target
+          required: true
+          in: query
+          description: the target of the node to modify
+          type: string  
+        - name: attributes_dictionnary
+          in: body
+          description: the dictionnary of attributes
+          schema:
+            type: object
+          required: true
+          
+      responses:
+        200:
+          description: modification worked
+        404: 
+          description: graph was not found
+        412:
+          description: modification failed
+          schema:
+            type: string
+ 
+  /graph/rm_edge_attr{graph_id}: 
+    put:
+      summary: remove a dictionnary of attributes
+      parameters:
+        - name: graph_id
+          in: path
+          description: The path to the graph in the hierarchy
+          required: true
+          type: string
+        - name: source
+          required: true
+          in: query
+          description: the source of the edge to modify
+          type: string
+        - name: target
+          required: true
+          in: query
+          description: the target of the node to modify
+          type: string  
+        - name: attributes_dictionnary
+          in: body
+          description: the dictionnary of attributes
+          schema:
+            type: object
+          required: true
+          
+      responses:
+        200:
+          description: modification worked
+        404: 
+          description: graph was not found
+        412:
+          description: modification failed
+          schema:
+            type: string   
+            
+  /graph/update_edge_attr{graph_id}: 
+    put:
+      summary: updates a dictionnary of attributes
+      parameters:
+        - name: graph_id
+          in: path
+          description: The path to the graph in the hierarchy
+          required: true
+          type: string
+        - name: source
+          required: true
+          in: query
+          description: the source of the edge to modify
+          type: string
+        - name: target
+          required: true
+          in: query
+          description: the target of the node to modify
+          type: string  
+        - name: attributes_dictionnary
+          in: body
+          description: the dictionnary of attributes
+          schema:
+            type: object
+          required: true
+          
+      responses:
+        200:
+          description: modification worked
+        404: 
+          description: graph was not found
+        412:
+          description: modification failed
+          schema:
+            type: string              
   /graph/rename_graph{graph_id}: 
     put:
       summary: rename a graph
@@ -1050,7 +1177,57 @@ paths:
           description: the version
           schema:
             type: string
-          
+            
+  /graph/unfold{graph_id}:
+    put:
+      summary: unfold a list of nuggets
+      parameters:
+        - name: graph_id
+          in: path
+          description: the id of the action graph
+          required: true
+          type: string
+        - name: new_metamodel_name
+          in: query
+          required: true
+          description: The new name for the parent of the created nuggets
+          type: string
+        - name: nuggets
+          in: body
+          required: true
+          description: the list of nuggets
+          schema:
+            type: array
+            items:
+              type: string
+      responses:
+        200:
+          description: the update was successful
+        404:
+          description: the graph was not found
+        212:
+          description: other failure
+  /graph/to_metakappa{graph_id}:
+    put:
+      summary: unfold a list of nuggets
+      parameters:
+        - name: graph_id
+          in: path
+          description: the id of the action graph
+          required: true
+          type: string
+        - name: new_metamodel_name
+          in: query
+          required: true
+          description: The new name for the parent of the created nuggets
+          type: string
+      responses:
+        200:
+          description: the translation was successful
+        404:
+          description: the graph was not found
+        212:
+          description: other failure        
 definitions:
 
   Node:
@@ -1071,6 +1248,8 @@ definitions:
         type: array
         items:
           type: string
+      attrs:
+        type: object
   Edge:
     type: object
     required:
