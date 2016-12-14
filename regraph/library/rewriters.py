@@ -5,6 +5,7 @@ from networkx.algorithms import isomorphism
 import warnings
 
 import itertools
+import copy
 import random
 
 from regraph.library.parser import parser
@@ -1134,6 +1135,8 @@ class Rewriter:
         Gm, P_Gm, Gm_G = pullback_complement(left_h, L_G)
         Gprime, Gm_Gprime, R_Gprime = pushout(P_Gm, right_h)
         Gprime.metamodel_ = graph.metamodel_
+        if graph.graph_attr:
+            Gprime.graph_attr = copy.deepcopy(graph.graph_attr) 
         Gprime.hom = TypedHomomorphism.canonic(Gprime, graph.metamodel_)
         if get_details:
             return Gm_Gprime, Gm_G

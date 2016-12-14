@@ -1451,6 +1451,7 @@ function seq() {
 	api.graphAddAttrgraphIdPut("/kami_base/kami/action_graph/nug4/", "mod", { "fun": "0.75" }, callback);
 	api.graphAddAttrgraphIdPut("/kami_base/kami/action_graph/", "state_r1", { "val": "10" }, callback);
 	api.graphAddAttrgraphIdPut("/kami_base/kami/action_graph/nug4/", "state_r1", { "val": "10" }, callback);
+    api.graphUpdateGraphAttrgraphIdPut("/kami_base/kami/action_graph/nug4/",{"rate":"2"}, callback);
 
 };
 seq();

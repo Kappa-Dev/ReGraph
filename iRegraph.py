@@ -1270,7 +1270,7 @@ class MyCmd(cmd.Cmd):
             new_nugget.graph = copy.deepcopy(nugget.graph)
             new_nugget.graph.metamodel_ = None
             contact_map_com.subCmds[nugget.name] = new_nugget
-
+        
         # add input for binds
         bnd_pattern = TypedDiGraph(self.graph.metamodel_)
         bnd_pattern.add_nodes_from([("b", "bnd"), ("l", "locus")])
@@ -1605,10 +1605,8 @@ class MyCmd(cmd.Cmd):
         to_delete = []
         for n in contact_map.nodes():
             type_of_n = contact_map.node[n].type_
-            print(n, type_of_n)
             if type_of_n == "locus":
                 contact_map.node[n].type_ = "site"
-                print("locus", n, "-->", contact_map.node[n].type_)
             if type_of_n == "mod":
                 contact_map.node[n].type_ = "MOD"
             if type_of_n == "bnd":
@@ -1638,11 +1636,8 @@ class MyCmd(cmd.Cmd):
                (tn1, tn2) == ("SYN/DEG", "agent") or
                (tn1, tn2) == ("site", "is_FREE")):
                 to_delete.append((n1, n2))
-
         for (n1, n2) in to_delete:
             contact_map_com._do_rm_edge_uncatched(n1, n2, force=True)
-        print("same:", contact_map is contact_map_com.graph)
-        print(contact_map_com.graph)
         return contact_map_com
 
     def postloop(self):

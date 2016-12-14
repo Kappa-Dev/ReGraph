@@ -116,6 +116,9 @@ class TypedDiGraph(nx.DiGraph):
         for n1,n2 in self.edges():
             res += str((n1,n2))+" : "+str(self.get_edge(n1, n2))+"\n"
         res += "\n"
+        res += "attributes : \n"
+        res += str(self.graph_attr)
+        res += "\n"
 
         return res
      

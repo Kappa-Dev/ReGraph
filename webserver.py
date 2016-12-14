@@ -790,8 +790,6 @@ def get_kappa(path_to_graph=""):
             new_kappa_command.graph.metamodel_ = kappa_meta.graph
             command = new_kappa_command
         if command.graph.metamodel_ != metamodel_kappa:
-            print("meta1", command.graph.metamodel_)
-            print("meta2", metamodel_kappa)
             return("not a valid action graph", 404)
         # app.cmd.subCmds[base_name].subCmds[metamodel_name].graph = metamodel_kappa
         for n in nuggets_names:

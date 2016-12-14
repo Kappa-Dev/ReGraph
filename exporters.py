@@ -1268,16 +1268,6 @@ class KappaExporter(object):
         rule_no = 1
         rules_decl = ''
 
-        hom = TypedHomomorphism.canonic(G.metamodel_, KappaExporter.meta)
-        bindings = [n for n in G.nodes() if hom[G.node[n].type_] == "BND"]
-        print("bindings", bindings)
-        if len(bindings) > 1:
-            raise ValueError("more than one binding in nugget")
-        elif (len(bindings) == 1 and G.node[bindings[0]].attrs_ and
-              "rate" in G.node[bindings[0]].attrs_.keys()):
-            rate = min(G.node[bindings[0]].attrs_["rate"])
-        else:
-            rate = None    
         for LHS, RHS in rules:
             if (LHS != {} or RHS != {}) and\
                 LHS != RHS:
@@ -1411,11 +1401,8 @@ class KappaExporter(object):
                     rule += '), '
 
                 if rule[-2:] == ', ' : rule = rule[:-2]
-                if False:
-                    rule += " @ {}".format(rate)
-                else:    
-                    #rule += " @ 'NUG_%s_RULE_%s'" % (count, rule_no)
-                    rule += " @ 'NUG_%s'" % (count)
+                #rule += " @ 'NUG_%s_RULE_%s'" % (count, rule_no)
+                rule += " @ 'NUG_%s'" % (count)
                 rule_no += 1
                 rules_decl += rule+"\n"
 
@@ -1497,27 +1484,17 @@ class KappaExporter(object):
         rules = ''
         count=1
         rate_decl = ''
-        for nug in nug_list:
+        def get_rate(g):
+            #print("asdasdsad",g)
+            if g.graph_attr:
+                print(g.graph_attr)
+                return g.graph_attr.get('rate', "UNDEFINED")
+            return "UNDEFINED"    
 
-            hom = TypedHomomorphism.canonic(nug.metamodel_, KappaExporter.meta)
-            actions_of_nugget = [n for n in nug.nodes() 
-                                 if hom[nug.node[n].type_] == "BND" or
-                                    hom[nug.node[n].type_] == "BRK" or
-                                    hom[nug.node[n].type_] == "SYN/DEG"]
-            if len(actions_of_nugget) > 1:
-                raise ValueError("more than one action in nugget")
-            elif (len(actions_of_nugget) == 1 and nug.node[actions_of_nugget[0]].attrs_ and
-                  "rate" in nug.node[actions_of_nugget[0]].attrs_.keys()):
-                rate = min(nug.node[actions_of_nugget[0]].attrs_["rate"])
-            elif len(actions_of_nugget) == 0:
-                mods = [n for n in nug.nodes() if hom[nug.node[n].type_] == "MOD"]
-                rate = None    
-            else:
-                rate = "undefined" 
+        for nug in nug_list:
             agent_sites, rule, context = KappaExporter.compile(nug, None, agent_sites)
             rules += KappaExporter.generate_rules_decl(nug, rule, context, count)
-            if rate:
-                rate_decl += "%var: 'NUG_{}' {}\n".format(count, rate)
+            rate_decl += "%var: 'NUG_{}' {}\n".format(count, get_rate(nug))
             count+=1
 
 
