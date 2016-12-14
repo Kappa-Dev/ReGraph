@@ -20,7 +20,9 @@ class KappaExporter(object):
     @staticmethod
     def check_nugget(G, hom=None):
         if G.hom is None:
-            raise ValueError("The nugget is empty")
+            G.hom = TypedHomomorphism.canonic(G, G.metamodel_)
+
+            #raise ValueError("The nugget is empty")
         # check syntax
         if G.metamodel_ is None:
             raise ValueError(
@@ -1266,6 +1268,16 @@ class KappaExporter(object):
         rule_no = 1
         rules_decl = ''
 
+        hom = TypedHomomorphism.canonic(G.metamodel_, KappaExporter.meta)
+        bindings = [n for n in G.nodes() if hom[G.node[n].type_] == "BND"]
+        print("bindings", bindings)
+        if len(bindings) > 1:
+            raise ValueError("more than one binding in nugget")
+        elif (len(bindings) == 1 and G.node[bindings[0]].attrs_ and
+              "rate" in G.node[bindings[0]].attrs_.keys()):
+            rate = min(G.node[bindings[0]].attrs_["rate"])
+        else:
+            rate = None    
         for LHS, RHS in rules:
             if (LHS != {} or RHS != {}) and\
                 LHS != RHS:
@@ -1399,8 +1411,11 @@ class KappaExporter(object):
                     rule += '), '
 
                 if rule[-2:] == ', ' : rule = rule[:-2]
-
-                rule += " @ 'NUG_%s_RULE_%s'" % (count, rule_no)
+                if False:
+                    rule += " @ {}".format(rate)
+                else:    
+                    #rule += " @ 'NUG_%s_RULE_%s'" % (count, rule_no)
+                    rule += " @ 'NUG_%s'" % (count)
                 rule_no += 1
                 rules_decl += rule+"\n"
 
@@ -1443,16 +1458,31 @@ class KappaExporter(object):
         for n_nugget in con_comp:
             nugget = G.subgraph(n_nugget)
             agent_sites, rule, context = KappaExporter.compile(nugget, hom, agent_sites)
-            rules.append((rule, context))
             agent_decl = KappaExporter.generate_agent_decl(agent_sites)
+            bindings = [n for n in G.nodes() if hom[G.node[n].type_] == "BND"]
+            print("bindings", bindings)
+            if len(bindings) > 1:
+                raise ValueError("more than one binding in nugget")
+            elif (len(bindings) == 1 and G.node[bindings[0]].attrs_ and
+                  "rate" in G.node[bindings[0]].attrs_.keys()):
+                rate = min(G.node[bindings[0]].attrs_["rate"])
+            elif (len(bindings) == 0):
+                rate = None    
+            else:
+                rate = "undefined" 
+            rules.append((rule, context, rate))
         rules_decl = ''
         count = 1
-        for rule, context in rules:
+        rate_decl = ''
+        for rule, context, rate in rules:
             rules_decl += KappaExporter.generate_rules_decl(G, rule, context, count)
+            if rate:
+                rate_decl += "\%var: 'NUG_%s' %s\n" % (count, rate)
             count += 1
 
-        return agent_decl, rules_decl
+        return agent_decl, rules_decl, rate_decl
 
+    @staticmethod 
     @staticmethod
     def compile_nugget(nug, hom=None):
         agent_sites, rule, context = KappaExporter.compile(nug, hom)
@@ -1466,15 +1496,33 @@ class KappaExporter(object):
         agent_sites = {}
         rules = ''
         count=1
-
+        rate_decl = ''
         for nug in nug_list:
+
+            hom = TypedHomomorphism.canonic(nug.metamodel_, KappaExporter.meta)
+            actions_of_nugget = [n for n in nug.nodes() 
+                                 if hom[nug.node[n].type_] == "BND" or
+                                    hom[nug.node[n].type_] == "BRK" or
+                                    hom[nug.node[n].type_] == "SYN/DEG"]
+            if len(actions_of_nugget) > 1:
+                raise ValueError("more than one action in nugget")
+            elif (len(actions_of_nugget) == 1 and nug.node[actions_of_nugget[0]].attrs_ and
+                  "rate" in nug.node[actions_of_nugget[0]].attrs_.keys()):
+                rate = min(nug.node[actions_of_nugget[0]].attrs_["rate"])
+            elif len(actions_of_nugget) == 0:
+                mods = [n for n in nug.nodes() if hom[nug.node[n].type_] == "MOD"]
+                rate = None    
+            else:
+                rate = "undefined" 
             agent_sites, rule, context = KappaExporter.compile(nug, None, agent_sites)
             rules += KappaExporter.generate_rules_decl(nug, rule, context, count)
+            if rate:
+                rate_decl += "%var: 'NUG_{}' {}\n".format(count, rate)
             count+=1
 
 
         agent_decl = KappaExporter.generate_agent_decl(agent_sites)
 
-        return agent_decl, rules
+        return agent_decl, rules, rate_decl
 
         #return agent_decl, rules_decl

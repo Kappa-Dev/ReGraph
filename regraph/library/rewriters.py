@@ -1179,7 +1179,7 @@ class Rewriter:
 
 
     @staticmethod
-    def find_matching(graph, pattern):
+    def find_matching(graph, pattern, ignore_attrs = False):
         """Perform matching of the pattern graph."""
         # NetworkX isomorphism lib crushes if the ids of nodes
         # have different types (e.g ints and strings).
@@ -1192,8 +1192,8 @@ class Rewriter:
         for pattern_node in pattern.nodes():
             for node in g.nodes():
                 if pattern.node[pattern_node].type_ == g.node[node].type_:
-                    if is_subdict(pattern.node[pattern_node].attrs_,
-                                  g.node[node].attrs_):
+                    if ignore_attrs or is_subdict(pattern.node[pattern_node].attrs_,
+                                                        g.node[node].attrs_):
                         matching_nodes.add(node)
         reduced_graph = g.subgraph(matching_nodes)
         instances = []
@@ -1224,14 +1224,14 @@ class Rewriter:
             for (pattern_node, node) in mapping.items():
                 if not pattern.node[pattern_node].type_ == subgraph.node[node].type_:
                     break
-                if not is_subdict(pattern.node[pattern_node].attrs_, subgraph.node[node].attrs_):
+                if not ignore_attrs and not is_subdict(pattern.node[pattern_node].attrs_, subgraph.node[node].attrs_):
                     break
             else:
                 # check edge attribute matched
                 for edge in pattern.edges():
                     pattern_attrs = pattern.get_edge(edge[0], edge[1])
                     target_attrs = subgraph.get_edge(mapping[edge[0]], mapping[edge[1]])
-                    if not is_subdict(pattern_attrs, target_attrs):
+                    if not ignore_attrs and not is_subdict(pattern_attrs, target_attrs):
                         break
                 else:
                     instances.append(mapping)

@@ -5,7 +5,7 @@ from flex.loading.schema.paths.path_item.operation.responses.single.schema\
     import schema_validator
 import json
 import flex
-from metamodels import (base_metamodel, metamodel_kappa)
+from metamodels import (base_metamodel, metamodel_kappa, kami, base_kami)
 from exporters import KappaExporter
 import os
 import subprocess
@@ -27,6 +27,15 @@ def include_kappa_metamodel(app, base_name, metamodel_name):
     except KeyError as e:
         return (str(e), 404)
 
+def include_kami_metamodel(app, base_name, metamodel_name):
+    try:
+        app.cmd._do_mkdir(base_name)
+        app.cmd.subCmds[base_name].graph = base_kami
+        app.cmd.subCmds[base_name]._do_mkdir(metamodel_name)
+        app.cmd.subCmds[base_name].subCmds[metamodel_name].graph = kami
+    except KeyError as e:
+        return (str(e), 404)
+
 app = MyFlask(__name__)
 app.config['DEBUG'] = True
 CORS(app)
@@ -34,6 +43,7 @@ json_schema_context = flex.load('iRegraph_api.yaml')
 base_name = "kappa_base_metamodel"
 metamodel_name = "kappa_metamodel"
 include_kappa_metamodel(app, base_name, metamodel_name)
+include_kami_metamodel(app, "kami_base", "kami")
 
 
 
@@ -138,6 +148,21 @@ def delete_graph(path_to_graph=""):
     try:
         parent_cmd.deleteSubCmd(graph_name)
         return("graph deleted", 200)
+    except ValueError as e:
+        return(str(e), 409)
+    except KeyError as e:
+        return(str(e), 404)
+
+
+@app.route("/rule/", methods=["DELETE"])
+@app.route("/rule/<path:path_to_graph>/", methods=["DELETE"])
+def delete_rule(path_to_graph=""):
+    (parent_cmd, rule_name) = parse_path(path_to_graph)
+    if rule_name is None:
+        return("The empty path does not contain a rule", 404)
+    try:
+        parent_cmd.deleteSubRule(rule_name)
+        return("rule deleted", 200)
     except ValueError as e:
         return(str(e), 409)
     except KeyError as e:
@@ -384,6 +409,23 @@ def rm_attr_graph(path_to_graph=""):
     return(get_command(path_to_graph, remove_attr))
 
 
+@app.route("/graph/add_edge_attr/", methods=["PUT"])
+@app.route("/graph/add_edge_attr/<path:path_to_graph>", methods=["PUT"])
+def add_edge_attr_graph(path_to_graph=""):
+    return(get_command(path_to_graph, add_edge_attr))
+
+
+@app.route("/graph/update_edge_attr/", methods=["PUT"])
+@app.route("/graph/update_edge_attr/<path:path_to_graph>", methods=["PUT"])
+def update_edge_attr_graph(path_to_graph=""):
+    return(get_command(path_to_graph, update_edge_attr))
+
+
+@app.route("/graph/rm_edge_attr/", methods=["PUT"])
+@app.route("/graph/rm_edge_attr/<path:path_to_graph>", methods=["PUT"])
+def rm_edge_attr_graph(path_to_graph=""):
+    return(get_command(path_to_graph, remove_edge_attr))
+
 @app.route("/rule/add_node/", methods=["PUT"])
 @app.route("/rule/add_node/<path:path_to_rule>", methods=["PUT"])
 def add_node_rule(path_to_rule=""):
@@ -475,6 +517,29 @@ def remove_attr(command):
 def add_attr(command):
     return modify_attr(command.main_graph().add_node_attrs)
 
+
+def modify_edge_attr(f):
+    source = request.args.get("source")
+    target = request.args.get("target")
+    if not (source and target) :
+        return("the source and target arguments are necessary")
+    try:
+        attributes = request.json
+        f(source, target, attributes)
+        return("attributes modified", 200)
+    except ValueError as e:
+        return("error: " + str(e), 412)
+
+def update_edge_attr(command):
+    return modify_edge_attr(command.graph.update_edge_attrs)
+
+
+def update_edge_attr(command):
+    return modify_edge_attr(command.main_graph().remove_edge_attrs)
+
+
+def add_edge_attr(command):
+    return modify_edge_attr(command.main_graph().add_edge_attrs)
 
 def add_edge(command):
     source_node = request.args.get("source_node")
@@ -717,18 +782,30 @@ def get_kappa(path_to_graph=""):
             return ("the nugget names object does not contain a field names",
                     404)
         nuggets_names = request.json["names"]
+        if command.graph.metamodel_ == kami:
+            new_kappa_command = command.to_kappa_like()
+            kappa_meta = app.cmd.subCmds[base_name].subCmds[metamodel_name]
+            new_kappa_command.parent = kappa_meta
+            # new_kappa_command.name = new_metamodel_name
+            new_kappa_command.graph.metamodel_ = kappa_meta.graph
+            command = new_kappa_command
         if command.graph.metamodel_ != metamodel_kappa:
+            print("meta1", command.graph.metamodel_)
+            print("meta2", metamodel_kappa)
             return("not a valid action graph", 404)
+        # app.cmd.subCmds[base_name].subCmds[metamodel_name].graph = metamodel_kappa
         for n in nuggets_names:
             if n not in command.subCmds.keys():
                 return ("Nugget " + n + " does not exist in action graph: " +
                         path_to_graph, 404)
         nugget_list = [command.subCmds[n].graph for n in nuggets_names]
         try:
-            (agent_dec, rules) = KappaExporter.compile_nugget_list(nugget_list)
+            (agent_dec, rules, variables_dec) =\
+                     KappaExporter.compile_nugget_list(nugget_list)
             json_rep = {}
             json_rep["agent_decl"] = agent_dec
             json_rep["rules"] = rules
+            json_rep["variable_decl"] = variables_dec
             resp = Response(response=json.dumps(json_rep),
                             status=200,
                             mimetype="application/json")
@@ -809,11 +886,67 @@ def delete_graph_attr(path_to_graph=""):
             else:
                 return("the key "+str(k) +
                        " does not correspond to a dictionnary", 412)
-        if keypath[0] in current_dict :
+        if keypath[0] in current_dict:
             del current_dict[keypath[0]]
         return ("deletion successful", 200)
     return get_command(path_to_graph, delete_graph_attr_aux)
 
+
+# @app.route("/graph/unfold/", methods=["PUT"])
+# @app.route("/graph/unfold/<path:path_to_graph>", methods=["PUT"])
+# def unfold_nugget(path_to_graph=""):
+#     def unfold_nugget_aux(command):
+#         new_metamodel_name = request.args.get("new_metamodel_name")
+#         if not new_metamodel_name:
+#             return("the query parameter new_metamodel_name is necessary", 404)
+#         try:
+#             command.unfold_abstract_nugget(new_metamodel_name)
+#             return("unfolding done", 200)
+#         except (ValueError, KeyError) as e:
+#             return(str(e), 412)
+
+#     return get_command(path_to_graph, unfold_nugget_aux)
+
+@app.route("/graph/unfold/", methods=["PUT"])
+@app.route("/graph/unfold/<path:path_to_graph>", methods=["PUT"])
+def unfold_nuggets(path_to_graph=""):
+    def unfold_nuggets_aux(command):
+        new_metamodel_name = request.args.get("new_metamodel_name")
+        if not new_metamodel_name:
+            return("the query parameter new_metamodel_name is necessary", 404)
+        if not isinstance(request.json, list):
+            return("the body must be a list of subgraphs", 412)
+        if request.json == []:
+            return("the body must not be the empty list", 412)
+        nuggets = list(request.json)
+        try:
+            command.unfold_abstract_nuggets(new_metamodel_name, nuggets)
+            return("unfolding done", 200)
+        except (ValueError, KeyError) as e:
+            return(str(e), 412)
+    return get_command(path_to_graph, unfold_nuggets_aux)
+
+
+@app.route("/graph/to_metakappa/", methods=["PUT"])
+@app.route("/graph/to_metakappa/<path:path_to_graph>", methods=["PUT"])
+def to_metakappa(path_to_graph=""):
+    def to_metakappa_aux(command):
+        new_metamodel_name = request.args.get("new_metamodel_name")
+        if not new_metamodel_name:
+            return("the query parameter new_metamodel_name is necessary", 404)
+        try:
+            new_kappa_command = command.to_kappa_like()
+            kappa_meta = app.cmd.subCmds[base_name].subCmds[metamodel_name]
+            if new_metamodel_name in kappa_meta.subCmds.keys():
+                raise KeyError("The new metamodel name already exists")
+            kappa_meta.subCmds[new_metamodel_name] = new_kappa_command
+            new_kappa_command.parent = kappa_meta
+            new_kappa_command.name = new_metamodel_name
+            new_kappa_command.graph.metamodel_ = kappa_meta.graph
+            return("translation done", 200)
+        except (ValueError, KeyError) as e:
+            return(str(e), 412)
+    return get_command(path_to_graph, to_metakappa_aux)
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0')

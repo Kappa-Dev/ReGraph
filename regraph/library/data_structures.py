@@ -329,8 +329,19 @@ class TypedDiGraph(nx.DiGraph):
     def exists_edge(self, source, target):
         return(source in self.edge and target in self.edge[source])
 
+    def filter_edges_by_attributes(self, attr_key, attr_cond):
+        for (n1, n2) in self.edges():
+            if (attr_key not in self.edge[n1][n2].keys() or
+               not attr_cond(self.edge[n1][n2][attr_key])):
+                print("key:")
+                print("attr_key")
+                print("attribute:")
+                print(self.edge[n1][n2][attr_key])
+
+                self.remove_edge(n1, n2)
+        return self
     def exists_outgoing_edge(self, source):
-        return(source in self.edge and self.edge[source]) 
+        return(source in self.edge and self.edge[source])
 
     def set_edge(self, source, target, attrs):
         if not (source, target) in self.edges():
@@ -564,6 +575,7 @@ class TypedDiGraph(nx.DiGraph):
 
         return new_node
 
+    #use relabel nodes instead
     def relabel_node(self, n, node_name):
         in_neighbors = self.in_edges(n)
         out_neighbors = self.out_edges(n)
@@ -584,7 +596,6 @@ class TypedDiGraph(nx.DiGraph):
 
     def subgraph(self, nbunch):
         res = type(self)()
-
         for n in nbunch:
             res.add_node(n, self.node[n].type_, self.node[n].attrs_)
 
@@ -593,7 +604,7 @@ class TypedDiGraph(nx.DiGraph):
                 res.add_edge(e[0], e[1], self.get_edge(e[0], e[1]))
 
         res.metamodel_ = self.metamodel_
-        if (self.hom) :
+        if (self.hom):
             res.hom = TypedHomomorphism(
                             res,
                             self.metamodel_,
@@ -606,7 +617,10 @@ class TypedDiGraph(nx.DiGraph):
     def appendToNodesNames(self,token):
         return(self.relabel_nodes({n:(str(n)+"_"+str(token)) for n in self.nodes()}))
         
-        
+    def myRelabelNode(self, n, new_name):
+        self.clone_node(n, new_name)
+        self.remove_node(n)
+
     def relabel_nodes(self, mapping):
         """Relabel graph nodes in place.
 
@@ -673,7 +687,9 @@ class TypedDiGraph(nx.DiGraph):
                     and self.node[n2].type_ == target_type):
                 self.remove_edge(n1,n2)
             
-            
+    def validMetamodel(self):
+        return self.validNewMetamodel(self.metamodel_)        
+
     def validNewMetamodel(self, new_metamodel):
         typing = {node_id: self.node[node_id].type_ for node_id in self.nodes()}
         return(Homomorphism.is_valid_homomorphism(self,new_metamodel,typing))
