@@ -11,6 +11,7 @@ import random
 from regraph.library.parser import parser
 from regraph.library.utils import (is_subdict,
                                    merge_attributes,
+                                   valid_attributes,
                                    dict_sub,
                                    fold_left,
                                    keys_by_value)
@@ -1189,14 +1190,19 @@ class Rewriter:
         # For the sake of security we will temporarily make
         # all the nodes ids to be int
         labels_mapping = dict([(n, i + 1) for i, n in enumerate(graph.nodes())])
+        print("asdasd")
         g = graph.relabel_nodes(labels_mapping)
+        print("asd")
         matching_nodes = set()
         # find all the nodes matching the nodes in pattern
         for pattern_node in pattern.nodes():
             for node in g.nodes():
                 if pattern.node[pattern_node].type_ == g.node[node].type_:
-                    if ignore_attrs or is_subdict(pattern.node[pattern_node].attrs_,
-                                                        g.node[node].attrs_):
+                    # if ignore_attrs or is_subdict(pattern.node[pattern_node].attrs_,
+                    #                                     g.node[node].attrs_):
+                    #     matching_nodes.add(node)
+                    if ignore_attrs or valid_attributes(pattern.node[pattern_node].attrs_,
+                                                        g.node[node]):
                         matching_nodes.add(node)
         reduced_graph = g.subgraph(matching_nodes)
         instances = []
@@ -1227,7 +1233,8 @@ class Rewriter:
             for (pattern_node, node) in mapping.items():
                 if not pattern.node[pattern_node].type_ == subgraph.node[node].type_:
                     break
-                if not ignore_attrs and not is_subdict(pattern.node[pattern_node].attrs_, subgraph.node[node].attrs_):
+                # if not ignore_attrs and not is_subdict(pattern.node[pattern_node].attrs_, subgraph.node[node].attrs_):
+                if not ignore_attrs and not valid_attributes(pattern.node[pattern_node].attrs_, subgraph.node[node]):
                     break
             else:
                 # check edge attribute matched

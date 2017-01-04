@@ -6,6 +6,7 @@ from copy import deepcopy
 
 from regraph.library.utils import (is_subdict,
                                    keys_by_value,
+                                   valid_attributes,
                                    to_set,
                                    normalize_attrs,
                                    listOr,
@@ -21,9 +22,10 @@ import os.path
 class TypedNode:
     """Define the datastructure for typed node."""
 
-    def __init__(self, n_type=None, attrs=None):
+    def __init__(self, n_type=None, attrs=None, attributes_typing=None):
         self.type_ = n_type
         self.attrs_ = attrs
+        self.attributes_typing = attributes_typing
         normalize_attrs(self.attrs_)
         return
 
@@ -160,15 +162,23 @@ class TypedDiGraph(nx.DiGraph):
                     "(node_id, node_type) or (node_id, node_type, node_attrs)"
                 )
 
+    def valid_attributes(self, node, attrs_dict):
+        if self.metamodel_ is None:
+            return True
+        t = self.node[node].type_
+        # pred = self.metamodel_.node[t].attributes_typing
+        # if pred is not None and attrs_dict:
+        #     return pred(attrs_dict)
+        return valid_attributes(attrs_dict, self.metamodel_.node[t])
+
     def add_node_attrs(self, node, attrs_dict):
         if node not in self.nodes():
             raise ValueError("Node %s does not exist" % str(node))
-        elif attrs_dict == None:
-            # warnings.warn(
-            #     "You want to add attrs to %s with an empty attrs_dict" % node
-            # )
+        elif attrs_dict is None:
             pass
         else:
+            if not self.valid_attributes(node, attrs_dict):
+                raise ValueError("The attributes are not valid")
             if self.node[node].attrs_ is None:
                 self.node[node].attrs_ = deepcopy(attrs_dict)
                 normalize_attrs(self.node[node].attrs_)
@@ -188,6 +198,8 @@ class TypedDiGraph(nx.DiGraph):
                 "You want to update %s attrs with an empty attrs_dict" % node
             )
         else:
+            if not self.valid_attributes(node, new_attrs):
+                raise ValueError("The attributes are not valid")
             normalize_attrs(new_attrs)
             if self.node[node].attrs_ is None:
                 self.node[node].attrs_ = new_attrs
@@ -691,11 +703,11 @@ class TypedDiGraph(nx.DiGraph):
                 self.remove_edge(n1,n2)
             
     def validMetamodel(self):
-        return self.validNewMetamodel(self.metamodel_)        
+        return self.validNewMetamodel(self.metamodel_)
 
     def validNewMetamodel(self, new_metamodel):
         typing = {node_id: self.node[node_id].type_ for node_id in self.nodes()}
-        return(Homomorphism.is_valid_homomorphism(self,new_metamodel,typing))
+        return(TypedHomomorphism.is_valid_homomorphism(self, new_metamodel, typing))
         
 
     def updateMetamodel(self, new_metamodel):
@@ -719,7 +731,8 @@ class TypedDiGraph(nx.DiGraph):
                     raise ValueError(
                         "Error loading graph: node id is not specified!")
                 if "type" in node.keys():
-                    node_type = node["type"] if node["type"]!="" else None
+                    #node_type = node["type"] if node["type"]!="" else None
+                    node_type = node["type"] 
                 elif self.metamodel_ is None:
                     node_type = None
                 else:    
@@ -754,6 +767,12 @@ class TypedDiGraph(nx.DiGraph):
                 else:
                     loaded_edges.append((s_node, t_node))
         nx.DiGraph.clear(self)
+        if "attributes" in j_data.keys():
+            self.graph_attr = j_data["attributes"]
+            if "exception_nugget" in self.graph_attr.keys():
+                self.metamodel_ = None
+        else:
+            self.graph_attr = {}    
         self.add_nodes_from(loaded_nodes)
         self.add_edges_from(loaded_edges)
 
@@ -888,6 +907,7 @@ class TypedDiGraph(nx.DiGraph):
                         attrs[key] = value
                 edge_data["attrs"] = attrs
             j_data["edges"].append(edge_data)
+        j_data["attributes"] = self.graph_attr    
         return(j_data)    
 
     def export(self, filename):
@@ -1458,6 +1478,7 @@ class TypedHomomorphism(Homomorphism):
 
     @staticmethod
     def is_valid_homomorphism(source, target, dictionary):
+        print("dict",dictionary)
         """Check if the homomorphism is valid (preserves edges and types)."""
 
         #check preserving of edges
@@ -1469,7 +1490,11 @@ class TypedHomomorphism(Homomorphism):
                 raise ValueError(
                     "Invalid homomorphism: Node type does not match (%s:%s and %s)!" %
                     (s, str(source.node[s].type_), str(t)))
-            if not is_subdict(source.node[s].attrs_, target.node[t].attrs_):
+
+            # pred = target.node[t].attributes_typing
+            # if pred is not None and pred(source.node[s].attrs_):
+            #     continue
+            if not valid_attributes(source.node[s].attrs_, target.node[t]):
                 raise ValueError(
                     "Invalid homomorphism: Attributes of nodes source:'%s' and target:'%s' does not match!" %
                     (str(s), str(t)))

@@ -202,3 +202,7 @@ kami.add_edges_from(
     ]
 )
 
+for n in kami.nodes():
+    kami.node[n].attributes_typing = lambda _: True
+for n in metamodel_kappa.nodes():
+    metamodel_kappa.node[n].attributes_typing = lambda _: True

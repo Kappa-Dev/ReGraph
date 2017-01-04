@@ -4,6 +4,14 @@ import networkx as nx
 from matplotlib import pyplot as plt
 import warnings
 
+
+def valid_attributes(attrs, typed_node_target):
+    pred = typed_node_target.attributes_typing
+    if pred is not None:
+        return pred(attrs)
+    return is_subdict(attrs, typed_node_target.attrs_)
+
+
 def is_subdict(small_dict, big_dict):
     """Check if the dictionary is a subset of other."""
 
@@ -12,7 +20,7 @@ def is_subdict(small_dict, big_dict):
     if len(small_dict) == 0:
         return True
     if big_dict is None and len(small_dict) != 0:
-        return True
+        return False
     if len(big_dict) == 0 and len(small_dict) != 0:
         return False
     for key, value in small_dict.items():

@@ -11,196 +11,6 @@ var callback = function (error, data, response) {
 	}
 };
 
-var hierarchy_test = {
-	"name": "tyty",
-	"top_graph": {
-		"nodes": [
-			{
-				"id": "c",
-				"type": "c"
-			},
-			{
-				"id": "b",
-				"type": "b"
-			},
-			{
-				"id": "a",
-				"type": "a"
-			}
-		],
-		"edges": [
-			{
-				"to": "c",
-				"from": "b",
-				"attrs": {}
-			},
-			{
-				"to": "b",
-				"from": "a",
-				"attrs": {}
-			}
-		]
-	},
-	"children": [
-		{
-			"name": "subgraph2",
-			"top_graph": {
-				"nodes": [],
-				"edges": []
-			},
-			"children": [
-				{
-					"name": "subgraph12",
-					"top_graph": {
-						"nodes": [],
-						"edges": []
-					},
-					"children": []
-				}
-			]
-		},
-		{
-			"name": "subgraph1",
-			"top_graph": {
-				"nodes": [
-					{
-						"id": "z",
-						"type": "b"
-					},
-					{
-						"id": "y",
-						"type": "b"
-					},
-					{
-						"id": "x",
-						"type": "a"
-					}
-				],
-				"edges": [
-					{
-						"to": "y",
-						"from": "x",
-						"attrs": {}
-					}
-				]
-			},
-			"children": [
-				{
-					"name": "subgraph12",
-					"top_graph": {
-						"nodes": [],
-						"edges": []
-					},
-					"children": [
-						{
-							"name": "toto",
-							"top_graph": {
-								"nodes": [],
-								"edges": []
-							},
-							"children": []
-						}
-					]
-				}
-			]
-		}
-	]
-}
-var hierarchy_test2 = {
-	"name": "/",
-	"top_graph": {
-		"nodes": [
-			{
-				"id": "c",
-				"type": ""
-			},
-			{
-				"id": "b",
-				"type": ""
-			},
-			{
-				"id": "a",
-				"type": ""
-			}
-		],
-		"edges": [
-			{
-				"to": "c",
-				"from": "b",
-				"attrs": {}
-			},
-			{
-				"to": "b",
-				"from": "a",
-				"attrs": {}
-			}
-		]
-	},
-	"children": [
-		{
-			"name": "subgraph2",
-			"top_graph": {
-				"nodes": [],
-				"edges": []
-			},
-			"children": [
-				{
-					"name": "subgraph12",
-					"top_graph": {
-						"nodes": [],
-						"edges": []
-					},
-					"children": []
-				}
-			]
-		},
-		{
-			"name": "subgraph1",
-			"top_graph": {
-				"nodes": [
-					{
-						"id": "z",
-						"type": "b"
-					},
-					{
-						"id": "y",
-						"type": "b"
-					},
-					{
-						"id": "x",
-						"type": "a"
-					}
-				],
-				"edges": [
-					{
-						"to": "y",
-						"from": "x",
-						"attrs": {}
-					}
-				]
-			},
-			"children": [
-				{
-					"name": "subgraph12",
-					"top_graph": {
-						"nodes": [],
-						"edges": []
-					},
-					"children": [
-						{
-							"name": "toto",
-							"top_graph": {
-								"nodes": [],
-								"edges": []
-							},
-							"children": []
-						}
-					]
-				}
-			]
-		}
-	]
-};
 function seq() {
 	api.graphgraphIdPost("/toto/", callback);
 	api.graphgraphIdPost("/tutu/", callback);
@@ -1351,7 +1161,6 @@ function seq() {
 	api.graphAddAttrgraphIdPut("/kappa_base_metamodel/kappa_metamodel/action_graph/", "X", { "Var": "X" }, callback);
 	api.graphAddAttrgraphIdPut("/kappa_base_metamodel/kappa_metamodel/action_graph/", "Y", { "Var": "Y" }, callback);
 	api.graphAddAttrgraphIdPut("/kappa_base_metamodel/kappa_metamodel/action_graph/", "test_site", { "Var": "X" }, callback);
-	api.graphAddEdgeAttrgraphIdPut("/kappa_base_metamodel/kappa_metamodel/", "site", "agent", { "Var": "X" }, callback);
 	api.graphAddEdgeAttrgraphIdPut("/kappa_base_metamodel/kappa_metamodel/action_graph/", "test_site", "X", { "Var": "X" }, callback);
 	api.graphAddNodegraphIdPut("/kappa_base_metamodel/kappa_metamodel/action_graph/nugget2/", "s", { nodeType: "test_site" }, callback);
 	api.graphAddEdgegraphIdPut("/kappa_base_metamodel/kappa_metamodel/action_graph/nugget2", "s", "x", callback);
@@ -1367,14 +1176,26 @@ function seq() {
 	api.graphAddEdgegraphIdPut("/kappa_base_metamodel/kappa_metamodel/action_graph/XSpattern/", "s", "x", callback);
 	api.ruleruleIdPost("/kappa_base_metamodel/kappa_metamodel/action_graph/arule1/", "Xpattern", callback);
 	api.ruleruleIdPost("/kappa_base_metamodel/kappa_metamodel/action_graph/arule2/", "XSpattern", callback);
+
 	api.ruleAddNoderuleIdPut("/kappa_base_metamodel/kappa_metamodel/action_graph/arule1/", "s", { "nodeType": "test_site" }, callback);
 	api.ruleAddEdgeruleIdPut("/kappa_base_metamodel/kappa_metamodel/action_graph/arule1/", "s", "x", callback);
 	api.graphUnfoldgraphIdPut("/kappa_base_metamodel/kappa_metamodel/action_graph/", "unfolded3", ["arule1"], callback);
 	api.graphUnfoldgraphIdPut("/kappa_base_metamodel/kappa_metamodel/action_graph/", "unfolded4", ["arule1", "nugget1"], callback);
+
 	api.ruleAddNoderuleIdPut("/kappa_base_metamodel/kappa_metamodel/action_graph/arule2/", "A3", { "nodeType": "A3" }, callback);
 	api.graphAddEdgegraphIdPut("/kappa_base_metamodel/kappa_metamodel/action_graph/", "test_site", "A3", callback);
 	api.ruleAddEdgeruleIdPut("/kappa_base_metamodel/kappa_metamodel/action_graph/arule2/", "s", "A3", callback);
+
+	api.graphgraphIdPost("/kappa_base_metamodel/kappa_metamodel/action_graph/exp1/", callback);
+	api.graphUpdateGraphAttrgraphIdPut("/kappa_base_metamodel/kappa_metamodel/action_graph/exp1/", {"exception_nugget":""})
+	api.graphAddNodegraphIdPut("/kappa_base_metamodel/kappa_metamodel/action_graph/exp1/", "A31", { nodeType: "A3" }, callback);
+	api.graphAddNodegraphIdPut("/kappa_base_metamodel/kappa_metamodel/action_graph/exp1/", "A32", { nodeType: "A3" }, callback);
+	api.graphAddNodegraphIdPut("/kappa_base_metamodel/kappa_metamodel/action_graph/exp1/", "s2", { nodeType: "s2" }, callback);
+	api.graphAddEdgegraphIdPut("/kappa_base_metamodel/kappa_metamodel/action_graph/exp1/", "s2", "A31", callback);
+	api.graphAddEdgegraphIdPut("/kappa_base_metamodel/kappa_metamodel/action_graph/exp1/", "s2", "A32", callback);
+
 	api.graphUnfoldgraphIdPut("/kappa_base_metamodel/kappa_metamodel/action_graph/", "unfolded5", ["arule2"], callback);
+
 	api.graphgraphIdPost("/kami_base/kami/action_graph/", callback);
 	api.graphgraphIdPost("/kami_base/kami/action_graph/nug1/", callback);
 	api.graphgraphIdPost("/kami_base/kami/action_graph/nug2/", callback);
@@ -1452,6 +1273,64 @@ function seq() {
 	api.graphAddAttrgraphIdPut("/kami_base/kami/action_graph/", "state_r1", { "val": "10" }, callback);
 	api.graphAddAttrgraphIdPut("/kami_base/kami/action_graph/nug4/", "state_r1", { "val": "10" }, callback);
     api.graphUpdateGraphAttrgraphIdPut("/kami_base/kami/action_graph/nug4/",{"rate":"2"}, callback);
+
+    //abstract nugget kami 
+	//action graph
+	api.graphAddNodegraphIdPut("/kami_base/kami/action_graph/", "A3", { nodeType: "agent" }, callback);
+	api.graphAddNodegraphIdPut("/kami_base/kami/action_graph/", "s3", { nodeType: "locus" }, callback);
+	api.graphAddNodegraphIdPut("/kami_base/kami/action_graph/", "bnd3", { nodeType: "bnd" }, callback);
+	api.graphAddNodegraphIdPut("/kami_base/kami/action_graph/", "X", { nodeType: "agent" }, callback);
+	api.graphAddNodegraphIdPut("/kami_base/kami/action_graph/", "sx", { nodeType: "locus" }, callback);
+	api.graphAddEdgegraphIdPut("/kami_base/kami/action_graph/", "s3", "A3", callback);
+	api.graphAddEdgegraphIdPut("/kami_base/kami/action_graph/", "s3", "bnd3", callback);
+	api.graphAddEdgegraphIdPut("/kami_base/kami/action_graph/", "sx", "X", callback);
+	api.graphAddEdgegraphIdPut("/kami_base/kami/action_graph/", "sx", "bnd3", callback);
+	api.graphAddAttrgraphIdPut("/kami_base/kami/action_graph/", "sx", { "Var": "v" }, callback);
+	api.graphAddAttrgraphIdPut("/kami_base/kami/action_graph/", "X", { "Var": "v" }, callback);
+	api.graphAddNodegraphIdPut("/kami_base/kami/action_graph/", "A4", { nodeType: "agent" }, callback);
+	api.graphAddNodegraphIdPut("/kami_base/kami/action_graph/", "s4", { nodeType: "locus" }, callback);
+	api.graphAddEdgegraphIdPut("/kami_base/kami/action_graph/", "s4", "A4", callback);
+
+
+	//pattern
+	api.graphgraphIdPost("/kami_base/kami/action_graph/pat1/", callback);
+	api.graphAddNodegraphIdPut("/kami_base/kami/action_graph/pat1/", "X", { nodeType: "X" }, callback);
+	api.graphAddNodegraphIdPut("/kami_base/kami/action_graph/pat1/", "sx", { nodeType: "sx" }, callback);
+	api.graphAddEdgegraphIdPut("/kami_base/kami/action_graph/pat1/", "sx", "X", callback);
+
+    //rule
+	// api.ruleruleIdPost("/kami_base/kami/action_graph/ab_nugget1/", "pat1", callback);
+	// api.ruleruleIdPost("/kami_base/kami/action_graph/ab_nugget2/", "pat1", callback);
+	// api.ruleAddNoderuleIdPut("/kami_base/kami/action_graph/ab_nugget1/", "A3", { "nodeType": "A3" }, callback);
+	// api.ruleAddNoderuleIdPut("/kami_base/kami/action_graph/ab_nugget1/", "s3", { "nodeType": "s3" }, callback);
+	// api.ruleAddNoderuleIdPut("/kami_base/kami/action_graph/ab_nugget1/", "bnd3", { "nodeType": "bnd3" }, callback);
+	// api.ruleAddEdgeruleIdPut("/kami_base/kami/action_graph/ab_nugget1/", "s3", "A3", callback);
+	// api.ruleAddEdgeruleIdPut("/kami_base/kami/action_graph/ab_nugget1/", "s3", "bnd3", callback);
+	// api.ruleAddEdgeruleIdPut("/kami_base/kami/action_graph/ab_nugget1/", "sx", "bnd3", callback);
+
+    //exception
+	api.graphgraphIdPost("/kami_base/kami/action_graph/exc1/", callback);
+	api.graphUpdateGraphAttrgraphIdPut("/kami_base/kami/action_graph/exc1/", {"exception_nugget":""})
+	api.graphAddNodegraphIdPut("/kami_base/kami/action_graph/exc1/", "A3_1", { nodeType: "A3" }, callback);
+	api.graphAddNodegraphIdPut("/kami_base/kami/action_graph/exc1/", "s3_1", { nodeType: "s3" }, callback);
+	api.graphAddNodegraphIdPut("/kami_base/kami/action_graph/exc1/", "bnd3", { nodeType: "bnd3" }, callback);
+	api.graphAddNodegraphIdPut("/kami_base/kami/action_graph/exc1/", "A3_2", { nodeType: "A3" }, callback);
+	api.graphAddNodegraphIdPut("/kami_base/kami/action_graph/exc1/", "s3_2", { nodeType: "s3" }, callback);
+	api.graphAddEdgegraphIdPut("/kami_base/kami/action_graph/exc1/", "s3_1", "A3_1", callback);
+	api.graphAddEdgegraphIdPut("/kami_base/kami/action_graph/exc1/", "s3_1", "bnd3", callback);
+	api.graphAddEdgegraphIdPut("/kami_base/kami/action_graph/exc1/", "s3_2", "A3_2", callback);
+	api.graphAddEdgegraphIdPut("/kami_base/kami/action_graph/exc1/", "s3_2", "bnd3", callback);
+
+    //unfold
+	//api.graphUnfoldgraphIdPut("/kami_base/kami/action_graph/", "unfolded1", ["ab_nugget1"], callback);
+
+
+
+	api.ruleruleIdPost("/kappa_base_metamodel/kappa_metamodel/action_graph/arule2/", "XSpattern", callback);
+
+	api.ruleAddNoderuleIdPut("/kappa_base_metamodel/kappa_metamodel/action_graph/arule1/", "s", { "nodeType": "test_site" }, callback);
+	api.ruleAddEdgeruleIdPut("/kappa_base_metamodel/kappa_metamodel/action_graph/arule1/", "s", "x", callback);
+	api.graphUnfoldgraphIdPut("/kappa_base_metamodel/kappa_metamodel/action_graph/", "unfolded3", ["arule1"], callback);
 
 };
 seq();

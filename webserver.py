@@ -1,5 +1,6 @@
 from flask import Flask, Response, request, send_from_directory, redirect, url_for
-from iRegraph import MyCmd
+from regraph.library.graph_hierarchy import Hierarchy
+
 from flask_cors import CORS, cross_origin
 from flex.loading.schema.paths.path_item.operation.responses.single.schema\
     import schema_validator
@@ -15,7 +16,7 @@ class MyFlask(Flask):
 
     def __init__(self, name):
         super().__init__(name, static_url_path="")
-        self.cmd = MyCmd("/", "/", None, None)
+        self.cmd = Hierarchy("/", None)
         self.cmd.graph = None
 
 def include_kappa_metamodel(app, base_name, metamodel_name):
@@ -44,6 +45,10 @@ base_name = "kappa_base_metamodel"
 metamodel_name = "kappa_metamodel"
 include_kappa_metamodel(app, base_name, metamodel_name)
 include_kami_metamodel(app, "kami_base", "kami")
+with open('example.json') as data_file:
+    print(data_file)
+    data = json.load(data_file)
+app.cmd.merge_hierarchy(data)
 
 
 
@@ -478,13 +483,13 @@ def add_node(command):
     node_id = request.args.get("node_id")
     if not node_id:
         return("the node_id argument is necessary")
-    if command.main_graph().metamodel_ is None:
-        node_type = None
-    else:
-        node_type = request.args.get("node_type")
-        if node_type is None:
-            return("this graph is typed, the node_type argument is necessary",
-                   412)
+    node_type = request.args.get("node_type")
+    # if command.main_graph().metamodel_ is None:
+    #     node_type = None
+    # else:
+    if node_type is None and command.main_graph().metamodel_ is not None:
+        return("this graph is typed, the node_type argument is necessary",
+               412)
     if node_id in command.main_graph().nodes():
         return(Response("the node already exists", 412))
     try:
@@ -496,11 +501,15 @@ def add_node(command):
 
 def modify_attr(f):
     node_id = request.args.get("node_id")
+    force = request.args.get("node_id") == "true"
     if not node_id:
         return("the node_id argument is necessary")
     try:
         attributes = request.json
-        f(node_id, attributes)
+        if force:
+            f(node_id, attributes, force=True)
+        else:
+            f(node_id, attributes)
         return("attributes modified", 200)
     except ValueError as e:
         return("error: " + str(e), 412)
@@ -511,7 +520,7 @@ def update_attr(command):
 
 
 def remove_attr(command):
-    return modify_attr(command.main_graph().remove_node_attrs)
+    return modify_attr(command.remove_attrs)
 
 
 def add_attr(command):
@@ -796,7 +805,11 @@ def get_kappa(path_to_graph=""):
             if n not in command.subCmds.keys():
                 return ("Nugget " + n + " does not exist in action graph: " +
                         path_to_graph, 404)
-        nugget_list = [command.subCmds[n].graph for n in nuggets_names]
+        if nuggets_names == []:
+            nuggets_names = command.subCmds.keys()
+        graph_list = [command.subCmds[n].graph for n in nuggets_names]
+        nugget_list = [g for g in graph_list 
+                       if "exception_nugget" not in g.graph_attr.keys()]
         try:
             (agent_dec, rules, variables_dec) =\
                      KappaExporter.compile_nugget_list(nugget_list)
@@ -855,6 +868,8 @@ def update_graph_attr(path_to_graph=""):
         if not isinstance(request.json, dict):
             return("the body must be a json object", 404)
         recursive_merge(command.graph.graph_attr, request.json)
+        if "exception_nugget" in request.json.keys():
+            command.graph.metamodel_ = None
         return ("merge successful", 200)
     return get_command(path_to_graph, update_graph_attr_aux)
 
