@@ -46,7 +46,6 @@ metamodel_name = "kappa_metamodel"
 include_kappa_metamodel(app, base_name, metamodel_name)
 include_kami_metamodel(app, "kami_base", "kami")
 with open('example.json') as data_file:
-    print(data_file)
     data = json.load(data_file)
 app.cmd.merge_hierarchy(data)
 
@@ -356,8 +355,8 @@ def get_command(path_to_graph, callback):
             # return("rules update not supported yet", 404)
         else:
             raise(KeyError)
-    except KeyError:
-        return("Graph not found", 404)
+    except KeyError as e:
+        return("Graph not found: {}".format(e), 404)
 
 
 @app.route("/graph/add_node/", methods=["PUT"])
@@ -792,6 +791,7 @@ def get_kappa(path_to_graph=""):
                     404)
         nuggets_names = request.json["names"]
         if command.graph.metamodel_ == kami:
+            command.link_states()
             new_kappa_command = command.to_kappa_like()
             kappa_meta = app.cmd.subCmds[base_name].subCmds[metamodel_name]
             new_kappa_command.parent = kappa_meta
@@ -948,6 +948,7 @@ def to_metakappa(path_to_graph=""):
         if not new_metamodel_name:
             return("the query parameter new_metamodel_name is necessary", 404)
         try:
+            command.link_states()
             new_kappa_command = command.to_kappa_like()
             kappa_meta = app.cmd.subCmds[base_name].subCmds[metamodel_name]
             if new_metamodel_name in kappa_meta.subCmds.keys():

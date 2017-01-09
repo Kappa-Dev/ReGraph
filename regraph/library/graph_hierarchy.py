@@ -4,7 +4,7 @@ from regraph.library.data_structures import Homomorphism
 from regraph.library.rewriters import Transformer
 from regraph.library.rewriters import Rewriter
 from regraph.library.rules import Rule
-from regraph.library.kami_to_metakappa import to_kappa_like
+from regraph.library.kami_to_metakappa import to_kappa_like, link_states
 
 import json
 from regraph.library.nugget_rules import AbstractRules
@@ -37,7 +37,7 @@ class Hierarchy():
         return h
 
     def hierarchy_of_names(self, include_rules):
-        print(self.subCmds.keys())
+        #print(self.subCmds.keys())
         h = {"name": self.name,
              "children": [sub.hierarchy_of_names(include_rules)
                           for sub in self.subCmds.values()]}
@@ -398,3 +398,4 @@ class Hierarchy():
             parent_cmd.subCmds[nug_name] = new_nug
 
 Hierarchy.to_kappa_like = to_kappa_like
+Hierarchy.link_states = link_states

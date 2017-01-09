@@ -2,6 +2,43 @@ import copy
 from regraph.library.data_structures import TypedDiGraph
 from regraph.library.rewriters import Rewriter
 
+
+def link_states(self):
+    for nugget in self.subCmds.values():
+        nug = nugget.graph
+        nug_copy = copy.deepcopy(nug)
+        while True:
+            for n in nug_copy.nodes():
+                ag_node = nug.node[n].type_
+                if (self.graph.node[ag_node].type_ in ["state", "region", "residue"] and
+                    not nug.neighbors(n)):
+                    ag_components = self.graph.neighbors(ag_node)
+                    if len(ag_components) != 1:
+                        raise ValueError("a state must have exaclty one "
+                                        "associated component")
+                    ag_component = ag_components[0]
+                    nug_components = [c for c in nug.nodes()
+                                    if nug.node[c].type_ == ag_component]
+                    if len(nug_components) > 1:
+                        print("components", nug_components)
+                        print("name", nugget.name)
+                        raise ValueError("a state cannot be associated "
+                                        "to a component")
+                    if len(nug_components) == 0:
+                        comp_name = "comp_{}".format(n)
+                        nug.add_node(comp_name, ag_component)
+                        nug.add_edge(n, comp_name)
+                    else:
+                        nug.add_edge(n, nug_components[0])
+            if nug_copy == nug:
+                break
+            else:
+                nug_copy = copy.deepcopy(nug)
+
+
+
+
+
     # self.graph must be typed by kami metamodel
 def to_kappa_like(self):
     from regraph.library.graph_hierarchy import Hierarchy 
@@ -117,20 +154,15 @@ def to_kappa_like(self):
         for nugget in contact_map_com.subCmds.values():
             nug_matchings = Rewriter.find_matching(nugget.graph,
                                                     nug_pattern)
-            if len(nug_matchings) == 0:
-                pass
-            elif len(nug_matchings) == 2:
-                for (j, nug_matching) in enumerate(nug_matchings):
-                    t_brk = "t_brk_{}_{}".format(i, j)
-                    nugget.graph.add_node(t_brk, new_t_brk)
-                    # nugget.graph.remove_edge(nug_matching["l"],
-                    #                          nug_matching["b"])
-                    nugget.graph.add_edge(nug_matching["l"], t_brk)
-                    nugget.graph.add_edge(t_brk, nug_matching["b"])
+            for (j, nug_matching) in enumerate(nug_matchings):
+                t_brk = "t_brk_{}_{}".format(i, j)
+                nugget.graph.add_node(t_brk, new_t_brk)
+                # nugget.graph.remove_edge(nug_matching["l"],
+                #                          nug_matching["b"])
+                #nugget.graph.add_edge(nug_matching["l"], t_brk)
+                nugget.graph.add_edge(t_brk, nug_matching["l"])
+                nugget.graph.add_edge(t_brk, nug_matching["b"])
 
-            else:
-                raise ValueError("There must be 2 or 0 matching for the"
-                                    " brk pattern in a nugget")
 
     # add input for is_bnd
     is_bnd_pattern = TypedDiGraph(self.graph.metamodel_)
@@ -377,5 +409,6 @@ def to_kappa_like(self):
             to_delete.append((n1, n2))
     for (n1, n2) in to_delete:
         contact_map_com._do_rm_edge_uncatched(n1, n2, force=True)
+    #link_states(self)
     return contact_map_com
 

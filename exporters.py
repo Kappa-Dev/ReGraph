@@ -811,7 +811,10 @@ class KappaExporter(object):
             else:
                 old_state = deepcopy(G.node[state].attrs_['val'])
                 old_state = old_state.pop()
-            new_state = G.node[mod].attrs_['fun']
+            if "fun" in G.node[mod].attrs_.keys():
+                new_state = G.node[mod].attrs_['fun']
+            else:
+                new_state = "undefined_value"
             if type(new_state) != set:
                 new_state = set([new_state])
             for el in new_state:
