@@ -814,9 +814,10 @@ def get_kappa(path_to_graph=""):
             (agent_dec, rules, variables_dec) =\
                      KappaExporter.compile_nugget_list(nugget_list)
             json_rep = {}
-            json_rep["agent_decl"] = agent_dec
-            json_rep["rules"] = rules
-            json_rep["variable_decl"] = variables_dec
+            json_rep["kappa_code"] = agent_dec+"\n"+variables_dec+"\n"+rules
+            # json_rep["agent_decl"] = agent_dec
+            # json_rep["rules"] = rules
+            # json_rep["variable_decl"] = variables_dec
             resp = Response(response=json.dumps(json_rep),
                             status=200,
                             mimetype="application/json")
