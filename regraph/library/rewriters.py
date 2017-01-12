@@ -1190,9 +1190,7 @@ class Rewriter:
         # For the sake of security we will temporarily make
         # all the nodes ids to be int
         labels_mapping = dict([(n, i + 1) for i, n in enumerate(graph.nodes())])
-        print("asdasd")
         g = graph.relabel_nodes(labels_mapping)
-        print("asd")
         matching_nodes = set()
         # find all the nodes matching the nodes in pattern
         for pattern_node in pattern.nodes():

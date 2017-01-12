@@ -502,7 +502,7 @@ def modify_attr(f):
     node_id = request.args.get("node_id")
     force = request.args.get("node_id") == "true"
     if not node_id:
-        return("the node_id argument is necessary")
+        return("the node_id argument is necessary", 412)
     try:
         attributes = request.json
         if force:
@@ -866,6 +866,7 @@ def get_graph_attr(path_to_graph=""):
 @app.route("/graph/update_graph_attr/<path:path_to_graph>", methods=["PUT"])
 def update_graph_attr(path_to_graph=""):
     def update_graph_attr_aux(command):
+        print(request.json)
         if not isinstance(request.json, dict):
             return("the body must be a json object", 404)
         recursive_merge(command.graph.graph_attr, request.json)

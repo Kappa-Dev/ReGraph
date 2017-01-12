@@ -1949,6 +1949,11 @@
                         "attrs": {}
                       },
                       {
+                        "from": "state_test",
+                        "to": "A1_2",
+                        "attrs": {}
+                      },
+                      {
                         "from": "s1_1",
                         "to": "A1_1",
                         "attrs": {}
@@ -1966,6 +1971,13 @@
                         "input_constraints": [],
                         "output_constraints": [],
                         "type": "A1"
+                      },
+                      {
+                        "id": "state_test",
+                        "input_constraints": [],
+                        "output_constraints": [],
+                        "type": "state1",
+                        "attrs":{"val":["1"]}
                       },
                       {
                         "id": "s1_1",

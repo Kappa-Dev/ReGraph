@@ -473,7 +473,6 @@ class KappaExporter(object):
                   source or target node
         """
 
-
         # check syntax
         if G.metamodel_ is None:
             raise ValueError(
@@ -594,7 +593,7 @@ class KappaExporter(object):
                 RHS[a2][site2] = [state2, None]
 
         def do_BND(site1, site2, LHS, RHS):
-
+            print("site1: ",site1," site2: ", site2)
             # source agents
             for e in G.out_edges(site1):
                 if hom.mapping_[G.hom.mapping_[e[1]]] == 'agent':
@@ -811,8 +810,8 @@ class KappaExporter(object):
             else:
                 old_state = deepcopy(G.node[state].attrs_['val'])
                 old_state = old_state.pop()
-            if "fun" in G.node[mod].attrs_.keys():
-                new_state = G.node[mod].attrs_['fun']
+            if "val" in G.node[mod].attrs_.keys():
+                new_state = G.node[mod].attrs_['val']
             else:
                 new_state = "undefined_value"
             if type(new_state) != set:
@@ -905,6 +904,7 @@ class KappaExporter(object):
 
                         for e_site in A_G.in_edges(s):
                             if hom.mapping_[e_site[0]] == 'state':
+                                print("state:", e_site[0])
                                 if A_G.node[e_site[0]].attrs_ is not None and\
                                    'val' in A_G.node[e_site[0]].attrs_.keys():
                                     if len(agent_sites[a][s]) == 0 :
@@ -920,8 +920,7 @@ class KappaExporter(object):
                                         ("State %s of site %s of agent %s doesn't have" %
                                         (e_site[0], s, a))+" 'val' attribute"
                                     )
-
-
+        print("agent_site: ", agent_sites)
         # making rules
 
         # LHS : { agent : { site1 : [state, binding],
@@ -1226,6 +1225,9 @@ class KappaExporter(object):
         context = {}
         for a in G.nodes():
             for LHS, RHS in rules:
+                print("a: ", a)
+                print("LHS: ", LHS)
+                print("RHS: ", RHS)
                 if a not in LHS.keys() and\
                    a not in RHS.keys() and\
                    hom.mapping_[G.hom.mapping_[a]] == "agent":
@@ -1233,16 +1235,45 @@ class KappaExporter(object):
                     context[a] = {}
 
                     for site, a in G.in_edges(a):
+                        print("ssssite:", site)
                         if hom.mapping_[G.hom.mapping_[site]] == 'site':
                             state = None
+                            for st, site in G.in_edges(site):
+                                if hom.mapping_[G.hom.mapping_[st]] == 'state':
+                                    print("st:", state)
+                                    if G.node[st].attrs_['val'] != set():
+                                        state = deepcopy(G.node[st].attrs_['val']).pop()
+                                        print("state: ",state)
+                            # updating context
+                            context[a][site] = [state, None]
+
+                elif hom.mapping_[G.hom.mapping_[a]] == "agent":
+                    for site, a in G.in_edges(a):
+                        if hom.mapping_[G.hom.mapping_[site]] == 'site':
                             for st, site in G.in_edges(site):
                                 if hom.mapping_[G.hom.mapping_[st]] == 'state':
                                     if G.node[st].attrs_['val'] != set():
                                         state = deepcopy(G.node[st].attrs_['val']).pop()
 
-                            # updating context
+                                        if a in LHS.keys() and site not in LHS[a].keys():
+                                            LHS[a][site]=[state, None]
+                                        elif a in LHS.keys() and LHS[a][site][0]:
+                                            pass
+                                            #print("value",a,",",site,",",LHS[a][site])
+                                            #raise ValueError("allready a value here")
+                                        elif a in LHS.keys():
+                                            LHS[a][site][0]=state
 
-                            context[a][site] = [state, None]
+                                        if a in RHS.keys() and site not in RHS[a].keys():
+                                            RHS[a][site]=[state, None]
+                                        elif a in RHS.keys() and RHS[a][site][0]:
+                                            pass
+                                            #raise ValueError("allready a value here")
+                                        elif a in RHS.keys():
+                                            RHS[a][site][0]=state
+
+
+
 
         return agent_sites, rules, context
 
@@ -1488,7 +1519,6 @@ class KappaExporter(object):
         count=1
         rate_decl = ''
         def get_rate(g):
-            #print("asdasdsad",g)
             if g.graph_attr:
                 print(g.graph_attr)
                 return g.graph_attr.get('rate', "UNDEFINED")

@@ -1478,7 +1478,6 @@ class TypedHomomorphism(Homomorphism):
 
     @staticmethod
     def is_valid_homomorphism(source, target, dictionary):
-        print("dict",dictionary)
         """Check if the homomorphism is valid (preserves edges and types)."""
 
         #check preserving of edges
