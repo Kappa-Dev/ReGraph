@@ -500,7 +500,7 @@ def add_node(command):
 
 def modify_attr(f):
     node_id = request.args.get("node_id")
-    force = request.args.get("node_id") == "true"
+    force = request.args.get("force") == "true"
     if not node_id:
         return("the node_id argument is necessary", 412)
     try:
@@ -963,6 +963,23 @@ def to_metakappa(path_to_graph=""):
         except (ValueError, KeyError) as e:
             return(str(e), 412)
     return get_command(path_to_graph, to_metakappa_aux)
+
+@app.route("/graph/get_children/", methods=["GET"])
+@app.route("/graph/get_children/<path:path_to_graph>", methods=["GET"])
+def get_children(path_to_graph=""):
+    def get_children_aux(command):
+        node_id = request.args.get("node_id")
+        if not node_id:
+            return("the query parameter node_id is necessary", 404)
+        try:
+            nugget_list = command.get_children(node_id)
+            resp = Response(response=json.dumps({"children":nugget_list}),
+                            status=200,
+                            mimetype="application/json")
+            return resp
+        except (ValueError, KeyError) as e:
+            return(str(e), 412)
+    return get_command(path_to_graph, get_children_aux)
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0')

@@ -334,28 +334,17 @@ class Hierarchy():
         self.subRules[new_name] = self.subRules.pop(old_name)
         self.subRules[new_name].name = new_name
 
-    # def unfold_abstract_nugget(self, new_metamodel_name):
-    #     if (self.parent is None or
-    #        self.parent.graph is None or
-    #        self.parent.parent.graph is None):
-    #         raise ValueError("An abstract nugget must have\
-    #                          a parent and a granparent")
-
-    #     if new_metamodel_name in self.parent.parent.subCmds.keys():
-    #         raise ValueError("There is already a graph with name: " +
-    #                          new_metamodel_name)
-    #     abstract_nug = AbstractNugget(self.graph, "Var")
-    #     (new_nuggets, new_metamodel) = abstract_nug.unfold_variables()
-    #     self.parent.parent.subCmds[new_metamodel_name] =\
-    #         Hierarchy(new_metamodel_name, self.parent.parent)
-    #     parent_cmd = self.parent.parent.subCmds[new_metamodel_name]
-    #     parent_cmd.graph = new_metamodel
-    #     for (i, new_nugget) in enumerate(new_nuggets):
-    #         new_nugget_name = self.name + "_" + str(i)
-    #         parent_cmd.subCmds[new_nugget_name] = Hierarchy(
-    #                                                  new_nugget_name,
-    #                                                  parent_cmd)
-    #         parent_cmd.subCmds[new_nugget_name].graph = new_nugget
+    def get_children(self, node_id):
+        if node_id not in self.graph.nodes():
+            raise ValueError("the node is not in the graph")
+        nugget_list = []    
+        for sub in self.subCmds.values():
+            g = sub.graph
+            for n in g.nodes():
+                if g.node[n].type_ == node_id:
+                    nugget_list.append(sub.name)
+                    break
+        return nugget_list
 
     def unfold_abstract_nuggets(self, new_metamodel_name, nuggetsNames):
         for name in nuggetsNames:
