@@ -588,9 +588,9 @@ class KappaExporter(object):
 
                 # updating RHS of rule
 
-                RHS[a1][site1] = [state1, None]
+                RHS[a1][site1] = [state1, "isFree"]
 
-                RHS[a2][site2] = [state2, None]
+                RHS[a2][site2] = [state2, "isFree"]
 
         def do_BND(site1, site2, LHS, RHS):
             print("site1: ",site1," site2: ", site2)

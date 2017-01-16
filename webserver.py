@@ -981,5 +981,27 @@ def get_children(path_to_graph=""):
             return(str(e), 412)
     return get_command(path_to_graph, get_children_aux)
 
+    
+@app.route("/graph/get_ancestors/", methods=["GET"])
+@app.route("/graph/get_ancestors/<path:path_to_graph>", methods=["GET"])
+def get_ancestors(path_to_graph=""):
+    def get_ancestors_aux(command):
+        degree = request.args.get("degree")
+        if not degree:
+            return("the query parameter degree is necessary", 404)
+        try:
+            degree = int(degree)
+            if degree < 1:
+                raise ValueError("degree must be greater than one")
+            mapping = command.ancestors(degree)
+            json_like = [{"left":n,"right":t} for (n,t) in mapping.items()]
+            resp = Response(response=json.dumps(json_like),
+                            status=200,
+                            mimetype="application/json")
+            return resp
+        except (ValueError, KeyError) as e:
+            return(str(e), 412)
+    return get_command(path_to_graph, get_ancestors_aux)
+
 if __name__ == "__main__":
     app.run(host='0.0.0.0')

@@ -386,5 +386,16 @@ class Hierarchy():
             new_nug.graph.metamodel_ = parent_cmd.graph
             parent_cmd.subCmds[nug_name] = new_nug
 
+    #precondition: degree > 0
+    
+    def ancestors(self, degree):
+        if not self.parent:
+            raise ValueError("the command does not have a parent")
+        if degree == 1:
+            return {n:self.graph.node[n].type_ for n in self.graph.nodes()}
+        else:
+            parentMapping = self.parent.ancestors(degree-1)
+            return {n:parentMapping[self.graph.node[n].type_] for n in self.graph.nodes()}
+
 Hierarchy.to_kappa_like = to_kappa_like
 Hierarchy.link_states = link_states

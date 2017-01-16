@@ -53,6 +53,14 @@ def to_kappa_like(self):
         new_nugget.graph.metamodel_ = None
         contact_map_com.subCmds[nugget.name] = new_nugget
     
+    # add "is_free" node to contact_map
+    
+    if "is_FREE" not in contact_map.node.keys():
+        contact_map.add_node("is_FREE","is_FREE")
+    if "t_FREE" not in contact_map.node.keys():
+         contact_map.add_node("t_FREE","t_FREE")
+    contact_map.add_edge("t_FREE","is_FREE")
+
     # add input for binds
     bnd_pattern = TypedDiGraph(self.graph.metamodel_)
     bnd_pattern.add_nodes_from([("b", "bnd"), ("l", "locus")])
@@ -65,6 +73,7 @@ def to_kappa_like(self):
         # contact_map.remove_edge(mat["l"], mat["b"])
         contact_map.add_edge(mat["l"], new_s_bnd)
         contact_map.add_edge(new_s_bnd, mat["b"])
+        contact_map.add_edge("t_FREE",mat["l"])
         nug_pattern = TypedDiGraph(self.graph)
         nug_pattern.add_nodes_from([("b", mat["b"]), ("l", mat["l"])])
         nug_pattern.add_edges_from([("l", "b")])
@@ -73,12 +82,20 @@ def to_kappa_like(self):
             nug_matchings = Rewriter.find_matching(nugget.graph,
                                                     nug_pattern)
             for (j, nug_matching) in enumerate(nug_matchings):
+                is_free_name = "is_free_tmp_bnd_{}_{}".format(i,j)
+                t_free_name = "t_free_tmp_bnd_{}_{}".format(i,j)
+                if is_free_name not in nugget.graph.node.keys():
+                    nugget.graph.add_node(is_free_name, "is_FREE")
+                if t_free_name not in nugget.graph.node.keys():
+                    nugget.graph.add_node(t_free_name, "t_FREE")
+                nugget.graph.add_edge(t_free_name, is_free_name)
                 new_s_bnd = "s_bnd_{}_{}".format(i, j)
                 nugget.graph.add_node(new_s_bnd, "s_bnd_{}".format(i))
                 # nugget.graph.remove_edge(nug_matching["l"],
                 #                          nug_matching["b"])
                 nugget.graph.add_edge(nug_matching["l"], new_s_bnd)
                 nugget.graph.add_edge(new_s_bnd, nug_matching["b"])
+                nugget.graph.add_edge(t_free_name,nug_matching["l"])
 
 
     # add input for free
@@ -150,18 +167,24 @@ def to_kappa_like(self):
         nug_pattern = TypedDiGraph(self.graph)
         nug_pattern.add_nodes_from([("b", mat["b"]), ("l", mat["l"])])
         nug_pattern.add_edges_from([("l", "b")])
+        contact_map.add_edge("t_FREE",mat["l"])
         # we rewrite the nuggets
         for nugget in contact_map_com.subCmds.values():
             nug_matchings = Rewriter.find_matching(nugget.graph,
                                                     nug_pattern)
             for (j, nug_matching) in enumerate(nug_matchings):
+                # is_free_name = "is_free_tmp_brk_{}_{}".format(i,j)
+                # t_free_name = "t_free_tmp_brk_{}_{}".format(i,j)
+                # if is_free_name not in nugget.graph.node.keys():
+                #     nugget.graph.add_node(is_free_name, "is_FREE")
+                # if t_free_name not in nugget.graph.node.keys():
+                #     nugget.graph.add_node(t_free_name, "t_FREE")
+                # nugget.graph.add_edge(t_free_name, is_free_name)
                 t_brk = "t_brk_{}_{}".format(i, j)
                 nugget.graph.add_node(t_brk, new_t_brk)
-                # nugget.graph.remove_edge(nug_matching["l"],
-                #                          nug_matching["b"])
-                #nugget.graph.add_edge(nug_matching["l"], t_brk)
                 nugget.graph.add_edge(t_brk, nug_matching["l"])
                 nugget.graph.add_edge(t_brk, nug_matching["b"])
+                # nugget.graph.add_edge(t_free_name,nug_matching["l"])
 
 
     # add input for is_bnd
