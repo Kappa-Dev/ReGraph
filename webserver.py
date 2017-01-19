@@ -866,7 +866,6 @@ def get_graph_attr(path_to_graph=""):
 @app.route("/graph/update_graph_attr/<path:path_to_graph>", methods=["PUT"])
 def update_graph_attr(path_to_graph=""):
     def update_graph_attr_aux(command):
-        print(request.json)
         if not isinstance(request.json, dict):
             return("the body must be a json object", 404)
         recursive_merge(command.graph.graph_attr, request.json)
@@ -888,13 +887,14 @@ def recursive_merge(dict1, dict2):
 @app.route("/graph/delete_graph_attr/<path:path_to_graph>", methods=["PUT"])
 def delete_graph_attr(path_to_graph=""):
     def delete_graph_attr_aux(command):
+
         if not isinstance(request.json, list):
             return("the body must be a list of keys", 412)
         if request.json == []:
             return("the body must not be the empty list", 412)
         keypath = list(request.json)
         current_dict = command.graph.graph_attr
-        while len(keypath) < 1:
+        while len(keypath) > 1:
             k = keypath.pop(0)
             if k in current_dict.keys() and isinstance(current_dict[k], dict):
                 current_dict = current_dict[k]
