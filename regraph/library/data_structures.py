@@ -30,7 +30,7 @@ class TypedNode:
         return
 
     def __str__(self):
-        return "Node:\nType: %s\nAttributes: %s\n" % (self.type_, self.attrs_)
+        return "Node:\nType: %s\nAttributes: %s\nAttribute_typing: %s\n" % (self.type_, self.attrs_, self.attributes_typing)
 
     def set_attrs(self, attrs):
         self.attrs_ = attrs

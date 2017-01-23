@@ -1135,6 +1135,12 @@ class Rewriter:
             )
         Gm, P_Gm, Gm_G = pullback_complement(left_h, L_G)
         Gprime, Gm_Gprime, R_Gprime = pushout(P_Gm, right_h)
+
+        for n in Gm.nodes():
+            n2 = Gm_G[n]
+            if graph.node[n2].attributes_typing:
+                Gprime.node[Gm_Gprime[n]].attributes_typing = copy.deepcopy(graph.node[n2].attributes_typing)
+
         Gprime.metamodel_ = graph.metamodel_
         if graph.graph_attr:
             Gprime.graph_attr = copy.deepcopy(graph.graph_attr) 

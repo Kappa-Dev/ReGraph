@@ -1564,6 +1564,11 @@
                 "attrs": {}
               },
               {
+                "from": "agent",
+                "to": "mod",
+                "attrs": {}
+              },
+              {
                 "from": "locus",
                 "to": "region",
                 "attrs": {}

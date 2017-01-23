@@ -198,7 +198,8 @@ kami.add_edges_from(
         ("locus", "bnd"),
         ("locus", "brk"),
         ("locus", "is_bnd"),
-        ("locus", "is_free")
+        ("locus", "is_free"),
+        ("agent","mod")
     ]
 )
 

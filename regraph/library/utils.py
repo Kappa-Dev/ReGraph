@@ -7,6 +7,9 @@ import warnings
 
 def valid_attributes(attrs, typed_node_target):
     pred = typed_node_target.attributes_typing
+    # print("")
+    # print("target",typed_node_target)
+    # print("node",attrs)
     if pred is not None:
         return pred(attrs)
     return is_subdict(attrs, typed_node_target.attrs_)

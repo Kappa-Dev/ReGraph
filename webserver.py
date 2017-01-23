@@ -1,4 +1,4 @@
-from flask import Flask, Response, request, send_from_directory, redirect, url_for
+from flask import Flask, Response, request, send_from_directory, redirect, url_for, render_template
 from regraph.library.graph_hierarchy import Hierarchy
 
 from flask_cors import CORS, cross_origin
@@ -14,8 +14,8 @@ import subprocess
 
 class MyFlask(Flask):
 
-    def __init__(self, name):
-        super().__init__(name, static_url_path="")
+    def __init__(self, name, template_folder):
+        super().__init__(name, static_url_path="", template_folder=template_folder)
         self.cmd = Hierarchy("/", None)
         self.cmd.graph = None
 
@@ -34,10 +34,12 @@ def include_kami_metamodel(app, base_name, metamodel_name):
         app.cmd.subCmds[base_name].graph = base_kami
         app.cmd.subCmds[base_name]._do_mkdir(metamodel_name)
         app.cmd.subCmds[base_name].subCmds[metamodel_name].graph = kami
+        for n in kami.nodes():
+            print(kami.node[n].attributes_typing)
     except KeyError as e:
         return (str(e), 404)
 
-app = MyFlask(__name__)
+app = MyFlask(__name__,template_folder="RegraphGui")
 app.config['DEBUG'] = True
 CORS(app)
 json_schema_context = flex.load('iRegraph_api.yaml')
@@ -835,12 +837,16 @@ def get_version():
 
 @app.route("/", methods=["GET"])
 def goto_gui():
-    if os.path.isdir("RegraphGui"):
-        subprocess.call(["sed", "-i",
-                         "s#server_url\ *=\ *.*;#server_url = \""+request.url_root[:-1]+"\";#",
-                         "RegraphGui/index.js"])
+    # if os.path.isdir("RegraphGui"):
+    #     subprocess.call(["sed", "-i",
+    #                      "s#server_url\ *=\ *.*;#server_url = \""+request.url_root[:-1]+"\";#",
+    #                      "RegraphGui/index.js"])
     return redirect(url_for("get_gui"))
 
+
+@app.route("/gui/index.js", methods=["GET"])
+def get_index():
+    return render_template("index.js",server_url=request.url_root[:-1])
 
 @app.route("/gui/", methods=["GET"])
 @app.route("/gui/<path:path>", methods=["GET"])
