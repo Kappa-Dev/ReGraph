@@ -1559,6 +1559,11 @@
                 "attrs": {}
               },
               {
+                "from": "residue",
+                "to": "region",
+                "attrs": {}
+              },
+              {
                 "from": "locus",
                 "to": "agent",
                 "attrs": {}

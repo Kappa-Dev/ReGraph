@@ -187,6 +187,7 @@ kami.add_edges_from(
     [
         ("region", "agent"),
         ("residue", "agent"),
+        ("residue", "region"),
         ("state", "agent"),
         ("syn", "agent"),
         ("deg", "agent"),
