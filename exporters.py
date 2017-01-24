@@ -790,7 +790,7 @@ class KappaExporter(object):
                                             str(a2), str(site2))]
 
 
-        def do_MOD(state, LHS, RHS):
+        def do_MOD(mod, state, LHS, RHS):
             # site targeted
             site = G.out_edges(state)[0][1]
 
@@ -810,7 +810,7 @@ class KappaExporter(object):
             else:
                 old_state = deepcopy(G.node[state].attrs_['val'])
                 old_state = old_state.pop()
-            if "val" in G.node[mod].attrs_.keys():
+            if (G.node[mod].attrs_ and "val" in G.node[mod].attrs_.keys()):
                 new_state = G.node[mod].attrs_['val']
             else:
                 new_state = "undefined_value"
@@ -1124,7 +1124,7 @@ class KappaExporter(object):
         MOD_g = set()
         for mod in MOD_a_g:
             MOD_g.update(keys_by_value(G.hom.mapping_, mod))
-
+        print("modG:",MOD_g)
         for mod in MOD_g:
             # target of MOD
             t = G.in_edges(mod)[0][0]
@@ -1135,7 +1135,7 @@ class KappaExporter(object):
                 if hom.mapping_[G.hom.mapping_[state]] == 'state':
                     aux_aux_rules = deepcopy(rules)
                     for LHS, RHS in aux_aux_rules:
-                        do_MOD(state, LHS, RHS)
+                        do_MOD(mod,state, LHS, RHS)
                     aux_rules += aux_aux_rules
 
             rules = aux_rules
