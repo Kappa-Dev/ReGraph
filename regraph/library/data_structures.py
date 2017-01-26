@@ -1310,6 +1310,8 @@ class Homomorphism(object):
             if n in B.nodes():
                 dic[n] = n
             else:
+                print("anodes:", A.nodes())
+                print("cathodes:", B.nodes())
                 raise ValueError(
                     "Node %s not found in the second graph" % n
                 )

@@ -76,7 +76,7 @@ class Rule():
     def _do_add_not_catched(self, node_id, node_type):
         t2 = copy.deepcopy(self.transformer)
         t2.add_node(node_id, node_type)
-        new_graph = Rewriter.rewrite_simple(t2)
+        # new_graph = Rewriter.rewrite_simple(t2)
         self.transformer = t2
         self.history.append(("add " + node_id + ":" + str(node_type),
                              lambda t: t.add_node(node_id, node_type)))
@@ -84,7 +84,7 @@ class Rule():
     def _do_ln_not_catched(self, node1, node2):
         t2 = copy.deepcopy(self.transformer)
         t2.add_edge(node1, node2)
-        new_graph = Rewriter.rewrite_simple(t2)
+        # new_graph = Rewriter.rewrite_simple(t2)
         self.transformer = t2
         self.history.append(("ln " + node1 + " " + node2,
                              lambda t: t.add_edge(node1, node2)))
@@ -92,7 +92,7 @@ class Rule():
     def _do_rm_node_not_catched(self, node_id):
         t2 = copy.deepcopy(self.transformer)
         t2.remove_node(node_id)
-        new_graph = Rewriter.rewrite_simple(t2)
+        # new_graph = Rewriter.rewrite_simple(t2)
         self.transformer = t2
         self.history.append(("rm_node " + node_id,
                              lambda t: t.remove_node(node_id)))
@@ -104,7 +104,7 @@ class Rule():
     def _do_merge_nodes_not_catched(self, node1, node2, new_name):
         t2 = copy.deepcopy(self.transformer)
         t2.merge_nodes(node1, node2, new_name)
-        new_graph = Rewriter.rewrite_simple(t2)
+        # new_graph = Rewriter.rewrite_simple(t2)
         self.transformer = t2
         self.history.append(
             ("merge_nodes " + node1 + " " + node2 + " " + new_name,
@@ -118,7 +118,7 @@ class Rule():
     def _do_clone_node_not_catched(self, node_id, new_name):
         t2 = copy.deepcopy(self.transformer)
         t2.clone_node(node_id, new_name)
-        new_graph = Rewriter.rewrite_simple(t2)
+        # new_graph = Rewriter.rewrite_simple(t2)
         self.transformer = t2
         self.history.append(("clone_node " + node_id + " " + new_name,
                              lambda t: t.clone_node(node_id, new_name)))
@@ -126,7 +126,35 @@ class Rule():
     def _do_rm_edge_uncatched(self, source, target, force_flag):
         t2 = copy.deepcopy(self.transformer)
         t2.remove_edge(source, target)
-        new_graph = Rewriter.rewrite_simple(t2)
+        # new_graph = Rewriter.rewrite_simple(t2)
         self.transformer = t2
         self.history.append(("remove_edge " + source + " " + target,
                              lambda t: t.remove_edge(source, target)))
+
+    def remove_attrs(self, node, attr_dict, force=False):
+        self.transformer.remove_node_attrs(node,attr_dict)
+
+    #precondition: degree > 0
+    def ancestors(self, degree):
+        if not self.parent:
+            raise ValueError("the command does not have a parent")
+        if degree == 1:
+            leftMapping = [{"left":n,"right":self.transformer.L.node[n].type_}
+                           for n in self.transformer.L.nodes()]
+            rightMapping = [{"left":n,"right":self.transformer.R.node[n].type_}
+                           for n in self.transformer.R.nodes()]
+            preservedMapping = [{"left":n,"right":self.transformer.P.node[n].type_}
+                           for n in self.transformer.P.nodes()]
+            return {"L":leftMapping,"P":preservedMapping,"R":rightMapping}               
+        else:
+            parentMapping = self.parent.ancestors_aux(degree-1)
+            leftMapping = [{"left":n,"right":parentMapping[self.transformer.L.node[n].type_]}
+                           for n in self.transformer.L.nodes()]
+            rightMapping = [{"left":n,"right":parentMapping[self.transformer.R.node[n].type_]}
+                           for n in self.transformer.R.nodes()]
+            preservedMapping = [{"left":n,"right":parentMapping[self.transformer.P.node[n].type_]}
+                           for n in self.transformer.P.nodes()]
+            return {"L":leftMapping,"P":preservedMapping,"R":rightMapping}
+
+
+                             

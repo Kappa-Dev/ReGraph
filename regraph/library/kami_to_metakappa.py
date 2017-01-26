@@ -391,6 +391,38 @@ def to_kappa_like(self):
                 nugget.graph.add_edge(nug_matching["s"], node_name)
                 nugget.graph.add_edge(node_name, nug_matching["a"])
 
+
+    # states associated to residues associated to agent
+    sites_residue_pattern = TypedDiGraph(self.graph.metamodel_)
+    sites_residue_pattern.add_nodes_from(
+        [("s", "state"), ("r", "residue"),("reg","region"), ("a", "agent")])
+    sites_residue_pattern.add_edges_from(
+        [("s", "r"), ("r", "reg"), ("reg","a")])
+    matchings = Rewriter.find_matching(self.graph, sites_residue_pattern)
+    for (i, mat) in enumerate(matchings):
+
+        # modify action graph
+        new_node_name = "{}_{}_{}".format(mat["r"],mat["s"], i)
+        contact_map.add_node(new_node_name, "site")
+        contact_map.add_edge(mat["s"], new_node_name)
+        contact_map.add_edge(new_node_name, mat["a"])
+
+        # modify nuggets
+        nug_pattern = TypedDiGraph(self.graph)
+        nug_pattern.add_nodes_from(
+            [("s", mat["s"]), ("a", mat["a"]),("reg",mat["reg"]), ("r", mat["r"])])
+        nug_pattern.add_edges_from(
+            [("s", "r"), ("r", "reg"), ("reg","a")])
+        for nugget in contact_map_com.subCmds.values():
+            nug_matchings = Rewriter.find_matching(nugget.graph,
+                                                    nug_pattern)
+            for (j, nug_matching) in enumerate(nug_matchings):
+                node_name = "{}_{}_{}_{}".format(nug_matching["r"], nug_matching["s"],
+                                                    i, j)
+                nugget.graph.add_node(node_name, new_node_name)
+                nugget.graph.add_edge(nug_matching["s"], node_name)
+                nugget.graph.add_edge(node_name, nug_matching["a"])
+
     # change and remove old types and edges
     contact_map_com.graph = contact_map
     for nugget in contact_map_com.subCmds.values():

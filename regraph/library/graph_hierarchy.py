@@ -388,14 +388,18 @@ class Hierarchy():
 
     #precondition: degree > 0
     
-    def ancestors(self, degree):
+    def ancestors_aux(self, degree):
         if not self.parent:
             raise ValueError("the command does not have a parent")
         if degree == 1:
             return {n:self.graph.node[n].type_ for n in self.graph.nodes()}
         else:
-            parentMapping = self.parent.ancestors(degree-1)
+            parentMapping = self.parent.ancestors_aux(degree-1)
             return {n:parentMapping[self.graph.node[n].type_] for n in self.graph.nodes()}
+
+    def ancestors(self, degree):
+        mapping = self.ancestors_aux(degree) 
+        return [{"left":n,"right":t} for (n,t) in mapping.items()]
 
 Hierarchy.to_kappa_like = to_kappa_like
 Hierarchy.link_states = link_states

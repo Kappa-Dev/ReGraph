@@ -34,8 +34,6 @@ def include_kami_metamodel(app, base_name, metamodel_name):
         app.cmd.subCmds[base_name].graph = base_kami
         app.cmd.subCmds[base_name]._do_mkdir(metamodel_name)
         app.cmd.subCmds[base_name].subCmds[metamodel_name].graph = kami
-        for n in kami.nodes():
-            print(kami.node[n].attributes_typing)
     except KeyError as e:
         return (str(e), 404)
 
@@ -491,6 +489,8 @@ def add_node(command):
     if node_type is None and command.main_graph().metamodel_ is not None:
         return("this graph is typed, the node_type argument is necessary",
                412)
+    # if node_type is None:
+    #     node_type = ""           
     if node_id in command.main_graph().nodes():
         return(Response("the node already exists", 412))
     try:
@@ -844,10 +844,35 @@ def goto_gui():
     return redirect(url_for("get_gui"))
 
 
+@app.route("/guidark/index.js", methods=["GET"])
 @app.route("/gui/index.js", methods=["GET"])
 def get_index():
     return render_template("index.js",server_url=request.url_root[:-1])
 
+@app.route("/guidark/index2.js", methods=["GET"])
+@app.route("/gui/index2.js", methods=["GET"])
+def get_index2():
+    return render_template("index2.js",server_url=request.url_root[:-1])
+
+
+@app.route("/gui/kr.css", methods=["GET"])
+def get_kr():
+        resp = Response(response=render_template("kr.css",
+                                css_defs="def_light.css"),
+                        status=200,
+                        mimetype="text/css")
+        return resp
+
+@app.route("/guidark/kr.css", methods=["GET"])
+def get_dark_kr():
+        resp = Response(response=render_template("kr.css",
+                                css_defs="def_dark.css"),
+                        status=200,
+                        mimetype="text/css")
+        return resp
+
+@app.route("/guidark/", methods=["GET"])
+@app.route("/guidark/<path:path>", methods=["GET"])
 @app.route("/gui/", methods=["GET"])
 @app.route("/gui/<path:path>", methods=["GET"])
 def get_gui(path="index.html"):
@@ -988,6 +1013,8 @@ def get_children(path_to_graph=""):
     return get_command(path_to_graph, get_children_aux)
 
     
+@app.route("/rule/get_ancestors/", methods=["GET"])
+@app.route("/rule/get_ancestors/<path:path_to_graph>", methods=["GET"])
 @app.route("/graph/get_ancestors/", methods=["GET"])
 @app.route("/graph/get_ancestors/<path:path_to_graph>", methods=["GET"])
 def get_ancestors(path_to_graph=""):
@@ -1000,8 +1027,7 @@ def get_ancestors(path_to_graph=""):
             if degree < 1:
                 raise ValueError("degree must be greater than one")
             mapping = command.ancestors(degree)
-            json_like = [{"left":n,"right":t} for (n,t) in mapping.items()]
-            resp = Response(response=json.dumps(json_like),
+            resp = Response(response=json.dumps(mapping),
                             status=200,
                             mimetype="application/json")
             return resp
