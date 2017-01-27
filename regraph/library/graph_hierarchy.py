@@ -25,22 +25,37 @@ class Hierarchy():
     def main_graph(self):
         return(self.graph)
 
-    def hierarchy_to_json(self, include_rules):
+    def hierarchy_to_json(self, include_rules, depth_bound):
+        if depth_bound and depth_bound <= 0:
+            children = []
+        elif depth_bound:
+            children = [sub.hierarchy_to_json(include_rules, depth_bound - 1)
+                        for sub in self.subCmds.values()] 
+        else:                 
+            children = [sub.hierarchy_to_json(include_rules, None)
+                        for sub in self.subCmds.values()] 
+
         h = {"name": self.name,
              "top_graph": (self.graph.to_json_like()
                            if self.graph is not None
                            else None),
-             "children": [sub.hierarchy_to_json(include_rules)
-                          for sub in self.subCmds.values()]}
+             "children": children }
         if include_rules:
             h["rules"] = [r.to_json_like() for r in self.subRules.values()]
         return h
 
-    def hierarchy_of_names(self, include_rules):
-        #print(self.subCmds.keys())
+    def hierarchy_of_names(self, include_rules, depth_bound):
+        if depth_bound and depth_bound <= 0:
+            children = []
+        elif depth_bound:
+            children = [sub.hierarchy_of_names(include_rules, depth_bound - 1)
+                        for sub in self.subCmds.values()] 
+        else:                 
+            children = [sub.hierarchy_of_names(include_rules, None)
+                        for sub in self.subCmds.values()] 
         h = {"name": self.name,
-             "children": [sub.hierarchy_of_names(include_rules)
-                          for sub in self.subCmds.values()]}
+             "children": children}
+
         if include_rules:
             h["rules"] = list(self.subRules.keys())
         return h

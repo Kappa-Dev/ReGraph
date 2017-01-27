@@ -56,19 +56,16 @@ class Rule():
         self.pattern.removeType(type_to_remove)
         self.transformer.removeType(type_to_remove)
         self.initTransformer.removeType(type_to_remove)
-        self.do_update("")
 
     def convertType(self, old_type, new_type):
         self.pattern.convertType(old_type, new_type)
         self.transformer.convertType(old_type, new_type)
         self.initTransformer.convertType(old_type, new_type)
-        self.do_update("")
 
     def removeEdgesByType(self, source_type, target_type):
         self.pattern.removeEdgesByType(source_type, target_type)
         self.transformer.removeEdgesByType(source_type, target_type)
         self.initTransformer.removeEdgesByType(source_type, target_type)
-        self.do_update("")
 
     def main_graph(self):
         return(self.transformer.R)

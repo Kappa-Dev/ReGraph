@@ -121,10 +121,19 @@ def merge_hierachy(path_to_graph=""):
 def get_hierarchy(path_to_graph=""):
     include_rules = request.args.get("rules") == "true"
     include_graphs = request.args.get("include_graphs")
-    if include_graphs == "true":
-        return get_graph_hierarchy(path_to_graph, include_rules)
+    depth_bound = request.args.get("depth_bound")
+    if depth_bound:
+        try:
+            depth_bound = int(depth_bound)
+        except ValueError:
+            return ("depth_bound is not an integer",404)    
     else:
-        return get_graph_hierarchy_only_names(path_to_graph, include_rules)
+        depth_bound = None
+
+    if include_graphs == "true":
+        return get_graph_hierarchy(path_to_graph, include_rules, depth_bound)
+    else:
+        return get_graph_hierarchy_only_names(path_to_graph, include_rules, depth_bound)
 
 
 @app.route("/hierarchy/", methods=["DELETE"])
@@ -193,11 +202,11 @@ def get_graph(path_to_graph):
         return(Response(response="graph not found : " + str(e), status=404))
 
 
-def get_graph_hierarchy(path_to_graph, include_rules):
+def get_graph_hierarchy(path_to_graph, include_rules, depth_bound):
     try:
         cmd = get_cmd(path_to_graph)
         resp = Response(
-                 response=json.dumps(cmd.hierarchy_to_json(include_rules)),
+                 response=json.dumps(cmd.hierarchy_to_json(include_rules,depth_bound)),
                  status=213 if include_rules else 210,
                  mimetype="application/json")
         return (resp)
@@ -205,11 +214,11 @@ def get_graph_hierarchy(path_to_graph, include_rules):
         return(Response(response="graph not found : " + str(e), status=404))
 
 
-def get_graph_hierarchy_only_names(path_to_graph, include_rules):
+def get_graph_hierarchy_only_names(path_to_graph, include_rules, depth_bound):
     try:
         cmd = get_cmd(path_to_graph)
         resp = Response(
-                response=json.dumps(cmd.hierarchy_of_names(include_rules)),
+                response=json.dumps(cmd.hierarchy_of_names(include_rules,depth_bound)),
                 status=212 if include_rules else 211,
                 mimetype="application/json")
         return (resp)
