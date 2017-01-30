@@ -844,12 +844,12 @@ def get_version():
     return("https://github.com/Kappa-Dev/ReGraph/commit/"+commit_hash.decode(), 200)
 
 
+@app.route("/favicon.ico", methods=["GET"])
+def get_icon():
+    return send_from_directory('RegraphGui', "favicon.ico")
+
 @app.route("/", methods=["GET"])
 def goto_gui():
-    # if os.path.isdir("RegraphGui"):
-    #     subprocess.call(["sed", "-i",
-    #                      "s#server_url\ *=\ *.*;#server_url = \""+request.url_root[:-1]+"\";#",
-    #                      "RegraphGui/index.js"])
     return redirect(url_for("get_gui"))
 
 
