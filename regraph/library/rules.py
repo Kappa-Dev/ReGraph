@@ -1,14 +1,15 @@
+"""Docs here."""
 import copy
 from regraph.library.rewriters import Transformer
-from regraph.library.rewriters import Rewriter
-import json
+
+
 class Rule():
 
     def __init__(self, name, pattern, parent):
         self.name = name
         self.pattern = copy.deepcopy(pattern)
-        self.pattern.input_constraints = {}
-        self.pattern.output_constraints = {}
+        self.pattern.input_constraints = dict()
+        self.pattern.output_constraints = dict()
         self.parent = parent
         self.transformer = Transformer(self.pattern)
         self.transformer.L = copy.deepcopy(self.pattern)
@@ -20,7 +21,7 @@ class Rule():
             self.transformer.identity().mapping_)
         self.initTransformer = copy.deepcopy(self.transformer)
         self.history = []
-    
+
     def __eq__(self, value):
         return(self.transformer == value.transformer)
 
@@ -97,7 +98,6 @@ class Rule():
     def _do_rm_node_force_not_catched(self, node_id):
         self._do_rm_node_not_catched(node_id)
 
-
     def _do_merge_nodes_not_catched(self, node1, node2, new_name):
         t2 = copy.deepcopy(self.transformer)
         t2.merge_nodes(node1, node2, new_name)
@@ -106,11 +106,10 @@ class Rule():
         self.history.append(
             ("merge_nodes " + node1 + " " + node2 + " " + new_name,
              lambda t: t.merge_nodes(node1, node2, new_name))
-             )
+        )
 
     def _do_merge_nodes_force_not_catched(self, node1, node2, new_node_id):
         self._do_merge_nodes_not_catched(node1, node2, new_node_id)
-
 
     def _do_clone_node_not_catched(self, node_id, new_name):
         t2 = copy.deepcopy(self.transformer)
@@ -129,29 +128,42 @@ class Rule():
                              lambda t: t.remove_edge(source, target)))
 
     def remove_attrs(self, node, attr_dict, force=False):
-        self.transformer.remove_node_attrs(node,attr_dict)
+        self.transformer.remove_node_attrs(node, attr_dict)
 
-    #precondition: degree > 0
+    # precondition: degree > 0
     def ancestors(self, degree):
         if not self.parent:
             raise ValueError("the command does not have a parent")
         if degree == 1:
-            leftMapping = [{"left":n,"right":self.transformer.L.node[n].type_}
-                           for n in self.transformer.L.nodes()]
-            rightMapping = [{"left":n,"right":self.transformer.R.node[n].type_}
-                           for n in self.transformer.R.nodes()]
-            preservedMapping = [{"left":n,"right":self.transformer.P.node[n].type_}
-                           for n in self.transformer.P.nodes()]
-            return {"L":leftMapping,"P":preservedMapping,"R":rightMapping}               
+            left_mapping = [
+                {"left": n,
+                 "right": self.transformer.L.node[n].type_}
+                for n in self.transformer.L.nodes()]
+            right_mapping = [
+                {"left": n,
+                 "right": self.transformer.R.node[n].type_}
+                for n in self.transformer.R.nodes()]
+            preserved_mapping = [
+                {"left": n,
+                 "right": self.transformer.P.node[n].type_}
+                for n in self.transformer.P.nodes()]
+            return {"L": left_mapping,
+                    "P": preserved_mapping,
+                    "R": right_mapping}
         else:
-            parentMapping = self.parent.ancestors_aux(degree-1)
-            leftMapping = [{"left":n,"right":parentMapping[self.transformer.L.node[n].type_]}
-                           for n in self.transformer.L.nodes()]
-            rightMapping = [{"left":n,"right":parentMapping[self.transformer.R.node[n].type_]}
-                           for n in self.transformer.R.nodes()]
-            preservedMapping = [{"left":n,"right":parentMapping[self.transformer.P.node[n].type_]}
-                           for n in self.transformer.P.nodes()]
-            return {"L":leftMapping,"P":preservedMapping,"R":rightMapping}
-
-
-                             
+            parent_mapping = self.parent.ancestors_aux(degree - 1)
+            left_mapping = [
+                {"left": n,
+                 "right": parent_mapping[self.transformer.L.node[n].type_]}
+                for n in self.transformer.L.nodes()]
+            right_mapping = [
+                {"left": n,
+                 "right": parent_mapping[self.transformer.R.node[n].type_]}
+                for n in self.transformer.R.nodes()]
+            preserved_mapping = [
+                {"left": n,
+                 "right": parent_mapping[self.transformer.P.node[n].type_]}
+                for n in self.transformer.P.nodes()]
+            return {"L": left_mapping,
+                    "P": preserved_mapping,
+                    "R": right_mapping}

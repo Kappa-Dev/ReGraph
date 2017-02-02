@@ -50,6 +50,7 @@ def keys_by_value(dictionary, val):
             res.append(key)
     return res
 
+
 def fold_left(f, init, l):
     """ f : a -> b -> b
         init : b
@@ -60,15 +61,17 @@ def fold_left(f, init, l):
         res = f(x, res)
     return res
 
+
 def to_set(value):
     if (type(value) == set) | (type(value) == list):
         return set(value)
     else:
         return {value}
 
+
 def normalize_attrs(attrs_):
     if attrs_ is not None:
-        for k,v in attrs_.items():
+        for k, v in attrs_.items():
             attrs_[k] = to_set(v)
     else:
         attrs_ = {}
@@ -119,6 +122,7 @@ def merge_attributes(attr1, attr2, method="union"):
         raise ValueError("Merging method %s is not defined!" % method)
     return result
 
+
 def colors_by_type(graph):
     """
     Generate colors for node by types.
@@ -156,7 +160,7 @@ def plot_graph(graph, types=True, filename=None):
         for node in graph.nodes():
             labels[node] = str(node)
             if types:
-                labels[node]+= ":"+str(graph.node[node].type_)
+                labels[node] += ":" + str(graph.node[node].type_)
         offset = 0.05
         for p in pos:  # raise text positions
             pos[p][1] += offset
@@ -164,9 +168,10 @@ def plot_graph(graph, types=True, filename=None):
 
         # save to the file
         if filename is not None:
-            with open(filename, "w") as f:
-                plt.savefig(f)
-                plt.clf()
+            # with open(filename, "w") as f:
+                # plt.savefig(f)
+            plt.savefig(filename)
+            plt.clf()
         else:
             plt.show()
         return
@@ -207,6 +212,7 @@ def plot_instance(graph, pattern, instance, filename=None):
         else:
             plt.show()
         return
+
 
 def dict_sub(A, B):
     res = A.copy()
