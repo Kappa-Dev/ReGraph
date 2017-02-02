@@ -56,9 +56,16 @@ python setup.py install
 
 ## Run tests
 
+### Nosetests
 ```
-python tests/test.py
+nosetests -v -s nosetests
 ```
+### Other tests
+
+```
+python -W ignore tests/tester.py -N 10 -n 20 -e 0.1 -t 500 --meta tests/big_graph/metametameta.xml -m 'prop;canonic' -comp
+```
+
 ## Installation with docker
 ```
 docker run --name regraph -p 5000:5000 -t ylecornec/regraph:latest
