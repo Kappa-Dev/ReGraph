@@ -2,7 +2,7 @@
 import os
 
 from nose.tools import assert_equals
-from nose.tools import raises
+# from nose.tools import raises
 
 from regraph.library.data_structures import (TypedDiGraph,
                                              TypedGraph,
@@ -19,10 +19,10 @@ class TestRewrites(object):
     def __init__(self):
         self.graph = TypedDiGraph()
         self.graph.add_node(1, 'agent',
-                          {'name': 'EGFR', 'state': 'p'})
+                            {'name': 'EGFR', 'state': 'p'})
         self.graph.add_node(2, 'action', attrs={'name': 'BND'})
         self.graph.add_node(3, 'agent',
-                          {'name': 'Grb2', 'aa': 'S', 'loc': 90})
+                            {'name': 'Grb2', 'aa': 'S', 'loc': 90})
         self.graph.add_node(4, 'region', attrs={'name': 'SH2'})
         self.graph.add_node(5, 'agent', attrs={'name': 'EGFR'})
         self.graph.add_node(6, 'action', attrs={'name': 'BND'})
@@ -84,22 +84,22 @@ class TestRewrites(object):
     def test_add_node(self):
         trans = Transformer(self.graph.copy())
 
-        trans.add_node(15, 'agent', {'name' : 'Grb3'})
+        trans.add_node(15, 'agent', {'name': 'Grb3'})
 
-
-        Gprime = Rewriter.rewrite(Homomorphism.identity(trans.L, trans.G), trans)
+        Gprime = Rewriter.rewrite(
+            Homomorphism.identity(trans.L, trans.G), trans)
 
         assert(15 in Gprime.nodes())
         assert(Gprime.node[15].type_ == 'agent')
-        assert(Gprime.node[15].attrs_ == {'name' : {'Grb3'}})
+        assert(Gprime.node[15].attrs_ == {'name': {'Grb3'}})
 
     def test_merge_nodes(self):
         trans = Transformer(self.graph.copy())
 
         trans.merge_nodes(1, 3, 15)
 
-
-        Gprime = Rewriter.rewrite(Homomorphism.identity(trans.L, trans.G), trans)
+        Gprime = Rewriter.rewrite(
+            Homomorphism.identity(trans.L, trans.G), trans)
 
         assert(15 in Gprime.nodes())
         assert(Gprime.node[15].type_ == 'agent')
@@ -112,8 +112,8 @@ class TestRewrites(object):
 
         trans.remove_node(1)
 
-
-        Gprime = Rewriter.rewrite(Homomorphism.identity(trans.L, trans.G), trans)
+        Gprime = Rewriter.rewrite(
+            Homomorphism.identity(trans.L, trans.G), trans)
 
         assert(1 not in Gprime.nodes())
 
@@ -122,8 +122,8 @@ class TestRewrites(object):
 
         trans.clone_node(1, 111)
 
-
-        Gprime = Rewriter.rewrite(Homomorphism.identity(trans.L, trans.G), trans)
+        Gprime = Rewriter.rewrite(
+            Homomorphism.identity(trans.L, trans.G), trans)
 
         assert(1 in Gprime.nodes())
         assert(111 in Gprime.nodes())
@@ -135,36 +135,37 @@ class TestRewrites(object):
 
         trans.add_edge(8, 10)
 
+        Gprime = Rewriter.rewrite(
+            Homomorphism.identity(trans.L, trans.G), trans)
 
-        Gprime = Rewriter.rewrite(Homomorphism.identity(trans.L, trans.G), trans)
-
-        assert((8,10) in Gprime.edges())
+        assert((8, 10) in Gprime.edges())
 
     def test_remove_edge(self):
         trans = Transformer(self.graph.copy())
 
         trans.remove_edge(13, 11)
 
+        Gprime = Rewriter.rewrite(
+            Homomorphism.identity(trans.L, trans.G), trans)
 
-        Gprime = Rewriter.rewrite(Homomorphism.identity(trans.L, trans.G), trans)
-
-        assert((13,11) not in Gprime.edges())
+        assert((13, 11) not in Gprime.edges())
 
     def test_add_node_attrs(self):
         trans = Transformer(self.graph.copy())
 
-        trans.add_node_attrs(1, {'name' : {'Grb1'}})
+        trans.add_node_attrs(1, {'name': {'Grb1'}})
 
-        Gprime = Rewriter.rewrite(Homomorphism.identity(trans.L, trans.G), trans)
-        assert(Gprime.node[1].attrs_ == {'name': {'EGFR','Grb1'}, 'state': {'p'}})
+        Gprime = Rewriter.rewrite(
+            Homomorphism.identity(trans.L, trans.G), trans)
+        assert(Gprime.node[1].attrs_ == {'name': {'EGFR', 'Grb1'}, 'state': {'p'}})
 
     def test_add_edge_attrs(self):
         trans = Transformer(self.graph.copy())
 
-        trans.add_edge_attrs(1, 2, {'name' : 'Grb1'})
+        trans.add_edge_attrs(1, 2, {'name': 'Grb1'})
 
-
-        Gprime = Rewriter.rewrite(Homomorphism.identity(trans.L, trans.G), trans)
+        Gprime = Rewriter.rewrite(
+            Homomorphism.identity(trans.L, trans.G), trans)
 
         assert(Gprime.get_edge(1, 2) ==  {'s': {'p'}, 'name' : {'Grb1'}})
 
@@ -172,7 +173,6 @@ class TestRewrites(object):
         trans = Transformer(self.graph.copy())
 
         trans.remove_node_attrs(1, {'name' : {'EGFR'}})
-
 
         Gprime = Rewriter.rewrite(Homomorphism.identity(trans.L, trans.G), trans)
 
@@ -290,7 +290,7 @@ class TestRewrites(object):
             g = rw.graph_
             trans = Rewriter.transformer_from_command(g, trans_list[i])
 
-            h1,h2 = trans.get()
+            h1, h2 = trans.get()
             instances = Rewriter.find_matching(g, trans.L)
 
             instance = Homomorphism(trans.L, g, instances[0])
@@ -299,7 +299,7 @@ class TestRewrites(object):
 
             plot_graph(
                 rw.graph_,
-                filename=os.path.join(__location__, "undir_rule_to_hom_RHS.png"))
+                filename=os.path.join(str(__location__), "undir_rule_to_hom_RHS.png"))
 
             rw = Rewriter(rw.graph_)
 
