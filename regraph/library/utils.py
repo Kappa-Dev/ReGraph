@@ -5,6 +5,7 @@ from matplotlib import pyplot as plt
 import warnings
 
 from regraph.library.parser import parser
+import copy
 
 
 def valid_attributes(attrs, typed_node_target):
@@ -217,7 +218,7 @@ def plot_instance(graph, pattern, instance, filename=None):
 
 
 def dict_sub(A, B):
-    res = A.copy()
+    res = copy.deepcopy(A)
     if B is None:
         return res
     for key, value in B.items():
@@ -236,6 +237,7 @@ def dict_sub(A, B):
                         (str(el), str(key)), RuntimeWarning)
             for el in elements_to_remove:
                 A[key].remove(el)
+    return res
 
 
 def listOr(*l):
