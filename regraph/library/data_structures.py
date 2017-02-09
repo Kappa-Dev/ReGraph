@@ -36,6 +36,7 @@ class TypedNode:
         self.attrs_ = attrs
         normalize_attrs(self.attrs_)
 
+
 class TypedDiGraph(nx.DiGraph):
     """Define simple typed directed graph.
 
@@ -51,14 +52,33 @@ class TypedDiGraph(nx.DiGraph):
     def __init__(self, metamodel=None, load_file=None):
         nx.DiGraph.__init__(self)
         self.metamodel_ = metamodel
-        self.input_constraints = {}
-        self.output_constraints = {}
+        self.hom = None
+        self.input_constraints = dict()
+        self.output_constraints = dict()
         self.unckecked_nodes = set()
         self.wrong_nodes = set()
-        self.hom = None
-        self.graph_attr = {}
-        if load_file != None:
+
+        self.graph_attr = dict()
+
+        if load_file:
             self.load(load_file)
+
+    def __str__(self):
+        res = ""
+        res += "Nodes : \n"
+        for n in self.nodes():
+            res += str(n)+" : "+str(self.node[n].type_)
+            res += " | "+str(self.node[n].attrs_)+"\n"
+        res += "\n"
+        res += "Edges : \n"
+        for n1,n2 in self.edges():
+            res += str((n1,n2))+" : " + str(self.get_edge(n1, n2)) + "\n"
+        res += "\n"
+        res += "attributes : \n"
+        res += str(self.graph_attr)
+        res += "\n"
+
+        return res
 
     def __eq__(self, A):
         if not (type(A) == type(self)):
@@ -91,39 +111,27 @@ class TypedDiGraph(nx.DiGraph):
 
     def sub(self, B, homBA):
         res = type(self)()
+        f = homBA.mapping_
+
         for n in self.nodes():
             if n not in homBA.mapping_.values():
                 res.add_node(n,
                              self.node[n].type_,
                              self.node[n].attrs_)
-
-        for n1 in res.nodes():
-            for n2 in res.nodes():
-                if (n1, n2) in self.edges():
-                    if (n1, n2) not in B.edges():
-                        res.add_edge(n1,
-                                     n2,
-                                     self.get_edge(n1, n2))
-
-        return res
-
-    def __str__(self):
-        res = ""
-        res += "Nodes : \n"
-        for n in self.nodes():
-            res += str(n)+" : "+str(self.node[n].type_)
-            res += " | "+str(self.node[n].attrs_)+"\n"
-        res += "\n"
-        res += "Edges : \n"
-        for n1,n2 in self.edges():
-            res += str((n1,n2))+" : "+str(self.get_edge(n1, n2))+"\n"
-        res += "\n"
-        res += "attributes : \n"
-        res += str(self.graph_attr)
-        res += "\n"
-
-        return res
-     
+        for (n1, n2) in self.edges():
+            if n1 in res.nodes() and n2 in res.nodes():
+                b_keys_1 = keys_by_value(f, n1)
+                b_keys_2 = keys_by_value(f, n2)
+                if len(b_keys_1) == 0 or len(b_keys_2) == 0:
+                    res.add_edge(n1, n2, self.get_edge(n1, n2))
+                else:
+                    for k1 in b_keys_1:
+                        for k2 in b_keys_2:
+                            if (k1, k2) not in B.edges():
+                                res.add_edge(n1,
+                                             n2,
+                                             self.get_edge(n1, n2))
+        return res     
     
     def add_node(self, node_id, node_type, attrs=None):
         if node_id not in self.nodes():
@@ -163,13 +171,15 @@ class TypedDiGraph(nx.DiGraph):
                 )
 
     def valid_attributes(self, node, attrs_dict):
-        if self.metamodel_ is None:
-            return True
-        t = self.node[node].type_
-        # pred = self.metamodel_.node[t].attributes_typing
-        # if pred is not None and attrs_dict:
-        #     return pred(attrs_dict)
-        return valid_attributes(attrs_dict, self.metamodel_.node[t])
+        # if self.metamodel_ is None:
+        #     return True
+        # t = self.node[node].type_
+        # # pred = self.metamodel_.node[t].attributes_typing
+        # # if pred is not None and attrs_dict:
+        # #     return pred(attrs_dict)
+        # print(attrs_dict, self.metamodel_.node[t].attrs_)
+        # return valid_attributes(attrs_dict, self.metamodel_.node[t])
+        return True
 
     def add_node_attrs(self, node, attrs_dict):
         if node not in self.nodes():
@@ -201,12 +211,12 @@ class TypedDiGraph(nx.DiGraph):
             if not self.valid_attributes(node, new_attrs):
                 raise ValueError("The attributes are not valid")
             normalize_attrs(new_attrs)
-            if self.node[node].attrs_ is None:
-                self.node[node].attrs_ = new_attrs
-                normalize_attrs(self.node[node].attrs_)
-            else:
-                for key, value in new_attrs.items():
-                    self.node[node].attrs_[key] = to_set(value)
+            # if self.node[node].attrs_ is None:
+            self.node[node].attrs_ = new_attrs
+            # normalize_attrs(self.node[node].attrs_)
+            # else:
+            #     for key, value in new_attrs.items():
+            #         self.node[node].attrs_[key] = to_set(value)
 
     def remove_node_attrs(self, node, attrs_dict):
         if node not in self.nodes():
@@ -247,6 +257,7 @@ class TypedDiGraph(nx.DiGraph):
                 raise ValueError(
                     "The attr_dict argument must be a dictionary."
                 )
+        new_attrs = deepcopy(attrs)
         if s not in self.nodes():
             raise ValueError("Node %s is not defined!" % s)
         if t not in self.nodes():
@@ -259,8 +270,8 @@ class TypedDiGraph(nx.DiGraph):
                     "Edge from '%s' to '%s' is not allowed by metamodel" %
                     (source_type, target_type)
                 )
-        normalize_attrs(attrs)
-        nx.DiGraph.add_edge(self, s, t, attrs)
+        normalize_attrs(new_attrs)
+        nx.DiGraph.add_edge(self, s, t, new_attrs)
         self.unckecked_nodes |= {s,t}
 
     def remove_edge(self, source, target):
@@ -300,17 +311,20 @@ class TypedDiGraph(nx.DiGraph):
                 else:
                     self.edge[node_1][node_2][key].update(to_set(value))
 
-    def update_edge_attrs(self, node_1, node_2, new_attrs):
+    def update_edge_attrs(self, node_1, node_2, attrs):
         if (node_1, node_2) not in self.edges():
             raise ValueError("Edge %s-%s does not exist" % (str(node_1), str(node_2)))
-        elif new_attrs == None:
+        elif attrs is None:
             warnings.warn(
                 "You want to update %s-%s attrs with an empty attrs_dict" %\
                 (str(node_1), str(node_2))
             )
         else:
-            for key, value in new_attrs.items():
-                self.edge[node_1][node_2][key] = to_set(value)
+            new_attrs = deepcopy(attrs)
+            normalize_attrs(new_attrs)
+            self.edge[node_1][node_2] = new_attrs
+            # for key, value in new_attrs.items():
+            #     self.edge[node_1][node_2][key] = to_set(value)
 
     def remove_edge_attrs(self, node_1, node_2, attrs_dict):
         if (node_1, node_2) not in self.edges():
@@ -355,6 +369,7 @@ class TypedDiGraph(nx.DiGraph):
 
                 self.remove_edge(n1, n2)
         return self
+
     def exists_outgoing_edge(self, source):
         return(source in self.edge and self.edge[source])
 
@@ -591,25 +606,27 @@ class TypedDiGraph(nx.DiGraph):
         return new_node
 
     #use relabel nodes instead
-    def relabel_node(self, n, node_name):
-        in_neighbors = self.in_edges(n)
-        out_neighbors = self.out_edges(n)
-        self.add_node(node_name,
-                      self.node[n].type_,
-                      self.node[n].attrs_)
-        for n2 in in_neighbors:
-            self.add_edge(n2[0],
-                          node_name,
-                          self.get_edge(n2[0],
-                                        n))
-        for n2 in out_neighbors:
-            self.add_edge(node_name,
-                          n2[1],
-                          self.get_edge(node_name,
-                                        n2[1]))
-        self.remove_node(n)
+    # def relabel_node(self, n, node_name):
+    #     """."""
+    #     in_neighbors = self.in_edges(n)
+    #     out_neighbors = self.out_edges(n)
+    #     self.add_node(node_name,
+    #                   self.node[n].type_,
+    #                   self.node[n].attrs_)
+    #     for n2 in in_neighbors:
+    #         self.add_edge(n2[0],
+    #                       node_name,
+    #                       self.get_edge(n2[0],
+    #                                     n))
+    #     for n2 in out_neighbors:
+    #         self.add_edge(node_name,
+    #                       n2[1],
+    #                       self.get_edge(node_name,
+    #                                     n2[1]))
+    #     self.remove_node(n)
 
     def subgraph(self, nbunch):
+        """Return a subgraph induced by the nodes given in `nbunch`."""
         res = type(self)()
         for n in nbunch:
             res.add_node(n, self.node[n].type_, self.node[n].attrs_)
@@ -620,19 +637,21 @@ class TypedDiGraph(nx.DiGraph):
 
         res.metamodel_ = self.metamodel_
         if (self.hom):
-            res.hom = TypedHomomorphism(
+            res.hom = Homomorphism(
                             res,
                             self.metamodel_,
                             dict([(n, self.hom[n]) for n in res.nodes()])
                     )
-
         return res
         
+    def append_to_node_names(self, token):
+        """Append a token to the node names."""
+        self.relabel_nodes(
+            {n: (str(n) + "_" + str(token)) for n in self.nodes()}
+        )
         
-    def appendToNodesNames(self,token):
-        return(self.relabel_nodes({n:(str(n)+"_"+str(token)) for n in self.nodes()}))
-        
-    def myRelabelNode(self, n, new_name):
+    def relabel_node(self, n, new_name):
+        """Relabel a node in the graph."""
         self.clone_node(n, new_name)
         self.remove_node(n)
 
@@ -642,10 +661,39 @@ class TypedDiGraph(nx.DiGraph):
         Similar to networkx.relabel.relabel_nodes:
         https://networkx.github.io/documentation/development/_modules/networkx/relabel.html
         """
+        unique_names = set(mapping.values())
+        if len(unique_names) != len(self.nodes()):
+            raise ValueError("Attemp to relabel nodes failed: the IDs are not unique!") 
+        
+        temp_names = {}
+        # Relabeling of the nodes: if at some point new ID conflicts
+        # with already existing ID - assign temp ID
+        for key, value in mapping.items():
+            if key != value:
+                if value not in self.nodes():
+                    self.clone_node(key, value)
+                    self.remove_node(key)
+                else:
+                    new_name = self.clone_node(key)
+                    temp_names[new_name] = value
+        # Relabeling the nodes with the temp ID to their new IDs
+        for key, value in temp_names:
+            if key != value:
+                self.clone_node(key, value)
+                self.remove_node(key)
+        return
+
+    def get_relabeled_graph(self, mapping):
+        """Return a graph isomorphic to `self` but with the nides
+        begin relabeled according to the mapping specified.
+
+        Similar to networkx.relabel.relabel_nodes:
+        https://networkx.github.io/documentation/development/_modules/networkx/relabel.html
+        """
         if self.metamodel_ is not None:
-            g = TypedDiGraph(self.metamodel_.copy())
+            g = type(self)(self.metamodel_.copy())
         else:
-            g = TypedDiGraph()
+            g = type(self)()
 
         old_nodes = set(mapping.keys())
 
@@ -675,49 +723,55 @@ class TypedDiGraph(nx.DiGraph):
             g.set_edge(s, t, attributes[(s, t)])
         return g
 
+    def convert_type(self, old_type, new_type):
+        """Convert types of the nodes with `old_type` to a `new_type`."""
+        nodes_to_convert = {n for (n, v) in self.node.items() if v.type_ == old_type}
+        for n in nodes_to_convert:
+            self.node[n].type_ = new_type
 
-    def convertType(self,old_type,new_type):
-        nodes_to_convert = {n for (n,v) in self.node.items() if v.type_==old_type}
-        for n in nodes_to_convert :
-            self.node[n].type_=new_type
-
-
-    def removeType(self,type_to_remove):
-        nodes_to_remove = {n for (n,v) in self.node.items() if v.type_==type_to_remove}
+    def remove_by_type(self, type_to_remove):
+        """Remove nodes of the type `type_to_remove`."""
+        nodes_to_remove = {n for (n, v) in self.node.items() if v.type_ == type_to_remove}
         for n in nodes_to_remove : 
             self.remove_node(n)
-        return(nodes_to_remove)    
+        return nodes_to_remove    
         
-    def nodesOfType(self, node_type):
-        if self.metamodel_ is None :
-            raise ValueError("The graph is not typed")
-        return [n for n in self.node.keys() if self.node[n].type_==node_type]
+    def nodes_by_type(self, node_type):
+        # if self.metamodel_ is None :
+        #     raise ValueError("The graph is not typed")
+        return [n for n in self.node.keys() if self.node[n].type_ == node_type]
 
-    def nodesOfTypes(self, type_list):
-        return [node for nodes in [self.nodesOfType(t) for t in type_list] for node in nodes]
+    def nodes_by_types(self, type_list):
+        return [node for nodes in [self.nodes_by_type(t) for t in type_list] for node in nodes]
 
-    def removeEdgesByType(self,source_type,target_type):
-        for (n1,n2) in self.edges():
+    def remove_edges_by_type(self, source_type, target_type):
+        for (n1, n2) in self.edges():
             if (self.node[n1].type_ == source_type  
                     and self.node[n2].type_ == target_type):
                 self.remove_edge(n1,n2)
-            
-    def validMetamodel(self):
-        return self.validNewMetamodel(self.metamodel_)
 
-    def validNewMetamodel(self, new_metamodel):
-        typing = {node_id: self.node[node_id].type_ for node_id in self.nodes()}
-        return(TypedHomomorphism.is_valid_homomorphism(self, new_metamodel, typing))
-        
+    def is_valid_metamodel(self, metamodel):
+        """Verify if `metamodel` is a valid metamodel for the graph."""
+        typing = {
+            node_id: self.node[node_id].type_ for node_id in self.nodes()
+        }
+        res = True
+        try:
+            TypingHomomorphism.is_valid_homomorphism(self, new_metamodel, typing)
+        except:
+            res = False
+        return res
 
-    def updateMetamodel(self, new_metamodel):
-        # typing = {node_id: self.node[node_id].type_ for node_id in self.nodes()}
-        # if Homomorphism.is_valid_homomorphism(self,new_metamodel,typing):
-        if self.validNewMetamodel(new_metamodel):    
+    def valid_metamodel(self):
+        """Return whether current metamodel is valid."""
+        return self.is_valid_metamodel(self.metamodel_)
+
+    def update_metamodel(self, new_metamodel):
+        """Try to update the metamodel."""
+        if self.is_valid_metamodel(new_metamodel):    
             self.metamodel_=new_metamodel
         else :
-            raise ValueError("metamodel update did not work")
-
+            raise ValueError("Metamodel is not valid for the given graph!")
 
     def from_json_like(self, j_data):
         """ Create a graph from a python dictionary """
@@ -1060,16 +1114,10 @@ class TypedDiGraph(nx.DiGraph):
 
         return res
 
-# class ConstraintGraph(TypedDiGraph):
-#     def __init__(self, metamodel=None, load_file=None):
-#         super().__init__(metamodel,load_file)
-#         self.input_constraints = {}
-#         self.output_constraints = {}
-
-    def getInputConstraints(self, node):
+    def get_input_constraints(self, node):
         return(self.input_constraints.get(node,[]))
 
-    def getOutputConstraints(self, node):
+    def get_output_constraints(self, node):
         return(self.output_constraints.get(node,[]))
 
     # def checkInputConstraint(self, node_type, constraint_node, cond, mapping):
@@ -1084,7 +1132,7 @@ class TypedDiGraph(nx.DiGraph):
     #         output_nodes = [target_node for (source_node, target_node) in self.edges() if source_node == n ]
     #         num_of_output_edges = len([target_node for target_node in output_nodes if mapping[target_node] == constraint_node])
 
-    def checkConstraintsOfNode(self, typing_graph, mapping, n):
+    def check_node_constraints(self, typing_graph, mapping, n):
         input_nodes = [i for (i,n) in self.edges()]
         wrong_conds = []
         for (n1, (cond, viewableCond)) in typing_graph.getInputConstraints(mapping[n]):
@@ -1096,8 +1144,7 @@ class TypedDiGraph(nx.DiGraph):
             num_of_output_edges = len([target_node for target_node in output_nodes if mapping[target_node]==n1])
             if not cond(num_of_output_edges):
                 wrong_conds.append(viewableCond)
-        return wrong_conds       
-    
+        return wrong_conds        
 
     # def checkConstraints(self, typing_graph, mapping, only_unckecked = False ):
     #     to_check = self.unckecked_nodes | self.wrong_nodes if only_unckecked else self.nodes()
@@ -1114,7 +1161,7 @@ class TypedDiGraph(nx.DiGraph):
     #                 return False
     #     return True            
  
-    def checkAllConstraintsOfNode(self, node):
+    def check_all_node_constraints(self, node):
         #can use a if to avoid the first useless composition 
         current_typing_graph = self.metamodel_
         sub_typing_graph = self
@@ -1123,7 +1170,7 @@ class TypedDiGraph(nx.DiGraph):
         while current_typing_graph is not None:
             top_typing = {node_id: sub_typing_graph.node[node_id].type_ for node_id in sub_typing_graph.nodes()}
             new_typing = {node_id: t3 for (node_id,t1) in current_typing.items() for (t2,t3) in top_typing.items() if t1==t2}
-            wrong_conds += self.checkConstraintsOfNode(current_typing_graph, new_typing, node)
+            wrong_conds += self.check_node_constraints(current_typing_graph, new_typing, node)
             sub_typing_graph = current_typing_graph
             current_typing_graph = current_typing_graph.metamodel_
             current_typing = new_typing
@@ -1133,7 +1180,7 @@ class TypedDiGraph(nx.DiGraph):
         to_check = self.nodes() if all_nodes else self.unckecked_nodes.copy() #| self.wrong_nodes
         all_wrong_conds = []
         for n in to_check:
-            wrong_conds = self.checkAllConstraintsOfNode(n)
+            wrong_conds = self.check_all_node_constraints(n)
             all_wrong_conds += wrong_conds
             if wrong_conds == []:
                 self.unckecked_nodes -= {n}
@@ -1141,8 +1188,6 @@ class TypedDiGraph(nx.DiGraph):
             elif all_nodes:
                 self.unckecked_nodes |= {n}
         return(all_wrong_conds)
-
-
 
     # def checkAllConstraints(self):
     #     #can use a if to avoid the first useless composition 
@@ -1159,18 +1204,17 @@ class TypedDiGraph(nx.DiGraph):
     #         current_typing = new_typing
     #     return True    
 
-
-    def addConstraint(self, n1, n2, cond, viewableCond, constraints):
+    def add_constraint(self, n1, n2, cond, viewable_cond, constraints):
         if n1 not in self.nodes():
             raise ValueError(n1 + " is not a node of the graph")
         if n2 not in self.nodes():
             raise ValueError(n2 + " is not a node of the graph")
-        if viewableCond in [vcond for (_,(_,vcond)) in constraints.get(n1,[])]:
+        if viewable_cond in [vcond for (_,(_,vcond)) in constraints.get(n1,[])]:
             raise ValueError(" condition already exists")
-        constraints.setdefault(n1,[]).append((n2,(cond,viewableCond)))
+        constraints.setdefault(n1,[]).append((n2, (cond, viewable_cond)))
 
-    def addInputConstraint(self, n1, n2, cond, viewableCond):
-        self.addConstraint(n1, n2, cond, viewableCond, self.input_constraints)
+    def add_input_constraint(self, n1, n2, cond, viewable_cond):
+        self.add_constraint(n1, n2, cond, viewable_cond, self.input_constraints)
 
         # if n1 not in self.nodes():
             # raise ValueError(n1 + " is not a node of the graph")
@@ -1180,8 +1224,8 @@ class TypedDiGraph(nx.DiGraph):
             # raise ValueError(" condition already exists")
         # self.input_constraints.setdefault(n1,[]).append((n2,(cond,viewableCond)))
 
-    def addOutputConstraint(self, n1, n2, cond, viewableCond):
-        self.addConstraint(n1, n2, cond, viewableCond, self.output_constraints)
+    def add_output_constraint(self, n1, n2, cond, viewable_cond):
+        self.add_constraint(n1, n2, cond, viewable_cond, self.output_constraints)
         # if n1 not in self.nodes():
             # raise ValueError(n1 + " is not a node of the graph")
         # if n2 not in self.nodes():
@@ -1190,26 +1234,47 @@ class TypedDiGraph(nx.DiGraph):
             # raise ValueError(" condition already exists")
         # self.output_constraints.setdefault(n1,[]).append((n2,(cond, viewableCond)))
 
-    def deleteConstraints(self, n, viewableCond, constraints):
+    def delete_constraints(self, n, viewable_cond, constraints):
         if n not in self.nodes():
             raise ValueError(n + " is not a node of the graph")
         old = constraints.get(n,[]).copy()    
         constraints[n]=[(target_node,(cond, vCond)) for (target_node,(cond, vCond)) in constraints.get(n,[]) if vCond != viewableCond]
         if constraints[n]==old:
-            raise ValueError("Constraint "+viewableCond+" not found")
+            raise ValueError("Constraint " + viewable_cond + " not found")
 
+    def delete_output_constraint(self, n, viewable_cond):
+        self.delete_constraints(n, viewable_cond, self.output_constraints)
 
-    def deleteOutputConstraint(self, n, viewableCond):
-        self.deleteConstraints(n, viewableCond, self.output_constraints)
+    def delete_input_constraint(self, n, viewable_cond):
+        self.delete_constraints(n, viewable_cond, self.input_constraints)
 
-    def deleteInputConstraint(self, n, viewableCond):
-        self.deleteConstraints(n, viewableCond, self.input_constraints)
 
 class TypedGraph(TypedDiGraph):
     """Define simple typed undirected graph."""
 
     def __init__(self, metamodel=None, load_file=None):
         TypedDiGraph.__init__(self, metamodel, load_file)
+
+    def __str__(self):
+        res = ""
+        res += "Nodes : \n"
+        for n in self.nodes():
+            res += str(n)+" : "+str(self.node[n].type_)
+            res += " | "+str(self.node[n].attrs_)+"\n"
+        res += "\n"
+        res += "Edges : \n"
+        edges = []
+        for n1, n2 in self.edges():
+            if (n1, n2) not in edges and (n2, n1) not in edges:
+                edges.append((n1, n2))
+        for n1, n2 in edges:
+            res += str((n1, n2)) + " : " + str(self.get_edge(n1, n2)) + "\n"
+        res += "\n"
+        res += "attributes : \n"
+        res += str(self.graph_attr)
+        res += "\n"
+
+        return res
 
     def add_edge(self, s, t, attrs=None, **attr):
         TypedDiGraph.add_edge(self, s, t, attrs, **attr)
@@ -1238,14 +1303,17 @@ class TypedGraph(TypedDiGraph):
     def get_edge(self, u, v):
         return merge_attributes(self.edge[u][v], self.edge[v][u])
 
+
 class Homomorphism(object):
     """Define graph homomorphism data structure."""
 
-    def __init__(self, source, target, dictionary):
+    def __init__(self, source, target, dictionary, ignore_types=False, ignore_attrs=False):
         if Homomorphism.is_valid_homomorphism(source, target, dictionary):
             self.source_ = source
             self.target_ = target
             self.mapping_ = dictionary
+            self.ignore_types = ignore_types
+            self.ignore_attrs = ignore_attrs
         else:
             raise ValueError("Homomorphism is not valid!")
 
@@ -1274,8 +1342,10 @@ class Homomorphism(object):
             len(set(self.mapping_.values()))
 
     @staticmethod
-    def is_valid_homomorphism(source, target, dictionary):
-        """Check if the homomorphism is valid (preserves edges)."""
+    def is_valid_homomorphism(source, target, dictionary, ignore_attrs=False, ignore_types=False):
+        """Check if the homomorphism is valid (preserves edges, 
+        preserves types and attributes if requires)."""
+
         # check if there is mapping for all the nodes of source graph
         if set(source.nodes()) != set(dictionary.keys()):
             raise ValueError(
@@ -1284,7 +1354,8 @@ class Homomorphism(object):
             raise ValueError(
                 "invalid homomorphism: image not in target graph"
             )
-        # check connectivity and edges attr matches
+
+        # check connectivity
         for s_edge in source.edges():
             if not (dictionary[s_edge[0]], dictionary[s_edge[1]]) in target.edges():
                 if not target.is_directed():
@@ -1298,10 +1369,36 @@ class Homomorphism(object):
                         "Invalid homomorphism: Connectivity is not preserved!"+\
                         " Was expecting an edge between %s and %s" %
                         (dictionary[s_edge[0]], dictionary[s_edge[1]]))
+
+        if not ignore_types:
+            # check nodes match with types
+            for s, t in dictionary.items():
+                if (source.node[s].type_ != None) and (source.node[s].type_ != target.node[t].type_):
+                    raise ValueError(
+                        "Invalid homomorphism: Node types do not match (%s:%s and %s:%s)!" %
+                        (s, str(source.node[s].type_), str(t), str(target.node[t].type_)))
+                if not ignore_attrs:
+                    # check sets of attributes of nodes (here homomorphism = set inclusion)
+                    if not valid_attributes(source.node[s].attrs_, target.node[t]):
+                        raise ValueError(
+                            "Invalid homomorphism: Attributes of nodes source:'%s' and target:'%s' do not match!" %
+                            (str(s), str(t)))
+
+        if not ignore_attrs:
+            # check sets of attributes of edges (homomorphism = set inclusion)
+            for s_edge in source.edges():
+                source_edge_attrs = source.get_edge(s_edge[0], s_edge[1])
+                target_edge_attrs = target.get_edge(dictionary[s_edge[0]],
+                                                    dictionary[s_edge[1]])
+                if not is_subdict(source_edge_attrs, target_edge_attrs):
+                    raise ValueError(
+                        "Invalid homomorphism: Attributes of edges (%s)-(%s) and (%s)-(%s) do not match!" %
+                        (s_edge[0], s_edge[1], dictionary[s_edge[0]],
+                            dictionary[s_edge[1]]))
         return True
 
     @staticmethod
-    def identity(A, B):
+    def identity(A, B, ignore_types=False, ignore_attrs=False):
         """ Tries to create the identity homomorphism of A from A to B,
             fails if some nodes of A aren't found in B
         """
@@ -1310,12 +1407,10 @@ class Homomorphism(object):
             if n in B.nodes():
                 dic[n] = n
             else:
-                print("anodes:", A.nodes())
-                print("cathodes:", B.nodes())
                 raise ValueError(
                     "Node %s not found in the second graph" % n
                 )
-        return Homomorphism(A, B, dic)
+        return Homomorphism(A, B, dic, ignore_types, ignore_attrs)
 
     @staticmethod
     def compose(h1, h2):
@@ -1323,174 +1418,32 @@ class Homomorphism(object):
         return Homomorphism(
             h2.source_,
             h1.target_,
-            dict([(n, h1.mapping_[h2.mapping_[n]]) for n in h2.mapping_.keys()])
+            dict([(n, h1.mapping_[h2.mapping_[n]]) for n in h2.mapping_.keys()]),
         )
 
-    def find_final_PBC(self):
-        # edges to remove will be removed automatically upon removal of the nodes
-        nodes = set([n for n in self.target_.nodes()
-                     if n not in self.mapping_.values()])
-        node_attrs = {}
-        for node in self.source_.nodes():
-            if node not in node_attrs.keys():
-                node_attrs.update({node: {}})
 
-            mapped_node = self.mapping_[node]
-            mapped_attrs = self.target_.node[mapped_node].attrs_
-
-            attrs = self.source_.node[node].attrs_
-            if mapped_attrs is not None and attrs is not None:
-                for key, value in mapped_attrs.items():
-                    if key not in attrs.keys():
-                        node_attrs[node].update({key: value})
-                    else:
-                        if type(value) != set:
-                            value = set([value])
-                        else:
-                            node_attrs[node].update(
-                                {key: set([el for el in value if el not in attrs[key]])})
-
-        edge_attrs = {}
-        edges = set()
-        for edge in self.target_.edges():
-            if self.source_.is_directed():
-                sources = keys_by_value(self.mapping_, edge[0])
-                targets = keys_by_value(self.mapping_, edge[1])
-                if len(sources) == 0 or len(targets) == 0:
-                    continue
-                for s in sources:
-                    for t in targets:
-                        if (s, t) not in self.source_.edges():
-                            edges.add((s, t))
-            else:
-                sources = keys_by_value(self.mapping_, edge[0])
-                targets = keys_by_value(self.mapping_, edge[1])
-                if len(sources) == 0 or len(targets) == 0:
-                    continue
-                for s in sources:
-                    for t in targets:
-                        if (s, t) not in self.source_.edges():
-                            if (t, s) not in self.source_.edges():
-                                edges.add((s, t))
-
-        for edge in self.source_.edges():
-            if edge not in edge_attrs.keys():
-                edge_attrs.update({edge: {}})
-
-            mapped_edge = (self.mapping_[edge[0]], self.mapping_[edge[1]])
-            mapped_attrs = self.target_.edge[mapped_edge[0]][mapped_edge[1]]
-
-            attrs = self.source_.edge[edge[0]][edge[1]]
-
-            for key, value in mapped_attrs.items():
-                if key not in attrs.keys():
-                    edge_attrs[edge].update({key: value})
-                else:
-                    if type(value) != set:
-                        value = set([value])
-                    else:
-                        edge_attrs[edge].update(
-                            {key: set([el for el in value if el not in attrs[key]])})
-        return (nodes, edges, node_attrs, edge_attrs)
-
-    def find_PO(self):
-        nodes = set([n for n in self.target_.nodes() if n not in self.mapping_.values()])
-
-        node_attrs = {}
-        for node in self.source_.nodes():
-            if node not in node_attrs.keys():
-                node_attrs.update({node: {}})
-
-            mapped_node = self.mapping_[node]
-            mapped_attrs = self.target_.node[mapped_node].attrs_
-
-            attrs = self.source_.node[node].attrs_
-            if mapped_attrs is not None and attrs is not None:
-                for key, value in mapped_attrs.items():
-                    if key not in attrs.keys():
-                        node_attrs[node].update({key: value})
-                    else:
-                        if type(value) != set:
-                            value = set([value])
-                        else:
-                            node_attrs[node].update(
-                                {key: set([el for el in value if el not in attrs[key]])})
-
-        edges = dict()
-        edge_attrs = {}
-
-        for edge in self.target_.edges():
-            sources = keys_by_value(self.mapping_, edge[0])
-            targets = keys_by_value(self.mapping_, edge[1])
-            if len(sources) == 0 or len(targets) == 0:
-                edges[(edge[0], edge[1])] = self.target_.edge[edge[0]][edge[1]]
-                continue
-            for s in sources:
-                for t in targets:
-                    if (s, t) not in self.source_.edges():
-                        edges[(edge[0], edge[1])] = self.target_.edge[edge[0]][edge[1]]
-
-        for edge in self.source_.edges():
-            if edge not in edge_attrs.keys():
-                edge_attrs.update({edge: {}})
-
-            mapped_edge = (self.mapping_[edge[0]], self.mapping_[edge[1]])
-            mapped_attrs = self.target_.edge[mapped_edge[0]][mapped_edge[1]]
-
-            attrs = self.source_.edge[edge[0]][edge[1]]
-
-            for key, value in mapped_attrs.items():
-                if key not in attrs.keys():
-                    edge_attrs[edge].update({key: value})
-                else:
-                    if type(value) != set:
-                        value = set([value])
-                    else:
-                        if type(attrs[key]) != set:
-                            edge_attrs[edge].update(
-                                {key: set([el for el in value
-                                           if el not in set([attrs[key]])])})
-                        else:
-                            edge_attrs[edge].update(
-                                {key: set([el for el in value
-                                           if el not in attrs[key]])})
-        return (nodes, edges, node_attrs, edge_attrs)
-
-
-
-
-class TypedHomomorphism(Homomorphism):
-    """Define graph typed homomorphism data structure."""
-
+class TypingHomomorphism(Homomorphism):
     def __init__(self, source, target, dictionary):
-        if TypedHomomorphism.is_valid_homomorphism(source, target, dictionary):
+        if TypingHomomorphism.is_valid_homomorphism(source, target, dictionary):
             self.source_ = source
             self.target_ = target
             self.mapping_ = dictionary
         else:
-            raise ValueError("TypedHomomorphism is not valid!")
-
-
-    @staticmethod
-    def from_untyped(hom):
-        """ Convert untyped Homomorphism to TypedHomomorphism by checking the
-            types condition on the graphs
-        """
-        return TypedHomomorphism(hom.source_, hom.target_, hom.mapping_)
+            raise ValueError("TypingHomomorphism is not valid!")
 
     @staticmethod
     def is_valid_homomorphism(source, target, dictionary):
         """Check if the homomorphism is valid (preserves edges and types)."""
 
         #check preserving of edges
-        Homomorphism.is_valid_homomorphism(source, target, dictionary)
+        Homomorphism.is_valid_homomorphism(source, target, dictionary, ignore_types=True)
 
         # check nodes match with types and sets of attributes
         for s, t in dictionary.items():
             if (source.node[s].type_ != None) and (source.node[s].type_ != t):
                 raise ValueError(
-                    "Invalid homomorphism: Node type does not match (%s:%s and %s)!" %
-                    (s, str(source.node[s].type_), str(t)))
+                    "Invalid homomorphism: Node types do not form a chain (%s:%s and %s:%s)!" %
+                    (s, str(source.node[s].type_), str(t), str(target.node[t].type_)))
 
             # pred = target.node[t].attributes_typing
             # if pred is not None and pred(source.node[s].attrs_):
@@ -1512,23 +1465,3 @@ class TypedHomomorphism(Homomorphism):
                         dictionary[s_edge[1]]))
 
         return True
-
-    @staticmethod
-    def canonic(G, T):
-        """ Tries to create the canonic TypedHomomorphism where each node is
-            mapped to its type in the typing graph
-        """
-        if T == None:
-            return None
-        hom_dict = {}
-        for n in G.nodes():
-            if G.node[n].type_ == None:
-                hom_dict[n] = n
-            else:
-                if not G.node[n].type_ in T.nodes():
-                    raise ValueError(
-                        "Type %s not found in typing graph" % str(G.node[n].type_)
-                    )
-                hom_dict[n] = G.node[n].type_
-        return TypedHomomorphism(G, T, hom_dict)
-

@@ -14,7 +14,8 @@ from regraph.library.utils import (is_subdict,
                                    dict_sub,
                                    fold_left,
                                    keys_by_value,
-                                   make_canonical_commands)
+                                   make_canonical_commands,
+                                   merge_attributes)
 from regraph.library.data_structures import (TypedGraph,
                                              TypedDiGraph,
                                              Homomorphism,)
@@ -587,7 +588,7 @@ class Rule(object):
         return
 
 
-    # Advanced operations
+    # Advanced operations (???)
 
     # def merge_edges(self, e1, e2, name_n1=None, name_n2=None):
     #     """ Merges two edges """
@@ -651,22 +652,13 @@ class Rule(object):
                 "Cannot merge less than two nodes!", RuntimeWarning
             )
 
+    def is_valid_metamodel(self, new_metamodel):
+        return(all([g.is_valid_metamodel(new_metamodel) for g in [self.p, self.rhs, self.lhs]]))
 
-#     def appendToNodesNames(self, token):
-#         self.P = self.P.appendToNodesNames(token)
-#         self.R = self.R.appendToNodesNames(token)
-#         self.L = self.L.appendToNodesNames(token)
-#         self.P_R_dict = {(str(k) + "_" + str(token)): (str(v) + "_" + str(token)) for (k, v) in self.P_R_dict.items()}
-#         self.P_L_dict = {(str(k) + "_" + str(token)): (str(v) + "_" + str(token)) for (k, v) in self.P_L_dict.items()}
-
-#     def validNewMetamodel(self, new_meta_model):
-#         return(all([g.validNewMetamodel for g in [self.G, self.P, self.R, self.L]]))
-
-#     def updateMetaModel(self, new_meta_model):
-#         self.G.updateMetamodel(new_meta_model)
-#         self.P.updateMetamodel(new_meta_model)
-#         self.R.updateMetamodel(new_meta_model)
-#         self.L.updateMetamodel(new_meta_model)
+    def update_metamodel(self, new_metamodel):
+        self.p.update_metamodel(new_metamodel)
+        self.rhs.update_metamodel(new_metamodel)
+        self.lhs.update_metamodel(new_metamodel)
 
     def remove_by_type(self, type_to_remove):
         nodes_removed_from_p = self.P.remove_type(type_to_remove)
@@ -678,16 +670,15 @@ class Rule(object):
         self.lhs.remove_by_type(type_to_remove)
 
     def convert_type(self, old_type, new_type):
-        self.G.convertType(old_type, new_type)
-        self.P.convertType(old_type, new_type)
-        self.R.convertType(old_type, new_type)
-        self.L.convertType(old_type, new_type)
+        self.p.convert_type(old_type, new_type)
+        self.lhs.convert_type(old_type, new_type)
+        self.rhs.convert_type(old_type, new_type)
 
-    def removeEdgesByType(self,source_type,target_type): 
-        self.G.removeEdgesByType(source_type,target_type) 
-        self.P.removeEdgesByType(source_type,target_type) 
-        self.R.removeEdgesByType(source_type,target_type) 
-        self.L.removeEdgesByType(source_type,target_type) 
+    def remove_edges_by_type(self, source_type, target_type): 
+        self.p.remove_edges_by_type(source_type, target_type) 
+        self.rhs.remove_edges_by_type(source_type, target_type) 
+        self.lhs.remove_edges_by_type(source_type, target_type) 
+
 
 class Rewriter(object):
     """Rewriter object incapsulates graph hierarchy and performs
@@ -718,7 +709,7 @@ class Rewriter(object):
         # For the sake of security we will temporarily make
         # all the nodes ids to be int
         labels_mapping = dict([(n, i + 1) for i, n in enumerate(self.graph.nodes())])
-        g = self.graph.relabel_nodes(labels_mapping)
+        g = self.graph.get_relabeled_graph(labels_mapping)
         matching_nodes = set()
 
         # find all the nodes matching the nodes in pattern
@@ -797,6 +788,8 @@ class Rewriter(object):
 
         (g_m, p_g_m, g_m_g) = pullback_complement(p_lhs, l_g)
         (g_prime, g_m_g_prime, r_g_prime) = pushout(p_g_m, p_rhs)
+
+        return g_prime
         # print(p_g_m)
         # print(g_prime)           
 
@@ -808,7 +801,150 @@ class Rewriter(object):
         """Apply rule at the given level and propagate the changes up."""
         pass
 
+    def apply_rule_in_place(self, instance, rule):
 
+        p_g_m = {}
+        # Remove/clone nodes
+        for n in rule.lhs.nodes():
+            p_keys = keys_by_value(rule.p_lhs, n)
+            # Remove nodes
+            if len(p_keys) == 0:
+                self.graph.remove_node(instance[n])
+            # Keep nodes
+            elif len(p_keys) == 1:
+                p_g_m[p_keys[0]] = instance[n]
+            # Clone nodes
+            else:
+                i = 1
+                for k in p_keys:
+                    if i == 1:
+                        p_g_m[k] = instance[n]
+                    else:
+                        new_name = self.graph.clone_node(instance[n])
+                        p_g_m[k] = new_name
+                    i += 1
+        
+        # Remove edges
+        for (n1, n2) in rule.lhs.edges():
+            p_keys_1 = keys_by_value(rule.p_lhs, n1)
+            p_keys_2 = keys_by_value(rule.p_lhs, n2)
+            if len(p_keys_1) > 0 and  len(p_keys_2) > 0:
+                for k1 in p_keys_1:
+                    for k2 in p_keys_2:
+                        if self.graph.is_directed():
+                            if (k1, k2) not in rule.p.edges():
+                                if (p_g_m[k1], p_g_m[k2]) in self.graph.edges():
+                                    self.graph.remove_edge(p_g_m[k1], p_g_m[k2])
+                        else:
+                            if (k1, k2) not in rule.p.edges() and (k2, k1) not in rule.p.edges():
+                                if (p_g_m[k1], p_g_m[k2]) in self.graph.edges() or\
+                                   (p_g_m[k2], p_g_m[k1]) in self.graph.edges():
+                                    self.graph.remove_edge(p_g_m[k1], p_g_m[k2])
+        # Remove node attrs
+        for n in rule.p.nodes():
+            attrs_to_remove = dict_sub(
+                rule.lhs.node[rule.p_lhs[n]].attrs_,
+                rule.p.node[n].attrs_
+            )
+            self.graph.remove_node_attrs(p_g_m[n], attrs_to_remove)
+
+        # Remove edge attrs
+        for (n1, n2) in rule.p.edges():
+            attrs_to_remove = dict_sub(
+                rule.lhs.get_edge(rule.p_lhs[n1], rule.p_lhs[n2]),
+                rule.p.get_edge(n1, n2)
+            )
+            self.graph.remove_edge_attrs(p_g_m[n1], p_g_m[n2], attrs_to_remove)
+        
+
+        # Add/merge nodes
+        rhs_g_prime = {}
+        for n in rule.rhs.nodes():
+            p_keys = keys_by_value(rule.p_rhs, n)
+            # Add nodes
+            if len(p_keys) == 0:
+                self.graph.add_node(n,
+                                    rule.rhs.node[n].type_,
+                                    rule.rhs.node[n].attrs_)
+                rhs_g_prime[n] = n
+            # Keep nodes
+            elif len(p_keys) == 1:
+                rhs_g_prime[rule.p_rhs[p_keys[0]]] = p_g_m[p_keys[0]]
+            # Merge nodes
+            else:
+                nodes_to_merge = []
+                for k in p_keys:
+                    nodes_to_merge.append(p_g_m[k])
+                new_name = self.graph.merge_nodes(nodes_to_merge)
+                rhs_g_prime[n] = new_name
+
+        # Add edges
+        for (n1, n2) in rule.rhs.edges():
+            if self.graph.is_directed():
+                if (rhs_g_prime[n1], rhs_g_prime[n2]) not in self.graph.edges():
+                    self.graph.add_edge(
+                        rhs_g_prime[n1],
+                        rhs_g_prime[n2],
+                        rule.rhs.get_edge(n1, n2))
+            else:
+                if (rhs_g_prime[n1], rhs_g_prime[n2]) not in self.graph.edges() and\
+                   (rhs_g_prime[n2], rhs_g_prime[n1]) not in self.graph.edges():
+                    self.graph.add_edge(
+                        rhs_g_prime[n1],
+                        rhs_g_prime[n2],
+                        rule.rhs.get_edge(n1, n2))
+
+        # Add node attrs
+        for n in rule.rhs.nodes():
+            p_keys = keys_by_value(rule.p_rhs, n)
+            # Add attributes to the nodes which stayed invariant
+            if len(p_keys) == 1:
+                attrs_to_add = dict_sub(
+                    rule.rhs.node[n].attrs_,
+                    rule.p.node[p_keys[0]].attrs_
+                )
+                self.graph.add_node_attrs(rhs_g_prime[n], attrs_to_add)
+            # Add attributes to the nodes which were merged
+            elif len(p_keys) > 1:
+                merged_attrs = {}
+                for k in p_keys:
+                    merged_attrs = merge_attributes(
+                        merged_attrs,
+                        rule.p.node[k].attrs_
+                    )
+                attrs_to_add = dict_sub(rule.rhs.node[n].attrs_, merged_attrs)
+                self.graph.add_node_attrs(rhs_g_prime[n], attrs_to_add)
+
+        # Add edge attrs
+        for (n1, n2) in rule.rhs.edges():
+            p_keys_1 = keys_by_value(rule.p_rhs, n1)
+            p_keys_2 = keys_by_value(rule.p_rhs, n2)
+            for k1 in p_keys_1:
+                for k2 in p_keys_2:
+                    if self.graph.is_directed():
+                        if (k1, k2) in rule.p.edges():
+                            attrs_to_add = dict_sub(
+                                rule.rhs.get_edge(n1, n2),
+                                rule.p.get_edge(k1, k2)
+                            )
+                            self.graph.add_edge_attrs(
+                                rhs_g_prime[n1],
+                                rhs_g_prime[n2], 
+                                attrs_to_add
+                            )
+                    else:
+                        if (k1, k2) in rule.p.edges() or (k2, k1) in rule.p.edges():
+                            attrs_to_add = dict_sub(
+                                rule.rhs.get_edge(n1, n2),
+                                rule.p.get_edge(k1, k2)
+                            )
+                            self.graph.add_edge_attrs(
+                                rhs_g_prime[n1],
+                                rhs_g_prime[n2],
+                                attrs_to_add
+                            )        
+
+        return rhs_g_prime
 
 # class Rewriter:
 #     """Class implements the transformation on the graph."""
@@ -1044,127 +1180,7 @@ class Rewriter(object):
 #                 raise ValueError("Unknown command %s" % action["keyword"])
 #         return trans
 
-#     def apply_rule(self, L_G, trans):
 
-#         left_h, right_h = trans.get()
-
-#         # check left_h.source == right_h.source
-#         if left_h.source_.nodes() != right_h.source_.nodes():
-#             raise ValueError("Preserving part does not match!")
-#         if left_h.source_.edges() != right_h.source_.edges():
-#             raise ValueError("Preserving part does not match!")
-#         instance = L_G.mapping_
-#         RHS_instance =\
-#             dict([(r, instance[left_h.mapping_[p]]) for p, r in right_h.mapping_.items()])
-#         P_instance =\
-#             dict([(p, instance[l]) for p, l in left_h.mapping_.items()])
-
-#         (nodes_to_remove,
-#          edges_to_remove,
-#          node_attrs_to_remove,
-#          edge_attrs_to_remove) = left_h.find_final_PBC()
-
-#         (nodes_to_add,
-#          edges_to_add,
-#          node_attrs_to_add,
-#          edge_attrs_to_add) = right_h.find_PO()
-
-#         # 1) Delete nodes/edges
-#         for node in nodes_to_remove:
-#             self.graph_.remove_node(node)
-
-#         merge_dict = {}
-#         for n in right_h.target_.nodes():
-#             merge_dict.update({n: []})
-#         for p_node, r_node in right_h.mapping_.items():
-#             if left_h.mapping_[p_node] not in nodes_to_remove:
-#                 merge_dict[r_node].append(p_node)
-#         nodes_to_merge =\
-#             dict([(key, value) for key, value in merge_dict.items()
-#                   if len(value) > 1])
-
-#         # 2) Clone nodes
-#         clone_dict = {}
-#         for n in left_h.target_.nodes():
-#             clone_dict.update({n: []})
-#         for p_node, r_node in left_h.mapping_.items():
-#             clone_dict[r_node].append(p_node)
-#         for node, value in clone_dict.items():
-#             if value is not None and len(value) > 1:
-#                 i = 0
-#                 for val in value:
-#                     will_be_merged = False
-#                     for r_node, p_nodes in nodes_to_merge.items():
-#                         if val in p_nodes:
-#                             will_be_merged = True
-#                     if i > 0:
-#                         if node != val:
-#                             new_name = self.graph_.clone_node(node, val)
-#                             P_instance.update(
-#                                 {val: new_name})
-#                             if not will_be_merged:
-#                                 RHS_instance.update(
-#                                     {right_h.mapping_[val]: new_name})
-#                     else:
-#                         P_instance.update(
-#                             {val: instance[node]})
-#                         if not will_be_merged:
-#                             RHS_instance.update(
-#                                 {right_h.mapping_[val]: instance[node]})
-#                     i += 1
-
-#         for edge in edges_to_remove:
-#             if (edge[0],edge[1]) in self.graph_.edges():
-#                 self.graph_.remove_edge(
-#                     edge[0],
-#                     edge[1])
-
-#         # 3) Delete attrs
-#         for node, attrs in node_attrs_to_remove.items():
-#             if len(attrs) > 0:
-#                 self.graph_.remove_node_attrs(
-#                     node,
-#                     attrs)
-
-#         for edge, attrs in edge_attrs_to_remove.items():
-#             self.graph_.remove_edge_attrs(
-#                 edge[0],
-#                 edge[1],
-#                 attrs)
-
-#         # 4) Add attrs
-#         for node, attrs in node_attrs_to_add.items():
-#             if len(attrs) > 0:
-#                 self.graph_.add_node_attrs(node, attrs)
-
-#         for edge, attrs in edge_attrs_to_add.items():
-#             self.graph_.add_edge_attrs(
-#                 edge[0],
-#                 edge[1],
-#                 attrs)
-
-#         # 5) Merge
-#         for rhs_node, nodes in nodes_to_merge.items():
-#             new_name = self.graph_.merge_nodes(nodes, node_name=rhs_node)
-#             RHS_instance.update({rhs_node: new_name})
-
-#         # 6) Add nodes/edges
-#         for node in nodes_to_add:
-#             self.graph_.add_node(
-#                 node,
-#                 right_h.target_.node[node].type_,
-#                 attrs=right_h.target_.node[node].attrs_)
-#             RHS_instance.update({node: node})
-
-#         for edge, attrs in edges_to_add.items():
-#             try:
-#                 self.graph_.add_edge(
-#                     edge[0],
-#                     edge[1],
-#                     attrs)
-#             except:
-#                 pass
-#         return RHS_instance
 
 #     @staticmethod
 #     def gen_transformations(n, graph, p_opt=0.5, merge_prop_av = 0.2,
