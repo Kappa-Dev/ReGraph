@@ -11,7 +11,6 @@ from regraph.library.nugget_rules import AbstractRules
 
 class Hierarchy():
     suffix_node_name = 0
-
     def __init__(self, name, parent):
         self.name = name
         self.subCmds = {}
