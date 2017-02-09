@@ -94,7 +94,7 @@ def pushout(h1, h2):
     D = type(B)()
     f = h1.mapping_
     g = h2.mapping_
-
+    
     # add nodes to the graph
     for n in C.nodes():
         a_keys = keys_by_value(g, n)
@@ -149,18 +149,22 @@ def pushout(h1, h2):
         else:
             for a_key_1 in a_keys_1:
                 for a_key_2 in a_keys_2:
-                    if A.is_directed():
-                        if (f[a_key_1], f[a_key_2]) in B.edges():
+                    if (f[a_key_1], f[a_key_2]) in B.edges():
+                        if (hom2[n1], hom2[n1]) not in D.edges():
                             D.add_edge(hom2[n1], hom2[n2], B.get_edge(f[a_key_1], f[a_key_2]))
                             D.add_edge_attrs(hom2[n1],
                                              hom2[n2],
                                              dict_sub(C.get_edge(n1, n2), A.get_edge(a_key_1, a_key_2)))
-                    else:
-                        if (f[a_key_1], f[a_key_2]) in B.edges() or (f[a_key_2], f[a_key_1]) in B.edges():
-                            D.add_edge(hom2[n1], hom2[n2], B.get_edge(f[a_key_1], f[a_key_2]))
+                        else:
+                            D.add_edge_attrs(hom2[n1],
+                                             hom2[n2],
+                                             B.get_edge(f[a_key_1], f[a_key_2]))
                             D.add_edge_attrs(hom2[n1],
                                              hom2[n2],
                                              dict_sub(C.get_edge(n1, n2), A.get_edge(a_key_1, a_key_2)))
+                    elif (hom2[n1], hom2[n2]) not in D.edges():
+                        D.add_edge(hom2[n1], hom2[n2], C.get_edge(n1, n2))
+
     for (n1, n2) in B.edges():
         a_keys_1 = keys_by_value(f, n1)
         a_keys_2 = keys_by_value(f, n2)
@@ -197,16 +201,25 @@ def pullback_complement(h1, h2):
     hom2 = {}
 
     A_D = Homomorphism.compose(h2, h1)
-
     DmB = D.sub(B, h2)
     
     for n in A.nodes():
-        C.add_node(g[f[n]],
-                   A.node[n].type_,
-                   dict_sub(D.node[g[f[n]]].attrs_, B.node[f[n]].attrs_))
-        C.add_node_attrs(g[f[n]], A.node[n].attrs_)
-        hom1[n] = g[f[n]]
-        hom2[g[f[n]]] = g[f[n]]
+        if g[f[n]] not in C.nodes():
+            C.add_node(g[f[n]],
+                       A.node[n].type_,
+                       dict_sub(D.node[g[f[n]]].attrs_, B.node[f[n]].attrs_))
+            C.add_node_attrs(g[f[n]], A.node[n].attrs_)
+            hom1[n] = g[f[n]]
+            hom2[g[f[n]]] = g[f[n]]
+        else:
+            new_name = C.clone_node(g[f[n]])
+            C.update_node_attrs(
+                new_name,
+                dict_sub(D.node[g[f[n]]].attrs_, B.node[f[n]].attrs_)
+            )
+            C.add_node_attrs(new_name, A.node[n].attrs_)
+            hom1[n] = new_name
+            hom2[new_name] = g[f[n]]
 
     for n in DmB.nodes():
         is_in_A = False
@@ -237,5 +250,17 @@ def pullback_complement(h1, h2):
         b_key_2 = keys_by_value(g, n2)
         if len(b_key_1) == 0 or len(b_key_2) == 0:
             C.add_edge(n1, n2, D.get_edge(n1, n2))
-
-    return C, Homomorphism(A, C, hom1), Homomorphism(C, D, hom2)
+        else:
+            if (b_key_1[0], b_key_2[0]) not in B.edges():
+                c_keys_1 = keys_by_value(hom2, n1)
+                c_keys_2 = keys_by_value(hom2, n2)
+                for c1 in c_keys_1:
+                    for c2 in c_keys_2:
+                        if (c1, c2) not in C.edges():
+                            print(c1, c2)
+                            C.add_edge(c1, c2, D.get_edge(n1, n2))        
+    return (
+        C,
+        Homomorphism(A, C, hom1),
+        Homomorphism(C, D, hom2)
+    )
