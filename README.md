@@ -58,21 +58,6 @@ python setup.py install
 
 ### Nosetests
 ```
-nosetests -v -s nosetests
+nosetests -v -s
 ```
-### Other tests
-
-```
-python -W ignore tests/tester.py -N 10 -n 20 -e 0.1 -t 500 --meta tests/big_graph/metametameta.xml -m 'prop;canonic' -comp
-```
-
-## Installation with docker
-```
-docker run --name regraph -p 5000:5000 -t ylecornec/regraph:latest
-```
-## REST API
-
-Launch the webserver in the venv using: `python webserver.py`
-[Browse the API](http://petstore.swagger.io/?url=https://raw.githubusercontent.com/Kappa-Dev/ReGraph/master/iRegraph_api.yaml)
-
 
