@@ -7,8 +7,10 @@ from nose.tools import assert_equals
 from regraph.library.data_structures import (TypedDiGraph,
                                              TypedGraph,
                                              Homomorphism)
-from regraph.library.rewriters import (Rule,
+from regraph.library.rewriters import (find_matching,
+                                       apply,
                                        Rewriter)
+from regraph.library.rules import Rule
 from regraph.library.utils import (merge_attributes,
                                    plot_graph)
 from nose.tools import raises
@@ -350,10 +352,9 @@ class TestRewriter(object):
 
         rule = Rule(p, pattern, rhs, p_lhs, p_rhs)
 
+        instances = find_matching(graph, pattern)
         rewriter = Rewriter(graph)
-        instances = rewriter.find_matching(pattern)
-        res_graph = rewriter.apply_rule(instances[0], rule)
-
-        rewriter.apply_rule_in_place(instances[0], rule)
+        res_graph = apply(graph, instances[0], rule)
+        rewriter.apply_transform(instances[0], rule)
         assert(res_graph == graph)
     
