@@ -191,7 +191,6 @@ class TestRule(object):
                     self.p_lhs, self.p_rhs, typing_graph=self.meta_model)
         rule.add_edge_attrs(4, 1, {'amazing': True})
         assert(rule.p == self.p)
-        print(rule.rhs.edge['s']['x'])
         assert(rule.rhs.edge['s']['x'] == {'amazing': {True}})
         return
 
@@ -270,16 +269,16 @@ class TestRewriter(object):
 
         self.model = TypedDiGraph(self.meta_model)
 
-        self.model.add_node(1, 'black_square')
+        self.model.add_node(1, 'black_square', {"a": {1, 2, 3}})
         self.model.add_node(2, 'black_square')
 
         self.model.add_node(3, 'white_square')
         self.model.add_node(4, 'white_square')
 
-        self.model.add_node(5, 'black_circle')
-        self.model.add_node(6, 'black_circle')
+        self.model.add_node(5, 'black_circle', {'c': {2, 11}})
+        self.model.add_node(6, 'black_circle', {'c': {1, 10}})
 
-        self.model.add_node(7, 'white_circle')
+        self.model.add_node(7, 'white_circle', {"b": {1, 2}})
         self.model.add_node(8, 'white_circle')
 
         self.model.add_edges_from([
@@ -289,9 +288,9 @@ class TestRewriter(object):
                 (2, 4),
                 (4, 5),
                 (5, 8),
-                (6, 7),
+                (6, 7, {"a": {1, 2, 3}}),
                 (7, 1),
-                (5, 6)
+                (5, 6, {"a": {1, 2}})
             ])
         return
 
@@ -300,51 +299,61 @@ class TestRewriter(object):
 
         # Define rewriting rule
         pattern = TypedDiGraph()
-        pattern.add_node(1, 'black_circle')
-        pattern.add_node(2, 'white_circle')
-        pattern.add_node(3, 'black_square')
-        pattern.add_node(4, 'black_circle')
+        pattern.add_node(1, 'black_circle', {'c': {1}})
+        pattern.add_node(2, 'white_circle', {'b': {1, 2}})
+        pattern.add_node(3, 'black_square', {'a': {1, 2}})
+        pattern.add_node(4, 'black_circle', {'c': {2}})
         
         pattern.add_edges_from([
-                (1, 2),
+                (1, 2, {"a": {1, 2}}),
                 (3, 2),
                 (2, 3),
-                (4, 1)
+                (4, 1, {"a": 1})
             ])
 
         # Define preserved part of the rule
         p = TypedDiGraph()
-        p.add_node('a', 'black_circle')
-        p.add_node('b', 'white_circle')
-        p.add_node('c', 'black_square')
-        p.add_node('d', 'black_circle')
+        p.add_node('a',  'black_circle', {'c': {1}})
+        p.add_node('b',  'white_circle', {'b': {1}})
+        p.add_node('b1', 'white_circle', {'b': {2}})
+        p.add_node('c',  'black_square', {'a': {1}})
+        p.add_node('d',  'black_circle', {'c': {2}})
 
         p.add_edges_from([
-            ('a', 'b'),
+            ('a', 'b', {'a': {1}}),
             ('b', 'c'),
+            ('a', 'b1', {'a': {2}}),
+            ('b1', 'c'),
             ('d', 'a')
         ])
 
         # Define the right hand side of the rule
         rhs = TypedDiGraph()
-        rhs.add_node('x', 'black_circle', {'a': 1})
-        rhs.add_node('y', 'white_circle')
-        rhs.add_node('z', 'black_square')
-        rhs.add_node('t', 'black_circle')
+        rhs.add_node('x',  'black_circle', {'c': {1, 2, 3}})
+        rhs.add_node('y',  'white_circle', {'b': {1, 5}})
+        rhs.add_node('y1', 'white_circle', {'b': {2, 6}})
+        rhs.add_node('z',  'black_square', {'a': {1,5}})
+        rhs.add_node('t',  'black_circle')
 
         rhs.add_edges_from([
-            ('x', 'y'),
+            ('x', 'y', {"a": {1, 5}}),
+            ('x', 'y1', {"a": {2, 5}}),
             ('y', 'z', {'a': {1}}),
+            ('y1', 'z'),
             ('x', 'x'),
             ('t', 'y')
         ])
 
         # Define mappings
-        p_lhs = {'a': 1, 'b': 2, 'c': 3, 'd': 4}
-        p_rhs = {'a': 'x', 'b': 'y', 'c': 'z', 'd': 'x'}
+        p_lhs = {'a': 1, 'b': 2, 'b1': 2, 'c': 3, 'd': 4}
+        p_rhs = {'a': 'x', 'b': 'y', 'b1': 'y1', 'c': 'z', 'd': 'x'}
 
         rule = Rule(p, pattern, rhs, p_lhs, p_rhs)
 
         rewriter = Rewriter(graph)
         instances = rewriter.find_matching(pattern)
-        rewriter.apply_rule(instances[0], rule)
+        res_graph = rewriter.apply_rule(instances[0], rule)
+
+        rewriter.apply_rule_in_place(instances[0], rule)
+        assert(res_graph == graph)
+    
