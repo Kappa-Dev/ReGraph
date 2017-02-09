@@ -236,7 +236,7 @@ def dict_sub(A, B):
                         "Dict A doesn't have '%s' with key '%s'" %
                         (str(el), str(key)), RuntimeWarning)
             for el in elements_to_remove:
-                A[key].remove(el)
+                res[key].remove(el)
     return res
 
 
