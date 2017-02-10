@@ -1,21 +1,22 @@
 """."""
-
-import networkx as nx
-from matplotlib import pyplot as plt
+import copy
 import warnings
 
+from matplotlib import pyplot as plt
+
+import networkx as nx
+
 from regraph.library.parser import parser
-import copy
 
 
 def valid_attributes(attrs, typed_node_target):
-    pred = typed_node_target.attributes_typing
-    # print("")
-    # print("target",typed_node_target)
-    # print("node",attrs)
-    if pred is not None:
-        return pred(attrs)
-    return is_subdict(attrs, typed_node_target.attrs_)
+    # pred = typed_node_target.attributes_typing
+    # # print("")
+    # # print("target",typed_node_target)
+    # # print("node",attrs)
+    # if pred is not None:
+    #     return pred(attrs)
+    return is_subdict(attrs, typed_node_target)
 
 
 def is_subdict(small_dict, big_dict):
@@ -24,6 +25,8 @@ def is_subdict(small_dict, big_dict):
     if small_dict is None:
         return True
     if len(small_dict) == 0:
+        return True
+    if all([len(v) == 0 for k, v in small_dict.items()]):
         return True
     if big_dict is None and len(small_dict) != 0:
         return False
@@ -432,12 +435,12 @@ def simplify_commands(commands, di=False):
                         for k in ad_index[j]:
                             elements_to_remove.append(k)
                         rem_el.append(j)
-                k=0
+                k = 0
                 for j in rem_el:
-                    del added[j-k]
-                    del ad_index[j-k]
-                    del ad_type[j-k]
-                    k+=1
+                    del added[j - k]
+                    del ad_index[j - k]
+                    del ad_type[j - k]
+                    k += 1
                 rem_el = []
                 for j in range(len(deleted)):
                     el = deleted[j]
@@ -446,11 +449,11 @@ def simplify_commands(commands, di=False):
                         for k in del_index[j]:
                             elements_to_remove.append(k)
                         rem_el.append(j)
-                k=0
+                k = 0
                 for j in rem_el:
-                    del deleted[j-k]
-                    del del_index[j-k]
-                    k+=1
+                    del deleted[j - k]
+                    del del_index[j - k]
+                    k += 1
             else:
                 # Same idea as before if one of the nodes have been cloned,
                 # but we have to take the max of the line number of all the
@@ -484,12 +487,12 @@ def simplify_commands(commands, di=False):
                             else:
                                 for k in rem_ind:
                                     ad_index[j].remove(k)
-                    m=0
+                    m = 0
                     for j in rem_el:
-                        del added[j-m]
-                        del ad_index[j-m]
-                        del ad_type[j-m]
-                        m+=1
+                        del added[j - m]
+                        del ad_index[j - m]
+                        del ad_type[j - m]
+                        m += 1
                     rem_el = []
                     for j in range(len(deleted)):
                         el = deleted[j]
@@ -505,11 +508,11 @@ def simplify_commands(commands, di=False):
                             else:
                                 for k in rem_ind:
                                     del_index[j].remove(k)
-                    m=0
+                    m = 0
                     for j in rem_el:
-                        del deleted[j-m]
-                        del del_index[j-m]
-                        m+=1
+                        del deleted[j - m]
+                        del del_index[j - m]
+                        m += 1
                 if e[1] in cloned:
                     rem_el = []
                     for j in range(len(added)):
@@ -528,12 +531,12 @@ def simplify_commands(commands, di=False):
                             else:
                                 for k in rem_ind:
                                     ad_index[j].remove(k)
-                    m=0
+                    m = 0
                     for j in rem_el:
-                        del added[j-m]
-                        del ad_index[j-m]
-                        del ad_type[j-m]
-                        m+=1
+                        del added[j - m]
+                        del ad_index[j - m]
+                        del ad_type[j - m]
+                        m += 1
                     rem_el = []
                     for j in range(len(deleted)):
                         el = deleted[j]
@@ -549,11 +552,11 @@ def simplify_commands(commands, di=False):
                             else:
                                 for k in rem_ind:
                                     del_index[j].remove(k)
-                    m=0
+                    m = 0
                     for j in rem_el:
-                        del deleted[j-m]
-                        del del_index[j-m]
-                        m+=1
+                        del deleted[j - m]
+                        del del_index[j - m]
+                        m += 1
             deleted.append(e)
             del_index.append([i])
         elif action["keyword"] == "add_edge_attrs":
@@ -596,7 +599,8 @@ def simplify_commands(commands, di=False):
             ad_index.append([i])
             ad_type.append("node")
 
-    return "\n".join([command_strings[i] for i in range(len(actions)) if i not in elements_to_remove])
+    return "\n".join(
+        [command_strings[i] for i in range(len(actions)) if i not in elements_to_remove])
 
 
 def make_canonical_commands(g, commands, di=False):
@@ -674,32 +678,32 @@ def make_canonical_commands(g, commands, di=False):
             action = actions[i]
             if action["keyword"] == "add_node":
                 if action["node"] not in protected_names:
-                    add_step += command_strings[i]+"\n"
+                    add_step += command_strings[i] + "\n"
                     added.append(action["node"])
             elif action["keyword"] == "delete_node":
                 if action["node"] in env_nodes and\
                    action["node"] not in del_wait:
-                    del_step += command_strings[i]+"\n"
+                    del_step += command_strings[i] + "\n"
                     env_nodes.remove(action["node"])
                 else:
-                    next_step += command_strings[i]+"\n"
+                    next_step += command_strings[i] + "\n"
                     ad_wait.append(action["node"])
             elif action["keyword"] == "add_node_attrs":
                 if action["node"] in env_nodes and\
                    action["node"] not in ad_wait:
-                    add_step += command_strings[i]+"\n"
+                    add_step += command_strings[i] + "\n"
                     added.append(action["node"])
                     clone_wait.append(action["node"])
                 else:
-                    next_step += command_strings[i]+"\n"
+                    next_step += command_strings[i] + "\n"
                     ad_wait.append(action["node"])
                     clone_wait.append(action["node"])
             elif action["keyword"] == "delete_node_attrs":
                 if action["node"] in env_nodes and\
                    action["node"] not in del_wait:
-                    del_step += command_strings[i]+"\n"
+                    del_step += command_strings[i] + "\n"
                 else:
-                    next_step += command_strings[i]+"\n"
+                    next_step += command_strings[i] + "\n"
                     clone_wait.append(action["node"])
                     ad_wait.append(action["node"])
             elif action["keyword"] == "add_edge":
@@ -708,28 +712,28 @@ def make_canonical_commands(g, commands, di=False):
                    e[1] in env_nodes and\
                    e[0] not in ad_wait and\
                    e[1] not in ad_wait:
-                   add_step += command_strings[i]+"\n"
-                   added.append(e)
-                   if not di:
-                       added.append((e[1], e[0]))
-                   clone_wait.append(action["node_1"])
-                   clone_wait.append(action["node_2"])
+                    add_step += command_strings[i] + "\n"
+                    added.append(e)
+                    if not di:
+                        added.append((e[1], e[0]))
+                    clone_wait.append(action["node_1"])
+                    clone_wait.append(action["node_2"])
                 else:
-                    next_step += command_strings[i]+"\n"
+                    next_step += command_strings[i] + "\n"
                     clone_wait.append(action["node_1"])
                     clone_wait.append(action["node_2"])
                     merge_wait.append(action["node_1"])
                     merge_wait.append(action["node_2"])
             elif action["keyword"] == "delete_edge":
                 e = (action["node_1"], action["node_2"])
-                if (e in env_edges or\
+                if (e in env_edges or
                    (not di and (e[1], e[0]) in env_edges)) and\
                    e[0] not in del_wait and\
                    e[1] not in del_wait:
                     is_cloned = False
                     for l in cloned:
                         if e[0] in l:
-                            next_step += command_strings[i]+"\n"
+                            next_step += command_strings[i] + "\n"
                             clone_wait.append(action["node_1"])
                             clone_wait.append(action["node_2"])
                             merge_wait.append(action["node_1"])
@@ -737,64 +741,64 @@ def make_canonical_commands(g, commands, di=False):
                             is_cloned = True
                             break
                     if not is_cloned:
-                        del_step += command_strings[i]+"\n"
+                        del_step += command_strings[i] + "\n"
                         clone_wait.append(action["node_1"])
                         clone_wait.append(action["node_2"])
                         env_edges.remove(e)
                         if not di:
                             env_edges.remove((e[1], e[0]))
                 else:
-                    next_step += command_strings[i]+"\n"
+                    next_step += command_strings[i] + "\n"
                     clone_wait.append(action["node_1"])
                     clone_wait.append(action["node_2"])
                     merge_wait.append(action["node_1"])
                     merge_wait.append(action["node_2"])
             elif action["keyword"] == "add_edge_attrs":
                 e = (action["node_1"], action["node_2"])
-                if (e in env_edges or\
+                if (e in env_edges or
                    (not di and (e[1], e[0]) in env_edges)) and\
                    e[0] not in ad_wait and\
                    e[1] not in ad_wait:
-                    add_step += command_strings[i]+"\n"
+                    add_step += command_strings[i] + "\n"
                     added.append(e)
                     if not di:
                         added.append((e[1], e[0]))
                     clone_wait.append(action["node_1"])
                     clone_wait.append(action["node_2"])
                 else:
-                    next_step += command_strings[i]+"\n"
+                    next_step += command_strings[i] + "\n"
                     clone_wait.append(action["node_1"])
                     clone_wait.append(action["node_2"])
                     merge_wait.append(action["node_1"])
                     merge_wait.append(action["node_2"])
             elif action["keyword"] == "delete_edge_attrs":
                 e = (action["node_1"], action["node_2"])
-                if (e in env_edges or\
+                if (e in env_edges or
                    (not di and (e[1], e[0]) in env_edges)) and\
                    e[0] not in del_wait and\
                    e[1] not in del_wait:
                     is_cloned = False
                     for l in cloned:
                         if e[0] in l:
-                            next_step += command_strings[i]+"\n"
+                            next_step += command_strings[i] + "\n"
                             clone_wait.append(action["node_1"])
                             clone_wait.append(action["node_2"])
                             merge_wait.append(action["node_1"])
                             merge_wait.append(action["node_2"])
                             is_cloned = True
                         elif e[1] in l:
-                            next_step += command_strings[i]+"\n"
+                            next_step += command_strings[i] + "\n"
                             clone_wait.append(action["node_1"])
                             clone_wait.append(action["node_2"])
                             merge_wait.append(action["node_1"])
                             merge_wait.append(action["node_2"])
                             is_cloned = True
                     if not is_cloned:
-                        del_step += command_strings[i]+"\n"
+                        del_step += command_strings[i] + "\n"
                         clone_wait.append(action["node_1"])
                         clone_wait.append(action["node_2"])
                 else:
-                    next_step += command_strings[i]+"\n"
+                    next_step += command_strings[i] + "\n"
                     clone_wait.append(action["node_1"])
                     clone_wait.append(action["node_2"])
                     merge_wait.append(action["node_1"])
@@ -805,21 +809,21 @@ def make_canonical_commands(g, commands, di=False):
                     new_node = action["node_name"]
                 else:
                     j = 1
-                    new_node = str(node)+str(j)
+                    new_node = str(node) + str(j)
                     while new_node in env_nodes or new_node in added:
-                        j+=1
-                        new_node = str(node)+str(j)
+                        j += 1
+                        new_node = str(node) + str(j)
                 if node in env_nodes and\
                    node not in clone_wait and\
                    new_node not in protected_names and\
-                   fold_left(lambda e, acc : (e != node or\
-                                             (type(e) == tuple and\
-                                             e[1] != node and\
-                                             e[0] != node)) and\
-                                             acc,
+                   fold_left(lambda e, acc: (e != node or
+                             (type(e) == tuple and
+                              e[1] != node and
+                              e[0] != node)) and
+                             acc,
                              True,
                              added):
-                    clone_step += command_strings[i]+"\n"
+                    clone_step += command_strings[i] + "\n"
                     added.append(new_node)
                     del_wait.append(node)
                     found = False
@@ -840,13 +844,12 @@ def make_canonical_commands(g, commands, di=False):
                             if e[0] == node and\
                                e[1] != node:
                                 to_add.append((new_node, e[1]))
-                            elif e[1] == node and\
-                                 e[0] != node:
+                            elif e[1] == node and e[0] != node:
                                 to_add.append((e[0], new_node))
                     for e in to_add:
                         added.append(e)
                 else:
-                    next_step += command_strings[i]+"\n"
+                    next_step += command_strings[i] + "\n"
                     del_wait.append(node)
                     merge_wait.append(node)
                     ad_wait.append(node)
@@ -856,13 +859,13 @@ def make_canonical_commands(g, commands, di=False):
                     node_name = actions[i]["node_name"]
                 else:
                     node_name = "_".join(actions[i]["nodes"])
-                if fold_left(lambda n, acc: (n in env_nodes and\
-                                             n not in merge_wait) and\
+                if fold_left(lambda n, acc: (n in env_nodes and
+                                             n not in merge_wait) and
                                              acc,
                              True,
                              action["nodes"]) and\
                     node_name not in protected_names:
-                    add_step += command_strings[i]+"\n"
+                    add_step += command_strings[i] + "\n"
 
                     added.append(node_name)
                     clone_wait.append(node_name)
@@ -911,7 +914,7 @@ def make_canonical_commands(g, commands, di=False):
                             if not di:
                                 added.remove((e[1], e[0]))
                 else:
-                    next_step += command_strings[i]+"\n"
+                    next_step += command_strings[i] + "\n"
                     protected_names.append(node_name)
 
         for el in added:
@@ -920,13 +923,80 @@ def make_canonical_commands(g, commands, di=False):
             else:
                 env_nodes.append(el)
 
-        if del_step+clone_step+add_step == '':
+        if del_step + clone_step + add_step == '':
             raise ValueError(
                 "Can't find any new transformations and actions is non-empty :\n%s" %
                 next_step
             )
 
-        res.append(del_step+clone_step+add_step)
-
+        res.append(del_step + clone_step + add_step)
 
     return res
+
+
+def is_valid_homomorphism(source,
+                          target,
+                          dictionary,
+                          ignore_types=False,
+                          ignore_attrs=False):
+    """Check if the homomorphism is valid (preserves edges,
+    preserves types and attributes if requires)."""
+
+    # check if there is mapping for all the nodes of source graph
+    if set(source.nodes()) != set(dictionary.keys()):
+        raise ValueError(
+            "Invalid homomorphism: Mapping is not covering all the nodes of source graph!")
+    if not set(dictionary.values()).issubset(target.nodes()):
+        raise ValueError(
+            "invalid homomorphism: image not in target graph"
+        )
+
+    # check connectivity
+    for s_edge in source.edges():
+        if not (dictionary[s_edge[0]], dictionary[s_edge[1]]) in target.edges():
+            if not target.is_directed():
+                if not (dictionary[s_edge[1]], dictionary[s_edge[0]]) in target.edges():
+                    raise ValueError(
+                        "Invalid homomorphism: Connectivity is not preserved!" +\
+                        " Was expecting an edge %s->%s" %
+                        (dictionary[s_edge[1]], dictionary[s_edge[0]]))
+            else:
+                raise ValueError(
+                    "Invalid homomorphism: Connectivity is not preserved!" +\
+                    " Was expecting an edge between %s and %s" %
+                    (dictionary[s_edge[0]], dictionary[s_edge[1]]))
+    # check nodes match with types
+    for s, t in dictionary.items():
+        if not ignore_types:
+            if (source.node[s].type_ is not None) and\
+               (source.node[s].type_ != target.node[t].type_):
+                raise ValueError(
+                    "Invalid homomorphism: Node types do not match (%s:%s and %s:%s)!" %
+                    (s, str(source.node[s].type_), str(t), str(target.node[t].type_)))
+        if not ignore_attrs:
+            # check sets of attributes of nodes (here homomorphism = set inclusion)
+            if type(source.node[s]) == dict():
+                source_attrs = source.node[s]
+            else:
+                source_attrs = source.node[s].attrs_
+            if type(target.node[t]) == dict:
+                target_attrs = target.node[t]
+            else:
+                target_attrs = target.node[t].attrs_
+            if not valid_attributes(source_attrs, target_attrs):
+                raise ValueError(
+                    "Invalid homomorphism: Attributes of nodes source:'%s' and target:'%s' do not match!" %
+                    (str(s), str(t)))
+
+    if not ignore_attrs:
+        # check sets of attributes of edges (homomorphism = set inclusion)
+        for s_edge in source.edges():
+            source_edge_attrs = source.get_edge(s_edge[0], s_edge[1])
+            target_edge_attrs = target.get_edge(dictionary[s_edge[0]],
+                                                dictionary[s_edge[1]])
+            if not is_subdict(source_edge_attrs, target_edge_attrs):
+                raise ValueError(
+                    "Invalid homomorphism: Attributes of edges (%s)-(%s) and (%s)-(%s) do not match!" %
+                    (s_edge[0], s_edge[1], dictionary[s_edge[0]],
+                        dictionary[s_edge[1]]))
+    return True

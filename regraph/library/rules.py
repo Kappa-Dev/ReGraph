@@ -1,12 +1,11 @@
 """Docs here."""
+import copy
 import warnings
 
-import copy
-
+from regraph.library.data_structures import Homomorphism
 from regraph.library.parser import parser
 from regraph.library.utils import (keys_by_value,
                                    make_canonical_commands)
-from regraph.library.data_structures import Homomorphism
 
 
 class Rule(object):
@@ -27,12 +26,12 @@ class Rule(object):
         they are created as Homomorphism.identity(p, lhs) etc with the
         correspondance according to the node names."""
         self.p = copy.deepcopy(p)
-        self.lhs = copy.deepcopy(lhs) 
+        self.lhs = copy.deepcopy(lhs)
         self.rhs = copy.deepcopy(rhs)
         self.typing_graph = typing_graph
         self.ignore_types = ignore_types
         self.ignore_attrs = ignore_attrs
-        
+
         if not p_lhs:
             self.p_lhs = Homomorphism.identity(p, lhs, ignore_types, ignore_attrs).mapping_
         else:
@@ -233,7 +232,7 @@ class Rule(object):
 
     def add_edge(self, n1, n2, attrs=None):
         """Add an edge in the graph."""
-        
+
         # Find nodes in p mapping to n1 & n2
         p_keys_1 = keys_by_value(self.p_lhs, n1)
         p_keys_2 = keys_by_value(self.p_lhs, n2)
@@ -299,20 +298,20 @@ class Rule(object):
                             (rhs_key_1, rhs_key_2)
                         )
                     self.p.remove_edge(k1, k2)
-                    self.rhs.remove_edge(rhs_key_1, rhs_key_2)                      
+                    self.rhs.remove_edge(rhs_key_1, rhs_key_2)
                 else:
                     if (k1, k2) not in self.p.edges() and (k2, k1) not in self.p.edges():
                         raise ValueError(
                             "Edge '%s-%s' does not exist in the preserved part of the rule " %
                             (k1, k2)
-                        ) 
+                        )
                     if (rhs_key_1, rhs_key_2) not in self.rhs.edges() and\
                        (rhs_key_2, rhs_key_1) not in self.rhs.edges():
                         raise ValueError(
                             "Edge '%s-%s' does not exist in the right hand side of the rule " %
                             (rhs_key_1, rhs_key_2)
                         )
-                    self.p.remove_edge(k1, k2)                      
+                    self.p.remove_edge(k1, k2)
         return
 
     def clone_node(self, n, node_name=None):
@@ -332,7 +331,7 @@ class Rule(object):
 
     def merge_nodes(self, n1, n2, node_name=None):
         """Merge two nodes of the graph."""
-        
+
         # Update graphs
         new_name = None
         p_keys_1 = keys_by_value(self.p_lhs, n1)
@@ -350,13 +349,13 @@ class Rule(object):
                         "Node with the id '%s' does not exist in the preserved part of the rule" % k2
                     )
                 nodes_to_merge.add(self.p_rhs[k1])
-                nodes_to_merge.add(self.p_rhs[k2])    
-     
+                nodes_to_merge.add(self.p_rhs[k2])
+
         new_name = self.rhs.merge_nodes(list(nodes_to_merge))
         # Update mappings
         keys = p_keys_1 + p_keys_2
         for k in keys:
-            self.p_rhs[k] = new_name  
+            self.p_rhs[k] = new_name
         return new_name
 
     def add_node_attrs(self, n, attrs):
@@ -375,11 +374,11 @@ class Rule(object):
 
         if n not in self.lhs.nodes():
             raise ValueError("Node %s does not exist in the left hand side of the rule" % n)
-            
+
         p_keys = keys_by_value(self.p_lhs, n)
         if len(p_keys) == 0:
             raise ValueError("Node %s is being removed by the rule, cannot remove attributes" % n)
-        
+
         for k in p_keys:
             self.p.remove_node_attrs(k, attrs)
             self.rhs.remove_node_attrs(self.p_rhs[k], attrs)
@@ -395,7 +394,7 @@ class Rule(object):
             raise ValueError("Node %s is being removed by the rule, cannot update attributes" % n)
         for k in p_keys:
             self.p.node[k].attrs_ = None
-            self.rhs.update_node_attrs(self.p_rhs[k], attrs)            
+            self.rhs.update_node_attrs(self.p_rhs[k], attrs)
         return
 
     def add_edge_attrs(self, n1, n2, attrs):
@@ -532,7 +531,7 @@ class Rule(object):
 
             p_keys_1 = keys_by_value(self.p_lhs, n1)
             p_keys_2 = keys_by_value(self.p_lhs, n2)
-            
+
             if len(p_keys_1) == 0:
                 raise ValueError(
                     "Node %s is being removed by the rule, cannot update attributes from the incident edge" %
@@ -647,7 +646,7 @@ class Rule(object):
 
     def remove_by_type(self, type_to_remove):
         nodes_removed_from_p = self.p.remove_by_type(type_to_remove)
-        
+
         for n in nodes_removed_from_p:
             del self.p_lhs[n]
             del self.p_rhs[n]

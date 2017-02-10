@@ -29,13 +29,29 @@ def find_matching(graph, pattern, ignore_types=False, ignore_attrs=False):
             for node in g.nodes():
                 if ignore_types is False:
                     if pattern.node[pattern_node].type_ == g.node[node].type_:
-                        if ignore_attrs or valid_attributes(pattern.node[pattern_node].attrs_,
-                                                                 g.node[node]):
+                        if type(pattern.node[pattern_node]) == dict():
+                            source_attrs = pattern.node[pattern_node]
+                        else:
+                            source_attrs = pattern.node[pattern_node].attrs_
+                        if type(g.node[node]) == dict():
+                            target_attrs = g.node[node]
+                        else:
+                            target_attrs = g.node[node].attrs_
+
+                        if ignore_attrs or valid_attributes(source_attrs, target_attrs):
                             matching_nodes.add(node)
                 else:
-                    if ignore_attrs or valid_attributes(pattern.node[pattern_node].attrs_,
-                                                             g.node[node]):
-                            matching_nodes.add(node)
+                    if type(pattern.node[pattern_node]) == dict():
+                        source_attrs = pattern.node[pattern_node]
+                    else:
+                        source_attrs = pattern.node[pattern_node].attrs_
+                    if type(g.node[node]) == dict():
+                        target_attrs = g.node[node]
+                    else:
+                        target_attrs = g.node[node].attrs_
+
+                    if ignore_attrs or valid_attributes(source_attrs, target_attrs):
+                        matching_nodes.add(node)
 
         reduced_graph = g.subgraph(matching_nodes)
         instances = []
@@ -67,8 +83,15 @@ def find_matching(graph, pattern, ignore_types=False, ignore_attrs=False):
             for (pattern_node, node) in mapping.items():
                 if not pattern.node[pattern_node].type_ == subgraph.node[node].type_:
                     break
-                # if not ignore_attrs and not is_subdict(pattern.node[pattern_node].attrs_, subgraph.node[node].attrs_):
-                if not ignore_attrs and not valid_attributes(pattern.node[pattern_node].attrs_, subgraph.node[node]):
+                if type(pattern.node[pattern_node]) == dict():
+                    source_attrs = pattern.node[pattern_node]
+                else:
+                    source_attrs = pattern.node[pattern_node].attrs_
+                if type(g.node[node]) == dict():
+                    target_attrs = subgraph.node[node]
+                else:
+                    target_attrs = subgraph.node[node].attrs_
+                if not ignore_attrs and not valid_attributes(source_attrs, target_attrs):
                     break
             else:
                 # check edge attribute matched
@@ -87,9 +110,10 @@ def find_matching(graph, pattern, ignore_types=False, ignore_attrs=False):
                 instance[key] = inverse_mapping[value]
         return instances
 
+
 def apply(graph, instance, rule):
         """Apply a rewriting rule for a given graph."""
- 
+
         p_lhs = Homomorphism(rule.p, rule.lhs, rule.p_lhs)
         p_rhs = Homomorphism(rule.p, rule.rhs, rule.p_rhs)
         l_g = Homomorphism(rule.lhs, graph, instance)
@@ -264,7 +288,7 @@ class Rewriter(object):
                                 rhs_g_prime[n1],
                                 rhs_g_prime[n2],
                                 attrs_to_add
-                            )        
+                            )
 
         return rhs_g_prime
 
@@ -286,7 +310,7 @@ class Rewriter(object):
 #     @staticmethod
 #     def rewrite_simple(trans, get_details=False):
 #        return(Rewriter.rewrite(Homomorphism.identity(trans.L,trans.G),trans,get_details))
-       
+
 #     @staticmethod
 #     def rewrite(L_G, trans, get_details=False):
 #         """ Simple rewriting using category operations """
