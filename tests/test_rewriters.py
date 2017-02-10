@@ -3,9 +3,9 @@ import os
 from nose.tools import assert_equals
 # from nose.tools import raises
 
-from regraph.library.data_structures import (TypedDiGraph,
-                                             TypedGraph,
-                                             Homomorphism)
+from regraph.library.graphs import (TypedDiGraph,
+                                    TypedGraph)
+from regraph.library.data_structures import Homomorphism
 from regraph.library.rewriters import (find_matching,
                                        apply,
                                        Rewriter)

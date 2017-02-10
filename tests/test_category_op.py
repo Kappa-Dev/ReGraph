@@ -2,9 +2,11 @@ from nose.tools import raises
 from nose.tools import assert_equals
 import copy
 
-from regraph.library.data_structures import (TypedGraph,
-                                             Homomorphism)
-from regraph.library.category_op import (pullback, pushout, pullback_complement)
+from regraph.library.data_structures import Homomorphism
+from regraph.library.graphs import TypedGraph
+from regraph.library.category_op import (pullback,
+                                         pushout,
+                                         pullback_complement)
 
 
 def assert_edges_undir(edges1, edges2):

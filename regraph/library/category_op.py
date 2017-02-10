@@ -1,8 +1,7 @@
 """Define category operations used by graph rewriting tool."""
-
-from regraph.library.data_structures import (TypedGraph,
-                                             TypedDiGraph,
-                                             Homomorphism)
+from regraph.library.graphs import (TypedGraph,
+                                    TypedDiGraph)
+from regraph.library.data_structures import Homomorphism
 from regraph.library.utils import keys_by_value, merge_attributes, dict_sub
 
 

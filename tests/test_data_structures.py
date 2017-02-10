@@ -5,8 +5,8 @@ import os
 from nose.tools import assert_equals
 from nose.tools import raises
 
-from regraph.library.data_structures import TypedDiGraph
-from regraph.library.data_structures import TypedGraph
+from regraph.library.graphs import TypedDiGraph
+from regraph.library.graphs import TypedGraph
 from regraph.library.data_structures import Homomorphism
 
 def assert_edges_undir(edges1, edges2):
