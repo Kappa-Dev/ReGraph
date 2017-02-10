@@ -637,22 +637,21 @@ class Rule(object):
                 "Cannot merge less than two nodes!", RuntimeWarning
             )
 
-    def is_valid_metamodel(self, new_metamodel):
+    def is_valid_typing(self, new_metamodel):
         return(all([g.is_valid_metamodel(new_metamodel) for g in [self.p, self.rhs, self.lhs]]))
 
-    def update_metamodel(self, new_metamodel):
+    def update_typing(self, new_metamodel):
         self.p.update_metamodel(new_metamodel)
         self.rhs.update_metamodel(new_metamodel)
         self.lhs.update_metamodel(new_metamodel)
 
     def remove_by_type(self, type_to_remove):
-        nodes_removed_from_p = self.P.remove_type(type_to_remove)
+        nodes_removed_from_p = self.p.remove_by_type(type_to_remove)
         
         for n in nodes_removed_from_p:
             del self.p_lhs[n]
             del self.p_rhs[n]
         self.rhs.remove_by_type(type_to_remove)
-        self.lhs.remove_by_type(type_to_remove)
 
     def convert_type(self, old_type, new_type):
         self.p.convert_type(old_type, new_type)
@@ -662,101 +661,3 @@ class Rule(object):
     def remove_edges_by_type(self, source_type, target_type): 
         self.p.remove_edges_by_type(source_type, target_type) 
         self.rhs.remove_edges_by_type(source_type, target_type) 
-        self.lhs.remove_edges_by_type(source_type, target_type)
-
-    # def _do_add_not_catched(self, node_id, node_type):
-    #     t2 = copy.deepcopy(self.transformer)
-    #     t2.add_node(node_id, node_type)
-    #     # new_graph = Rewriter.rewrite_simple(t2)
-    #     self.transformer = t2
-    #     self.history.append(("add " + node_id + ":" + str(node_type),
-    #                          lambda t: t.add_node(node_id, node_type)))
-
-    # def _do_ln_not_catched(self, node1, node2):
-    #     t2 = copy.deepcopy(self.transformer)
-    #     t2.add_edge(node1, node2)
-    #     # new_graph = Rewriter.rewrite_simple(t2)
-    #     self.transformer = t2
-    #     self.history.append(("ln " + node1 + " " + node2,
-    #                          lambda t: t.add_edge(node1, node2)))
-
-    # def _do_rm_node_not_catched(self, node_id):
-    #     t2 = copy.deepcopy(self.transformer)
-    #     t2.remove_node(node_id)
-    #     # new_graph = Rewriter.rewrite_simple(t2)
-    #     self.transformer = t2
-    #     self.history.append(("rm_node " + node_id,
-    #                          lambda t: t.remove_node(node_id)))
-
-    # def _do_rm_node_force_not_catched(self, node_id):
-    #     self._do_rm_node_not_catched(node_id)
-
-    # def _do_merge_nodes_not_catched(self, node1, node2, new_name):
-    #     t2 = copy.deepcopy(self.transformer)
-    #     t2.merge_nodes(node1, node2, new_name)
-    #     # new_graph = Rewriter.rewrite_simple(t2)
-    #     self.transformer = t2
-    #     self.history.append(
-    #         ("merge_nodes " + node1 + " " + node2 + " " + new_name,
-    #          lambda t: t.merge_nodes(node1, node2, new_name))
-    #     )
-
-    # def _do_merge_nodes_force_not_catched(self, node1, node2, new_node_id):
-    #     self._do_merge_nodes_not_catched(node1, node2, new_node_id)
-
-    # def _do_clone_node_not_catched(self, node_id, new_name):
-    #     t2 = copy.deepcopy(self.transformer)
-    #     t2.clone_node(node_id, new_name)
-    #     # new_graph = Rewriter.rewrite_simple(t2)
-    #     self.transformer = t2
-    #     self.history.append(("clone_node " + node_id + " " + new_name,
-    #                          lambda t: t.clone_node(node_id, new_name)))
-
-    # def _do_rm_edge_uncatched(self, source, target, force_flag):
-    #     t2 = copy.deepcopy(self.transformer)
-    #     t2.remove_edge(source, target)
-    #     # new_graph = Rewriter.rewrite_simple(t2)
-    #     self.transformer = t2
-    #     self.history.append(("remove_edge " + source + " " + target,
-    #                          lambda t: t.remove_edge(source, target)))
-
-    # def remove_attrs(self, node, attr_dict, force=False):
-    #     self.transformer.remove_node_attrs(node, attr_dict)
-
-    # # precondition: degree > 0
-    # def ancestors(self, degree):
-    #     if not self.parent:
-    #         raise ValueError("the command does not have a parent")
-    #     if degree == 1:
-    #         left_mapping = [
-    #             {"left": n,
-    #              "right": self.transformer.L.node[n].type_}
-    #             for n in self.transformer.L.nodes()]
-    #         right_mapping = [
-    #             {"left": n,
-    #              "right": self.transformer.R.node[n].type_}
-    #             for n in self.transformer.R.nodes()]
-    #         preserved_mapping = [
-    #             {"left": n,
-    #              "right": self.transformer.P.node[n].type_}
-    #             for n in self.transformer.P.nodes()]
-    #         return {"L": left_mapping,
-    #                 "P": preserved_mapping,
-    #                 "R": right_mapping}
-    #     else:
-    #         parent_mapping = self.parent.ancestors_aux(degree - 1)
-    #         left_mapping = [
-    #             {"left": n,
-    #              "right": parent_mapping[self.transformer.L.node[n].type_]}
-    #             for n in self.transformer.L.nodes()]
-    #         right_mapping = [
-    #             {"left": n,
-    #              "right": parent_mapping[self.transformer.R.node[n].type_]}
-    #             for n in self.transformer.R.nodes()]
-    #         preserved_mapping = [
-    #             {"left": n,
-    #              "right": parent_mapping[self.transformer.P.node[n].type_]}
-    #             for n in self.transformer.P.nodes()]
-    #         return {"L": left_mapping,
-    #                 "P": preserved_mapping,
-    #                 "R": right_mapping}
