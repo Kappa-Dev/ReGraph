@@ -1,23 +1,16 @@
-import os
-
-from nose.tools import assert_equals
 # from nose.tools import raises
-
-from regraph.library.graphs import (TypedDiGraph,
-                                    TypedGraph)
-from regraph.library.data_structures import Homomorphism
-from regraph.library.rewriters import (find_matching,
-                                       apply,
-                                       Rewriter)
-from regraph.library.rules import Rule
-from regraph.library.utils import (merge_attributes,
-                                   plot_graph)
-from nose.tools import raises
 import copy
+
+from regraph.library.graphs import TypedDiGraph
+from regraph.library.rewriters import (Rewriter,
+                                       apply,
+                                       find_matching,
+                                       )
+from regraph.library.rules import Rule
 
 
 class TestRewriter(object):
-    
+
     def __init__(self):
         self.meta_meta_model = TypedDiGraph()
 
@@ -25,12 +18,11 @@ class TestRewriter(object):
         self.meta_meta_model.add_node('circle', None)
 
         self.meta_meta_model.add_edges_from([
-                ('square', 'square'),
-                ('square', 'circle'),
-                ('circle', 'circle'),
-                ('circle', 'square')
-            ]
-        )
+            ('square', 'square'),
+            ('square', 'circle'),
+            ('circle', 'circle'),
+            ('circle', 'square')
+        ])
 
         self.meta_model = TypedDiGraph(self.meta_meta_model)
 
@@ -40,14 +32,14 @@ class TestRewriter(object):
         self.meta_model.add_node('white_circle', 'circle')
 
         self.meta_model.add_edges_from([
-                ('black_square', 'black_square'),
-                ('black_square', 'white_square'),
-                ('black_square', 'white_circle'),
-                ('white_square', 'black_circle'),
-                ('black_circle', 'white_circle'),
-                ('black_circle', 'black_circle'),
-                ('white_circle', 'black_square')
-            ])
+            ('black_square', 'black_square'),
+            ('black_square', 'white_square'),
+            ('black_square', 'white_circle'),
+            ('white_square', 'black_circle'),
+            ('black_circle', 'white_circle'),
+            ('black_circle', 'black_circle'),
+            ('white_circle', 'black_square')
+        ])
 
         self.model = TypedDiGraph(self.meta_model)
 
@@ -64,16 +56,16 @@ class TestRewriter(object):
         self.model.add_node(8, 'white_circle')
 
         self.model.add_edges_from([
-                (1, 2),
-                (1, 4),
-                (1, 7),
-                (2, 4),
-                (4, 5),
-                (5, 8),
-                (6, 7, {"a": {1, 2, 3}}),
-                (7, 1),
-                (5, 6, {"a": {1, 2}})
-            ])
+            (1, 2),
+            (1, 4),
+            (1, 7),
+            (2, 4),
+            (4, 5),
+            (5, 8),
+            (6, 7, {"a": {1, 2, 3}}),
+            (7, 1),
+            (5, 6, {"a": {1, 2}})
+        ])
         return
 
     def test_simple_rewrite(self):
@@ -85,21 +77,21 @@ class TestRewriter(object):
         pattern.add_node(2, 'white_circle', {'b': {1, 2}})
         pattern.add_node(3, 'black_square', {'a': {1, 2}})
         pattern.add_node(4, 'black_circle', {'c': {2}})
-        
+
         pattern.add_edges_from([
-                (1, 2, {"a": {1, 2}}),
-                (3, 2),
-                (2, 3),
-                (4, 1, {"a": 1})
-            ])
+            (1, 2, {"a": {1, 2}}),
+            (3, 2),
+            (2, 3),
+            (4, 1, {"a": 1})
+        ])
 
         # Define preserved part of the rule
         p = TypedDiGraph()
-        p.add_node('a',  'black_circle', {'c': {1}})
-        p.add_node('b',  'white_circle', {'b': {1}})
+        p.add_node('a', 'black_circle', {'c': {1}})
+        p.add_node('b', 'white_circle', {'b': {1}})
         p.add_node('b1', 'white_circle', {'b': {2}})
-        p.add_node('c',  'black_square', {'a': {1}})
-        p.add_node('d',  'black_circle', {'c': {2}})
+        p.add_node('c', 'black_square', {'a': {1}})
+        p.add_node('d', 'black_circle', {'c': {2}})
 
         p.add_edges_from([
             ('a', 'b', {'a': {1}}),
@@ -111,11 +103,11 @@ class TestRewriter(object):
 
         # Define the right hand side of the rule
         rhs = TypedDiGraph()
-        rhs.add_node('x',  'black_circle', {'c': {1, 2, 3}})
-        rhs.add_node('y',  'white_circle', {'b': {1, 5}})
+        rhs.add_node('x', 'black_circle', {'c': {1, 2, 3}})
+        rhs.add_node('y', 'white_circle', {'b': {1, 5}})
         rhs.add_node('y1', 'white_circle', {'b': {2, 6}})
-        rhs.add_node('z',  'black_square', {'a': {1,5}})
-        rhs.add_node('t',  'black_circle')
+        rhs.add_node('z', 'black_square', {'a': {1, 5}})
+        rhs.add_node('t', 'black_circle')
 
         rhs.add_edges_from([
             ('x', 'y', {"a": {1, 5}}),
@@ -137,4 +129,3 @@ class TestRewriter(object):
         res_graph = apply(graph, instances[0], rule)
         rewriter.apply_transform(instances[0], rule)
         assert(res_graph == graph)
-    
