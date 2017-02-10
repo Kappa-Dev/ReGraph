@@ -757,7 +757,7 @@ class TypedDiGraph(nx.DiGraph):
         }
         res = True
         try:
-            TypingHomomorphism.is_valid_homomorphism(self, new_metamodel, typing)
+            TypingHomomorphism.is_valid_homomorphism(self, metamodel, typing, ignore_attrs=True)
         except:
             res = False
         return res
@@ -769,7 +769,7 @@ class TypedDiGraph(nx.DiGraph):
     def update_metamodel(self, new_metamodel):
         """Try to update the metamodel."""
         if self.is_valid_metamodel(new_metamodel):    
-            self.metamodel_=new_metamodel
+            self.metamodel_ = new_metamodel
         else :
             raise ValueError("Metamodel is not valid for the given graph!")
 
@@ -1176,7 +1176,7 @@ class TypedDiGraph(nx.DiGraph):
             current_typing = new_typing
         return wrong_conds    
 
-    def checkConstraints(self, all_nodes = False):
+    def check_constraints(self, all_nodes = False):
         to_check = self.nodes() if all_nodes else self.unckecked_nodes.copy() #| self.wrong_nodes
         all_wrong_conds = []
         for n in to_check:
@@ -1342,7 +1342,7 @@ class Homomorphism(object):
             len(set(self.mapping_.values()))
 
     @staticmethod
-    def is_valid_homomorphism(source, target, dictionary, ignore_attrs=False, ignore_types=False):
+    def is_valid_homomorphism(source, target, dictionary, ignore_types=False, ignore_attrs=False):
         """Check if the homomorphism is valid (preserves edges, 
         preserves types and attributes if requires)."""
 
@@ -1432,11 +1432,17 @@ class TypingHomomorphism(Homomorphism):
             raise ValueError("TypingHomomorphism is not valid!")
 
     @staticmethod
-    def is_valid_homomorphism(source, target, dictionary):
+    def is_valid_homomorphism(source, target, dictionary, ignore_attrs=False):
         """Check if the homomorphism is valid (preserves edges and types)."""
 
         #check preserving of edges
-        Homomorphism.is_valid_homomorphism(source, target, dictionary, ignore_types=True)
+        Homomorphism.is_valid_homomorphism(
+            source,
+            target,
+            dictionary,
+            ignore_types=True,
+            ignore_attrs=ignore_attrs,
+        )
 
         # check nodes match with types and sets of attributes
         for s, t in dictionary.items():
@@ -1448,20 +1454,22 @@ class TypingHomomorphism(Homomorphism):
             # pred = target.node[t].attributes_typing
             # if pred is not None and pred(source.node[s].attrs_):
             #     continue
-            if not valid_attributes(source.node[s].attrs_, target.node[t]):
-                raise ValueError(
-                    "Invalid homomorphism: Attributes of nodes source:'%s' and target:'%s' does not match!" %
-                    (str(s), str(t)))
+        #     if not ignore_attrs:
+        #         if not valid_attributes(source.node[s].attrs_, target.node[t]):
+        #             raise ValueError(
+        #                 "Invalid homomorphism: Attributes of nodes source:'%s' and target:'%s' does not match!" %
+        #                 (str(s), str(t)))
 
-        # check edges attr matches
-        for s_edge in source.edges():
-            source_edge_attrs = source.get_edge(s_edge[0], s_edge[1])
-            target_edge_attrs = target.get_edge(dictionary[s_edge[0]],
-                                                dictionary[s_edge[1]])
-            if not is_subdict(source_edge_attrs, target_edge_attrs):
-                raise ValueError(
-                    "Invalid homomorphism: Attributes of edges (%s)-(%s) and (%s)-(%s) does not match!" %
-                    (s_edge[0], s_edge[1], dictionary[s_edge[0]],
-                        dictionary[s_edge[1]]))
+        # # check edges attr matches
+        # if not ignore_attrs:
+        #     for s_edge in source.edges():
+        #         source_edge_attrs = source.get_edge(s_edge[0], s_edge[1])
+        #         target_edge_attrs = target.get_edge(dictionary[s_edge[0]],
+        #                                             dictionary[s_edge[1]])
+        #         if not is_subdict(source_edge_attrs, target_edge_attrs):
+        #             raise ValueError(
+        #                 "Invalid homomorphism: Attributes of edges (%s)-(%s) and (%s)-(%s) does not match!" %
+        #                 (s_edge[0], s_edge[1], dictionary[s_edge[0]],
+        #                     dictionary[s_edge[1]]))
 
         return True
