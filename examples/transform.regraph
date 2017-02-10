@@ -1,4 +1,0 @@
-delete_node 6.
-merge [1, 5].
-merge [4, 7] as merge_1.
-add_edge merge_1 2.
