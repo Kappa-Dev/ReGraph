@@ -56,7 +56,6 @@ class TypedDiGraph(nx.DiGraph):
         self.input_constraints = dict()
         self.output_constraints = dict()
         self.unckecked_nodes = set()
-        self.wrong_nodes = set()
 
         self.graph_attr = dict()
 
@@ -1113,96 +1112,64 @@ class TypedDiGraph(nx.DiGraph):
         return res
 
     def get_input_constraints(self, node):
-        return(self.input_constraints.get(node, []))
+        return self.input_constraints.get(node, [])
 
     def get_output_constraints(self, node):
-        return(self.output_constraints.get(node, []))
-
-    # def checkInputConstraint(self, node_type, constraint_node, cond, mapping):
-    #     filtered_by_type = (n for n in self.nodes() if mapping(n) == node_type)
-    #     for n in filtered_by_type:
-    #         input_nodes = [source_node for (source_node, target_node) in self.edges() if target_node == n ]
-    #         num_of_input_edges = len([source_node for source_node in input_nodes if mapping[source_node] == constraint_node])
-
-    # def checkOutputConstraint(self, node_type, constraint_node, cond, mapping):
-    #     filtered_by_type = (n for n in self.nodes() if mapping(n) == node_type)
-    #     for n in filtered_by_type :
-    #         output_nodes = [target_node for (source_node, target_node) in self.edges() if source_node == n ]
-    #         num_of_output_edges = len([target_node for target_node in output_nodes if mapping[target_node] == constraint_node])
+        return self.output_constraints.get(node, [])
 
     def check_node_constraints(self, typing_graph, mapping, n):
-        input_nodes = [i for (i, n) in self.edges()]
         wrong_conds = []
-        for (n1, (cond, viewableCond)) in typing_graph.getInputConstraints(mapping[n]):
+
+        input_nodes = [i for (i, n2) in self.edges() if n2 == n]
+        input_constraints = typing_graph.get_input_constraints(mapping[n])
+        for (n1, (cond, viewableCond)) in input_constraints:
             num_of_input_edges =\
-                len([source_node for source_node in input_nodes if mapping[source_node]==n1])
+                len([source_node for source_node in input_nodes
+                     if mapping[source_node] == n1])
             if not cond(num_of_input_edges):
                 wrong_conds.append(viewableCond)
-        output_nodes = [o for (n, o) in self.edges()]
-        for (n1, (cond, viewableCond)) in typing_graph.getOutputConstraints(mapping[n]):
+
+        output_nodes = [o for (n2, o) in self.edges() if n2 == n]
+        output_constraints = typing_graph.get_output_constraints(mapping[n])
+        for (n1, (cond, viewableCond)) in output_constraints:
             num_of_output_edges =\
-                len([target_node for target_node in output_nodes if mapping[target_node]==n1])
+                len([target_node for target_node in output_nodes
+                     if mapping[target_node] == n1])
             if not cond(num_of_output_edges):
                 wrong_conds.append(viewableCond)
         return wrong_conds
 
-    # def checkConstraints(self, typing_graph, mapping, only_unckecked = False ):
-    #     to_check = self.unckecked_nodes | self.wrong_nodes if only_unckecked else self.nodes()
-    #     for n in to_check:
-    #         input_nodes = [i for (i,n) in self.edges()]
-    #         for (n1, cond) in typing_graph.getInputConstraints(mapping(n)):
-    #             num_of_input_edges = len([source_node for source_nodes in input_nodes if mapping(source_node)==n1])
-    #             if not cond(num_of_input_edges):
-    #                 return False
-    #         output_nodes = [o for (n,o) in self.edges()]
-    #         for (n1, cond) in typing_graph.getOutputConstraints(mapping(n)):
-    #             num_of_output_edges = len([source_node for source_nodes in out_nodes if mapping(source_node)==n1])
-    #             if not cond(num_of_output_edges):
-    #                 return False
-    #     return True
-
     def check_all_node_constraints(self, node):
         # can use a if to avoid the first useless composition
+
         current_typing_graph = self.metamodel_
         sub_typing_graph = self
         current_typing = {node_id: node_id for node_id in self.nodes()}
         wrong_conds = []
         while current_typing_graph is not None:
-            top_typing = {node_id: sub_typing_graph.node[node_id].type_ for node_id in sub_typing_graph.nodes()}
-            new_typing = {node_id: t3 for (node_id,t1) in current_typing.items() for (t2,t3) in top_typing.items() if t1==t2}
-            wrong_conds += self.check_node_constraints(current_typing_graph, new_typing, node)
+            top_typing = {node_id: sub_typing_graph.node[node_id].type_
+                          for node_id in sub_typing_graph.nodes()}
+            new_typing = {node_id: t3
+                          for (node_id, t1) in current_typing.items()
+                          for (t2, t3) in top_typing.items() if t1 == t2}
+            wrong_conds += self.check_node_constraints(current_typing_graph,
+                                                       new_typing, node)
             sub_typing_graph = current_typing_graph
             current_typing_graph = current_typing_graph.metamodel_
             current_typing = new_typing
         return wrong_conds
 
     def check_constraints(self, all_nodes=False):
-        to_check = self.nodes() if all_nodes else self.unckecked_nodes.copy() #| self.wrong_nodes
+        to_check = self.nodes() if all_nodes else self.unckecked_nodes.copy()
         all_wrong_conds = []
         for n in to_check:
             wrong_conds = self.check_all_node_constraints(n)
             all_wrong_conds += wrong_conds
             if wrong_conds == []:
                 self.unckecked_nodes -= {n}
-                # self.wrong_nodes -= {n}
             elif all_nodes:
                 self.unckecked_nodes |= {n}
-        return(all_wrong_conds)
-
-    # def checkAllConstraints(self):
-    #     #can use a if to avoid the first useless composition
-    #     current_typing_graph = self.metamodel_
-    #     sub_typing_graph = self
-    #     current_typing = {node_id: node_id for node_id in self.nodes()}
-    #     while current_typing_graph is not None:
-    #         top_typing = {node_id: sub_typing_graph.node[node_id].type_ for node_id in sub_typing_graph.nodes()}
-    #         new_typing = {node_id: t for (node_id,t1) in current_typing.items() for (t2,t3) in top_typing.items() if t1==t2}
-    #         if not self.checkConstraints(typing_graph, new_typing):
-    #             return False
-    #         sub_typing_graph = current_typing_graph
-    #         current_typing_graph = current_typing_graph.metamodel_
-    #         current_typing = new_typing
-    #     return True
+        return all_wrong_conds
 
     def add_constraint(self, n1, n2, cond, viewable_cond, constraints):
         if n1 not in self.nodes():
@@ -1216,23 +1183,8 @@ class TypedDiGraph(nx.DiGraph):
     def add_input_constraint(self, n1, n2, cond, viewable_cond):
         self.add_constraint(n1, n2, cond, viewable_cond, self.input_constraints)
 
-        # if n1 not in self.nodes():
-            # raise ValueError(n1 + " is not a node of the graph")
-        # if n2 not in self.nodes():
-            # raise ValueError(n2 + " is not a node of the graph")
-        # if viewableCond in [vcond for (_,(_,vcond)) in self.input_constraints.get(n1,[])]:
-            # raise ValueError(" condition already exists")
-        # self.input_constraints.setdefault(n1,[]).append((n2,(cond,viewableCond)))
-
     def add_output_constraint(self, n1, n2, cond, viewable_cond):
         self.add_constraint(n1, n2, cond, viewable_cond, self.output_constraints)
-        # if n1 not in self.nodes():
-            # raise ValueError(n1 + " is not a node of the graph")
-        # if n2 not in self.nodes():
-            # raise ValueError(n2 + " is not a node of the graph")
-        # if viewableCond in [vcond for (_,(_,vcond)) in self.output_constraints.get(n1,[])]:
-            # raise ValueError(" condition already exists")
-        # self.output_constraints.setdefault(n1,[]).append((n2,(cond, viewableCond)))
 
     def delete_constraints(self, n, viewable_cond, constraints):
         if n not in self.nodes():
