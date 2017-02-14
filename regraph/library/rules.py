@@ -61,12 +61,15 @@ class Rule(object):
     @classmethod
     def from_transform(cls, pattern, typing_graph=None, ignore_types=False, ignore_attrs=False, commands=None):
         """Initialize a rule from the transformation.
+
         On input takes a pattern which is used as LHS of the rule,
         as an optional argument transformation commands can be provided,
         by default the list of commands is empty and all P, LHS and RHS
         are initialized to be the same graph (pattern), later on
         when transformations are applied P and RHS are being updated.
-        If list of commands is specified, """
+        If list of commands is specified, these commands are simplified,
+        transformed to the canonical order, and applied to P, LHS & RHS.
+        """
         p = copy.deepcopy(pattern)
         lhs = copy.deepcopy(pattern)
         rhs = copy.deepcopy(pattern)
@@ -81,9 +84,7 @@ class Rule(object):
         if commands:
             # 1. make the commands canonical
             commands = make_canonical_commands(p, commands, p.is_directed())
-            print(commands)
             # 2. apply the commands
-            print([c for block in commands for c in block.splitlines() ])
 
             command_strings = [c for block in commands if len(block) > 0 for c in block.splitlines()]
 
@@ -216,7 +217,6 @@ class Rule(object):
 
     def remove_node(self, n):
         """Remove a node in the graph."""
-
         # remove corresponding nodes from p and rhs
         p_keys = keys_by_value(self.p_lhs, n)
         for k in p_keys:
@@ -232,7 +232,6 @@ class Rule(object):
 
     def add_edge(self, n1, n2, attrs=None):
         """Add an edge in the graph."""
-
         # Find nodes in p mapping to n1 & n2
         p_keys_1 = keys_by_value(self.p_lhs, n1)
         p_keys_2 = keys_by_value(self.p_lhs, n2)
@@ -268,7 +267,6 @@ class Rule(object):
 
     def remove_edge(self, n1, n2):
         """Remove edge from the graph."""
-
         # Find nodes in p mapping to n1 & n2
         p_keys_1 = keys_by_value(self.p_lhs, n1)
         p_keys_2 = keys_by_value(self.p_lhs, n2)
@@ -331,7 +329,6 @@ class Rule(object):
 
     def merge_nodes(self, n1, n2, node_name=None):
         """Merge two nodes of the graph."""
-
         # Update graphs
         new_name = None
         p_keys_1 = keys_by_value(self.p_lhs, n1)
@@ -371,7 +368,6 @@ class Rule(object):
 
     def remove_node_attrs(self, n, attrs):
         """Remove nodes attributes from a node in the graph."""
-
         if n not in self.lhs.nodes():
             raise ValueError("Node %s does not exist in the left hand side of the rule" % n)
 
@@ -626,7 +622,7 @@ class Rule(object):
     #         self.P_R_dict[n0] = node_name
 
     def merge_node_list(self, node_list, node_name=None):
-        """ Merge a list of nodes """
+        """Merge a list of nodes."""
         if len(node_list) > 1:
             node_name = self.merge_nodes(node_list[0], node_list[1], node_name)
             for i in range(2, len(node_list)):

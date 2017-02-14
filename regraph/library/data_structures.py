@@ -4,6 +4,7 @@ import copy
 import networkx as nx
 
 from regraph.library.utils import (is_subdict,
+                                   keys_by_value,
                                    valid_attributes)
 
 
@@ -48,7 +49,7 @@ def is_valid_homomorphism(source,
                     (s, str(source.node[s].type_), str(t), str(target.node[t].type_)))
         if not ignore_attrs:
             # check sets of attributes of nodes (here homomorphism = set inclusion)
-            if type(source.node[s]) == dict():
+            if type(source.node[s]) == dict:
                 source_attrs = source.node[s]
             else:
                 source_attrs = source.node[s].attrs_
@@ -79,6 +80,108 @@ def is_valid_homomorphism(source,
                     (s1, s2, dictionary[s1],
                         dictionary[s2]))
     return True
+
+
+def compose_homomorphisms(hom1, hom2):
+    # Strategy: if hom1 and hom2
+    # are typing homomorphisms or one of them is typing and
+    # another is type-preserving, we construct a new typing
+    # homomorphism and convert the node types to the
+    # corresponding new types. Otherwise we create
+    # a homomorphism which is a composition of
+    # the previous two (hom2 * hom1)
+    source = copy.deepcopy(hom1.source_)
+    converted_types = {}
+
+    if type(hom1) == TypingHomomorphism:
+        if type(hom2) == TypingHomomorphism:
+            # change the types of the newly typed graphs
+            for new_type in hom2.target_.nodes():
+                old_types = keys_by_value(
+                    hom2.mapping_,
+                    new_type
+                )
+                for t in old_types:
+                    source.convert_type(t, new_type)
+                    converted_types.update({t: new_type})
+            # update meta-model of the corresponding graph
+            source.update_metamodel(hom2.target_)
+            composed_hom = TypingHomomorphism(
+                source,
+                hom2.target_,
+                ignore_attrs=(hom1.ignore_attrs or hom2.ignore_attrs)
+            )
+        else:
+            if hom2.ignore_types is False:
+                # change the types of the newly typed graphs
+                for new_type in hom2.target_.nodes():
+                    old_types = keys_by_value(
+                        hom2.mapping_,
+                        new_type
+                    )
+                    for t in old_types:
+                        source.convert_type(t, new_type)
+                        converted_types.update({t: new_type})
+                # update meta-model of the corresponding graph
+                source.update_metamodel(hom2.target_)
+                composed_hom = TypingHomomorphism(
+                    source,
+                    hom2.target_,
+                    ignore_attrs=(hom1.ignore_attrs or hom2.ignore_attrs)
+                )
+            else:
+                mapping = dict(
+                    [(key, hom2.mapping_[value]) for key, value in hom1.mapping_.items()]
+                )
+                composed_hom = Homomorphism(
+                    source,
+                    hom2.target_,
+                    mapping,
+                    ignore_types=True,
+                    ignore_attrs=(hom1.ignore_attrs or hom2.ignore_attrs)
+                )
+    else:
+        if type(hom2) == TypingHomomorphism:
+            if hom1.ignore_types is False:
+                # change the types of the newly typed graphs
+                for new_type in hom2.target_.nodes():
+                    old_types = keys_by_value(
+                        hom2.mapping_,
+                        new_type
+                    )
+                    for t in old_types:
+                        source.convert_type(t, new_type)
+                        converted_types.update({t: new_type})
+                # update meta-model of the corresponding graph
+                source.update_metamodel(hom2.target_)
+                composed_hom = TypingHomomorphism(
+                    source,
+                    hom2.target_,
+                    ignore_attrs=(hom1.ignore_attrs or hom2.ignore_attrs)
+                )
+            else:
+                mapping = dict(
+                    [(key, hom2.mapping_[value]) for key, value in hom1.mapping_.items()]
+                )
+                composed_hom = Homomorphism(
+                    source,
+                    hom2.target_,
+                    mapping,
+                    ignore_types=True,
+                    ignore_attrs=(hom1.ignore_attrs or hom2.ignore_attrs)
+                )
+        else:
+            mapping = dict(
+                [(key, hom2.mapping_[value]) for key, value in hom1.mapping_.items()]
+            )
+            composed_hom = Homomorphism(
+                source,
+                hom2.target_,
+                mapping,
+                ignore_types=True,
+                ignore_attrs=(hom1.ignore_attrs or hom2.ignore_attrs)
+            )
+    return (composed_hom, converted_types)
 
 
 class Homomorphism(object):
@@ -187,10 +290,14 @@ class Hierarchy(nx.DiGraph):
         res += "Homomorphisms : \n"
         for n1, n2 in self.edges():
             res +=\
-                str((n1, n2)) +\
-                " : ignore_types == " +\
-                str(self.edge[n1][n2].ignore_types) +\
-                " : ignore_attrs == " +\
+                str((n1, n2))
+            if type(self.edge[n1][n2]) == TypingHomomorphism:
+                res += " : typing homomorphism, "
+            else:
+                res += " : ignore_types == %s, " %\
+                    str(self.edge[n1][n2].ignore_types)
+
+            res += "ignore_attrs == " +\
                 str(self.edge[n1][n2].ignore_attrs) +\
                 "\n"
         res += "\n"
@@ -260,27 +367,49 @@ class Hierarchy(nx.DiGraph):
                 "Graph %s is not defined in the hierarchy!" % graph_id)
 
         if reconnect:
-            in_graphs = self.successors(graph_id)
-            out_graphs = self.predecessors(graph_id)
+            pass
+            # out_graphs = self.successors(graph_id)
+            # in_graphs = self.predecessors(graph_id)
 
-            for source in in_graphs:
-                for target in out_graphs:
-                    print(source, graph_id, target)
-                    print(self)
-                    print(self.edge)
-                    pred = self.edge[source][graph_id]
-                    succ = self.edge[graph_id][target]
-                    mapping = dict(
-                        [(key, succ[value]) for key, value in pred.items()]
-                    )
-                    # Add edges corresponding to new mappings
-                    self.add_homomorphism(
-                        source,
-                        target,
-                        mapping,
-                        pred.ignore_types or succ.ignore_types,
-                        pred.ignore_attrs or pred.ignore_attrs
-                    )
-                    # self.remove_edge(source, graph_id)
-                    # self.remove_edge(graph_id, target)
-        # self.remove_node(graph_id)
+            # updated_nodes = set(out_graphs + [graph_id] + in_graphs)
+            # edges_to_add = dict()
+            # for source in in_graphs:
+            #     for target in out_graphs:
+
+            #         # compose two homomorphisms
+            #         (new_homomorphism, converted_types) = compose_homomorphisms(
+            #             self.edge[source][graph_id],
+            #             self.edge[graph_id][target]
+            #         )
+
+            #         # update a source graph
+            #         self.node[source] = new_homomorphism.source_
+
+            #         # BFS for updates in the graphs
+            #         if converted_types:
+            #             updated_nodes.add(source)
+            #             for u, v in nx.bfs_edges(self, source):
+            #                 if u in updated_nodes and v not in updated_nodes:
+            #                     if type(self.edge[u][v]) == Homomorphism:
+            #                         if self.edge[u][v].ignore_types is False:
+            #                             for old, new in converted_types.items():
+            #                                 self.node[v].convert_type(old, new)
+            #                                 updated_nodes.add(v)
+            #                 elif u not in updated_nodes and v in updated_nodes:
+            #                     if type(self.edge[u][v]) == Homomorphism:
+            #                         if self.edge[u][v].ignore_types is False:
+            #                             for old, new in converted_types.items():
+            #                                 self.node[u].convert_type(old, new)
+            #                                 updated_nodes(u)
+
+            #         # Add edges corresponding to constructed homomorphisms
+            #         edges_to_add[(source, target)] = new_homomorphism
+
+            # for edge, hom in edges_to_add.items():
+            #     if (edge[0], edge[1]) not in self.edges():
+            #         print(edge[0], edge[1])
+            #         print(hom)
+            #         self.add_edge(edge[0], edge[1])
+            #         self.edge[edge[0]][edge[1]] = hom
+
+        self.remove_node(graph_id)
