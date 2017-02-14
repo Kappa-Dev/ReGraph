@@ -368,48 +368,52 @@ class Hierarchy(nx.DiGraph):
 
         if reconnect:
             pass
-            # out_graphs = self.successors(graph_id)
-            # in_graphs = self.predecessors(graph_id)
+            out_graphs = self.successors(graph_id)
+            in_graphs = self.predecessors(graph_id)
 
-            # updated_nodes = set(out_graphs + [graph_id] + in_graphs)
-            # edges_to_add = dict()
-            # for source in in_graphs:
-            #     for target in out_graphs:
+            updated_nodes = set(out_graphs + [graph_id] + in_graphs)
+            edges_to_add = dict()
+            for source in in_graphs:
+                for target in out_graphs:
 
-            #         # compose two homomorphisms
-            #         (new_homomorphism, converted_types) = compose_homomorphisms(
-            #             self.edge[source][graph_id],
-            #             self.edge[graph_id][target]
-            #         )
+                    # compose two homomorphisms
+                    (new_homomorphism, converted_types) = compose_homomorphisms(
+                        self.edge[source][graph_id],
+                        self.edge[graph_id][target]
+                    )
 
-            #         # update a source graph
-            #         self.node[source] = new_homomorphism.source_
+                    # update a source graph
+                    self.node[source] = new_homomorphism.source_
+                    # update adjacent homomorphisms
+                    for (u, v) in self.in_edges(source):
+                        self.edge[u][v].target_ = new_homomorphism.source_
+                    for (u, v) in self.out_edges(source):
+                        self.edge[u][v].source_ = new_homomorphism.source_
 
-            #         # BFS for updates in the graphs
-            #         if converted_types:
-            #             updated_nodes.add(source)
-            #             for u, v in nx.bfs_edges(self, source):
-            #                 if u in updated_nodes and v not in updated_nodes:
-            #                     if type(self.edge[u][v]) == Homomorphism:
-            #                         if self.edge[u][v].ignore_types is False:
-            #                             for old, new in converted_types.items():
-            #                                 self.node[v].convert_type(old, new)
-            #                                 updated_nodes.add(v)
-            #                 elif u not in updated_nodes and v in updated_nodes:
-            #                     if type(self.edge[u][v]) == Homomorphism:
-            #                         if self.edge[u][v].ignore_types is False:
-            #                             for old, new in converted_types.items():
-            #                                 self.node[u].convert_type(old, new)
-            #                                 updated_nodes(u)
+                    # BFS for updates in the graphs
+                    if converted_types:
+                        updated_nodes.add(source)
+                        for u, v in nx.bfs_edges(self, source):
+                            if u in updated_nodes and v not in updated_nodes:
+                                if type(self.edge[u][v]) == Homomorphism:
+                                    if self.edge[u][v].ignore_types is False:
+                                        for old, new in converted_types.items():
+                                            self.node[v].convert_type(old, new)
+                                            # update adjacent homomorphisms
+                                            updated_nodes.add(v)
+                            elif u not in updated_nodes and v in updated_nodes:
+                                if type(self.edge[u][v]) == Homomorphism:
+                                    if self.edge[u][v].ignore_types is False:
+                                        for old, new in converted_types.items():
+                                            self.node[u].convert_type(old, new)
+                                            updated_nodes(u)
 
-            #         # Add edges corresponding to constructed homomorphisms
-            #         edges_to_add[(source, target)] = new_homomorphism
+                    # Add edges corresponding to constructed homomorphisms
+                    edges_to_add[(source, target)] = new_homomorphism
 
-            # for edge, hom in edges_to_add.items():
-            #     if (edge[0], edge[1]) not in self.edges():
-            #         print(edge[0], edge[1])
-            #         print(hom)
-            #         self.add_edge(edge[0], edge[1])
-            #         self.edge[edge[0]][edge[1]] = hom
+            for edge, hom in edges_to_add.items():
+                if (edge[0], edge[1]) not in self.edges():
+                    self.add_edge(edge[0], edge[1])
+                    self.edge[edge[0]][edge[1]] = hom
 
         self.remove_node(graph_id)
