@@ -1,5 +1,7 @@
 import networkx as nx
 
+from regraph.library.utils import (dict_sub,
+                                   is_subdict)
 from regraph.library.primitives import *
 
 
@@ -7,21 +9,19 @@ class TestPrimitives(object):
 
     def __init__(self):
         self.graph = nx.DiGraph()
-        self.graph.add_node('1', {'name': 'EGFR', 'state': 'p'})
-        self.graph.add_node('2', {'name': 'BND'})
-        self.graph.add_node('3', {'name': 'Grb2', 'aa': 'S', 'loc': 90})
-        self.graph.add_node('4', {'name': 'SH2'})
-        self.graph.add_node('5', {'name': 'EGFR'})
-        self.graph.add_node('6', {'name': 'BND'})
-        self.graph.add_node('7', {'name': 'Grb2'})
-
-        self.graph.add_node('8', {'name': 'WAF1'})
-        self.graph.add_node('9', {'name': 'BND'})
-        self.graph.add_node('10', {'name': 'G1-S/CDK', 'state': 'p'})
-
-        self.graph.add_node('11')
-        self.graph.add_node('12')
-        self.graph.add_node('13')
+        add_node(self.graph, '1', {'name': 'EGFR', 'state': 'p'})
+        add_node(self.graph, '2', {'name': 'BND'})
+        add_node(self.graph, '3', {'name': 'Grb2', 'aa': 'S', 'loc': 90})
+        add_node(self.graph, '4', {'name': 'SH2'})
+        add_node(self.graph, '5', {'name': 'EGFR'})
+        add_node(self.graph, '6', {'name': 'BND'})
+        add_node(self.graph, '7', {'name': 'Grb2'})
+        add_node(self.graph, '8', {'name': 'WAF1'})
+        add_node(self.graph, '9', {'name': 'BND'})
+        add_node(self.graph, '10', {'name': 'G1-S/CDK', 'state': 'p'})
+        add_node(self.graph, '11')
+        add_node(self.graph, '12')
+        add_node(self.graph, '13')
 
         edges = [
             ('1', '2', {'s': 'p'}),
@@ -30,7 +30,9 @@ class TestPrimitives(object):
             ('5', '6', {'s': 'p'}),
             ('7', '6', {'s': 'u'}),
             ('8', '9'),
-            ('10', '9'),
+            ('9', '8'),
+            ('10', '8', {"a": {1}}),
+            ('10', '9', {"a": {2}}),
             ('11', '12'),
             ('12', '11'),
             ('12', '13'),
@@ -40,7 +42,7 @@ class TestPrimitives(object):
             ('5', '2', {'s': 'u'})
         ]
 
-        self.graph.add_edges_from(edges)
+        add_edges_from(self.graph, edges)
 
     def test_add_node(self):
         try:
@@ -113,7 +115,41 @@ class TestPrimitives(object):
         assert(id(g.edge[s][t]) == id(g.edge[t][s]))
 
     def test_remove_edge(self):
-        pass
+        g = self.graph.to_undirected()
+
+        remove_edge(self.graph, '11', '12')
+        assert(('11', '12') not in self.graph.nodes())
+
+        # try with undirected
+        remove_edge(g, '11', '12')
+        assert(('11', '12') not in self.graph.nodes())
+        assert(('12', '11') not in self.graph.nodes())
+
+    def test_update_node_attrs(self):
+        new_attr = {"b": {1}}
+        add_node_attrs(self.graph, '1', new_attr)
+        assert(id(self.graph.node['1']) != id(new_attr))
+
+    def test_add_edge_attrs(self):
+        g = self.graph.to_undirected()
+        new_attrs = {"b": {1}}
+        add_edge_attrs(g, '1', '2', new_attrs)
+        assert(is_subdict(new_attrs, g.edge['1']['2']))
+        assert(is_subdict(new_attrs, g.edge['2']['1']))
+
+    def test_remove_edge_attrs(self):
+        g = self.graph.to_undirected()
+        attrs = {"s": {"p"}}
+        remove_edge_attrs(g, '1', '2', attrs)
+        assert(not is_subdict(attrs, g.edge['1']['2']))
+        assert(not is_subdict(attrs, g.edge['2']['1']))
+
+    def test_update_edge_attrs(self):
+        g = self.graph.to_undirected()
+        attrs = {"b": {1}}
+        update_edge_attrs(g, '1', '2', attrs)
+        assert(id(g.edge['1']['2']) != id(attrs))
+        assert(id(g.edge['2']['1']) == id(g.edge['1']['2']))
 
     def test_clone_node(self):
         node_to_clone = '1'
@@ -157,7 +193,68 @@ class TestPrimitives(object):
             assert(id(g.edge[n][new_name]) != id(g.edge[n][node_to_clone]))
 
     def test_merge_nodes(self):
-        merge_nodes(self.graph, ["4", "5"])
+        g = self.graph.to_undirected()
 
-    def test_merge_nodes_undir(self):
+        old_attrs1 = self.graph.node['8']
+        old_attrs2 = self.graph.node['9']
+        old_edge_attrs1 = self.graph.edge['10']['8']
+        old_edge_attrs2 = self.graph.edge['10']['9']
+        new_name = merge_nodes(self.graph, ["8", "9"])
+        assert(new_name in self.graph.nodes())
+        assert("8" not in self.graph.nodes())
+        assert("9" not in self.graph.nodes())
+        assert(is_subdict(old_attrs1, self.graph.node[new_name]))
+        assert(is_subdict(old_attrs2, self.graph.node[new_name]))
+        assert((new_name, new_name) in self.graph.edges())
+        assert(is_subdict(old_edge_attrs1, self.graph.edge['10'][new_name]))
+        assert(is_subdict(old_edge_attrs2, self.graph.edge['10'][new_name]))
+
+        # test undirected case
+        old_attrs1 = g.node['8']
+        old_attrs2 = g.node['9']
+        old_edge_attrs1 = g.edge['10']['8']
+        old_edge_attrs2 = g.edge['10']['9']
+        new_name = merge_nodes(g, ["8", "9"])
+        assert(new_name in g.nodes())
+        assert("8" not in g.nodes())
+        assert("9" not in g.nodes())
+        assert(is_subdict(old_attrs1, g.node[new_name]))
+        assert(is_subdict(old_attrs2, g.node[new_name]))
+        assert((new_name, new_name) in g.edges())
+        assert(is_subdict(old_edge_attrs1, g.edge['10'][new_name]))
+        assert(is_subdict(old_edge_attrs1, g.edge[new_name]['10']))
+        assert(is_subdict(old_edge_attrs2, g.edge['10'][new_name]))
+        assert(is_subdict(old_edge_attrs2, g.edge[new_name]['10']))
+        assert(g.edge['10'][new_name] == g.edge[new_name]['10'])
+        assert(id(g.edge['10'][new_name]) == id(g.edge[new_name]['10']))
+
+
+    def test_set_edge(self):
+        pass
+
+    def test_relabel_node(self):
+        pass
+
+    def test_relabel_nodes(self):
+        pass
+
+    def test_get_relabeled_graph(self):
+        pass
+
+    def test_subtract(self):
+        pass
+
+    def test_append_to_node_names(self):
+        pass
+
+    def test_from_json_like(self):
+        pass
+
+    def test_to_json_like(self):
+        pass
+
+    def test_load(self):
+        pass
+
+    def test_export(self):
         pass

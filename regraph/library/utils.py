@@ -129,19 +129,20 @@ def merge_attributes(attr1, attr2, method="union"):
     return result
 
 
-def dict_sub(A, B):
-    res = copy.deepcopy(A)
-    if B is None:
+def dict_sub(a, b):
+    res = copy.deepcopy(a)
+    normalize_attrs(res)
+    if b is None:
         return res
-    for key, value in B.items():
-        if key not in A.keys():
+    for key, value in b.items():
+        if key not in a.keys():
             warnings.warn(
                 "Dict A does not have attribute '%s'" %
                 (str(key)), RuntimeWarning)
         else:
             elements_to_remove = []
             for el in to_set(value):
-                if el in A[key]:
+                if el in a[key]:
                     elements_to_remove.append(el)
                 else:
                     warnings.warn(
@@ -210,47 +211,47 @@ def simplify_commands(commands, di=False):
                 rem_el = []
                 for j in range(len(added)):
                     el = added[j]
-                    if (type(el) == tuple and (el[0] == action["node"] or\
+                    if (type(el) == tuple and (el[0] == action["node"] or
                                                el[1] == action["node"])) or\
-                        el == action["node"]:
-                            # If the node have been involved in an addition
-                            # we remove that addition since it has been
-                            # deleted now, if there are not more lines that
-                            # refers to the addition of that node, we can
-                            # remove the deletion of the node
-                            # Finding the node in added is not enough to
-                            # remove the deletion since it can be an
-                            # addition of an edge, we have to check if it
-                            # the node itself that we added
-                            if el == action["node"]:
-                                elements_to_remove.append(i)
-                            for k in ad_index[j]:
-                                elements_to_remove.append(k)
-                            rem_el.append(j)
-                k=0
+                       el == action["node"]:
+                        # If the node have been involved in an addition
+                        # we remove that addition since it has been
+                        # deleted now, if there are not more lines that
+                        # refers to the addition of that node, we can
+                        # remove the deletion of the node
+                        # Finding the node in added is not enough to
+                        # remove the deletion since it can be an
+                        # addition of an edge, we have to check if it
+                        # the node itself that we added
+                        if el == action["node"]:
+                            elements_to_remove.append(i)
+                        for k in ad_index[j]:
+                            elements_to_remove.append(k)
+                        rem_el.append(j)
+                k = 0
                 for j in rem_el:
-                    del added[j-k]
-                    del ad_index[j-k]
-                    del ad_type[j-k]
+                    del added[j - k]
+                    del ad_index[j - k]
+                    del ad_type[j - k]
                     k += 1
                 rem_el = []
                 for j in range(len(deleted)):
                     el = deleted[j]
-                    if (type(el) == tuple and (el[0] == action["node"] or\
+                    if (type(el) == tuple and (el[0] == action["node"] or
                                                el[1] == action["node"])) or\
-                        el == action["node"]:
-                            # If the node have been involved in a deletion
-                            # we can remove that deletion since the deletion
-                            # of the node itself will delete what the deletion
-                            # would have deleted
-                            for k in del_index[j]:
-                                elements_to_remove.append(k)
-                            rem_el.append(j)
-                k=0
+                       el == action["node"]:
+                        # If the node have been involved in a deletion
+                        # we can remove that deletion since the deletion
+                        # of the node itself will delete what the deletion
+                        # would have deleted
+                        for k in del_index[j]:
+                            elements_to_remove.append(k)
+                        rem_el.append(j)
+                k = 0
                 for j in rem_el:
-                    del deleted[j-k]
-                    del del_index[j-k]
-                    k+=1
+                    del deleted[j - k]
+                    del del_index[j - k]
+                    k += 1
             else:
                 # If the node have been cloned before, we can't delete the
                 # transformations that happened before the cloning since

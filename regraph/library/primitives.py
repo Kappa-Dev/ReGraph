@@ -207,7 +207,7 @@ def update_edge_attrs(graph, node_1, node_2, attrs):
         normalize_attrs(new_attrs)
         graph.edge[node_1][node_2] = new_attrs
         if not graph.is_directed():
-            graph.edge[node_1][node_2] = new_attrs
+            graph.edge[node_2][node_1] = new_attrs
 
 
 def remove_edge_attrs(graph, node_1, node_2, attrs_dict):
