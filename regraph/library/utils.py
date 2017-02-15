@@ -129,97 +129,6 @@ def merge_attributes(attr1, attr2, method="union"):
     return result
 
 
-def colors_by_type(graph):
-    """
-    Generate colors for node by types.
-
-    :returns: Dict. Nodes as keys, colors as values.
-    """
-    colors_dict = {}
-    colors = []
-    counter = 1
-    for node in graph.nodes():
-        if graph.node[node].type_ not in colors_dict:
-            colors_dict[graph.node[node].type_] =\
-                float(counter)
-            colors.append(float(counter))
-            counter += 1
-        else:
-            colors.append(colors_dict[graph.node[node].type_])
-    return colors
-
-
-def plot_graph(graph, types=True, filename=None):
-        """Plot graph with node colors corresponding to types."""
-        if types:
-            color_list = colors_by_type(graph)
-        else:
-            color_list = None
-
-        pos = nx.spring_layout(graph)
-        nx.draw_networkx_nodes(graph, pos,
-                               node_color=color_list,
-                               node_size=100, arrows=True)
-        nx.draw_networkx_edges(graph, pos, alpha=0.4)
-
-        labels = {}
-        for node in graph.nodes():
-            labels[node] = str(node)
-            if types:
-                labels[node] += ":" + str(graph.node[node].type_)
-        offset = 0.05
-        for p in pos:  # raise text positions
-            pos[p][1] += offset
-        nx.draw_networkx_labels(graph, pos, labels, font_size=11)
-
-        # save to the file
-        if filename is not None:
-            # with open(filename, "w") as f:
-                # plt.savefig(f)
-            plt.savefig(filename)
-            plt.clf()
-        else:
-            plt.show()
-        return
-
-
-def plot_instance(graph, pattern, instance, filename=None):
-        """Plot the graph with instance of pattern highlighted."""
-        new_colors = ["g" if not graph.nodes()[i] in instance.values()
-                      else "r" for i, c in enumerate(graph.nodes())]
-        pos = nx.spring_layout(graph)
-        nx.draw_networkx_nodes(
-            graph, pos, node_color=new_colors,
-            node_size=100, arrows=True)
-        nx.draw_networkx_edges(graph, pos, alpha=0.4)
-
-        # Draw pattern edges highlighted
-        edgelist = [(instance[edge[0]], instance[edge[1]])
-                    for edge in pattern.edges()]
-        nx.draw_networkx_edges(
-            graph, pos,
-            edgelist=edgelist,
-            width=3, alpha=0.5, edge_color='r')
-
-        labels = {}
-        for node in graph.nodes():
-            labels[node] = node
-        offset = 0.05
-        for p in pos:  # raise text positions
-            pos[p][1] += offset
-        nx.draw_networkx_labels(graph, pos, labels, font_size=11)
-
-        # color the instances
-        plt.title("Graph with instance of pattern highlighted")
-        if filename is not None:
-            with open(filename, "w") as f:
-                plt.savefig(f)
-                plt.clf()
-        else:
-            plt.show()
-        return
-
-
 def dict_sub(A, B):
     res = copy.deepcopy(A)
     if B is None:
@@ -253,11 +162,11 @@ def simplify_commands(commands, di=False):
     command_strings = [c for c in commands.splitlines() if len(c) > 0]
     actions = []
     for command in command_strings:
-      try:
-          parsed = parser.parseString(command).asDict()
-          actions.append(parsed)
-      except:
-          raise ValueError("Cannot parse command '%s'" % command)
+        try:
+            parsed = parser.parseString(command).asDict()
+            actions.append(parsed)
+        except:
+            raise ValueError("Cannot parse command '%s'" % command)
 
     # We keep updated a list of the element we added, the lines of
     # transformations that added them or added attributes to them
@@ -934,13 +843,13 @@ def make_canonical_commands(g, commands, di=False):
     return res
 
 
-def is_valid_homomorphism(source,
-                          target,
-                          dictionary,
-                          ignore_types=False,
-                          ignore_attrs=False):
+def compose_homomorphisms(d1, d2):
+    return dict([(key, d2[value]) for key, value in d1.items()])
+
+
+def check_homomorphism(source, target, dictionary, ignore_attrs=False):
     """Check if the homomorphism is valid (preserves edges,
-    preserves types and attributes if requires)."""
+    and attributes if requires)."""
 
     # check if there is mapping for all the nodes of source graph
     if set(source.nodes()) != set(dictionary.keys()):
@@ -965,38 +874,23 @@ def is_valid_homomorphism(source,
                     "Invalid homomorphism: Connectivity is not preserved!" +\
                     " Was expecting an edge between %s and %s" %
                     (dictionary[s_edge[0]], dictionary[s_edge[1]]))
+
     # check nodes match with types
     for s, t in dictionary.items():
-        if not ignore_types:
-            if (source.node[s].type_ is not None) and\
-               (source.node[s].type_ != target.node[t].type_):
-                raise ValueError(
-                    "Invalid homomorphism: Node types do not match (%s:%s and %s:%s)!" %
-                    (s, str(source.node[s].type_), str(t), str(target.node[t].type_)))
         if not ignore_attrs:
             # check sets of attributes of nodes (here homomorphism = set inclusion)
-            if type(source.node[s]) == dict():
-                source_attrs = source.node[s]
-            else:
-                source_attrs = source.node[s].attrs_
-            if type(target.node[t]) == dict:
-                target_attrs = target.node[t]
-            else:
-                target_attrs = target.node[t].attrs_
-            if not valid_attributes(source_attrs, target_attrs):
+            if not valid_attributes(source.node[s], target.node[t]):
                 raise ValueError(
                     "Invalid homomorphism: Attributes of nodes source:'%s' and target:'%s' do not match!" %
                     (str(s), str(t)))
 
     if not ignore_attrs:
         # check sets of attributes of edges (homomorphism = set inclusion)
-        for s_edge in source.edges():
-            source_edge_attrs = source.get_edge(s_edge[0], s_edge[1])
-            target_edge_attrs = target.get_edge(dictionary[s_edge[0]],
-                                                dictionary[s_edge[1]])
-            if not is_subdict(source_edge_attrs, target_edge_attrs):
+        for s1, s2 in source.edges():
+            if not valid_attributes(
+               source.edge[s1][s2], target.edge[dictionary[s1]][dictionary[s2]]):
                 raise ValueError(
                     "Invalid homomorphism: Attributes of edges (%s)-(%s) and (%s)-(%s) do not match!" %
-                    (s_edge[0], s_edge[1], dictionary[s_edge[0]],
-                        dictionary[s_edge[1]]))
+                    (s1, s2, dictionary[s1],
+                        dictionary[s2]))
     return True
