@@ -2,7 +2,7 @@
 
 from setuptools import setup
 setup(name='ReGraph',
-      version='0.1',
+      version='0.3',
       description='Graph rewriting tool',
       author='Eugenia Oshurko',
       license='MIT License',
