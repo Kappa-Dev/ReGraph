@@ -1,5 +1,5 @@
 import warnings
-
+import os
 from copy import deepcopy
 
 from regraph.library.utils import (merge_attributes,
@@ -321,9 +321,11 @@ def clone_node(graph, node, name=None):
 
     # Connect all the edges
     if graph.is_directed():
-        graph.add_edges_from(
+        add_edges_from(
+            graph,
             [(n, new_node) for n, _ in graph.in_edges(node)])
-        graph.add_edges_from(
+        add_edges_from(
+            graph,
             [(new_node, n) for _, n in graph.out_edges(node)])
 
         # Copy the attributes of the edges
@@ -332,13 +334,15 @@ def clone_node(graph, node, name=None):
         for s, t in graph.out_edges(node):
             graph.edge[new_node][t] = deepcopy(graph.edge[s][t])
     else:
-        graph.add_edges_from(
-            [(n, new_node) for n in graph.neighbors(node)])
+        add_edges_from(
+            graph,
+            [(n, new_node) for n in graph.neighbors(node)]
+        )
 
         # Copy the attributes of the edges
         for n in graph.neighbors(node):
             graph.edge[new_node][n] = deepcopy(graph.edge[n][node])
-            graph.edge[n][new_node] = deepcopy(graph.edge[n][node])
+            graph.edge[n][new_node] = graph.edge[new_node][n]
 
     return new_node
 
@@ -415,8 +419,7 @@ def get_relabeled_graph(graph, mapping):
     return g
 
 
-def merge_nodes(graph, nodes, method="union",
-                node_name=None, edge_method="union"):
+def merge_nodes(graph, nodes, method="union", node_name=None, edge_method="union"):
     """Merge list of nodes."""
     if len(nodes) == 1:
         if node_name is not None:
