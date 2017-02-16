@@ -1,7 +1,8 @@
 import networkx as nx
 
 from regraph.library.utils import (dict_sub,
-                                   is_subdict)
+                                   is_subdict,
+                                   identity)
 from regraph.library.primitives import *
 
 
@@ -161,7 +162,10 @@ class TestPrimitives(object):
 
         assert(new_name in self.graph.nodes())
         assert(self.graph.node[new_name] == self.graph.node[node_to_clone])
-        assert(id(self.graph.node[new_name]) != id(self.graph.node[node_to_clone]))
+        assert(
+            id(self.graph.node[new_name]) !=
+            id(self.graph.node[node_to_clone])
+        )
         for u, _ in in_edges:
             assert((u, new_name) in self.graph.edges())
             assert(
@@ -228,33 +232,44 @@ class TestPrimitives(object):
         assert(g.edge['10'][new_name] == g.edge[new_name]['10'])
         assert(id(g.edge['10'][new_name]) == id(g.edge[new_name]['10']))
 
-
     def test_set_edge(self):
-        pass
+        g = self.graph.to_undirected()
+        old_edge = g.edge['6']['7']
+        set_edge(g, '6', '7', {'a': 'b'})
+        assert(id(old_edge) != id(g.edge['6']['7']))
+        assert(id(g.edge['6']['7']) == id(g.edge['7']['6']))
 
     def test_relabel_node(self):
-        pass
-
-    def test_relabel_nodes(self):
-        pass
-
-    def test_get_relabeled_graph(self):
-        pass
+        g = self.graph.to_undirected()
+        relabel_node(g, '1', 'a')
+        assert('1' not in g.nodes())
+        assert('a' in g.nodes())
 
     def test_subtract(self):
-        pass
+        g = deepcopy(self.graph)
+        remove_node(g, '1')
+        remove_node(g, '4')
+        remove_node(g, '2')
+        sub_graph = subtract(self.graph, g, identity(g, self.graph))
+        assert('1' in sub_graph.nodes())
+        assert(('4', '2') in sub_graph.edges())
 
     def test_append_to_node_names(self):
-        pass
+        g = deepcopy(self.graph)
+        mapping = dict((str(n) + '_lala', n) for n in g.nodes())
+        append_to_node_names(g, 'lala')
+        relabel_nodes(g, mapping)
+        assert(set(g.nodes()) == set(self.graph.nodes()))
 
-    def test_from_json_like(self):
-        pass
+    # def test_from_json_like(self):
+    #     pass
 
-    def test_to_json_like(self):
-        pass
+    # def test_to_json_like(self):
+    #     pass
 
-    def test_load(self):
-        pass
-
-    def test_export(self):
-        pass
+    def test_load_export(self):
+        g1 = load_graph("tests/graph_example.json")
+        export_graph(g1, "tests/graph_output.json")
+        g2 = load_graph("tests/graph_output.json")
+        assert(set(g1.nodes()) == set(g2.nodes()))
+        assert(set(g1.edges()) == set(g2.edges()))
