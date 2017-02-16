@@ -895,3 +895,15 @@ def check_homomorphism(source, target, dictionary, ignore_attrs=False):
                     (s1, s2, dictionary[s1],
                         dictionary[s2]))
     return True
+
+
+def identity(a, b):
+    dic = {}
+    for n in a.nodes():
+        if n in b.nodes():
+            dic[n] = n
+        else:
+            raise ValueError(
+                "Node '%s' not found in the second graph!" % n
+            )
+    return dic

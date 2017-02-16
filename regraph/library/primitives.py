@@ -66,6 +66,7 @@ def add_node_attrs(graph, node, attrs_dict):
             graph.node[node] = deepcopy(new_attrs)
             normalize_attrs(graph.node[node])
         else:
+            normalize_attrs(graph.node[node])
             for key, value in new_attrs.items():
                 if key not in graph.node[node].keys():
                     graph.node[node].update({key: to_set(value)})
@@ -105,6 +106,7 @@ def remove_node_attrs(graph, node, attrs_dict):
             "Node '%s' does not have any attribute!" % node, RuntimeWarning
         )
     else:
+        normalize_attrs(graph.node[node])
         for key, value in attrs_dict.items():
             if key not in graph.node[node].keys():
                 warnings.warn(
