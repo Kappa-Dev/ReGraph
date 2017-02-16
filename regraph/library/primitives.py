@@ -1,16 +1,20 @@
 import warnings
 import os
 import json
+import itertools
 
 import networkx as nx
 
 from copy import deepcopy
-from xml.dom import minidom
+from networkx.algorithms import isomorphism
+# from xml.dom import minidom
 
 from regraph.library.utils import (merge_attributes,
                                    normalize_attrs,
                                    to_set,
-                                   keys_by_value)
+                                   keys_by_value,
+                                   is_subdict,
+                                   dict_sub)
 
 
 def add_node(graph, node_id, attrs=None):
@@ -40,11 +44,11 @@ def remove_node(graph, node):
 def add_nodes_from(graph, node_list):
     """Add nodes from a list."""
     for n in node_list:
-        if len(n) == 2:
+        if type(n) == int:
+            add_node(graph, n)
+        elif len(n) == 2:
             node_id, node_attrs = n
             add_node(graph, node_id, node_attrs)
-        elif len(n) == 1:
-            add_node(graph, n)
         else:
             raise ValueError(
                 "Each element of the node list should be either " +
@@ -395,7 +399,7 @@ def get_relabeled_graph(graph, mapping):
     Similar to networkx.relabel.relabel_nodes:
     https://networkx.github.io/documentation/development/_modules/networkx/relabel.html
     """
-    g = type(self)()
+    g = type(graph)()
 
     old_nodes = set(mapping.keys())
 
@@ -884,3 +888,226 @@ def export_graph(graph, filename):
         raise ValueError(
             "The exported file should be a JSON or an XML file"
         )
+
+
+def find_matching(graph, pattern, ignore_attrs=False):
+    """Find matching of a pattern in a graph."""
+    labels_mapping = dict([(n, i + 1) for i, n in enumerate(graph.nodes())])
+    g = get_relabeled_graph(graph, labels_mapping)
+    matching_nodes = set()
+
+    # find all the nodes matching the nodes in pattern
+    for pattern_node in pattern.nodes():
+        for node in g.nodes():
+            if ignore_attrs or is_subdict(pattern.node[pattern_node], g.node[node]):
+                matching_nodes.add(node)
+    reduced_graph = g.subgraph(matching_nodes)
+    instances = []
+    isomorphic_subgraphs = []
+    for sub_nodes in itertools.combinations(reduced_graph.nodes(),
+                                            len(pattern.nodes())):
+            subg = reduced_graph.subgraph(sub_nodes)
+            for edgeset in itertools.combinations(subg.edges(),
+                                                  len(pattern.edges())):
+                if g.is_directed():
+                    edge_induced_graph = nx.DiGraph(list(edgeset))
+                    edge_induced_graph.add_nodes_from(
+                        [n for n in subg.nodes() if n not in edge_induced_graph.nodes()])
+                    matching_obj = isomorphism.DiGraphMatcher(pattern, edge_induced_graph)
+                    for isom in matching_obj.isomorphisms_iter():
+                        isomorphic_subgraphs.append((subg, isom))
+                else:
+                    edge_induced_graph = nx.Graph(edgeset)
+                    edge_induced_graph.add_nodes_from(
+                        [n for n in subg.nodes() if n not in edge_induced_graph.nodes()])
+                    matching_obj = isomorphism.GraphMatcher(pattern, edge_induced_graph)
+                    for isom in matching_obj.isomorphisms_iter():
+                        isomorphic_subgraphs.append((subg, isom))
+
+    for subgraph, mapping in isomorphic_subgraphs:
+        # check node matches
+        # exclude subgraphs which nodes information does not
+        # correspond to pattern
+        for (pattern_node, node) in mapping.items():
+            if not ignore_attrs and\
+               not is_subdict(pattern.node[pattern_node], subgraph.node[node]):
+                break
+        else:
+            # check edge attribute matched
+            for edge in pattern.edges():
+                pattern_attrs = get_edge(pattern, edge[0], edge[1])
+                target_attrs = get_edge(subgraph, mapping[edge[0]], mapping[edge[1]])
+                if not ignore_attrs and not is_subdict(pattern_attrs, target_attrs):
+                    break
+            else:
+                instances.append(mapping)
+
+    # bring back original labeling
+    inverse_mapping = dict(
+        [(value, key) for key, value in labels_mapping.items()]
+    )
+    for instance in instances:
+        for key, value in instance.items():
+            instance[key] = inverse_mapping[value]
+    return instances
+
+
+def rewrite(graph, instance, rule):
+    """Rewrite an instance of a rule in a graph."""
+    p_g_m = {}
+    # Remove/clone nodes
+    for n in rule.lhs.nodes():
+        p_keys = keys_by_value(rule.p_lhs, n)
+        # Remove nodes
+        if len(p_keys) == 0:
+            remove_node(graph, instance[n])
+        # Keep nodes
+        elif len(p_keys) == 1:
+            p_g_m[p_keys[0]] = instance[n]
+        # Clone nodes
+        else:
+            i = 1
+            for k in p_keys:
+                if i == 1:
+                    p_g_m[k] = instance[n]
+                else:
+                    new_name = clone_node(graph, instance[n])
+                    p_g_m[k] = new_name
+                i += 1
+
+    # Remove edges
+    for (n1, n2) in rule.lhs.edges():
+        p_keys_1 = keys_by_value(rule.p_lhs, n1)
+        p_keys_2 = keys_by_value(rule.p_lhs, n2)
+        if len(p_keys_1) > 0 and len(p_keys_2) > 0:
+            for k1 in p_keys_1:
+                for k2 in p_keys_2:
+                    if graph.is_directed():
+                        if (k1, k2) not in rule.p.edges():
+                            if (p_g_m[k1], p_g_m[k2]) in graph.edges():
+                                remove_edge(graph, p_g_m[k1], p_g_m[k2])
+                    else:
+                        if (k1, k2) not in rule.p.edges() and (k2, k1) not in rule.p.edges():
+                            if (p_g_m[k1], p_g_m[k2]) in graph.edges() or\
+                               (p_g_m[k2], p_g_m[k1]) in graph.edges():
+                                remove_edge(graph, p_g_m[k1], p_g_m[k2])
+    # Remove node attrs
+    for n in rule.p.nodes():
+        attrs_to_remove = dict_sub(
+            rule.lhs.node[rule.p_lhs[n]],
+            rule.p.node[n]
+        )
+        remove_node_attrs(graph, p_g_m[n], attrs_to_remove)
+
+    # Remove edge attrs
+    for (n1, n2) in rule.p.edges():
+        attrs_to_remove = dict_sub(
+            get_edge(rule.lhs, rule.p_lhs[n1], rule.p_lhs[n2]),
+            get_edge(rule.p, n1, n2)
+        )
+        remove_edge_attrs(graph, p_g_m[n1], p_g_m[n2], attrs_to_remove)
+
+    # Add/merge nodes
+    rhs_g_prime = {}
+    for n in rule.rhs.nodes():
+        p_keys = keys_by_value(rule.p_rhs, n)
+        # Add nodes
+        if len(p_keys) == 0:
+            add_node(
+                graph,
+                n,
+                rule.rhs.node[n])
+            rhs_g_prime[n] = n
+        # Keep nodes
+        elif len(p_keys) == 1:
+            rhs_g_prime[rule.p_rhs[p_keys[0]]] = p_g_m[p_keys[0]]
+        # Merge nodes
+        else:
+            nodes_to_merge = []
+            for k in p_keys:
+                nodes_to_merge.append(p_g_m[k])
+            new_name = merge_nodes(graph, nodes_to_merge)
+            rhs_g_prime[n] = new_name
+
+    # Add edges
+    for (n1, n2) in rule.rhs.edges():
+        if graph.is_directed():
+            if (rhs_g_prime[n1], rhs_g_prime[n2]) not in graph.edges():
+                add_edge(
+                    graph,
+                    rhs_g_prime[n1],
+                    rhs_g_prime[n2],
+                    get_edge(rule.rhs, n1, n2))
+        else:
+            if (rhs_g_prime[n1], rhs_g_prime[n2]) not in graph.edges() and\
+               (rhs_g_prime[n2], rhs_g_prime[n1]) not in graph.edges():
+                add_edge(
+                    graph,
+                    rhs_g_prime[n1],
+                    rhs_g_prime[n2],
+                    get_edge(rule.rhs, n1, n2)
+                )
+
+    # Add node attrs
+    for n in rule.rhs.nodes():
+        p_keys = keys_by_value(rule.p_rhs, n)
+        # Add attributes to the nodes which stayed invariant
+        if len(p_keys) == 1:
+            attrs_to_add = dict_sub(
+                rule.rhs.node[n],
+                rule.p.node[p_keys[0]]
+            )
+            add_node_attrs(graph, rhs_g_prime[n], attrs_to_add)
+        # Add attributes to the nodes which were merged
+        elif len(p_keys) > 1:
+            merged_attrs = {}
+            for k in p_keys:
+                merged_attrs = merge_attributes(
+                    merged_attrs,
+                    rule.p.node[k]
+                )
+            attrs_to_add = dict_sub(rule.rhs.node[n], merged_attrs)
+            add_node_attrs(graph, rhs_g_prime[n], attrs_to_add)
+
+    # Add edge attrs
+    for (n1, n2) in rule.rhs.edges():
+        p_keys_1 = keys_by_value(rule.p_rhs, n1)
+        p_keys_2 = keys_by_value(rule.p_rhs, n2)
+        for k1 in p_keys_1:
+            for k2 in p_keys_2:
+                if graph.is_directed():
+                    if (k1, k2) in rule.p.edges():
+                        attrs_to_add = dict_sub(
+                            get_edge(rule.rhs, n1, n2),
+                            get_edge(rule.p, k1, k2)
+                        )
+                        add_edge_attrs(
+                            graph,
+                            rhs_g_prime[n1],
+                            rhs_g_prime[n2],
+                            attrs_to_add
+                        )
+                else:
+                    if (k1, k2) in rule.p.edges() or (k2, k1) in rule.p.edges():
+                        attrs_to_add = dict_sub(
+                            get_edge(rule.rhs, n1, n2),
+                            get_edge(rule.p, k1, k2)
+                        )
+                        add_edge_attrs(
+                            graph,
+                            rhs_g_prime[n1],
+                            rhs_g_prime[n2],
+                            attrs_to_add
+                        )
+
+    return rhs_g_prime
+
+
+def print_graph(graph):
+    print("\nNodes:\n")
+    for n in graph.nodes():
+        print(n, " : ", graph.node[n])
+    print("\nEdges:\n")
+    for (n1, n2) in graph.edges():
+        print(n1, '->', n2, ' : ', graph.edge[n1][n2])
+    return

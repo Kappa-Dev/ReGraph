@@ -1,5 +1,6 @@
 import networkx as nx
 
+from regraph.library.rules import Rule
 from regraph.library.utils import (dict_sub,
                                    is_subdict,
                                    identity)
@@ -273,3 +274,67 @@ class TestPrimitives(object):
         g2 = load_graph("tests/graph_output.json")
         assert(set(g1.nodes()) == set(g2.nodes()))
         assert(set(g1.edges()) == set(g2.edges()))
+
+    def test_find_matching(self):
+        pattern = nx.DiGraph()
+        pattern.add_nodes_from(
+            [(1, {'state': 'p'}),
+             (2, {'name': 'BND'}),
+             (3),
+             (4)]
+        )
+        pattern.add_edges_from(
+            [(1, 2, {'s': 'p'}),
+             (3, 2, {'s': 'u'}),
+             (3, 4)]
+        )
+        find_matching(self.graph, pattern, ignore_attrs=False)
+        # assert smth here
+
+    def test_rewrite(self):
+        pattern = nx.DiGraph()
+        pattern.add_nodes_from(
+            [(1, {'state': 'p'}),
+             (2, {'name': 'BND'}),
+             3,
+             4]
+        )
+        pattern.add_edges_from(
+            [(1, 2, {'s': 'p'}),
+             (3, 2, {'s': 'u'}),
+             (3, 4)]
+        )
+
+        p = nx.DiGraph()
+        p.add_nodes_from([
+            (1, {'state': 'p'}),
+            (2, {'name': 'BND'}),
+            3,
+            4
+        ])
+        p.add_edges_from([
+            (1, 2),
+            (3, 4)
+        ])
+
+        rhs = nx.DiGraph()
+        rhs.add_nodes_from([
+            (1, {'state': 'p'}),
+            (2, {'name': 'BND'}),
+            (3, {'merged': 'yes'}),
+            (4, {'new': 'yes'})
+        ])
+
+        rhs.add_edges_from([
+            (1, 2, {'s': 'u'}),
+            (2, 4),
+            (3, 4, {'from': 'merged'})
+        ])
+
+        p_lhs = {1: 1, 2: 2, 3: 3, 4: 4}
+        p_rhs = {1: 1, 2: 2, 3: 3, 4: 3}
+
+        rule = Rule(p, pattern, rhs, p_lhs, p_rhs)
+        instances = find_matching(self.graph, rule.lhs, ignore_attrs=False)
+        rewrite(self.graph, instances[0], rule)
+        print_graph(self.graph)
