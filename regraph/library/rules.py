@@ -4,7 +4,8 @@ import warnings
 
 # from regraph.library.parser import parser
 from regraph.library.utils import (keys_by_value,
-                                   identity)
+                                   identity,
+                                   check_homomorphism,)
 #                                    make_canonical_commands)
 from regraph.library import primitives
 
@@ -26,20 +27,23 @@ class Rule(object):
         p -> lhs & p -> rhs. By default the homomorphisms are None, and
         they are created as Homomorphism.identity(p, lhs) etc with the
         correspondance according to the node names."""
-        self.p = copy.deepcopy(p)
-        self.lhs = copy.deepcopy(lhs)
-        self.rhs = copy.deepcopy(rhs)
-        self.ignore_attrs = ignore_attrs
-
         if not p_lhs:
             self.p_lhs = identity(p, lhs)
         else:
+            check_homomorphism(p, lhs, p_lhs, ignore_attrs)
             self.p_lhs = copy.deepcopy(p_lhs)
 
         if not p_rhs:
             self.p_rhs = identity(p, rhs)
         else:
+            check_homomorphism(p, rhs, p_rhs, ignore_attrs)
             self.p_rhs = copy.deepcopy(p_rhs)
+
+        self.p = copy.deepcopy(p)
+        self.lhs = copy.deepcopy(lhs)
+        self.rhs = copy.deepcopy(rhs)
+        self.ignore_attrs = ignore_attrs
+
         return
 
     def __eq__(self, rule):

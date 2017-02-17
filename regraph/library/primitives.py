@@ -231,34 +231,39 @@ def remove_edge_attrs(graph, node_1, node_2, attrs_dict):
             (str(node_1), str(node_2))
         )
     else:
+
+        new_attrs = get_edge(graph, node_1, node_2)
+        normalize_attrs(new_attrs)
+
         for key, value in attrs_dict.items():
-            if key not in graph.edge[node_1][node_2].keys():
+            if key not in new_attrs.keys():
                 warnings.warn(
                     "Edge %s-%s does not have attribute '%s'" %
                     (str(node_1), str(node_2), str(key)), RuntimeWarning)
             else:
                 elements_to_remove = []
                 for el in to_set(value):
-                    if el in graph.edge[node_1][node_2][key]:
+                    if el in new_attrs[key]:
                         elements_to_remove.append(el)
                     else:
                         warnings.warn(
                             "Edge %s-%s does not have attribute '%s' with value '%s'" %
                             (str(node_1), str(node_2), str(key), str(el)), RuntimeWarning)
                 for el in elements_to_remove:
-                    graph.edge[node_1][node_2][key].remove(el)
+                    new_attrs[key].remove(el)
 
                 if not graph.is_directed():
                     elements_to_remove = []
                     for el in to_set(value):
-                        if el in graph.edge[node_2][node_1][key]:
+                        if el in new_attrs[key]:
                             elements_to_remove.append(el)
                         else:
                             warnings.warn(
                                 "Edge %s-%s does not have attribute '%s' with value '%s'" %
                                 (str(node_1), str(node_2), str(key), str(el)), RuntimeWarning)
                     for el in elements_to_remove:
-                        graph.edge[node_2][node_1][key].remove(el)
+                        new_attrs[key].remove(el)
+        set_edge(graph, node_1, node_2, new_attrs)
     return
 
 
@@ -426,7 +431,16 @@ def get_relabeled_graph(graph, mapping):
 
     add_edges_from(g, new_edges)
     for s, t in g.edges():
-        set_edge(g, s, t, attributes[(s, t)])
+        # print_graph(g)
+        # print(s, t)
+        # print(attributes)
+        if g.is_directed():
+            set_edge(g, s, t, attributes[(s, t)])
+        else:
+            if (s, t) in attributes.keys():
+                set_edge(g, s, t, attributes[(s, t)])
+            else:
+                set_edge(g, s, t, attributes[(t, s)])
     return g
 
 

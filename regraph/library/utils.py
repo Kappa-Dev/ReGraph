@@ -21,7 +21,8 @@ def valid_attributes(attrs, typed_node_target):
 
 def is_subdict(small_dict, big_dict):
     """Check if the dictionary is a subset of other."""
-
+    normalize_attrs(small_dict)
+    normalize_attrs(big_dict)
     if small_dict is None:
         return True
     if len(small_dict) == 0:
@@ -844,7 +845,7 @@ def make_canonical_commands(g, commands, di=False):
     return res
 
 
-def compose_homomorphisms(d1, d2):
+def compose_homomorphisms(d2, d1):
     return dict([(key, d2[value]) for key, value in d1.items()])
 
 
@@ -907,3 +908,23 @@ def identity(a, b):
                 "Node '%s' not found in the second graph!" % n
             )
     return dic
+
+
+def is_monic(f):
+    """Check if the homomorphism is monic."""
+    return len(set(f.keys())) ==\
+        len(set(f.values()))
+
+
+def assert_graph_eq(g1, g2):
+    assert(set(g1.nodes()) == set(g2.nodes()))
+    if g1.is_directed() and g2.is_directed():
+        assert(set(g1.edges()) == set(g2.edges()))
+    else:
+        for s, t in g1.edges():
+            assert((s, t) in g2.edges() or (t, s) in g2.edges())
+    for n in g1.nodes():
+        assert(g1.node[n] == g2.node[n])
+    for e1, e2 in g1.edges():
+        assert(g1.edge[e1][e2] == g2.edge[e1][e2])
+    return

@@ -328,6 +328,7 @@ class TestPrimitives(object):
         rhs.add_edges_from([
             (1, 2, {'s': 'u'}),
             (2, 4),
+            (3, 3),
             (3, 4, {'from': 'merged'})
         ])
 
@@ -337,4 +338,4 @@ class TestPrimitives(object):
         rule = Rule(p, pattern, rhs, p_lhs, p_rhs)
         instances = find_matching(self.graph, rule.lhs, ignore_attrs=False)
         rewrite(self.graph, instances[0], rule)
-        print_graph(self.graph)
+        # print_graph(self.graph)

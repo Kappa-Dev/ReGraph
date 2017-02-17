@@ -3,16 +3,7 @@ import networkx as nx
 from nose.tools import raises
 
 from regraph.library.rules import Rule
-
-
-def assert_graph_eq(g1, g2):
-    assert(set(g1.nodes()) == set(g2.nodes()))
-    assert(set(g1.edges()) == set(g2.edges()))
-    for n in g1.nodes():
-        assert(g1.node[n] == g2.node[n])
-    for e1, e2 in g1.edges():
-        assert(g1.edge[e1][e2] == g2.edge[e1][e2])
-    return
+from regraph.library.utils import assert_graph_eq
 
 
 class TestRule(object):
