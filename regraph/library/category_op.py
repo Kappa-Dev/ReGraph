@@ -19,7 +19,7 @@ from regraph.library.utils import (keys_by_value,
                                    check_homomorphism)
 
 
-def multi_pullback(b, cds):
+def nary_pullback(b, cds):
     """Find a pullback with multiple conspans."""
 
     # 1. find individual pullbacks
@@ -29,6 +29,7 @@ def multi_pullback(b, cds):
         pullbacks.append((
             c_name, pb
         ))
+
     # 2. find pullbacks of pullbacks
     if len(pullbacks) > 1:
         c_name1, (a1, a_b1, a_c1) = pullbacks[0]
@@ -74,11 +75,7 @@ def pullback(b, c, d, b_d, c_d):
 
     f = b_d
     g = c_d
-    # if h1.target_ != D:
-    #     raise ValueError(
-    #         "Homomorphisms don't have the same codomain, can't do pullback.\nh1: %s\nh2:%s\n" %
-    #         (h1, h2)
-    #     )
+
     for n1 in b.nodes():
         for n2 in c.nodes():
             if f[n1] == g[n2]:
@@ -97,14 +94,14 @@ def pullback(b, c, d, b_d, c_d):
                     while new_name in a.nodes():
                         i += 1
                         new_name = str(n1) + str(i)
-                    if n2 not in a.nodes():
-                        add_node(a,
-                                 new_name,
-                                 merge_attributes(b.node[n1],
-                                                  c.node[n2],
-                                                  'intersection'))
-                        hom1[new_name] = n1
-                        hom2[new_name] = n2
+                    # if n2 not in a.nodes():
+                    add_node(a,
+                             new_name,
+                             merge_attributes(b.node[n1],
+                                              c.node[n2],
+                                              'intersection'))
+                    hom1[new_name] = n1
+                    hom2[new_name] = n2
 
     for n1 in a.nodes():
         for n2 in a.nodes():

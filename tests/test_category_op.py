@@ -10,7 +10,7 @@ from regraph.library.utils import assert_graph_eq
 from regraph.library.category_op import (pullback,
                                          pushout,
                                          pullback_complement,
-                                         multi_pullback)
+                                         nary_pullback)
 
 
 def assert_edges_undir(edges1, edges2):
@@ -168,7 +168,7 @@ class TestCategoryOp:
         C3.add_edges_from([('p', 'u'), ('u', 'u'), ('p', 'p')])
         c_d3 = {'u': 'u', 'p': 'p'}
 
-        A, A_B, A_Cs = multi_pullback(
+        A, A_B, A_Cs = nary_pullback(
             B,
             {'d1': (C1, D1, b_d1, c_d1),
              'd2': (C2, D2, b_d2, c_d2),

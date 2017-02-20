@@ -9,7 +9,7 @@ from networkx.algorithms import isomorphism
 from regraph.library.category_op import (pullback,
                                          pullback_complement,
                                          pushout,
-                                         multi_pullback)
+                                         nary_pullback)
 from regraph.library.primitives import (get_relabeled_graph,
                                         get_edge,
                                         print_graph)
@@ -293,6 +293,7 @@ class Hierarchy(nx.DiGraph):
 
         for typing_graph in self.successors(graph_id):
             if typing_graph not in rhs_typing.keys():
+                # check if there are anything added or merged
                 removed_homomorphisms.add((graph_id, typing_graph))
                 # self.remove_edge(graph_id, typing_graph)
             else:
@@ -376,7 +377,7 @@ class Hierarchy(nx.DiGraph):
                                      updated_graphs[suc][1])
                             })
                     graph_m, graph_m_graph, graph_m_sucs_m =\
-                        multi_pullback(self.node[graph], cospans)
+                        nary_pullback(self.node[graph], cospans)
                     # apply changes to the hierarchy
                     updated_graphs.update({
                         graph: (graph_m, graph_m_graph, None, None)
