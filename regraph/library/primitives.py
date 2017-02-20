@@ -444,7 +444,7 @@ def get_relabeled_graph(graph, mapping):
     return g
 
 
-def merge_nodes(graph, nodes, method="union", node_name=None, edge_method="union"):
+def merge_nodes(graph, nodes, node_name=None, method="union", edge_method="union"):
     """Merge list of nodes."""
     if len(nodes) == 1:
         if node_name is not None:

@@ -6,6 +6,7 @@ from regraph.library.rules import Rule
 from regraph.library.hierarchy import Hierarchy
 from nose.tools import raises
 from regraph.library.primitives import print_graph
+from regraph.library.utils import is_monic
 
 
 class TestHierarchy(object):
@@ -61,7 +62,7 @@ class TestHierarchy(object):
         ])
 
         self.hierarchy.add_graph("g1", g1)
-        self.hierarchy.add_homomorphism(
+        self.hierarchy.add_typing(
             "g1", "g0",
             {"black_circle": "circle",
              "white_circle": "circle",
@@ -72,7 +73,7 @@ class TestHierarchy(object):
             ignore_attrs=True
         )
 
-        self.hierarchy.add_homomorphism(
+        self.hierarchy.add_typing(
             "g1", "g00",
             {
                 "black_square": "black",
@@ -106,7 +107,7 @@ class TestHierarchy(object):
             (5, 7)
         ])
         self.hierarchy.add_graph("g2", g2)
-        self.hierarchy.add_homomorphism(
+        self.hierarchy.add_typing(
             "g2", "g1",
             {1: "black_circle",
              2: "black_circle",
@@ -143,7 +144,7 @@ class TestHierarchy(object):
             (5, 7)
         ])
         self.hierarchy.add_graph("g3", g3)
-        self.hierarchy.add_homomorphism(
+        self.hierarchy.add_typing(
             "g3", "g1",
             {1: "black_circle",
              2: "white_circle",
@@ -163,75 +164,31 @@ class TestHierarchy(object):
         ])
 
         self.hierarchy.add_graph("g4", g4)
-        self.hierarchy.add_homomorphism("g4", "g2", {1: 2, 2: 3, 3: 6})
-        self.hierarchy.add_homomorphism("g4", "g3", {1: 1, 2: 5, 3: 6})
+        self.hierarchy.add_typing("g4", "g2", {1: 2, 2: 3, 3: 6})
+        self.hierarchy.add_typing("g4", "g3", {1: 1, 2: 5, 3: 6})
 
-        # g4 = nx.DiGraph()
-        # g4.add_nodes_from([1, 2, 3, 4, 5])
-        # g4.add_edges_from([
-        #     (1, 1),
-        #     (1, 2),
-        #     (2, 1),
-        #     (1, 3),
-        #     (3, 1),
-        #     (3, 4)
-        # ])
+        g5 = nx.DiGraph()
+        g5.add_nodes_from([
+            ("black_circle", {"a": {255}}),
+            ("black_square", {"a": {256}}),
+            ("white_triangle", {"a": {257}}),
+            ("star", {"a": {258}})
+        ])
+        g5.add_edges_from([
+            ("black_circle", "black_square"),
+            ("black_square", "white_triangle", {"b": {11}}),
+            ("star", "black_square"),
+            ("star", "white_triangle")
+        ])
 
-        # self.hierarchy.add_graph("g0", g0)
-        # self.hierarchy.add_graph("g1", g1)
-        # self.hierarchy.add_graph("g2", g2)
-        # self.hierarchy.add_graph("g3", g3)
-        # self.hierarchy.add_graph("g4", g4)
-        # self.hierarchy.add_homomorphism("g1", "g0", typing=True, ignore_attrs=True)
-        # self.hierarchy.add_homomorphism("g2", "g1", typing=True)
-        # self.hierarchy.add_homomorphism("g3", "g1", typing=True)
-        # self.hierarchy.add_homomorphism(
-        #     "g2", "g3",
-        #     {1: 1, 2: 1, 3: 5, 4: 3, 5: 4, 6: 6, 7: 7}
-        # )
-        # self.hierarchy.add_homomorphism(
-        #     "g4", "g3",
-        #     {1: 1, 2: 3, 3: 3, 4: 4, 5: 5},
-        #     ignore_types=True,
-        #     ignore_attrs=True
-        # )
-        # g5 = TypedDiGraph()
-        # g5.add_nodes_from([
-        #     (1, 'black_circle'),
-        #     (2, 'white_circle'),
-        #     (3, 'black_square'),
-        #     (4, 'white_square'),
-        #     (5, 'white_triangle'),
-        #     (6, 'black_triangle'),
-        #     (7, 'black_square')
-        # ])
-        # g5.add_edges_from([
-        #     (1, 1),
-        #     (1, 2),
-        #     (1, 3),
-        #     (1, 7),
-        #     (2, 1),
-        #     (2, 4),
-        #     (3, 5),
-        #     (3, 6),
-        #     (4, 2),
-        #     (4, 5),
-        #     (4, 6),
-        #     (7, 6)
-        # ])
-        # self.hierarchy.add_graph("g5", g5)
-        # self.hierarchy.add_homomorphism(
-        #     "g3", "g5",
-        #     {1: 1, 2: 2, 3: 2, 4: 4, 5: 3, 6: 5, 7: 6},
-        #     ignore_attrs=True
-        # )
+        self.hierarchy.add_graph("g5", g5)
 
     def test_add_graph(self):
         return
 
     @raises(ValueError)
-    def test_add_homomorphism_cycle(self):
-        self.hierarchy.add_homomorphism(
+    def test_add_typing_cycle(self):
+        self.hierarchy.add_typing(
             "g0", "g1",
             {"circle": "black_circle",
              "square": "white_square",
@@ -266,6 +223,7 @@ class TestHierarchy(object):
             },
             ignore_attrs=False
         )
+        assert(len(instances) == 4)
 
     def test_rewrite(self):
         pattern = nx.DiGraph()
@@ -329,11 +287,26 @@ class TestHierarchy(object):
             lhs_typing,
             rhs_typing
         )
-        print_graph(self.hierarchy.node["g1"])
-        print_graph(self.hierarchy.node["g2"])
-        print_graph(self.hierarchy.node["g3"])
+        # print_graph(self.hierarchy.node["g1"])
+        # print_graph(self.hierarchy.node["g2"])
+        # print_graph(self.hierarchy.node["g3"])
+        # add nice assertions here
 
     def test_node_type(self):
-        print(self.hierarchy.node_type("g4", 1))
-        print(self.hierarchy.node_type("g4", 2))
-        print(self.hierarchy.node_type("g4", 3))
+        assert(set(self.hierarchy.node_type("g1", "white_circle")) == set(["white", "circle"]))
+        assert(set(self.hierarchy.node_type("g1", "black_square")) == set(["black", "square"]))
+
+    def test_add_partial_typing(self):
+        self.hierarchy.add_partial_typing(
+            "g5",
+            "g1",
+            {"black_circle": "black_circle",
+             "black_square": "black_square",
+             "white_triangle": "white_triangle"},
+            ignore_attrs=True
+        )
+        assert("g5_g1" in self.hierarchy.nodes())
+        assert(("g5_g1", "g5") in self.hierarchy.edges())
+        assert(("g5_g1", "g1") in self.hierarchy.edges())
+        assert(is_monic(self.hierarchy.edge["g5_g1"]["g5"][0]))
+        print_graph(self.hierarchy.node["g5_g1"])

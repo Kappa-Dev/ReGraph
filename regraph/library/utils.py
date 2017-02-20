@@ -276,12 +276,12 @@ def simplify_commands(commands, di=False):
                         else:
                             for k in rem_ind:
                                 ad_index[j].remove(k)
-                m=0
+                m = 0
                 for j in rem_el:
-                    del added[j-m]
-                    del ad_index[j-m]
-                    del ad_type[j-m]
-                    m+=1
+                    del added[j - m]
+                    del ad_index[j - m]
+                    del ad_type[j - m]
+                    m += 1
                 rem_el = []
                 for j in range(len(deleted)):
                     el = deleted[j]
@@ -298,11 +298,11 @@ def simplify_commands(commands, di=False):
                         else:
                             for k in rem_ind:
                                 del_index[j].remove(k)
-                m=0
+                m = 0
                 for j in rem_el:
-                    del deleted[j-m]
-                    del del_index[j-m]
-                    m+=1
+                    del deleted[j - m]
+                    del del_index[j - m]
+                    m += 1
                 ind = clone_index.index(ind)
                 del cloned[ind]
                 del clone_index[ind]
@@ -373,7 +373,7 @@ def simplify_commands(commands, di=False):
                 if e[0] in cloned:
                     ind = max([clone_index[i] for i in range(len(cloned)) if cloned[i] == e[0]])
                 if e[1] in cloned:
-                    ind = max([ind]+[clone_index[i] for i in range(len(cloned)) if cloned[i] == e[1]])
+                    ind = max([ind] + [clone_index[i] for i in range(len(cloned)) if cloned[i] == e[1]])
 
                 ind = clone_index.index(ind)
 
@@ -877,7 +877,6 @@ def check_homomorphism(source, target, dictionary, ignore_attrs=False):
                     " Was expecting an edge between %s and %s" %
                     (dictionary[s_edge[0]], dictionary[s_edge[1]]))
 
-    # check nodes match with types
     for s, t in dictionary.items():
         if not ignore_attrs:
             # check sets of attributes of nodes (here homomorphism = set inclusion)

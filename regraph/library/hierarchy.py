@@ -12,7 +12,8 @@ from regraph.library.category_op import (pullback,
                                          nary_pullback)
 from regraph.library.primitives import (get_relabeled_graph,
                                         get_edge,
-                                        print_graph)
+                                        add_node,
+                                        add_edge)
 from regraph.library.utils import (compose_homomorphisms,
                                    check_homomorphism,
                                    is_subdict,
@@ -35,7 +36,7 @@ class Hierarchy(nx.DiGraph):
         for n in self.nodes():
             res += str(n) + " "
         res += "\n"
-        res += "Homomorphisms : \n"
+        res += "Typing homomorphisms : \n"
         for n1, n2 in self.edges():
             res += "%s -> %s: ignore_attrs == %s, partial == %s\n" %\
                 (n1, n2, self.edge[n1][n2][1], self.edge[n1][n2][2])
@@ -61,7 +62,7 @@ class Hierarchy(nx.DiGraph):
         self.node[graph_id] = graph
         return
 
-    def add_homomorphism(self, source, target, mapping, ignore_attrs=False):
+    def add_typing(self, source, target, mapping, ignore_attrs=False):
         """Add homomorphism to the hierarchy."""
         if source not in self.nodes():
             raise ValueError(
@@ -114,8 +115,41 @@ class Hierarchy(nx.DiGraph):
         self.edge[source][target] = (mapping, ignore_attrs)
         return
 
-    def add_partial_homomorphism(self, source, target, mapping, ignore_attrs=False):
-        pass
+    def add_partial_typing(self, source, target,
+                           mapping, ignore_attrs=False):
+        """Add partial homomorphism A -\ B"""
+        # 1. Construct A' (A' >-> A)
+        if self.is_directed:
+            new_graph = nx.DiGraph()
+        else:
+            new_graph = nx.Graph()
+
+        new_graph_source = {}
+        for node in self.node[source].nodes():
+            if node in mapping.keys():
+                add_node(new_graph, node, self.node[source].node[node])
+                new_graph_source[node] = node
+
+        for s, t in self.node[source].edges():
+            if s in new_graph.nodes() and t in new_graph.nodes():
+                add_edge(new_graph, s, t, get_edge(self.node[source], s, t))
+
+        # generate_name for the new_graph
+        new_name = str(source) + "_" + str(target)
+        if new_name in self.nodes():
+            i = 1
+            new_name = str(source) + "_" + str(target) + str(i)
+            while new_name in self.nodes():
+                i += 1
+                new_name = str(source) + "_" + str(target) + str(i)
+
+        new_graph_target = dict(
+            [(node, mapping[node]) for node in new_graph.nodes()]
+        )
+        self.add_graph(new_name, new_graph)
+        self.add_typing(new_name, source, new_graph_source, False)
+        self.add_typing(new_name, target, new_graph_target, ignore_attrs)
+        return
 
     def remove_graph(self, graph_id, reconnect=False):
         """Remove graph from the hierarchy.
@@ -141,7 +175,7 @@ class Hierarchy(nx.DiGraph):
                     )
 
                     if (source, target) not in self.edges():
-                        self.add_homomorphism(
+                        self.add_typing(
                             source,
                             target,
                             mapping,

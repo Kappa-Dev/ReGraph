@@ -2,11 +2,11 @@
 import copy
 import warnings
 
-# from regraph.library.parser import parser
+from regraph.library.parser import parser
 from regraph.library.utils import (keys_by_value,
                                    identity,
-                                   check_homomorphism,)
-#                                    make_canonical_commands)
+                                   check_homomorphism,
+                                   make_canonical_commands)
 from regraph.library import primitives
 
 
@@ -45,6 +45,100 @@ class Rule(object):
         self.ignore_attrs = ignore_attrs
 
         return
+
+    @classmethod
+    def from_transform(cls, pattern, ignore_attrs=False, commands=None):
+        """Initialize a rule from the transformation.
+
+        On input takes a pattern which is used as LHS of the rule,
+        as an optional argument transformation commands can be provided,
+        by default the list of commands is empty and all P, LHS and RHS
+        are initialized to be the same graph (pattern), later on
+        when transformations are applied P and RHS are being updated.
+        If list of commands is specified, these commands are simplified,
+        transformed to the canonical order, and applied to P, LHS & RHS.
+        """
+        p = copy.deepcopy(pattern)
+        lhs = copy.deepcopy(pattern)
+        rhs = copy.deepcopy(pattern)
+        p_lhs = dict([(n, n) for n in pattern.nodes()])
+        p_rhs = dict([(n, n) for n in pattern.nodes()])
+        ignore_attrs = ignore_attrs
+
+        rule = cls(p, lhs, rhs, p_lhs, p_rhs, ignore_attrs)
+
+        # if the commands are provided, perform respecitive transformations
+        if commands:
+            # 1. make the commands canonical
+            commands = make_canonical_commands(p, commands, p.is_directed())
+            # 2. apply the commands
+
+            command_strings = [c for block in commands if len(block) > 0 for c in block.splitlines()]
+
+            actions = []
+            for command in command_strings:
+                try:
+                    parsed = parser.parseString(command).asDict()
+                    actions.append(parsed)
+                except:
+                    raise ValueError("Cannot parse command '%s'" % command)
+
+            for action in actions:
+                if action["keyword"] == "clone":
+                    node_name = None
+                    if "node_name" in action.keys():
+                        node_name = action["node_name"]
+                    rule.clone_node(action["node"], node_name)
+                elif action["keyword"] == "merge":
+                    node_name = None
+                    if "node_name" in action.keys():
+                        node_name = action["node_name"]
+                    merged_node = rule.merge_nodes(
+                        action["nodes"],
+                        node_name)
+                elif action["keyword"] == "add_node":
+                    name = None
+                    attrs = {}
+                    if "node" in action.keys():
+                        name = action["node"]
+                    if "attributes" in action.keys():
+                        attrs = action["attributes"]
+                    rule.add_node(name, attrs)
+                elif action["keyword"] == "delete_node":
+                    rule.remove_node(action["node"])
+                elif action["keyword"] == "add_edge":
+                    attrs = {}
+                    if "attributes" in action.keys():
+                        attrs = action["attributes"]
+                    rule.add_edge(
+                        action["node_1"],
+                        action["node_2"],
+                        attrs)
+                elif action["keyword"] == "delete_edge":
+                    rule.remove_edge(
+                        action["node_1"],
+                        action["node_2"])
+                elif action["keyword"] == "add_node_attrs":
+                    rule.add_node_attrs(
+                        action["node"],
+                        action["attributes"])
+                elif action["keyword"] == "add_edge_attrs":
+                    rule.add_edge_attrs(
+                        action["node_1"],
+                        action["node_2"],
+                        action["attributes"])
+                elif action["keyword"] == "delete_node_attrs":
+                    rule.remove_node_attrs(
+                        action["node"],
+                        action["attributes"])
+                elif action["keyword"] == "delete_edge_attrs":
+                    rule.remove_edge_attrs(
+                        action["node_1"],
+                        action["node_2"],
+                        action["attributes"])
+                else:
+                    raise ValueError("Unknown command %s" % action["keyword"])
+        return rule
 
     def __eq__(self, rule):
         return (
@@ -223,7 +317,11 @@ class Rule(object):
                 nodes_to_merge.add(self.p_rhs[k1])
                 nodes_to_merge.add(self.p_rhs[k2])
 
-        new_name = primitives.merge_nodes(self.rhs, list(nodes_to_merge))
+        new_name = primitives.merge_nodes(
+            self.rhs,
+            list(nodes_to_merge),
+            node_name=node_name
+        )
         # Update mappings
         keys = p_keys_1 + p_keys_2
         for k in keys:
@@ -536,7 +634,10 @@ class Rule(object):
     def merge_node_list(self, node_list, node_name=None):
         """Merge a list of nodes."""
         if len(node_list) > 1:
-            node_name = self.merge_nodes(node_list[0], node_list[1], node_name)
+            node_name = self.merge_nodes(
+                node_list[0],
+                node_list[1],
+                node_name)
             for i in range(2, len(node_list)):
                 node_name = self.merge_nodes(node_list[i], node_name, node_name)
         else:

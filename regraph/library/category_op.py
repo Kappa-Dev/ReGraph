@@ -85,7 +85,6 @@ def pullback(b, c, d, b_d, c_d):
                              merge_attributes(b.node[n1],
                                               c.node[n2],
                                               'intersection'))
-
                     hom1[n1] = n1
                     hom2[n1] = n2
                 else:
