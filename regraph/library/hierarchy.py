@@ -75,7 +75,8 @@ class Hierarchy(nx.DiGraph):
         if not nx.is_directed_acyclic_graph(self):
             self.remove_edge(source, target)
             raise ValueError(
-                "Edge '%s->%s' creates a cycle in the hierarchy!" % (source, target)
+                "Edge '%s->%s' creates a cycle in the hierarchy!" %
+                (source, target)
             )
         self.remove_edge(source, target)
 
@@ -86,6 +87,28 @@ class Hierarchy(nx.DiGraph):
             mapping,
             ignore_attrs
         )
+
+        # check if commutes with other shortest paths from source to target
+
+        paths = nx.all_shortest_paths(self, source, target)
+        try:
+            for p in paths:
+                s = p[0]
+                t = p[1]
+                homomorphism = self.edge[s][t][0]
+                for i in range(2, len(p)):
+                    s = p[i - 1]
+                    t = p[i]
+                    homomorphism = compose_homomorphisms(
+                        self.edge[s][t][0],
+                        homomorphism
+                    )
+                if homomorphism != mapping:
+                    raise ValueError(
+                        "Homomorphism does not commute with an existing " +
+                        "path from '%s' to '%s'!" % (source, target))
+        except(nx.NetworkXNoPath):
+            pass
 
         self.add_edge(source, target)
         self.edge[source][target] = (mapping, ignore_attrs)
