@@ -220,9 +220,9 @@ class TestRule(object):
         rule.remove_node(1)
         # print(rule)
 
-    # def test_from_script(self):
-    #     commands = "clone 2 as 21.\nadd_node 'a' type 'black_circle'.\ndelete_node 3."
-    #     rule = Rule.from_transform(self.pattern, commands=commands)
-    #     assert('a' in rule.rhs.nodes())
-    #     assert('21' in rule.rhs.nodes())
-    #     assert(3 not in rule.rhs.nodes())
+    def test_from_script(self):
+        commands = "clone 2 as 21.\nadd_node 'a' {'a': 1}.\ndelete_node 3."
+        rule = Rule.from_transform(self.pattern, commands=commands)
+        assert('a' in rule.rhs.nodes())
+        assert('21' in rule.rhs.nodes())
+        assert(3 not in rule.rhs.nodes())

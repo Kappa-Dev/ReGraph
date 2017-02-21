@@ -220,8 +220,7 @@ class TestHierarchy(object):
             pattern_typing={
                 "g0": pattern_typing,
                 "g00": {1: "white", 2: "white", 3: "black"}
-            },
-            ignore_attrs=False
+            }
         )
         assert(len(instances) == 4)
 
@@ -229,7 +228,7 @@ class TestHierarchy(object):
         pattern = nx.DiGraph()
         pattern.add_nodes_from([
             1,
-            (2, {"a": 1}),
+            (2, {"a": {1, 2}}),
             3
         ])
         pattern.add_edges_from([
@@ -251,7 +250,7 @@ class TestHierarchy(object):
         rhs = nx.DiGraph()
         rhs.add_nodes_from([
             1,
-            (2, {"a": {2, 3}}),
+            (2, {"a": {3, 5}}),
             (3, {"new_attrs": {1}}),
             4
         ])
@@ -287,9 +286,9 @@ class TestHierarchy(object):
             lhs_typing,
             rhs_typing
         )
-        # print_graph(self.hierarchy.node["g1"])
-        # print_graph(self.hierarchy.node["g2"])
-        # print_graph(self.hierarchy.node["g3"])
+        print_graph(self.hierarchy.node["g1"])
+        print_graph(self.hierarchy.node["g2"])
+        print_graph(self.hierarchy.node["g3"])
         # add nice assertions here
 
     def test_node_type(self):
@@ -310,3 +309,6 @@ class TestHierarchy(object):
         assert(("g5_g1", "g1") in self.hierarchy.edges())
         assert(is_monic(self.hierarchy.edge["g5_g1"]["g5"][0]))
         print_graph(self.hierarchy.node["g5_g1"])
+
+    def test_rewrite_ignore_attrs(self):
+        pass

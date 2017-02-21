@@ -135,7 +135,7 @@ typing = type_keyword + type_name.setResultsName("type")
 add_node = CaselessKeyword("ADD_NODE")
 add_node.setParseAction(lambda t: t[0].lower())
 add_node = add_node + Optional(node.setResultsName("node")) +\
-    typing + Optional(attributes)
+    Optional(typing) + Optional(attributes)
 
 delete_edge = CaselessKeyword("DELETE_EDGE")
 delete_edge.setParseAction(lambda t: t[0].lower())

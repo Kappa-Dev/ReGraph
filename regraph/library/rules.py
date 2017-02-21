@@ -21,8 +21,7 @@ class Rule(object):
     which is set by the attribute `ignore_types`
     """
 
-    def __init__(self, p, lhs, rhs, p_lhs=None,
-                 p_rhs=None, ignore_attrs=False):
+    def __init__(self, p, lhs, rhs, p_lhs=None, p_rhs=None):
         """Initialize a rule by p, lhs and rhs and two homomorphisms:
         p -> lhs & p -> rhs. By default the homomorphisms are None, and
         they are created as Homomorphism.identity(p, lhs) etc with the
@@ -30,24 +29,23 @@ class Rule(object):
         if not p_lhs:
             self.p_lhs = identity(p, lhs)
         else:
-            check_homomorphism(p, lhs, p_lhs, ignore_attrs)
+            check_homomorphism(p, lhs, p_lhs)
             self.p_lhs = copy.deepcopy(p_lhs)
 
         if not p_rhs:
             self.p_rhs = identity(p, rhs)
         else:
-            check_homomorphism(p, rhs, p_rhs, ignore_attrs)
+            check_homomorphism(p, rhs, p_rhs)
             self.p_rhs = copy.deepcopy(p_rhs)
 
         self.p = copy.deepcopy(p)
         self.lhs = copy.deepcopy(lhs)
         self.rhs = copy.deepcopy(rhs)
-        self.ignore_attrs = ignore_attrs
 
         return
 
     @classmethod
-    def from_transform(cls, pattern, ignore_attrs=False, commands=None):
+    def from_transform(cls, pattern, commands=None):
         """Initialize a rule from the transformation.
 
         On input takes a pattern which is used as LHS of the rule,
@@ -63,9 +61,8 @@ class Rule(object):
         rhs = copy.deepcopy(pattern)
         p_lhs = dict([(n, n) for n in pattern.nodes()])
         p_rhs = dict([(n, n) for n in pattern.nodes()])
-        ignore_attrs = ignore_attrs
 
-        rule = cls(p, lhs, rhs, p_lhs, p_rhs, ignore_attrs)
+        rule = cls(p, lhs, rhs, p_lhs, p_rhs)
 
         # if the commands are provided, perform respecitive transformations
         if commands:
@@ -73,7 +70,9 @@ class Rule(object):
             commands = make_canonical_commands(p, commands, p.is_directed())
             # 2. apply the commands
 
-            command_strings = [c for block in commands if len(block) > 0 for c in block.splitlines()]
+            command_strings = [
+                c for block in commands if len(block) > 0 for c in block.splitlines()
+            ]
 
             actions = []
             for command in command_strings:
@@ -146,8 +145,7 @@ class Rule(object):
             self.lhs == rule.lhs and
             self.rhs == rule.rhs and
             self.p_lhs == rule.p_lhs and
-            self.p_rhs == rule.p_rhs and
-            self.ignore_attrs == rule.ignore_attrs
+            self.p_rhs == rule.p_rhs
         )
 
     def __str__(self):
@@ -577,59 +575,6 @@ class Rule(object):
                         attrs
                     )
         return
-
-    # Advanced operations (???)
-
-    # def merge_edges(self, e1, e2, name_n1=None, name_n2=None):
-    #     """ Merges two edges """
-    #     n1_1, n1_2 = e1
-    #     n2_1, n2_2 = e2
-    #     if (n1_1 == n2_2) or (n1_2 == n2_1):
-    #         if self.G.is_directed():
-    #             raise ValueError(
-    #                 "Can't merge edges with pattern %s->%s and %s->%s" %
-    #                 (n1_1, n1_2, n2_1, n2_2)
-    #             )
-    #         else:
-    #             if n1_1 == n2_2:
-    #                 self.merge_nodes(n1_2, n2_1, name_n2)
-    #             else:
-    #                 self.merge_nodes(n1_1, n2_2, name_n1)
-    #     else:
-    #         self.merge_nodes(n1_1, n2_1, name_n1)
-    #         self.merge_nodes(n1_2, n2_2, name_n2)
-    #         self.R.add_edge(name_n1, name_n2)
-
-    # def clone_edge(self, n1, n2, new_n1, new_n2):
-    #     """ Clones an edge """
-    #     self.clone_node(n1, new_n1)
-    #     self.clone_node(n2, new_n2)
-    #     self.R.add_edge(new_n1, new_n2)
-
-    # def relabel_node(self, n, node_name):
-    #     """ Relabels a node """
-    #     if n in self.base_nodes:
-    #         if not n in self.P.nodes():
-    #             self.P.add_node(n,
-    #                             self.G.node[n].type_,
-    #                             self.G.node[n].attrs_)
-    #         if not n in self.L.nodes():
-    #             self.L.add_node(n,
-    #                             self.G.node[n].type_,
-    #                             self.G.node[n].attrs_)
-    #             self.P_L_dict[n] = n
-    #         self.base_nodes.remove(n)
-
-    #     if n in self.R.nodes():
-    #         self.R.relabel_node(n, node_name)
-    #     else:
-    #         self.R.add_node(node_name,
-    #                         self.P.node[n].type_,
-    #                         self.P.node[n].attrs_)
-    #         self.P_R_dict[n] = node_name
-    #     pred = keys_by_value(self.P_R_dict, n)
-    #     for n0 in pred:
-    #         self.P_R_dict[n0] = node_name
 
     def merge_node_list(self, node_list, node_name=None):
         """Merge a list of nodes."""

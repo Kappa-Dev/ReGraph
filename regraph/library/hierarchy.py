@@ -201,17 +201,15 @@ class Hierarchy(nx.DiGraph):
             types.append(mapping[node_id])
         return types
 
-    def find_matching(self, graph_id, pattern, pattern_typing=None, ignore_attrs=False):
+    def find_matching(self, graph_id, pattern, pattern_typing=None):
         """Find an instance of a pattern in a specified graph.
 
         `graph_id` -- id of a graph in the hierarchy to search for matches;
         `pattern` -- nx.(Di)Graph object defining a pattern to match;
-        `typing_graph` -- id of a graph in the hierarchy that types a pattern,
-        this graph should be among parents of the `graph_id` graph;
-        `pattern_typing` -- a dictionary that specifies a mapping of nodes
-        from pattern to the typing graph;
-        `ignore_attrs` -- if set to True the matching will ignore
-        attributes homomorphism (by defaults attributes are not ignored).
+        `pattern_typing` -- a dictionary that specifies a typing of a pattern,
+        keys of the dictionary -- graph id that types a pattern, this graph
+        should be among parents of the `graph_id` graph; values are mappings
+        of nodes from pattern to the typing graph;
         """
 
         # Check that 'typing_graph' and 'pattern_typing' are correctly specified
@@ -258,10 +256,10 @@ class Hierarchy(nx.DiGraph):
                     # check types match
                     for typing_graph, typing in pattern_typing.items():
                         if g_typing[typing_graph][node] == typing[pattern_node]:
-                            if ignore_attrs or is_subdict(pattern.node[pattern_node], g.node[node]):
+                            if is_subdict(pattern.node[pattern_node], g.node[node]):
                                 matching_nodes.add(node)
                 else:
-                    if ignore_attrs or is_subdict(pattern.node[pattern_node], g.node[node]):
+                    if is_subdict(pattern.node[pattern_node], g.node[node]):
                         matching_nodes.add(node)
         reduced_graph = g.subgraph(matching_nodes)
         instances = []
@@ -295,15 +293,14 @@ class Hierarchy(nx.DiGraph):
                     for typing_graph, typing in pattern_typing.items():
                         if g_typing[typing_graph][node] != typing[pattern_node]:
                             break
-                if not ignore_attrs and\
-                   not is_subdict(pattern.node[pattern_node], subgraph.node[node]):
+                if not is_subdict(pattern.node[pattern_node], subgraph.node[node]):
                     break
             else:
                 # check edge attribute matched
                 for edge in pattern.edges():
                     pattern_attrs = get_edge(pattern, edge[0], edge[1])
                     target_attrs = get_edge(subgraph, mapping[edge[0]], mapping[edge[1]])
-                    if not ignore_attrs and not is_subdict(pattern_attrs, target_attrs):
+                    if not is_subdict(pattern_attrs, target_attrs):
                         break
                 else:
                     instances.append(mapping)
