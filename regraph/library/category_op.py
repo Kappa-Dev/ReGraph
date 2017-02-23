@@ -67,7 +67,13 @@ def pullback(b, c, d, b_d, c_d):
         a = nx.Graph()
 
     # Check homomorphisms
-    check_homomorphism(b, d, b_d)
+    try:
+        check_homomorphism(b, d, b_d)
+    except:
+        print_graph(b)
+        print_graph(d)
+        print(b_d)
+
     check_homomorphism(c, d, c_d)
 
     hom1 = {}
@@ -201,10 +207,16 @@ def pushout(a, b, c, a_b, a_c):
                     if (f[a_key_1], f[a_key_2]) in b.edges():
                         if (hom2[n1], hom2[n1]) not in d.edges():
                             add_edge(d, hom2[n1], hom2[n2], get_edge(b, f[a_key_1], f[a_key_2]))
-                            add_edge_attrs(d, hom2[n1],
-                                           hom2[n2],
-                                           dict_sub(get_edge(c, n1, n2),
-                                                    get_edge(a, a_key_1, a_key_2)))
+                            if (a_key_1, a_key_2) in a.edges():
+                                add_edge_attrs(d, hom2[n1],
+                                               hom2[n2],
+                                               dict_sub(get_edge(c, n1, n2),
+                                               get_edge(a, a_key_1, a_key_2)))
+
+                            else:
+                                add_edge_attrs(d, hom2[n1],
+                                               hom2[n2],
+                                               get_edge(c, n1, n2))
                         else:
                             add_edge_attrs(d, hom2[n1],
                                            hom2[n2],
@@ -293,7 +305,16 @@ def pullback_complement(a, b, d, a_b, b_d):
         b_key_1 = keys_by_value(g, n1)
         b_key_2 = keys_by_value(g, n2)
         if len(b_key_1) == 0 or len(b_key_2) == 0:
-            add_edge(c, n1, n2, get_edge(d, n1, n2))
+            if len(b_key_1) == 0 and len(b_key_2) != 0:
+                a_keys_2 = keys_by_value(f, b_key_2[0])
+                for k in a_keys_2:
+                    add_edge(c, n1, hom1[k], get_edge(d, n1, n2))
+            if len(b_key_1) != 0 and len(b_key_2) == 0:
+                a_keys_1 = keys_by_value(f, b_key_1[0])
+                for k in a_keys_1:
+                    add_edge(c, hom1[k], n2, get_edge(d, n1, n2))
+            else:
+                add_edge(c, n1, n2, get_edge(d, n1, n2))
         else:
             if (b_key_1[0], b_key_2[0]) not in b.edges():
                 c_keys_1 = keys_by_value(hom2, n1)
