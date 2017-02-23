@@ -171,12 +171,12 @@ class Hierarchy(nx.DiGraph):
             if type(self.edge[n1][n2]) == Typing:
                 res += "%s -> %s: ignore_attrs == %s\n" %\
                     (n1, n2, self.edge[n1][n2].ignore_attrs)
-                res += "mapping: %s\n" % str(self.edge[n1][n2].mapping)
+                # res += "mapping: %s\n" % str(self.edge[n1][n2].mapping)
             elif type(self.edge[n1][n2]) == RuleTyping:
                 res += "%s -> %s: ignore_attrs == %s\n" %\
                     (n1, n2, self.edge[n1][n2].ignore_attrs)
-                res += "lhs mapping: %s\n" % str(self.edge[n1][n2].lhs_mapping)
-                res += "rhs mapping: %s\n" % str(self.edge[n1][n2].rhs_mapping)
+                # res += "lhs mapping: %s\n" % str(self.edge[n1][n2].lhs_mapping)
+                # res += "rhs mapping: %s\n" % str(self.edge[n1][n2].rhs_mapping)
             else:
                 raise ValueError(
                     "Hierarchy error: unknown type '%s' of the edge '%s->%s'!" %
@@ -486,28 +486,44 @@ class Hierarchy(nx.DiGraph):
         if type(self.node[graph_id]) == RuleNode:
             raise ValueError("Pattern matching in a rule is not implemented!")
         # Check that 'typing_graph' and 'pattern_typing' are correctly specified
+
         if len(self.successors(graph_id)) != 0:
-            if pattern_typing is None:
-                raise ValueError(
-                    "Graph '%s' has non-empty set of parents, " +
-                    "pattern should be typed by one of them!" %
-                    graph_id
-                )
+            # if pattern_typing is None:
+            #     raise ValueError(
+            #         ("Graph '%s' has non-empty set of parents, " +
+            #          "pattern should be typed by one of them!") %
+            #           graph_id
+            #     )
             # Check 'typing_graph' is in successors of 'graph_id'
-            for typing_graph, _ in pattern_typing.items():
-                if typing_graph not in self.successors(graph_id):
-                    raise ValueError(
-                        "Pattern typing graph '%s' is not in the typing graphs of '%s'!" %
-                        (typing_graph, graph_id)
+            if pattern_typing is not None:
+                for typing_graph, _ in pattern_typing.items():
+                    if typing_graph not in self.successors(graph_id):
+                        raise ValueError(
+                            "Pattern typing graph '%s' is not in the typing graphs of '%s'!" %
+                            (typing_graph, graph_id)
+                        )
+
+                new_pattern_typing = dict()
+                for key, value in pattern_typing.items():
+                    if type(value) == dict:
+                        new_pattern_typing[key] = (value, False)
+                    else:
+                        try:
+                            if len(value) == 2:
+                                new_pattern_typing[key] = value
+                            elif len(value) == 1:
+                                new_pattern_typing[key] = (value[0], False)
+                        except:
+                            raise ValueError("Invalid pattern typing!")
+
+                # Check pattern typing is a valid homomorphism
+                for typing_graph, (mapping, ignore_attrs) in new_pattern_typing.items():
+                    check_homomorphism(
+                        pattern,
+                        self.node[typing_graph].graph,
+                        mapping,
+                        ignore_attrs
                     )
-            # Check pattern typing is a valid homomorphism
-            for typing_graph, (mapping, ignore_attrs) in pattern_typing.items():
-                check_homomorphism(
-                    pattern,
-                    self.node[typing_graph].graph,
-                    mapping,
-                    ignore_attrs
-                )
 
         labels_mapping = dict(
             [(n, i + 1) for i, n in enumerate(self.node[graph_id].graph.nodes())])
@@ -521,7 +537,7 @@ class Hierarchy(nx.DiGraph):
             g_typing = dict([
                 (typing_graph, dict([
                     (labels_mapping[k], v) for k, v in self.edge[graph_id][typing_graph].mapping.items()
-                ])) for typing_graph in pattern_typing.keys()
+                ])) for typing_graph in new_pattern_typing.keys()
             ])
 
         matching_nodes = set()
@@ -532,7 +548,7 @@ class Hierarchy(nx.DiGraph):
                 if pattern_typing:
                     # check types match
                     match = False
-                    for typing_graph, (typing, _) in pattern_typing.items():
+                    for typing_graph, (typing, _) in new_pattern_typing.items():
                         if g_typing[typing_graph][node] == typing[pattern_node]:
                             if is_subdict(pattern.node[pattern_node], g.node[node]):
                                 match = True
@@ -570,7 +586,7 @@ class Hierarchy(nx.DiGraph):
             # correspond to pattern
             for (pattern_node, node) in mapping.items():
                 if pattern_typing:
-                    for typing_graph, (typing, _) in pattern_typing.items():
+                    for typing_graph, (typing, _) in new_pattern_typing.items():
                         if g_typing[typing_graph][node] != typing[pattern_node]:
                             break
                         if not is_subdict(pattern.node[pattern_node], subgraph.node[node]):
@@ -603,20 +619,61 @@ class Hierarchy(nx.DiGraph):
         # validity of homomorphisms
         if type(self.node[graph_id]) == RuleNode:
             raise ValueError("Rewriting of a rule is not implemented!")
-        for typing_graph, (mapping, ignore_attrs) in lhs_typing.items():
-            check_homomorphism(
-                rule.lhs,
-                self.node[typing_graph].graph,
-                mapping,
-                ignore_attrs
-            )
-        for typing_graph, (mapping, ignore_attrs) in rhs_typing.items():
-            check_homomorphism(
-                rule.rhs,
-                self.node[typing_graph].graph,
-                mapping,
-                ignore_attrs
-            )
+        if lhs_typing:
+            new_lhs_typing = dict()
+            for key, value in lhs_typing.items():
+                if type(value) == dict:
+                    new_lhs_typing[key] = (value, False)
+                else:
+                    try:
+                        if len(value) == 2:
+                            new_lhs_typing[key] = value
+                        elif len(value) == 1:
+                            new_lhs_typing[key] = (value[0], False)
+                    except:
+                        raise ValueError("Invalid lhs typing!")
+
+            for typing_graph, (mapping, ignore_attrs) in new_lhs_typing.items():
+                check_homomorphism(
+                    rule.lhs,
+                    self.node[typing_graph].graph,
+                    mapping,
+                    ignore_attrs
+                )
+        if rhs_typing:
+            new_rhs_typing = dict()
+            for key, value in rhs_typing.items():
+                if type(value) == dict:
+                    new_rhs_typing[key] = (value, False)
+                else:
+                    try:
+                        if len(value) == 2:
+                            new_rhs_typing[key] = value
+                        elif len(value) == 1:
+                            new_rhs_typing[key] = (value[0], False)
+                    except:
+                        raise ValueError("Invalid lhs typing!")
+            for typing_graph, (mapping, ignore_attrs) in new_rhs_typing.items():
+                check_homomorphism(
+                    rule.rhs,
+                    self.node[typing_graph].graph,
+                    mapping,
+                    ignore_attrs
+                )
+        lhs_typing = new_lhs_typing
+        rhs_typing = new_rhs_typing
+
+        check_homomorphism(
+            rule.lhs,
+            self.node[graph_id].graph,
+            instance)
+
+        # check instance typing and lhs typing coincide
+        for node in rule.lhs.nodes():
+            if lhs_typing:
+                for typing_graph, (lhs_mapping, _) in lhs_typing.items():
+                    if lhs_mapping[node] != self.edge[graph_id][typing_graph].mapping[instance[node]]:
+                        raise ValueError("Typing of the instance of LHS does not coincide with typing of LHS!")
 
         # 1. Rewriting steps
         g_m, p_g_m, g_m_g = pullback_complement(
