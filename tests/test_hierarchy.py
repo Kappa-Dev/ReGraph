@@ -25,7 +25,7 @@ class TestHierarchy(object):
             ("square", "circle"),
             ("square", "triangle")
         ])
-        self.hierarchy.add_graph("g0", g0)
+        self.hierarchy.add_graph("g0", g0, {"name": "Shapes"})
 
         g00 = nx.DiGraph()
         g00.add_nodes_from(['white', 'black'])
@@ -35,14 +35,14 @@ class TestHierarchy(object):
             ('black', 'black'),
             ('black', 'white')
         ])
-        self.hierarchy.add_graph("g00", g00)
+        self.hierarchy.add_graph("g00", g00, {"name": "Colors"})
 
         g1 = nx.DiGraph()
         g1.add_nodes_from([
             ("black_circle", {"a": {1, 2, 3}}),
             "white_circle",
             "black_square",
-            ("white_square", {"a": {1}}),
+            ("white_square", {"a": {1, 2}}),
             "black_triangle",
             "white_triangle"
         ])
@@ -136,7 +136,6 @@ class TestHierarchy(object):
             (1, 3),
             (1, 5),
             (2, 1),
-            (3, 1),
             (3, 4),
             (4, 7),
             (4, 6),
@@ -184,6 +183,7 @@ class TestHierarchy(object):
         self.hierarchy.add_graph("g5", g5)
 
     def test_add_graph(self):
+        # add nice assertions here!
         return
 
     @raises(ValueError)
@@ -218,11 +218,11 @@ class TestHierarchy(object):
             graph_id="g1",
             pattern=pattern,
             pattern_typing={
-                "g0": pattern_typing,
-                "g00": {1: "white", 2: "white", 3: "black"}
+                "g0": (pattern_typing, True),
+                "g00": ({1: "white", 2: "white", 3: "black"}, True)
             }
         )
-        assert(len(instances) == 4)
+        assert(len(instances) == 1)
 
     def test_rewrite(self):
         pattern = nx.DiGraph()
@@ -235,7 +235,10 @@ class TestHierarchy(object):
             (1, 2),
             (2, 3)
         ])
-        lhs_typing = {1: "circle", 2: "square", 3: "triangle"}
+        lhs_typing = {
+            "g0": ({1: "circle", 2: "square", 3: "triangle"}, True),
+            "g00": ({1: "white", 2: "white", 3: "black"}, True)
+        }
 
         p = nx.DiGraph()
         p.add_nodes_from([
@@ -255,7 +258,7 @@ class TestHierarchy(object):
             4
         ])
         rhs.add_edges_from([
-            (1, 4, {"new_attrs": {2}}),
+            (2, 1, {"new_attrs": {2}}),
             (2, 4, {"new_attrs": {3}}),
             (2, 3, {"new_attrs": {4}})
         ])
@@ -264,19 +267,24 @@ class TestHierarchy(object):
 
         rule = Rule(p, pattern, rhs, p_lhs, p_rhs)
         rhs_typing = {
-            1: "circle",
-            2: "sqaure",
-            3: "triangle",
-            4: "triangle"
+            "g0": ({
+                1: "circle",
+                2: "square",
+                3: "triangle",
+                4: "triangle"
+            }, True),
+            "g00": ({
+                1: "white",
+                2: "white",
+                3: "black",
+                4: "black"
+            }, True)
         }
 
         instances = self.hierarchy.find_matching(
             "g1",
             pattern,
-            {
-                "g0": lhs_typing,
-                "g00": {1: 'white', 2: 'white', 3: 'black'}
-            }
+            lhs_typing
         )
         # print(instances[0])
         self.hierarchy.rewrite(
@@ -286,9 +294,6 @@ class TestHierarchy(object):
             lhs_typing,
             rhs_typing
         )
-        print_graph(self.hierarchy.node["g1"])
-        print_graph(self.hierarchy.node["g2"])
-        print_graph(self.hierarchy.node["g3"])
         # add nice assertions here
 
     def test_node_type(self):
@@ -307,8 +312,266 @@ class TestHierarchy(object):
         assert("g5_g1" in self.hierarchy.nodes())
         assert(("g5_g1", "g5") in self.hierarchy.edges())
         assert(("g5_g1", "g1") in self.hierarchy.edges())
-        assert(is_monic(self.hierarchy.edge["g5_g1"]["g5"][0]))
-        print_graph(self.hierarchy.node["g5_g1"])
+        assert(is_monic(self.hierarchy.edge["g5_g1"]["g5"].mapping))
 
     def test_rewrite_ignore_attrs(self):
         pass
+
+    def test_to_json(self):
+        res = self.hierarchy.to_json()
+
+    def test_add_rule(self):
+        lhs = nx.DiGraph()
+        lhs.add_nodes_from([
+            1, 2, 3
+        ])
+        lhs.add_edges_from([
+            (1, 2),
+            (2, 1),
+            (2, 3)
+        ])
+
+        p = nx.DiGraph()
+        p.add_nodes_from([
+            1, 2, 3, 31
+        ])
+        p.add_edges_from([
+            (1, 2),
+            (2, 3),
+            (2, 31)
+        ])
+
+        rhs = nx.DiGraph()
+        rhs.add_nodes_from([
+            1, 2, 3, 31, 4
+        ])
+        rhs.add_edges_from([
+            (1, 2),
+            (4, 2),
+            (2, 3),
+            (2, 31)
+        ])
+
+        p_lhs = {1: 1, 2: 2, 3: 3, 31: 3}
+        p_rhs = {1: 1, 2: 2, 3: 3, 31: 3}
+
+        rule = Rule(p, lhs, rhs, p_lhs, p_rhs)
+
+        lhs_typing = {
+            1: "black_circle",
+            2: "white_circle",
+            3: "white_square"
+        }
+        rhs_typing = {
+            1: "black_circle",
+            2: "white_circle",
+            3: "white_square",
+            31: "white_square",
+            4: "black_circle"
+        }
+        self.hierarchy.add_rule("r1", rule, {"name": "First rule"})
+        self.hierarchy.add_rule_typing("r1", "g1", lhs_typing, rhs_typing)
+
+        pattern = nx.DiGraph()
+        pattern.add_nodes_from([
+            1,
+            (2, {"a": {1, 2}}),
+            3
+        ])
+        pattern.add_edges_from([
+            (1, 2),
+            (2, 3)
+        ])
+        lhs_typing = {
+            "g0": ({1: "circle", 2: "square", 3: "triangle"}, True),
+            "g00": ({1: 'white', 2: 'white', 3: 'black'}, True)
+        }
+
+        p = nx.DiGraph()
+        p.add_nodes_from([
+            1,
+            11,
+            2,
+            3
+        ])
+        p.add_edges_from([
+            (2, 3)
+        ])
+
+        rhs = nx.DiGraph()
+        rhs.add_nodes_from([
+            1,
+            11,
+            (2, {"a": {3, 5}}),
+            (3, {"new_attrs": {1}}),
+        ])
+        rhs.add_edges_from([
+            (2, 3, {"new_attrs": {4}})
+        ])
+        p_lhs = {1: 1, 11: 1, 2: 2, 3: 3}
+        p_rhs = {1: 1, 11: 11, 2: 2, 3: 3}
+
+        rule = Rule(p, pattern, rhs, p_lhs, p_rhs)
+        rhs_typing = {
+            "g0": ({
+                1: "circle",
+                11: "circle",
+                2: "square",
+                3: "triangle"
+            }, True),
+            "g00": ({
+                1: "white",
+                11: "white",
+                2: "white",
+                3: "black"
+            }, True)
+        }
+
+        instances = self.hierarchy.find_matching(
+            "g1",
+            pattern,
+            lhs_typing
+        )
+
+        self.hierarchy.rewrite(
+            "g1",
+            instances[0],
+            rule,
+            lhs_typing,
+            rhs_typing
+        )
+        print("\n\nG1:\n\n")
+        print_graph(self.hierarchy.node["g1"].graph)
+        print("\n\nG3:\n\n")
+        print_graph(self.hierarchy.node["g3"].graph)
+        print("\n\nRULE :\n\n")
+        print_graph(self.hierarchy.node["r1"].rule.p)
+        print_graph(self.hierarchy.node["r1"].rule.lhs)
+        print_graph(self.hierarchy.node["r1"].rule.rhs)
+        print(self.hierarchy.node["r1"].rule.p_lhs)
+        print(self.hierarchy.node["r1"].rule.p_rhs)
+
+    def test_add_rule_multiple_typing(self):
+
+        lhs = nx.DiGraph()
+        lhs.add_nodes_from([1, 2, 3, 4])
+        lhs.add_edges_from([
+            (1, 3),
+            (2, 3),
+            (4, 3)
+        ])
+
+        p = nx.DiGraph()
+        p.add_nodes_from([1, 3, 31, 4])
+        p.add_edges_from([
+            (1, 3),
+            (1, 31),
+            (4, 3),
+            (4, 31)
+        ])
+
+        rhs = copy.deepcopy(p)
+
+        p_lhs = {1: 1, 3: 3, 31: 3, 4: 4}
+        p_rhs = {1: 1, 3: 3, 31: 31, 4: 4}
+
+        lhs_typing_g2 = {
+            1: 1,
+            2: 1,
+            3: 2,
+            4: 4
+        }
+
+        rhs_typing_g2 = {
+            1: 1,
+            3: 2,
+            31: 2,
+            4: 4
+        }
+
+        lhs_typing_g3 = {
+            1: 1,
+            2: 1,
+            3: 1,
+            4: 2
+        }
+
+        rhs_typing_g3 = {
+            1: 1,
+            3: 1,
+            31: 1,
+            4: 2
+        }
+
+        rule = Rule(p, lhs, rhs, p_lhs, p_rhs)
+        self.hierarchy.add_rule("r2", rule, {"name": "Second rule: with multiple typing"})
+        self.hierarchy.add_rule_typing("r2", "g2", lhs_typing_g2, rhs_typing_g2)
+        self.hierarchy.add_rule_typing("r2", "g3", lhs_typing_g3, rhs_typing_g3)
+
+        pattern = nx.DiGraph()
+        pattern.add_nodes_from([
+            1,
+            2
+        ])
+        pattern.add_edges_from([
+            (2, 1)
+        ])
+        lhs_typing = {
+            "g0": ({1: "circle", 2: "circle"}, True),
+            "g00": ({1: "black", 2: "white"}, True)
+        }
+
+        p = nx.DiGraph()
+        p.add_nodes_from([
+            1,
+            2,
+            21
+        ])
+        p.add_edges_from([
+            (21, 1)
+        ])
+
+        rhs = copy.deepcopy(p)
+
+        p_lhs = {1: 1, 2: 2, 21: 2}
+        p_rhs = {1: 1, 2: 2, 21: 21}
+
+        rule = Rule(p, pattern, rhs, p_lhs, p_rhs)
+        rhs_typing = {
+            "g0": ({
+                1: "circle",
+                2: "circle",
+                21: "circle",
+            }, True),
+            "g00": ({
+                1: "black",
+                2: "white",
+                21: "white"
+            }, True)
+        }
+
+        instances = self.hierarchy.find_matching(
+            "g1",
+            pattern,
+            lhs_typing
+        )
+
+        self.hierarchy.rewrite(
+            "g1",
+            instances[0],
+            rule,
+            lhs_typing,
+            rhs_typing
+        )
+        print("\n\nG1:\n\n")
+        print_graph(self.hierarchy.node["g1"].graph)
+        print("\n\nG2:\n\n")
+        print_graph(self.hierarchy.node["g2"].graph)
+        print("\n\nG3:\n\n")
+        print_graph(self.hierarchy.node["g3"].graph)
+        print("\n\nRULE :\n\n")
+        print_graph(self.hierarchy.node["r2"].rule.p)
+        print_graph(self.hierarchy.node["r2"].rule.lhs)
+        print_graph(self.hierarchy.node["r2"].rule.rhs)
+        print(self.hierarchy.node["r2"].rule.p_lhs)
+        print(self.hierarchy.node["r2"].rule.p_rhs)

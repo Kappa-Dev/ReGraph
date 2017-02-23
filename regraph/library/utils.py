@@ -869,12 +869,12 @@ def check_homomorphism(source, target, dictionary, ignore_attrs=False):
                 if not (dictionary[s_edge[1]], dictionary[s_edge[0]]) in target.edges():
                     raise ValueError(
                         "Invalid homomorphism: Connectivity is not preserved!" +\
-                        " Was expecting an edge %s->%s" %
+                        " Was expecting an edge '%s' and '%s'" %
                         (dictionary[s_edge[1]], dictionary[s_edge[0]]))
             else:
                 raise ValueError(
                     "Invalid homomorphism: Connectivity is not preserved!" +\
-                    " Was expecting an edge between %s and %s" %
+                    " Was expecting an edge between '%s' and '%s'" %
                     (dictionary[s_edge[0]], dictionary[s_edge[1]]))
 
     for s, t in dictionary.items():

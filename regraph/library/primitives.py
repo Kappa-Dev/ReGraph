@@ -101,10 +101,11 @@ def remove_node_attrs(graph, node, attrs_dict):
     if node not in graph.nodes():
         raise ValueError("Node '%s' does not exist!" % str(node))
     elif attrs_dict is None:
-        warnings.warn(
-            "You want to remove attrs from '%s' with an empty attrs_dict!" %
-            (node, RuntimeWarning)
-        )
+        pass
+        # warnings.warn(
+        #     "You want to remove attrs from '%s' with an empty attrs_dict!" %
+        #     (node, RuntimeWarning)
+        # )
     elif graph.node[node] is None:
         warnings.warn(
             "Node '%s' does not have any attribute!" % node, RuntimeWarning
@@ -127,6 +128,7 @@ def remove_node_attrs(graph, node, attrs_dict):
                             (str(node), str(key), str(el)), RuntimeWarning)
                 for el in elements_to_remove:
                     graph.node[node][key].remove(el)
+    return
 
 
 def add_edge(graph, s, t, attrs=None, **attr):
@@ -649,7 +651,7 @@ def append_to_node_names(graph, token):
     )
 
 
-def graph_from_json(graph, j_data):
+def graph_from_json(j_data, directed=True):
     """Create a graph from a python dictionary."""
     loaded_nodes = []
     if "nodes" in j_data.keys():
@@ -688,112 +690,25 @@ def graph_from_json(graph, j_data):
                 loaded_edges.append((s_node, t_node, attrs))
             else:
                 loaded_edges.append((s_node, t_node))
-    nx.DiGraph.clear(graph)
-    add_nodes_from(graph, loaded_nodes)
-    add_edges_from(graph, loaded_edges)
-    return
-
-
-def load_graph(filename, directed=True):
-    """Create graph from JSON or XML file."""
     if directed:
         graph = nx.DiGraph()
     else:
         graph = nx.Graph()
+    add_nodes_from(graph, loaded_nodes)
+    add_edges_from(graph, loaded_edges)
+    return graph
 
+
+def load_graph(filename, directed=True):
+    """Create graph from JSON or XML file."""
     if os.path.isfile(filename):
-        ext = os.path.splitext(filename)[1]
-        if ext == ".json":
-            with open(filename, "r+") as f:
-                j_data = json.loads(f.read())
-                # start graph init
-                loaded_nodes = []
-                if "nodes" in j_data.keys():
-                    j_nodes = j_data["nodes"]
-                    for node in j_nodes:
-                        if "id" in node.keys():
-                            node_id = node["id"]
-                        else:
-                            raise ValueError(
-                                "Error loading graph: node id is not specified!")
-                        attrs = None
-                        if "attrs" in node.keys():
-                            attrs = node["attrs"]
-                        loaded_nodes.append((node_id, attrs))
-                else:
-                    raise ValueError(
-                        "Error loading graph: no nodes specified!")
-                loaded_edges = []
-                if "edges" in j_data.keys():
-                    j_edges = j_data["edges"]
-                    for edge in j_edges:
-                        if "from" in edge.keys():
-                            s_node = edge["from"]
-                        else:
-                            raise ValueError(
-                                "Error loading graph: edge source is not specified!")
-                        if "to" in edge.keys():
-                            t_node = edge["to"]
-                        else:
-                            raise ValueError(
-                                "Error loading graph: edge target is not specified!")
-                        if "attrs" in edge.keys():
-                            attrs = edge["attrs"]
-                            if type(attrs) == list:
-                                attrs = set(attrs)
-                            loaded_edges.append((s_node, t_node, attrs))
-                        else:
-                            loaded_edges.append((s_node, t_node))
-                nx.DiGraph.clear(graph)
-                add_nodes_from(graph, loaded_nodes)
-                add_edges_from(graph, loaded_edges)
-        elif ext == ".xml":
-            raise ValueError("Import from xml is currently deprecated!")
-            # g = minidom.parse(filename).documentElement
-            # loaded_nodes = []
-            # loaded_edges = []
-            # for nodes in g.getElementsByTagName("nodes"):
-            #     for node in nodes.getElementsByTagName("node"):
-            #         node_id = node.getAttribute('id')
-            #         node_attrs = {}
-            #         for attr in node.getElementsByTagName("attr"):
-            #             k = attr.getAttribute('key')
-            #             value = []
-            #             for val in attr.getElementsByTagName("value"):
-            #                 value.append(val.firstChild.nodeValue)
-            #             node_attrs[k] = set(value)
-            #         if node_attrs == {}:
-            #             loaded_nodes.append(node_id)
-            #         else:
-            #             loaded_nodes.append((node_id, node_attrs))
-            # for edges in g.getElementsByTagName("edges"):
-            #     for edge in edges.getElementsByTagName("edge"):
-            #         n1 = edge.getAttribute('from')
-            #         n2 = edge.getAttribute('to')
-            #         edge_attrs = {}
-            #         for attr in edge.getElementsByTagName("attr"):
-            #             k = attr.getAttribute('key')
-            #             value = []
-            #             for val in attr.getElementsByTagName("value"):
-            #                 value.append(val.firstChild.nodeValue)
-            #             edge_attrs[k] = set(value)
-            #         if edge_attrs == {}:
-            #             loaded_edges.append((n1, n2))
-            #         else:
-            #             loaded_edges.append((n1, n2, edge_attrs))
-            # nx.DiGraph.clear(graph)
-            # add_nodes_from(graph, loaded_nodes)
-            # add_edges_from(graph, loaded_edges)
-        else:
-            raise ValueError(
-                "Imported files should be JSON or XML files"
-            )
+        with open(filename, "r+") as f:
+            j_data = json.loads(f.read())
+            return graph_from_json(j_data, directed)
     else:
         raise ValueError(
             "Error loading graph: file '%s' does not exist!" %
             filename)
-    return graph
-
 
 def graph_to_json(graph):
     """Create Python dict from a graph."""
@@ -834,74 +749,10 @@ def graph_to_json(graph):
 
 def export_graph(graph, filename):
     """Export graph to JSON or XML file."""
-    ext = os.path.splitext(filename)[1]
-    if ext == ".json":
-        j_data = {"edges": [], "nodes": []}
-        # dump nodes
-        for node in graph.nodes():
-            node_data = {}
-            node_data["id"] = node
-            if graph.node[node] is not None:
-                attrs = {}
-                for key, value in graph.node[node].items():
-                    if type(value) == set:
-                        attrs[key] = list(value)
-                    else:
-                        attrs[key] = value
-                node_data["attrs"] = attrs
-            j_data["nodes"].append(node_data)
-        # dump edges
-        for s, t in graph.edges():
-            edge_data = {}
-            edge_data["from"] = s
-            edge_data["to"] = t
-            if graph.edge[s][t] is not None:
-                attrs = {}
-                for key, value in graph.edge[s][t].items():
-                    if type(value) == set:
-                        attrs[key] = list(value)
-                    else:
-                        attrs[key] = value
-                edge_data["attrs"] = attrs
-            j_data["edges"].append(edge_data)
-        with open(filename, 'w') as f:
-            json.dump(j_data, f)
-    elif ext == ".xml":
-        raise ValueError("Import from xml is currently deprecated!")
-        # res_xml = "<?xml version='1.0' encoding='utf8' ?>"
-        # res_xml += "<graph>"
-        # res_xml += "<nodes>"
-        # for n in graph.nodes():
-        #     res_xml += "<node id='%s'>" % (n)
-        #     if graph.node[n] != {} and graph.node[n] is not None:
-        #         for k, v in graph.node[n].items():
-        #             res_xml += "<attr key='%s'>" % k
-        #             for val in v:
-        #                 res_xml += "<value>%s</value>" % val
-        #             res_xml += "</attr>"
-        #     res_xml += "</node>"
-        # res_xml += "</nodes>"
-        # res_xml += "<edges>"
-
-        # for (n1, n2) in graph.edges():
-        #     res_xml += "<edge from='%s' to='%s'>" % (n1, n2)
-        #     edge_attrs = get_edge(graph, n1, n2)
-        #     if edge_attrs != {} and edge_attrs is not None:
-        #         for k, v in edge_attrs.items():
-        #             res_xml += "<attr key='%s'>" % k
-        #             for val in v:
-        #                 res_xml += "<value>%s</value>" % val
-        #             res_xml += "</attr>"
-        #     res_xml += "</edge>"
-        # res_xml += "</edges>"
-        # res_xml += "</graph>"
-
-        # with open(filename, 'w') as f:
-        #     f.write(res_xml)
-    else:
-        raise ValueError(
-            "The exported file should be a JSON or an XML file"
-        )
+    with open(filename, 'w') as f:
+        j_data = graph_to_json(graph)
+        json.dump(j_data, f)
+    return
 
 
 def find_matching(graph, pattern, ignore_attrs=False):
