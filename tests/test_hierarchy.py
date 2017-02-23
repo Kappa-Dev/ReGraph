@@ -575,3 +575,6 @@ class TestHierarchy(object):
         print_graph(self.hierarchy.node["r2"].rule.rhs)
         print(self.hierarchy.node["r2"].rule.p_lhs)
         print(self.hierarchy.node["r2"].rule.p_rhs)
+
+    def test_get_ancestors(self):
+        print(self.hierarchy.get_ancestors("g2"))

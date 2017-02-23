@@ -140,11 +140,12 @@ class RuleTyping(AttributeContainter):
 class Hierarchy(nx.DiGraph):
     """."""
 
-    def __init__(self, directed=True):
+    def __init__(self, directed=True, graph_node_constuctor=GraphNode):
         """Initialize an hierarchy of graphs."""
         nx.DiGraph.__init__(self)
         self.hierarchy_attrs = dict()
         self.directed = directed
+        self.graph_node_constructor = graph_node_constuctor
         return
 
     def __str__(self):
@@ -153,7 +154,7 @@ class Hierarchy(nx.DiGraph):
         res += "\nGraphs (directed == %s): \n" % self.directed
         res += "\nNodes:\n"
         for n in self.nodes():
-            if type(self.node[n]) == GraphNode:
+            if isinstance(self.node[n], GraphNode):
                 res += "Graph:"
             elif type(self.node[n]) == RuleNode:
                 res += "Rule:"
@@ -205,7 +206,7 @@ class Hierarchy(nx.DiGraph):
                 graph_id
             )
         self.add_node(graph_id)
-        self.node[graph_id] = GraphNode(graph, graph_attrs)
+        self.node[graph_id] = self.graph_node_constructor(graph, graph_attrs)
         return
 
     def add_rule(self, rule_id, rule, rule_attrs=None):
@@ -245,7 +246,7 @@ class Hierarchy(nx.DiGraph):
             raise ValueError(
                 "Node '%s' is not defined in the hierarchy!" % target)
 
-        if type(self.node[source]) != GraphNode:
+        if not isinstance(self.node[source], GraphNode):
             if type(self.node[source]) == RuleNode:
                 raise ValueError(
                     "Source node is a rule, use `add_rule_typing` method instead!"
@@ -255,7 +256,7 @@ class Hierarchy(nx.DiGraph):
                     "Source of a typing should be a graph, `%s` is provided!" %
                     type(self.node[source])
                 )
-        if type(self.node[target]) != GraphNode:
+        if not isinstance(self.node[target], GraphNode):
             raise ValueError(
                 "Target of a typing should be a graph, `%s` is provided!" %
                 type(self.node[target])
@@ -314,7 +315,7 @@ class Hierarchy(nx.DiGraph):
         else:
             new_graph = nx.Graph()
 
-        if type(self.node[source]) != GraphNode:
+        if not isinstance(self.node[source], GraphNode):
             if type(self.node[source]) == RuleNode:
                 raise ValueError(
                     "Source node is a rule, use `add_rule_typing` method instead!"
@@ -324,7 +325,7 @@ class Hierarchy(nx.DiGraph):
                     "Source of a typing should be a graph, `%s` is provided!" %
                     type(self.node[source])
                 )
-        if type(self.node[target]) != GraphNode:
+        if not isinstance(self.node[target], GraphNode):
             raise ValueError(
                 "Target of a typing should be a graph, `%s` is provided!" %
                 type(self.node[target])
@@ -373,7 +374,7 @@ class Hierarchy(nx.DiGraph):
                 "Source of a rule typing should be a rule, `%s` is provided!" %
                 type(self.node[rule_id])
             )
-        if type(self.node[graph_id]) != GraphNode:
+        if not isinstance(self.node[graph_id], GraphNode):
             raise ValueError(
                 "Target of a rule typing should be a graph, `%s` is provided!" %
                 type(self.node[graph_id])
@@ -698,7 +699,7 @@ class Hierarchy(nx.DiGraph):
                 if len(successors[graph]) == 1:
                     # simple case
                     suc = successors[graph][0]
-                    if type(self.node[graph]) == GraphNode:
+                    if isinstance(self.node[graph], GraphNode):
                         if suc in updated_graphs.keys():
                             # find pullback
                             graph_m, graph_m_graph, graph_m_suc_m =\
@@ -819,7 +820,7 @@ class Hierarchy(nx.DiGraph):
                         )
                 else:
                     # complicated case
-                    if type(self.node[graph]) == GraphNode:
+                    if isinstance(self.node[graph], GraphNode):
                         cospans = {}
                         for suc in successors[graph]:
                             if suc in updated_graphs.keys():
@@ -1046,3 +1047,25 @@ class Hierarchy(nx.DiGraph):
                 # check no homomorphisms are broken
                 pass
         return
+
+    def get_ancestors(self, graph_id):
+        """ returns the ancestors of a graph as well as the typing morphisms"""
+        def _get_ancestors_aux(known_ancestors, graph_id):
+            ancestors = {}
+            for _, typing in self.out_edges(graph_id):
+                if typing not in known_ancestors:
+                    mapping = self.edge[graph_id][typing].mapping
+                    typing_ancestors = _get_ancestors_aux(known_ancestors, typing)
+                    ancestors[typing] = mapping
+                    for (anc, typ) in typing_ancestors.items():
+                        ancestors[anc] = compose_homomorphisms(typ, mapping)
+                        known_ancestors.append(anc)
+            return ancestors
+        return _get_ancestors_aux([], graph_id)
+
+
+
+
+
+            
+
