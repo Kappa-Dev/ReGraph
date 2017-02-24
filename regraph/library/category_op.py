@@ -16,6 +16,7 @@ from regraph.library.utils import (keys_by_value,
                                    dict_sub,
                                    is_monic,
                                    compose_homomorphisms,
+                                   check_totality,
                                    check_homomorphism)
 
 
@@ -54,8 +55,41 @@ def nary_pullback(b, cds):
             check_homomorphism(a, cds[c_name][0], a_c_guy)
         return (a, a_b, a_c)
 
+def pullback(b, c, d, b_d, c_d, total=False):
+    if total:
+        return total_pullback(b, c, d, b_d, c_d)
+    else:
+        return partial_pullback(b, c, d, b_d, c_d)
 
-def pullback(b, c, d, b_d, c_d):
+
+def partial_pullback(b, c, d, b_d, c_d):
+    try:
+        check_totality(b, b_d)
+        check_totality(c, c_d)
+        return total_pullback(b, c, d, b_d, c_d)
+
+    except ValueError:
+        check_homomorphism(b, d, b_d, total=False)
+        check_homomorphism(c, d, c_d, total=False)
+        if b.is_directed():
+            bd_dom = nx.DiGraph(b.subgraph(b_d.keys()))
+            cd_dom = nx.DiGraph(c.subgraph(c_d.keys()))
+        else:
+            bd_dom = nx.Graph(b.subgraph(b_d.keys()))
+            cd_dom = nx.Graph(c.subgraph(c_d.keys()))
+
+        bd_b = {n: n for n in bd_dom.nodes()}
+        cd_c = {n: n for n in cd_dom.nodes()}
+        (tmp, tmp_bddom, tmp_cddom) = total_pullback(bd_dom, cd_dom, d, b_d, c_d)
+        (b2, tmp_b2, b2_b) = pullback_complement(tmp, bd_dom, b, tmp_bddom, bd_b)
+        (c2, tmp_c2, c2_c) = pullback_complement(tmp, cd_dom, c, tmp_cddom, cd_c)
+        (new, b2_new, c2_new) = pushout(tmp, b2, c2, tmp_b2, tmp_c2)
+        hom1 = {v: b2_b[k] for (k, v) in b2_new.items()}
+        hom2 = {v: c2_c[k] for (k, v) in c2_new.items()}
+        return(new, hom1, hom2)
+
+
+def total_pullback(b, c, d, b_d, c_d):
     """Find pullback.
 
     Given h1 : B -> D; h2 : C -> D returns A, rh1, rh2
@@ -128,11 +162,45 @@ def pullback(b, c, d, b_d, c_d):
     return (a, hom1, hom2)
 
 
-def pushout(a, b, c, a_b, a_c):
+def pushout(a, b, c, a_b, a_c, total=False):
     """Find pushout.
     Given h1 : A -> B; h2 : A -> C returns D, rh1, rh2
     with rh1 : B -> D; rh2 : C -> D and D the pushout.
     """
+    if total:
+        return total_pushout(a, b, c, a_b, a_c)
+    else:
+        return partial_pushout(a, b, c, a_b, a_c)
+
+
+def partial_pushout(a, b, c, a_b, a_c):
+    try:
+        check_totality(a, a_b)
+        check_totality(a, a_c)
+        return total_pushout(a, b, c, a_b, a_c)
+
+    except ValueError:
+        check_homomorphism(a, b, a_b, total=False)
+        check_homomorphism(a, c, a_c, total=False)
+        if a.is_directed():
+            ab_dom = nx.DiGraph(a.subgraph(a_b.keys()))
+            ac_dom = nx.DiGraph(a.subgraph(a_c.keys()))
+        else:
+            ab_dom = nx.Graph(a.subgraph(a_b.keys()))
+            ac_dom = nx.Graph(a.subgraph(a_c.keys()))
+
+        ac_a = {n: n for n in ac_dom.nodes()}
+        ab_a = {n: n for n in ab_dom.nodes()}
+
+        (c2, a_c2, c_c2) = total_pushout(ac_dom, a, c, ac_a, a_c)
+        (b2, a_b2, b_b2) = total_pushout(ab_dom, a, b, ab_a, a_b)
+        (d, b2_d, c2_d) = total_pushout(a, b2, c2, a_b2, a_c2)
+        b_d = compose_homomorphisms(b2_d, b_b2)
+        c_d = compose_homomorphisms(c2_d, c_c2)
+
+        return(d, b_d, c_d)
+
+def total_pushout(a, b, c, a_b, a_c):
 
     # if h1.source_ != h2.source_:
     #     raise ValueError(
@@ -205,7 +273,7 @@ def pushout(a, b, c, a_b, a_c):
             for a_key_1 in a_keys_1:
                 for a_key_2 in a_keys_2:
                     if (f[a_key_1], f[a_key_2]) in b.edges():
-                        if (hom2[n1], hom2[n1]) not in d.edges():
+                        if (hom2[n1], hom2[n2]) not in d.edges():
                             add_edge(d, hom2[n1], hom2[n2], get_edge(b, f[a_key_1], f[a_key_2]))
                             if (a_key_1, a_key_2) in a.edges():
                                 add_edge_attrs(d, hom2[n1],

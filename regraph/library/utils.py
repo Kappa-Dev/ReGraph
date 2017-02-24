@@ -849,14 +849,22 @@ def compose_homomorphisms(d2, d1):
     return dict([(key, d2[value]) for key, value in d1.items()])
 
 
-def check_homomorphism(source, target, dictionary, ignore_attrs=False):
+def check_totality(source, dictionary):
+    """check that a mapping is total"""
+    if set(source.nodes()) != set(dictionary.keys()):
+        raise ValueError(
+            "Invalid homomorphism: Mapping is not"
+            "covering all the nodes of source graph!")
+
+
+def check_homomorphism(source, target, dictionary,
+                       ignore_attrs=False, total=True):
     """Check if the homomorphism is valid (preserves edges,
     and attributes if requires)."""
 
     # check if there is mapping for all the nodes of source graph
-    if set(source.nodes()) != set(dictionary.keys()):
-        raise ValueError(
-            "Invalid homomorphism: Mapping is not covering all the nodes of source graph!")
+    if total:
+        check_totality(source, dictionary)
     if not set(dictionary.values()).issubset(target.nodes()):
         raise ValueError(
             "invalid homomorphism: image not in target graph"
@@ -864,18 +872,21 @@ def check_homomorphism(source, target, dictionary, ignore_attrs=False):
 
     # check connectivity
     for s_edge in source.edges():
-        if not (dictionary[s_edge[0]], dictionary[s_edge[1]]) in target.edges():
-            if not target.is_directed():
-                if not (dictionary[s_edge[1]], dictionary[s_edge[0]]) in target.edges():
+        try:
+            if not (dictionary[s_edge[0]], dictionary[s_edge[1]]) in target.edges():
+                if not target.is_directed():
+                    if not (dictionary[s_edge[1]], dictionary[s_edge[0]]) in target.edges():
+                        raise ValueError(
+                            "Invalid homomorphism: Connectivity is not preserved!" +\
+                            " Was expecting an edge '%s' and '%s'" %
+                            (dictionary[s_edge[1]], dictionary[s_edge[0]]))
+                else:
                     raise ValueError(
                         "Invalid homomorphism: Connectivity is not preserved!" +\
-                        " Was expecting an edge '%s' and '%s'" %
-                        (dictionary[s_edge[1]], dictionary[s_edge[0]]))
-            else:
-                raise ValueError(
-                    "Invalid homomorphism: Connectivity is not preserved!" +\
-                    " Was expecting an edge between '%s' and '%s'" %
-                    (dictionary[s_edge[0]], dictionary[s_edge[1]]))
+                        " Was expecting an edge between '%s' and '%s'" %
+                        (dictionary[s_edge[0]], dictionary[s_edge[1]]))
+        except KeyError:
+            pass
 
     for s, t in dictionary.items():
         if not ignore_attrs:
@@ -888,12 +899,15 @@ def check_homomorphism(source, target, dictionary, ignore_attrs=False):
     if not ignore_attrs:
         # check sets of attributes of edges (homomorphism = set inclusion)
         for s1, s2 in source.edges():
-            if not valid_attributes(
-               source.edge[s1][s2], target.edge[dictionary[s1]][dictionary[s2]]):
-                raise ValueError(
-                    "Invalid homomorphism: Attributes of edges (%s)-(%s) and (%s)-(%s) do not match!" %
-                    (s1, s2, dictionary[s1],
-                        dictionary[s2]))
+            try:
+                if not valid_attributes(
+                source.edge[s1][s2], target.edge[dictionary[s1]][dictionary[s2]]):
+                    raise ValueError(
+                        "Invalid homomorphism: Attributes of edges (%s)-(%s) and (%s)-(%s) do not match!" %
+                        (s1, s2, dictionary[s1],
+                            dictionary[s2]))
+            except KeyError:
+                pass
     return True
 
 

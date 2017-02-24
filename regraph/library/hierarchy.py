@@ -1062,10 +1062,3 @@ class Hierarchy(nx.DiGraph):
                         known_ancestors.append(anc)
             return ancestors
         return _get_ancestors_aux([], graph_id)
-
-
-
-
-
-            
-
