@@ -239,6 +239,36 @@ class Hierarchy(nx.DiGraph):
         self.add_node(rule_id)
         self.node[rule_id] = RuleNode(rule, rule_attrs)
 
+    def compose_path_typing(self, path):
+        s = path[0]
+        if isinstance(self.node[s], GraphNode):
+            t = path[1]
+            homomorphism = self.edge[s][t].mapping
+            for i in range(2, len(path)):
+                s = path[i - 1]
+                t = path[i]
+                homomorphism = compose_homomorphisms(
+                    self.edge[s][t].mapping,
+                    homomorphism
+                )
+            return homomorphism
+        else:
+            t = path[1]
+            lhs_homomorphism = self.edge[s][t].lhs_mapping
+            rhs_homomorphism = self.edge[s][t].rhs_mapping
+            for i in range(2, len(path)):
+                s = path[i - 1]
+                t = path[i]
+                lhs_homomorphism = compose_homomorphisms(
+                    self.edge[s][t].mapping,
+                    lhs_homomorphism
+                )
+                rhs_homomorphism = compose_homomorphisms(
+                    self.edge[s][t].mapping,
+                    rhs_homomorphism
+                )
+            return lhs_homomorphism, rhs_homomorphism
+
     def add_typing(self, source, target, mapping, ignore_attrs=False, attrs=None):
         """Add homomorphism to the hierarchy."""
         if source not in self.nodes():
@@ -282,27 +312,46 @@ class Hierarchy(nx.DiGraph):
             ignore_attrs
         )
 
-        # check if commutes with other shortest paths from source to target
+        # check if newly created path commutes with existing shortest paths 
+        all_paths = nx.all_pairs_shortest_path(self)
 
-        paths = nx.all_shortest_paths(self, source, target)
-        try:
-            for p in paths:
-                s = p[0]
-                t = p[1]
-                homomorphism = self.edge[s][t].mapping
-                for i in range(2, len(p)):
-                    s = p[i - 1]
-                    t = p[i]
-                    homomorphism = compose_homomorphisms(
-                        self.edge[s][t].mapping,
-                        homomorphism
+        paths_to_source = {}
+        paths_from_target = {}
+        for s in self.nodes():
+            if source in all_paths[s].keys():
+                paths_to_source[s] = all_paths[s][source]
+            if s == target:
+                for key in all_paths[target].keys():
+                    paths_from_target[key] = all_paths[target][key]
+
+        for s in paths_to_source.keys():
+            for t in paths_from_target.keys():
+                # find homomorphism from s to t via new path
+                if s != source:
+                    new_homomorphism = self.compose_path_typing(paths_to_source[s])
+                else:
+                    new_homomorphism =\
+                        dict([(key, key) for key, _ in mapping.items()])
+                new_homomorphism = compose_homomorphisms(mapping, new_homomorphism)
+                if t != target:
+                    new_homomorphism = compose_homomorphisms(
+                        self.compose_path_typing(paths_from_target[t]),
+                        new_homomorphism
                     )
-                if homomorphism != mapping:
-                    raise ValueError(
-                        "Homomorphism does not commute with an existing " +
-                        "path from '%s' to '%s'!" % (source, target))
-        except(nx.NetworkXNoPath):
-            pass
+
+                # find homomorphisms from s to t via other paths
+                s_t_paths = nx.all_shortest_paths(self, s, t)
+                try:
+                    # check only the first path
+                    first_path = list(s_t_paths)[0]
+                    if self.compose_path_typing(first_path) != new_homomorphism:
+                        raise ValueError(
+                            "Homomorphism does not commute with an existing " +
+                            "path from '%s' to '%s'!" % (s, t)
+                        )
+
+                except(nx.NetworkXNoPath):
+                    pass
 
         self.add_edge(source, target)
         self.edge[source][target] = Typing(mapping, ignore_attrs, attrs)
@@ -484,7 +533,6 @@ class Hierarchy(nx.DiGraph):
         should be among parents of the `graph_id` graph; values are mappings
         of nodes from pattern to the typing graph;
         """
-
         if type(self.node[graph_id]) == RuleNode:
             raise ValueError("Pattern matching in a rule is not implemented!")
         # Check that 'typing_graph' and 'pattern_typing' are correctly specified
@@ -526,6 +574,7 @@ class Hierarchy(nx.DiGraph):
                         mapping,
                         ignore_attrs
                     )
+                pattern_typing = new_pattern_typing
 
         labels_mapping = dict(
             [(n, i + 1) for i, n in enumerate(self.node[graph_id].graph.nodes())])
@@ -539,7 +588,7 @@ class Hierarchy(nx.DiGraph):
             g_typing = dict([
                 (typing_graph, dict([
                     (labels_mapping[k], v) for k, v in self.edge[graph_id][typing_graph].mapping.items()
-                ])) for typing_graph in new_pattern_typing.keys()
+                ])) for typing_graph in pattern_typing.keys()
             ])
 
         matching_nodes = set()
@@ -550,7 +599,7 @@ class Hierarchy(nx.DiGraph):
                 if pattern_typing:
                     # check types match
                     match = False
-                    for typing_graph, (typing, _) in new_pattern_typing.items():
+                    for typing_graph, (typing, _) in pattern_typing.items():
                         if g_typing[typing_graph][node] == typing[pattern_node]:
                             if is_subdict(pattern.node[pattern_node], g.node[node]):
                                 match = True
@@ -588,7 +637,7 @@ class Hierarchy(nx.DiGraph):
             # correspond to pattern
             for (pattern_node, node) in mapping.items():
                 if pattern_typing:
-                    for typing_graph, (typing, _) in new_pattern_typing.items():
+                    for typing_graph, (typing, _) in pattern_typing.items():
                         if g_typing[typing_graph][node] != typing[pattern_node]:
                             break
                         if not is_subdict(pattern.node[pattern_node], subgraph.node[node]):
@@ -860,8 +909,6 @@ class Hierarchy(nx.DiGraph):
                                         new_p_rhs[p_m_key] = rhs_m_keys[i]
 
                         # nothing is typed by rule -- the changes can be applied right away
-                        print(new_p_lhs)
-                        print(new_p_rhs)
                         new_rule = Rule(
                             p_m, lhs_m, rhs_m, new_p_lhs, new_p_rhs
                         )

@@ -174,6 +174,6 @@ class TestCategoryOp:
              'd2': (C2, D2, b_d2, c_d2),
              'd3': (C3, D3, b_d3, c_d3)}
         )
-        print_graph(A)
-        print(A_B)
-        print(A_Cs)
+        # print_graph(A)
+        # print(A_B)
+        # print(A_Cs)

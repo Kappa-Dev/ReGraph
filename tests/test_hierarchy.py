@@ -440,16 +440,16 @@ class TestHierarchy(object):
             lhs_typing,
             rhs_typing
         )
-        print("\n\nG1:\n\n")
-        print_graph(self.hierarchy.node["g1"].graph)
-        print("\n\nG3:\n\n")
-        print_graph(self.hierarchy.node["g3"].graph)
-        print("\n\nRULE :\n\n")
-        print_graph(self.hierarchy.node["r1"].rule.p)
-        print_graph(self.hierarchy.node["r1"].rule.lhs)
-        print_graph(self.hierarchy.node["r1"].rule.rhs)
-        print(self.hierarchy.node["r1"].rule.p_lhs)
-        print(self.hierarchy.node["r1"].rule.p_rhs)
+        # print("\n\nG1:\n\n")
+        # print_graph(self.hierarchy.node["g1"].graph)
+        # print("\n\nG3:\n\n")
+        # print_graph(self.hierarchy.node["g3"].graph)
+        # print("\n\nRULE :\n\n")
+        # print_graph(self.hierarchy.node["r1"].rule.p)
+        # print_graph(self.hierarchy.node["r1"].rule.lhs)
+        # print_graph(self.hierarchy.node["r1"].rule.rhs)
+        # print(self.hierarchy.node["r1"].rule.p_lhs)
+        # print(self.hierarchy.node["r1"].rule.p_rhs)
 
     def test_add_rule_multiple_typing(self):
 
@@ -563,18 +563,180 @@ class TestHierarchy(object):
             lhs_typing,
             rhs_typing
         )
-        print("\n\nG1:\n\n")
-        print_graph(self.hierarchy.node["g1"].graph)
-        print("\n\nG2:\n\n")
-        print_graph(self.hierarchy.node["g2"].graph)
-        print("\n\nG3:\n\n")
-        print_graph(self.hierarchy.node["g3"].graph)
-        print("\n\nRULE :\n\n")
-        print_graph(self.hierarchy.node["r2"].rule.p)
-        print_graph(self.hierarchy.node["r2"].rule.lhs)
-        print_graph(self.hierarchy.node["r2"].rule.rhs)
-        print(self.hierarchy.node["r2"].rule.p_lhs)
-        print(self.hierarchy.node["r2"].rule.p_rhs)
+        # print("\n\nG1:\n\n")
+        # print_graph(self.hierarchy.node["g1"].graph)
+        # print("\n\nG2:\n\n")
+        # print_graph(self.hierarchy.node["g2"].graph)
+        # print("\n\nG3:\n\n")
+        # print_graph(self.hierarchy.node["g3"].graph)
+        # print("\n\nRULE :\n\n")
+        # print_graph(self.hierarchy.node["r2"].rule.p)
+        # print_graph(self.hierarchy.node["r2"].rule.lhs)
+        # print_graph(self.hierarchy.node["r2"].rule.rhs)
+        # print(self.hierarchy.node["r2"].rule.p_lhs)
+        # print(self.hierarchy.node["r2"].rule.p_rhs)
 
     def test_get_ancestors(self):
-        print(self.hierarchy.get_ancestors("g2"))
+        anc = self.hierarchy.get_ancestors("g2")
+        assert("g1" in anc.keys())
+        assert("g0" in anc.keys())
+        assert("g00" in anc.keys())
+
+    @raises(ValueError)
+    def test_add_typing_advanced(self):
+        hierarchy = Hierarchy()
+
+        g9 = nx.DiGraph()
+        g9.add_nodes_from(["a", "b"])
+        hierarchy.add_graph(9, g9)
+
+        g8 = nx.DiGraph()
+        g8.add_nodes_from(["1_a", "1_b", "2_a", "2_b"])
+        hierarchy.add_graph(8, g8)
+
+        hierarchy.add_typing(
+            8, 9,
+            {"1_a": "a",
+             "1_b": "b",
+             "2_a": "a",
+             "2_b": "b"}
+        )
+
+        g7 = nx.DiGraph()
+        g7.add_nodes_from(["x_a", "x_b", "y_a", "y_b"])
+        hierarchy.add_graph(7, g7)
+
+        hierarchy.add_typing(
+            7, 9,
+            {
+                "x_a": "a",
+                "x_b": "b",
+                "y_a": "a",
+                "y_b": "b"
+            }
+        )
+
+        g2 = nx.DiGraph()
+        g2.add_nodes_from(["s_1_a", "t_1_a", "s_1_b", "t_2_a"])
+        hierarchy.add_graph(2, g2)
+
+        hierarchy.add_typing(
+            2, 8,
+            {
+                "s_1_a": "1_a",
+                "t_1_a": "1_a",
+                "s_1_b": "1_b",
+                "t_2_a": "2_a"
+            }
+        )
+
+        g3 = nx.DiGraph()
+        g3.add_nodes_from(["s_x_a", "t_x_a", "g_y_b"])
+        hierarchy.add_graph(3, g3)
+
+        hierarchy.add_typing(
+            3, 7,
+            {
+                "s_x_a": "x_a",
+                "t_x_a": "x_a",
+                "g_y_b": "y_b"
+            }
+        )
+
+        g4 = nx.DiGraph()
+        g4.add_nodes_from(["a_x_a", "t_y_b"])
+        hierarchy.add_graph(4, g4)
+
+        hierarchy.add_typing(
+            4, 3,
+            {
+                "a_x_a": "s_x_a",
+                "t_y_b": "g_y_b"
+            }
+        )
+
+        hierarchy.add_typing(
+            4, 7,
+            {
+                "a_x_a": "x_a",
+                "t_y_b": "y_b"
+            }
+        )
+
+        g6 = nx.DiGraph()
+        g6.add_nodes_from(["a_x_a", "b_x_a", "a_y_b", "b_y_a", "c_x_b"])
+        hierarchy.add_graph(6, g6)
+
+        hierarchy.add_typing(
+            6, 7,
+            {
+                "a_x_a": "x_a",
+                "b_x_a": "x_a",
+                "a_y_b": "y_b",
+                "b_y_a": "y_a",
+                "c_x_b": "x_b"
+            }
+        )
+
+        g5 = nx.DiGraph()
+        g5.add_nodes_from(["1_a_x_a", "2_a_x_a", "1_a_y_b"])
+        hierarchy.add_graph(5, g5)
+
+        hierarchy.add_typing(
+            5, 6,
+            {
+                "1_a_x_a": "a_x_a",
+                "2_a_x_a": "a_x_a",
+                "1_a_y_b": "a_y_b"
+            }
+        )
+
+        hierarchy.add_typing(
+            5, 4,
+            {
+                "1_a_x_a": "a_x_a",
+                "2_a_x_a": "a_x_a",
+                "1_a_y_b": "t_y_b"
+            }
+        )
+
+        g1 = nx.DiGraph()
+        g1.add_nodes_from(["1_s_1_a", "2_s_1_a", "1_s_1_b"])
+        hierarchy.add_graph(1, g1)
+
+        hierarchy.add_typing(
+            1, 2,
+            {
+                "1_s_1_a": "s_1_a",
+                "2_s_1_a": "s_1_a",
+                "1_s_1_b": "s_1_b"
+            }
+        )
+
+        hierarchy.add_typing(
+            1, 3,
+            {
+                "1_s_1_a": "s_x_a",
+                "2_s_1_a": "t_x_a",
+                "1_s_1_b": "g_y_b"
+            }
+        )
+        # start testing
+        hierarchy.add_typing(
+            3, 8,
+            {
+                "s_x_a": "1_a",
+                "t_x_a": "1_a",
+                "g_y_b": "1_b"
+            }
+        )
+        hierarchy.add_typing(
+            6, 9,
+            {
+                "a_x_a": "a",
+                "b_x_a": "b",
+                "a_y_b": "b",
+                "b_y_a": "a",
+                "c_x_b": "b"
+            }
+        )
