@@ -1,8 +1,9 @@
 """nose tests for the mu_graph_hierarchy"""
 
 from nose.tools import assert_equals
-from regraph.library.hierarchy_mu import MuHierarchy
+from regraph.library.hierarchy import MuHierarchy
 import networkx as nx
+
 
 class TestMuHierarchy(object):
     """verification of formulae from parent graphs"""

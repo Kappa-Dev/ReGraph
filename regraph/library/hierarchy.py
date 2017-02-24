@@ -642,6 +642,8 @@ class Hierarchy(nx.DiGraph):
                     mapping,
                     ignore_attrs
                 )
+            lhs_typing = new_lhs_typing
+
         if rhs_typing:
             new_rhs_typing = dict()
             for key, value in rhs_typing.items():
@@ -662,8 +664,7 @@ class Hierarchy(nx.DiGraph):
                     mapping,
                     ignore_attrs
                 )
-        lhs_typing = new_lhs_typing
-        rhs_typing = new_rhs_typing
+            rhs_typing = new_rhs_typing
 
         check_homomorphism(
             rule.lhs,
@@ -1108,7 +1109,7 @@ class Hierarchy(nx.DiGraph):
         return
 
     def get_ancestors(self, graph_id):
-        """ returns the ancestors of a graph as well as the typing morphisms"""
+        """Returns ancestors of a graph as well as the typing morphisms."""
         def _get_ancestors_aux(known_ancestors, graph_id):
             ancestors = {}
             for _, typing in self.out_edges(graph_id):
@@ -1121,6 +1122,14 @@ class Hierarchy(nx.DiGraph):
                         known_ancestors.append(anc)
             return ancestors
         return _get_ancestors_aux([], graph_id)
+
+    def to_nx_graph(self):
+        g = nx.DiGraph()
+        for node in self.nodes():
+            g.add_node(node, self.node[node].attrs)
+        for s, t in self.edges():
+            g.add_edge(s, t, self.edge[s][t].attrs)
+        return g
 
 
 def _verify(phi_str, current_typing, graph):
