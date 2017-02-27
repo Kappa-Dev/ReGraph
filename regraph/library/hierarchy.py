@@ -827,11 +827,10 @@ class Hierarchy(nx.DiGraph):
                     removed_nodes.add(instance[node])
                 # nodes were clonned
                 elif len(p_keys) > 1:
-                    print("SOME NODE SHOULD BE CLONNED")
-                    if node in self.edge[graph_id][typing_graph].mapping.keys():
+                    if instance[node] in self.edge[graph_id][typing_graph].mapping.keys():
                         for k in p_keys:
                             new_nodes[p_g_m[k]] =\
-                                self.edge[graph_id][typing_graph].mapping[node]
+                                self.edge[graph_id][typing_graph].mapping[instance[node]]
 
             for node in rule.rhs.nodes():
                 p_keys = keys_by_value(rule.p_rhs, node)
