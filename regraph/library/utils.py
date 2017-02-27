@@ -853,14 +853,14 @@ def compose_homomorphisms(d2, d1):
     return res
 
 
-def is_total_homomorphism(source, mapping):
+def is_total_homomorphism(elements, mapping):
     """Returns True if mapping is total"""
-    return set(source.nodes()) == set(mapping.keys())
+    return set(elements) == set(mapping.keys())
 
 
-def check_totality(source, dictionary):
+def check_totality(elements, dictionary):
     """check that a mapping is total"""
-    if set(source.nodes()) != set(dictionary.keys()):
+    if set(elements) != set(dictionary.keys()):
         raise ValueError(
             "Invalid homomorphism: Mapping is not "
             "covering all the nodes of source graph!")
@@ -873,7 +873,7 @@ def check_homomorphism(source, target, dictionary,
 
     # check if there is mapping for all the nodes of source graph
     if total:
-        check_totality(source, dictionary)
+        check_totality(source.nodes(), dictionary)
     if not set(dictionary.values()).issubset(target.nodes()):
         raise ValueError(
             "invalid homomorphism: image not in target graph"

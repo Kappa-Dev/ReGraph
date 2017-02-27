@@ -273,3 +273,42 @@ class TestPartialTyping(object):
 
         print("New graph: ")
         print_graph(self.hierarchy.node["new_g"].graph)
+
+    def test_partially_typed_rule(self):
+        lhs = nx.DiGraph()
+        lhs.add_nodes_from([1, 2, 3])
+        lhs.add_edges_from([(1, 2), (1, 3)])
+
+        rule = Rule.from_transform(lhs)
+        rule.merge_nodes(2, 3)
+        rule.clone_node(1)
+        rule.add_node(4, {"a": {1}})
+
+        lhs_typing = {
+            "g1":
+                {1: "red_circle"},
+            "g2":
+                {1: "bad_circle"}
+        }
+        rhs_typing = {
+            "g1":
+            {
+                # {"2_3": "red_circle"}
+            }
+        }
+        instances = self.hierarchy.find_matching(
+            "g3",
+            rule.lhs,
+            lhs_typing
+        )
+        print("\nRewriting instance: ", instances[0])
+        self.hierarchy.rewrite(
+            "g3",
+            rule,
+            instances[0],
+            lhs_typing,
+            rhs_typing
+        )
+        print_graph(self.hierarchy.node["g3"].graph)
+        print(self.hierarchy.edge["g3"]["g1"].mapping)
+        print(self.hierarchy.edge["g3"]["g2"].mapping)
