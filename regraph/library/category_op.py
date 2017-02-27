@@ -26,7 +26,7 @@ def nary_pullback(b, cds):
     # 1. find individual pullbacks
     pullbacks = []
     for c_name, (c, d, b_d, c_d) in cds.items():
-        pb = pullback(b, c, d, b_d, c_d)
+        pb = pullback(b, c, d, b_d, c_d, total=False)
         pullbacks.append((
             c_name, pb
         ))
@@ -38,7 +38,8 @@ def nary_pullback(b, cds):
         for i in range(1, len(pullbacks)):
             c_name2, (a2, a_b2, a_c2) = pullbacks[i]
             a1, a1_old_a1, a1_a2 = pullback(
-                a1, a2, b, a_b1, a_b2
+                a1, a2, b, a_b1, a_b2,
+                total=False
             )
             a_b1 = compose_homomorphisms(a_b1, a1_old_a1)
             # update a_c
@@ -50,10 +51,11 @@ def nary_pullback(b, cds):
         a_b = a_b1
         a = a1
 
-        check_homomorphism(a, b, a_b)
+        check_homomorphism(a, b, a_b, total=False)
         for c_name, a_c_guy in a_c.items():
-            check_homomorphism(a, cds[c_name][0], a_c_guy)
+            check_homomorphism(a, cds[c_name][0], a_c_guy, total=False)
         return (a, a_b, a_c)
+
 
 def pullback(b, c, d, b_d, c_d, total=False):
     if total:
@@ -71,6 +73,7 @@ def partial_pullback(b, c, d, b_d, c_d):
     except ValueError:
         check_homomorphism(b, d, b_d, total=False)
         check_homomorphism(c, d, c_d, total=False)
+
         if b.is_directed():
             bd_dom = nx.DiGraph(b.subgraph(b_d.keys()))
             cd_dom = nx.DiGraph(c.subgraph(c_d.keys()))
@@ -164,6 +167,7 @@ def total_pullback(b, c, d, b_d, c_d):
 
 def pushout(a, b, c, a_b, a_c, total=False):
     """Find pushout.
+
     Given h1 : A -> B; h2 : A -> C returns D, rh1, rh2
     with rh1 : B -> D; rh2 : C -> D and D the pushout.
     """
@@ -200,8 +204,8 @@ def partial_pushout(a, b, c, a_b, a_c):
 
         return(d, b_d, c_d)
 
-def total_pushout(a, b, c, a_b, a_c):
 
+def total_pushout(a, b, c, a_b, a_c):
     # if h1.source_ != h2.source_:
     #     raise ValueError(
     #         "Domain of homomorphism 1 and domain of homomorphism 2 " +
