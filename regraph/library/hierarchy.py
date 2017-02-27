@@ -112,10 +112,12 @@ class RuleNode(AttributeContainter):
 class Typing(AttributeContainter):
     """Incapsulate homomorphism in the edge of the hierarchy."""
 
-    def __init__(self, mapping, ignore_attrs=False, attrs=None):
+    def __init__(self, mapping, total=False, ignore_attrs=False,
+                 attrs=None):
         """Initialize homomorphism."""
         self.mapping = mapping
         self.ignore_attrs = ignore_attrs
+        self.total = total
         if attrs:
             self.attrs = attrs
         else:
@@ -127,11 +129,14 @@ class RuleTyping(AttributeContainter):
     """Incapsulate rule typing in the edge of the hierarchy."""
 
     def __init__(self, lhs_mapping, rhs_mapping,
+                 lhs_total=False, rhs_total=False,
                  ignore_attrs=False, attrs=None):
         """Initialize homomorphism."""
         self.lhs_mapping = lhs_mapping
         self.rhs_mapping = rhs_mapping
         self.ignore_attrs = ignore_attrs
+        self.lhs_total = lhs_total
+        self.rhs_total = rhs_total
         if attrs:
             self.attrs = attrs
         else:
@@ -140,7 +145,7 @@ class RuleTyping(AttributeContainter):
 
 
 class Hierarchy(nx.DiGraph):
-    """."""
+    """Implements a hierarchy of graphs as a DAG."""
 
     def __init__(self, directed=True, graph_node_constuctor=GraphNode):
         """Initialize an hierarchy of graphs."""
@@ -171,12 +176,16 @@ class Hierarchy(nx.DiGraph):
         res += "Typing homomorphisms: \n"
         for n1, n2 in self.edges():
             if type(self.edge[n1][n2]) == Typing:
-                res += "%s -> %s: ignore_attrs == %s\n" %\
-                    (n1, n2, self.edge[n1][n2].ignore_attrs)
+                res += "%s -> %s: total == %s, ignore_attrs == %s\n" %\
+                    (n1, n2, self.edge[n1][n2].total, self.edge[n1][n2].ignore_attrs)
                 # res += "mapping: %s\n" % str(self.edge[n1][n2].mapping)
             elif type(self.edge[n1][n2]) == RuleTyping:
-                res += "%s -> %s: ignore_attrs == %s\n" %\
-                    (n1, n2, self.edge[n1][n2].ignore_attrs)
+                res += "%s -> %s: lhs_total == %s, rhs_total == %s, ignore_attrs == %s\n" %\
+                    (
+                        n1, n2, self.edge[n1][n2].lhs_total,
+                        self.edge[n1][n2].rhs_total,
+                        self.edge[n1][n2].ignore_attrs
+                    )
                 # res += "lhs mapping: %s\n" % str(self.edge[n1][n2].lhs_mapping)
                 # res += "rhs mapping: %s\n" % str(self.edge[n1][n2].rhs_mapping)
             else:
@@ -240,6 +249,7 @@ class Hierarchy(nx.DiGraph):
         self.node[rule_id] = RuleNode(rule, rule_attrs)
 
     def compose_path_typing(self, path):
+        """Compose homomorphisms along the path."""
         s = path[0]
         if isinstance(self.node[s], GraphNode):
             t = path[1]
@@ -269,7 +279,8 @@ class Hierarchy(nx.DiGraph):
                 )
             return lhs_homomorphism, rhs_homomorphism
 
-    def add_typing(self, source, target, mapping, ignore_attrs=False, attrs=None):
+    def add_typing(self, source, target, mapping,
+                   total=False, ignore_attrs=False, attrs=None):
         """Add homomorphism to the hierarchy."""
         if source not in self.nodes():
             raise ValueError(
@@ -278,6 +289,11 @@ class Hierarchy(nx.DiGraph):
             raise ValueError(
                 "Node '%s' is not defined in the hierarchy!" % target)
 
+        if (source, target) in self.edges():
+            raise ValueError(
+                "Edge '%s->%s' already exists in the hierarchy: no muliple edges allowed!" %
+                (source, target)
+            )
         if not isinstance(self.node[source], GraphNode):
             if type(self.node[source]) == RuleNode:
                 raise ValueError(
@@ -309,10 +325,11 @@ class Hierarchy(nx.DiGraph):
             self.node[source].graph,
             self.node[target].graph,
             mapping,
-            ignore_attrs
+            ignore_attrs,
+            total=total
         )
 
-        # check if newly created path commutes with existing shortest paths 
+        # check if newly created path commutes with existing shortest paths
         all_paths = nx.all_pairs_shortest_path(self)
 
         paths_to_source = {}
@@ -343,74 +360,78 @@ class Hierarchy(nx.DiGraph):
                 s_t_paths = nx.all_shortest_paths(self, s, t)
                 try:
                     # check only the first path
-                    first_path = list(s_t_paths)[0]
-                    if self.compose_path_typing(first_path) != new_homomorphism:
-                        raise ValueError(
-                            "Homomorphism does not commute with an existing " +
-                            "path from '%s' to '%s'!" % (s, t)
-                        )
-
+                    for path in s_t_paths:
+                        path_homomorphism = self.compose_path_typing(path)
+                        for key, value in path_homomorphism.items():
+                            if key in new_homomorphism.keys():
+                                if new_homomorphism[key] != value:
+                                    raise ValueError(
+                                        "Homomorphism does not commute with an existing " +
+                                        "path from '%s' to '%s'!" % (s, t)
+                                    )
                 except(nx.NetworkXNoPath):
                     pass
 
         self.add_edge(source, target)
-        self.edge[source][target] = Typing(mapping, ignore_attrs, attrs)
+        self.edge[source][target] = Typing(mapping, total, ignore_attrs, attrs)
         return
 
     def add_partial_typing(self, source, target,
                            mapping, ignore_attrs=False, attrs=None):
         """Add partial homomorphism A -> B."""
-        # 1. Construct A' (A' >-> A)
-        if self.is_directed:
-            new_graph = nx.DiGraph()
-        else:
-            new_graph = nx.Graph()
+        raise ValueError("Deprecated: use `add_typing` with parameter `total=False`!")
+    #     # 1. Construct A' (A' >-> A)
+    #     if self.is_directed:
+    #         new_graph = nx.DiGraph()
+    #     else:
+    #         new_graph = nx.Graph()
 
-        if not isinstance(self.node[source], GraphNode):
-            if type(self.node[source]) == RuleNode:
-                raise ValueError(
-                    "Source node is a rule, use `add_rule_typing` method instead!"
-                )
-            else:
-                raise ValueError(
-                    "Source of a typing should be a graph, `%s` is provided!" %
-                    type(self.node[source])
-                )
-        if not isinstance(self.node[target], GraphNode):
-            raise ValueError(
-                "Target of a typing should be a graph, `%s` is provided!" %
-                type(self.node[target])
-            )
+    #     if not isinstance(self.node[source], GraphNode):
+    #         if type(self.node[source]) == RuleNode:
+    #             raise ValueError(
+    #                 "Source node is a rule, use `add_rule_typing` method instead!"
+    #             )
+    #         else:
+    #             raise ValueError(
+    #                 "Source of a typing should be a graph, `%s` is provided!" %
+    #                 type(self.node[source])
+    #             )
+    #     if not isinstance(self.node[target], GraphNode):
+    #         raise ValueError(
+    #             "Target of a typing should be a graph, `%s` is provided!" %
+    #             type(self.node[target])
+    #         )
 
-        new_graph_source = {}
-        for node in self.node[source].graph.nodes():
-            if node in mapping.keys():
-                add_node(new_graph, node, self.node[source].graph.node[node])
-                new_graph_source[node] = node
+    #     new_graph_source = {}
+    #     for node in self.node[source].graph.nodes():
+    #         if node in mapping.keys():
+    #             add_node(new_graph, node, self.node[source].graph.node[node])
+    #             new_graph_source[node] = node
 
-        for s, t in self.node[source].graph.edges():
-            if s in new_graph.nodes() and t in new_graph.nodes():
-                add_edge(new_graph, s, t, get_edge(self.node[source].graph, s, t))
-        new_graph_attrs = copy.deepcopy(self.node[source].attrs)
+    #     for s, t in self.node[source].graph.edges():
+    #         if s in new_graph.nodes() and t in new_graph.nodes():
+    #             add_edge(new_graph, s, t, get_edge(self.node[source].graph, s, t))
+    #     new_graph_attrs = copy.deepcopy(self.node[source].attrs)
 
-        # generate_name for the new_graph
-        new_name = str(source) + "_" + str(target)
-        if new_name in self.nodes():
-            i = 1
-            new_name = str(source) + "_" + str(target) + str(i)
-            while new_name in self.nodes():
-                i += 1
-                new_name = str(source) + "_" + str(target) + str(i)
+    #     # generate_name for the new_graph
+    #     new_name = str(source) + "_" + str(target)
+    #     if new_name in self.nodes():
+    #         i = 1
+    #         new_name = str(source) + "_" + str(target) + str(i)
+    #         while new_name in self.nodes():
+    #             i += 1
+    #             new_name = str(source) + "_" + str(target) + str(i)
 
-        new_graph_target = dict(
-            [(node, mapping[node]) for node in new_graph.nodes()]
-        )
-        self.add_graph(new_name, new_graph, new_graph_attrs)
-        self.add_typing(new_name, source, new_graph_source, False, attrs)
-        self.add_typing(new_name, target, new_graph_target, ignore_attrs, attrs)
-        return
+    #     new_graph_target = dict(
+    #         [(node, mapping[node]) for node in new_graph.nodes()]
+    #     )
+    #     self.add_graph(new_name, new_graph, new_graph_attrs)
+    #     self.add_typing(new_name, source, new_graph_source, False, attrs)
+    #     self.add_typing(new_name, target, new_graph_target, ignore_attrs, attrs)
+    #     return
 
     def add_rule_typing(self, rule_id, graph_id, lhs_mapping, rhs_mapping,
+                        lhs_total=False, rhs_total=False,
                         ignore_attrs=False, attrs=None):
         """Add typing of a rule."""
         if rule_id not in self.nodes():
@@ -435,19 +456,23 @@ class Hierarchy(nx.DiGraph):
             self.node[rule_id].rule.lhs,
             self.node[graph_id].graph,
             lhs_mapping,
-            ignore_attrs
+            ignore_attrs,
+            total=lhs_total
         )
         # check if an rhs typing is valid
         check_homomorphism(
             self.node[rule_id].rule.rhs,
             self.node[graph_id].graph,
             rhs_mapping,
-            ignore_attrs
+            ignore_attrs,
+            total=rhs_total
         )
         self.add_edge(rule_id, graph_id)
         self.edge[rule_id][graph_id] = RuleTyping(
             lhs_mapping,
             rhs_mapping,
+            lhs_total,
+            rhs_total,
             ignore_attrs,
             attrs
         )
@@ -484,6 +509,10 @@ class Hierarchy(nx.DiGraph):
                                 target,
                                 lhs_mapping,
                                 rhs_mapping,
+                                self.edge[source][graph_id].lhs_total and
+                                self.edge[graph_id][target].lhs_total,
+                                self.edge[source][graph_id].rhs_total and
+                                self.edge[graph_id][target].rhs_total,
                                 self.edge[source][graph_id].ignore_attrs or
                                 self.edge[graph_id][target].ignore_attrs
                             )
@@ -499,6 +528,8 @@ class Hierarchy(nx.DiGraph):
                                 source,
                                 target,
                                 mapping,
+                                self.edge[source][graph_id].total and
+                                self.edge[graph_id][target].total,
                                 self.edge[source][graph_id].ignore_attrs or
                                 self.edge[graph_id][target].ignore_attrs
                             )
@@ -520,7 +551,8 @@ class Hierarchy(nx.DiGraph):
         types = []
         for _, typing in self.out_edges(graph_id):
             mapping = self.edge[graph_id][typing].mapping
-            types.append(mapping[node_id])
+            if node_id in mapping.keys():
+                types.append(mapping[node_id])
         return types
 
     def find_matching(self, graph_id, pattern, pattern_typing=None):
@@ -600,9 +632,13 @@ class Hierarchy(nx.DiGraph):
                     # check types match
                     match = False
                     for typing_graph, (typing, _) in pattern_typing.items():
-                        if g_typing[typing_graph][node] == typing[pattern_node]:
-                            if is_subdict(pattern.node[pattern_node], g.node[node]):
-                                match = True
+                        if node in g_typing[typing_graph].keys():
+                            if g_typing[typing_graph][node] == typing[pattern_node]:
+                                if is_subdict(pattern.node[pattern_node], g.node[node]):
+                                    match = True
+                        else:
+                            # there is no mapping of this node in the typing by `typing_graph`
+                            pass
                     if match:
                         matching_nodes.add(node)
                 else:
@@ -663,7 +699,11 @@ class Hierarchy(nx.DiGraph):
 
         return instances
 
-    def rewrite(self, graph_id, instance, rule,
+    def apply_rule(self, rule_id, graph_id, instance):
+        """Apply rule from the hierarchy."""
+        pass
+
+    def rewrite(self, graph_id, rule, instance,
                 lhs_typing=None, rhs_typing=None):
         """Rewrite and propagate the changes up."""
         # 0. Check consistency of the input parameters &
@@ -751,47 +791,48 @@ class Hierarchy(nx.DiGraph):
         removed_homomorphisms = set()
 
         for typing_graph in self.successors(graph_id):
-            if typing_graph not in rhs_typing.keys():
-                # check if there are anything added or merged
-                removed_homomorphisms.add((graph_id, typing_graph))
-                # self.remove_edge(graph_id, typing_graph)
-            else:
-                new_nodes = {}
-                removed_nodes = set()
-                new_hom = copy.deepcopy(self.edge[graph_id][typing_graph].mapping)
-                for node in rule.lhs.nodes():
-                    p_keys = keys_by_value(rule.p_lhs, node)
-                    # nodes that were removed
-                    if len(p_keys) == 0:
-                        removed_nodes.add(node)
-                    # nodes that were cloned
-                    elif len(p_keys) > 1:
-                        for k in p_keys:
-                            new_nodes[p_g_m[k]] =\
-                                lhs_typing[typing_graph][0][node]
-                for node in rule.rhs.nodes():
-                    p_keys = keys_by_value(rule.p_rhs, node)
-                    # nodes that were added
-                    if len(p_keys) == 0:
-                        new_nodes.update({
-                            node: rhs_typing[typing_graph][0][node]
-                        })
-                    # nodes that were merged
-                    elif len(p_keys) > 1:
-                        removed_nodes.update(set([
-                            instance[rule.p_lhs[k]] for k in p_keys
-                        ]))
-                        new_nodes.update({
-                            node: rhs_typing[typing_graph][0][node]
-                        })
-                # update homomorphisms
-                for n in removed_nodes:
-                    del new_hom[n]
-                new_hom.update(new_nodes)
-                ignore_attrs = rhs_typing[typing_graph][1]
-                updated_homomorphisms.update({
-                    (graph_id, typing_graph): (new_hom, ignore_attrs)
-                })
+            if rhs_typing:
+                if typing_graph not in rhs_typing.keys():
+                    # check if there are anything added or merged
+                    removed_homomorphisms.add((graph_id, typing_graph))
+                    # self.remove_edge(graph_id, typing_graph)
+                else:
+                    new_nodes = {}
+                    removed_nodes = set()
+                    new_hom = copy.deepcopy(self.edge[graph_id][typing_graph].mapping)
+                    for node in rule.lhs.nodes():
+                        p_keys = keys_by_value(rule.p_lhs, node)
+                        # nodes that were removed
+                        if len(p_keys) == 0:
+                            removed_nodes.add(node)
+                        # nodes that were cloned
+                        elif len(p_keys) > 1:
+                            for k in p_keys:
+                                new_nodes[p_g_m[k]] =\
+                                    lhs_typing[typing_graph][0][node]
+                    for node in rule.rhs.nodes():
+                        p_keys = keys_by_value(rule.p_rhs, node)
+                        # nodes that were added
+                        if len(p_keys) == 0:
+                            new_nodes.update({
+                                node: rhs_typing[typing_graph][0][node]
+                            })
+                        # nodes that were merged
+                        elif len(p_keys) > 1:
+                            removed_nodes.update(set([
+                                instance[rule.p_lhs[k]] for k in p_keys
+                            ]))
+                            new_nodes.update({
+                                node: rhs_typing[typing_graph][0][node]
+                            })
+                    # update homomorphisms
+                    for n in removed_nodes:
+                        del new_hom[n]
+                    new_hom.update(new_nodes)
+                    ignore_attrs = rhs_typing[typing_graph][1]
+                    updated_homomorphisms.update({
+                        (graph_id, typing_graph): (new_hom, ignore_attrs)
+                    })
 
         # 2. Propagation steps reverse BFS on neighbours
         current_level = set(self.predecessors(graph_id))

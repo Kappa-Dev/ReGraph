@@ -133,11 +133,13 @@ def add_node(hie, g_id, parent, node_id, nodeType):
     else:
         raise(ValueError("todo rules"))
 
+
 def add_edge(self, node1, node2):
     tr = Transformer(self.graph)
     tr.add_edge(node1, node2)
     self.graph = Rewriter.rewrite_simple(tr)
     self.updateSubMetamodels(self.graph)
+
 
 def _do_rm_node_not_catched(self, nodeId):
     tr = Transformer(self.graph)
@@ -145,6 +147,7 @@ def _do_rm_node_not_catched(self, nodeId):
     new_graph = Rewriter.rewrite_simple(tr)
     self.updateSubMetamodels(new_graph)
     self.graph = new_graph
+
 
 def _do_rm_node_force_not_catched(self, nodeId):
     for sub in self.subCmds.values():
@@ -160,11 +163,13 @@ def _do_rm_node_force_not_catched(self, nodeId):
     self.updateSubMetamodels(new_graph)
     self.graph = new_graph
 
+
 def remove_attrs(self, node, attr_dict, force=False):
     new_graph = copy.deepcopy(self.graph)
     new_graph.remove_node_attrs(node, attr_dict)
     self.updateSubMetamodels(new_graph)
     self.graph = new_graph
+
 
 def _do_merge_nodes_not_catched(self, node1, node2, newName):
     tr = Transformer(self.graph)
@@ -172,6 +177,7 @@ def _do_merge_nodes_not_catched(self, node1, node2, newName):
     new_graph = Rewriter.rewrite_simple(tr)
     self.updateSubMetamodels(new_graph)
     self.graph = new_graph
+
 
 def _do_merge_nodes_force_not_catched(self, node1, node2, newName):
     tr = Transformer(self.graph)
@@ -186,6 +192,7 @@ def _do_merge_nodes_force_not_catched(self, node1, node2, newName):
     self.updateSubMetamodels(new_graph)
     self.graph = new_graph
 
+
 def rename_node(self, node_id, new_name):
     self.graph.myRelabelNode(node_id, new_name)
     for sub in self.subCmds.values():
@@ -193,11 +200,13 @@ def rename_node(self, node_id, new_name):
     for rule in self.subRules.values():
         rule.convertType(node_id, new_name)
 
+
 def _do_clone_node_not_catched(self, node1, clone_name):
     tr = Transformer(self.graph)
     tr.clone_node(node1, clone_name)
     self.graph = Rewriter.rewrite_simple(tr)
     self.updateSubMetamodels(self.graph)
+
 
 def _do_rm_edge_uncatched(self, node1, node2, force):
     if force:
@@ -214,9 +223,11 @@ def _do_rm_edge_uncatched(self, node1, node2, force):
     self.updateSubMetamodels(new_graph)
     self.graph = new_graph
 
+
 def _do_new_rule(self, name, pattern):
     self.subRules[name] = Rule(
         name, self.subCmds[pattern].graph, self)
+
 
 def get_matchings(self, rule, graphName):
     graph = self.subCmds[graphName].graph
@@ -224,12 +235,14 @@ def get_matchings(self, rule, graphName):
     matchings = Rewriter.find_matching(graph, pattern)
     return matchings
 
+
 def _add_subgraph_no_catching(self, graph, name):
     if name not in self.subCmds.keys():
         self.subCmds[name] = self.__class__(name, self)
         self.subCmds[name].graph = graph
     else:
         raise(KeyError("name already exists"))
+
 
 def merge_conflict(self, hierarchy):
     if "top_graph" in hierarchy.keys() and hierarchy["top_graph"] is not None:
@@ -252,6 +265,7 @@ def merge_conflict(self, hierarchy):
     return any((self.subCmds[child["name"]].merge_conflict(child)
                 for child in hierarchy["children"]
                 if child["name"] in self.subCmds.keys()))
+
 
 def merge_hierarchy(self, hierarchy):
     if "top_graph" in hierarchy.keys() and hierarchy["top_graph"] is not None:
@@ -278,6 +292,7 @@ def merge_hierarchy(self, hierarchy):
                 new_rule.from_json_like(r)
                 self.subRules[r["name"]] = new_rule
 
+
 def add_subHierarchy(self, subHierarchy, force=False):
     g = TypedDiGraph(metamodel=self.graph)
     g.from_json_like(subHierarchy["top_graph"])
@@ -301,31 +316,36 @@ def add_subHierarchy(self, subHierarchy, force=False):
             cmd.subRules[r["name"]] = new_rule
     self.subCmds[subHierarchy["name"]] = cmd
 
+
 def deleteSubCmd(self, name):
     if self.subCmds[name].subCmds or self.subCmds[name].subRules:
         raise ValueError("The graph to delete has children")
     del self.subCmds[name]
 
+
 def deleteSubRule(self, name):
     del self.subRules[name]
 
+
 def _do_rename_graph_no_catching(self, old_name, new_name):
     if old_name not in self.subCmds.keys():
-        raise ValueError("The graph "+old_name+" does not exist")
+        raise ValueError("The graph " + old_name + " does not exist")
     if not self.valid_new_name(new_name):
         raise ValueError("a rule or graph named " +
-                            new_name + " already exists")
+                         new_name + " already exists")
     self.subCmds[new_name] = self.subCmds.pop(old_name)
     self.subCmds[new_name].name = new_name
 
+
 def _do_rename_rule_no_catching(self, old_name, new_name):
     if old_name not in self.subRules.keys():
-        raise ValueError("The rule "+old_name+" does not exist")
+        raise ValueError("The rule " + old_name + " does not exist")
     if not self.valid_new_name(new_name):
         raise ValueError("a rule or graph named " +
-                            new_name + " already exists")
+                         new_name + " already exists")
     self.subRules[new_name] = self.subRules.pop(old_name)
     self.subRules[new_name].name = new_name
+
 
 def get_children(self, node_id):
     if node_id not in self.graph.nodes():
@@ -339,6 +359,7 @@ def get_children(self, node_id):
                 break
     return nugget_list
 
+
 def ancestors_aux(self, degree):
     if not self.parent:
         raise ValueError("the command does not have a parent")
@@ -349,9 +370,11 @@ def ancestors_aux(self, degree):
         return {n: parentMapping[self.graph.node[n].type_]
                 for n in self.graph.nodes()}
 
+
 def ancestors(self, degree):
     mapping = self.ancestors_aux(degree)
     return [{"left": n, "right": t} for (n, t) in mapping.items()]
+
 
 def merge_graphs(self, name1, name2, mapping, new_name):
     """ merge two graph based on an identity relation
@@ -375,9 +398,9 @@ def merge_graphs(self, name1, name2, mapping, new_name):
         g0.add_node(new_node, new_type)
         left_mapping[new_node] = n1
         right_mapping[new_node] = n2
-    print("g0",g0)    
-    print("g1",g1)    
-    print("leftMapping",left_mapping)    
+    print("g0", g0)
+    print("g1", g1)
+    print("leftMapping", left_mapping)
     h1 = Homomorphism(g0, g1, left_mapping)
     h2 = Homomorphism(g0, g2, right_mapping)
     (new_graph, g1_new_graph, g2_new_graph) = pushout(h1, h2)
@@ -401,4 +424,3 @@ def merge_graphs(self, name1, name2, mapping, new_name):
         copy_nugget(sub, g1_new_graph.mapping_)
     for sub in self.subCmds[name2].subCmds.values():
         copy_nugget(sub, g2_new_graph.mapping_)
-

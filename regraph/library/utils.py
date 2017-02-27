@@ -846,14 +846,23 @@ def make_canonical_commands(g, commands, di=False):
 
 
 def compose_homomorphisms(d2, d1):
-    return dict([(key, d2[value]) for key, value in d1.items()])
+    res = dict()
+    for key, value in d1.items():
+        if value in d2.keys():
+            res[key] = d2[value]
+    return res
+
+
+def is_total_homomorphism(source, mapping):
+    """Returns True if mapping is total"""
+    return set(source.nodes()) == set(mapping.keys())
 
 
 def check_totality(source, dictionary):
     """check that a mapping is total"""
     if set(source.nodes()) != set(dictionary.keys()):
         raise ValueError(
-            "Invalid homomorphism: Mapping is not"
+            "Invalid homomorphism: Mapping is not "
             "covering all the nodes of source graph!")
 
 
