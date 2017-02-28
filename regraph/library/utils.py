@@ -950,3 +950,23 @@ def assert_graph_eq(g1, g2):
     for e1, e2 in g1.edges():
         assert(g1.edge[e1][e2] == g2.edge[e1][e2])
     return
+
+
+def normalize_typing(typing):
+    if typing is None:
+        typing = dict()
+    if typing is None:
+        typing = dict()
+    new_typing = dict()
+    for key, value in typing.items():
+        if type(value) == dict:
+            new_typing[key] = (value, False)
+        else:
+            try:
+                if len(value) == 2:
+                    new_typing[key] = value
+                elif len(value) == 1:
+                    new_typing[key] = (value[0], False)
+            except:
+                raise ValueError("Invalid typing typing!")
+    return new_typing

@@ -26,7 +26,8 @@ from regraph.library.utils import (compose_homomorphisms,
                                    keys_by_value,
                                    normalize_attrs,
                                    to_set,
-                                   is_total_homomorphism)
+                                   is_total_homomorphism,
+                                   normalize_typing)
 from regraph.library.rules import Rule
 from regraph.library.mu import parse_formula
 from lrparsing import ParseError
@@ -535,7 +536,6 @@ class Hierarchy(nx.DiGraph):
 
     def add_node_type(self, graph_id, node_id, typing_graph, type_id):
         """Type a node in a graph."""
-
         if (graph_id, typing_graph) not in self.edges():
             raise ValueError(
                 "Typing `%s->%s` does not exist!" %
@@ -731,9 +731,54 @@ class Hierarchy(nx.DiGraph):
 
         return instances
 
-    def apply_rule(self, rule_id, graph_id, instance):
-        """Apply rule from the hierarchy."""
-        pass
+    def find_rule_matching(self, graph_id, rule_id):
+        """Find matching of a rule `rule_id` form the hierarchy."""
+        if type(self.node[graph_id]) == RuleNode:
+            raise ValueError("Pattern matching in a rule is not implemented!")
+
+        if type(self.node[rule_id]) != RuleNode:
+            raise ValueError("Invalid rule `%s` to match!" % rule_id)
+
+        rule = self.node[rule_id].rule
+
+        lhs_typing = {}
+        rhs_typing = {}
+
+        rule_successors = self.successors(rule_id)
+
+        for suc in rule_successors:
+            lhs_typing[suc] =\
+                self.edge[rule_id][suc].lhs_mapping
+            rhs_typing[suc] =\
+                self.edge[rule_id][suc].rhs_mapping
+
+        instances = self.find_matching(
+            graph_id,
+            rule.lhs,
+            lhs_typing
+        )
+        return instances
+
+    def _check_instance(self, graph_id, pattern, instance, pattern_typing):
+        check_homomorphism(
+            pattern,
+            self.node[graph_id].graph,
+            instance,
+            total=True
+        )
+
+        # check instance typing and lhs typing coincide
+        for node in pattern.nodes():
+            if pattern_typing:
+                for typing_graph, (lhs_mapping, _) in pattern_typing.items():
+                    if node in pattern_typing.keys() and\
+                       instance[node] in self.edge[graph_id][typing_graph].mapping.keys():
+                        if lhs_mapping[node] != self.edge[graph_id][typing_graph].mapping[instance[node]]:
+                            raise ValueError(
+                                "Typing of the instance of LHS does not " +
+                                " coincide with typing of LHS!"
+                            )
+        return
 
     def rewrite(self, graph_id, rule, instance,
                 lhs_typing=None, rhs_typing=None):
@@ -745,23 +790,7 @@ class Hierarchy(nx.DiGraph):
         # 0. Check consistency of the input parameters &
         # validity of homomorphisms
 
-        if lhs_typing is None:
-            lhs_typing = dict()
-        if rhs_typing is None:
-            rhs_typing = dict()
-
-        new_lhs_typing = dict()
-        for key, value in lhs_typing.items():
-            if type(value) == dict:
-                new_lhs_typing[key] = (value, False)
-            else:
-                try:
-                    if len(value) == 2:
-                        new_lhs_typing[key] = value
-                    elif len(value) == 1:
-                        new_lhs_typing[key] = (value[0], False)
-                except:
-                    raise ValueError("Invalid lhs typing!")
+        new_lhs_typing = normalize_typing(lhs_typing)
 
         for typing_graph, (mapping, ignore_attrs) in new_lhs_typing.items():
             check_homomorphism(
@@ -773,18 +802,8 @@ class Hierarchy(nx.DiGraph):
             )
         lhs_typing = new_lhs_typing
 
-        new_rhs_typing = dict()
-        for key, value in rhs_typing.items():
-            if type(value) == dict:
-                new_rhs_typing[key] = (value, False)
-            else:
-                try:
-                    if len(value) == 2:
-                        new_rhs_typing[key] = value
-                    elif len(value) == 1:
-                        new_rhs_typing[key] = (value[0], False)
-                except:
-                    raise ValueError("Invalid lhs typing!")
+        new_rhs_typing = normalize_typing(rhs_typing)
+
         for typing_graph, (mapping, ignore_attrs) in new_rhs_typing.items():
             check_homomorphism(
                 rule.rhs,
@@ -795,24 +814,10 @@ class Hierarchy(nx.DiGraph):
             )
         rhs_typing = new_rhs_typing
 
-        check_homomorphism(
-            rule.lhs,
-            self.node[graph_id].graph,
-            instance,
-            total=True
+        self._check_instance(
+            graph_id, rule.lhs,
+            instance, lhs_typing
         )
-
-        # check instance typing and lhs typing coincide
-        for node in rule.lhs.nodes():
-            if lhs_typing:
-                for typing_graph, (lhs_mapping, _) in lhs_typing.items():
-                    if node in lhs_typing.keys() and\
-                       instance[node] in self.edge[graph_id][typing_graph].mapping.keys():
-                        if lhs_mapping[node] != self.edge[graph_id][typing_graph].mapping[instance[node]]:
-                            raise ValueError(
-                                "Typing of the instance of LHS does not " +
-                                " coincide with typing of LHS!"
-                            )
 
         # 1. Rewriting steps
         g_m, p_g_m, g_m_g = pullback_complement(
@@ -1221,6 +1226,38 @@ class Hierarchy(nx.DiGraph):
             self.edge[s][t] = Typing(
                 mapping, total, ignore_attrs, self.edge[s][t].attrs
             )
+        return
+
+    def apply_rule(self, graph_id, rule_id, instance):
+        """Apply rule from the hierarchy."""
+
+        if type(self.node[graph_id]) == RuleNode:
+            raise ValueError("Rewriting of a rule is not implemented!")
+
+        if type(self.node[rule_id]) != RuleNode:
+            raise ValueError("Invalid rewriting rule `%s`!" % rule_id)
+
+        rule = self.node[rule_id].rule
+
+        lhs_typing = {}
+        rhs_typing = {}
+
+        rule_successors = self.successors(rule_id)
+
+        for suc in rule_successors:
+            lhs_typing[suc] =\
+                self.edge[rule_id][suc].lhs_mapping
+            rhs_typing[suc] =\
+                self.edge[rule_id][suc].rhs_mapping
+
+        self.rewrite(
+            graph_id,
+            rule,
+            instance,
+            lhs_typing,
+            rhs_typing
+        )
+
         return
 
     def to_json(self):

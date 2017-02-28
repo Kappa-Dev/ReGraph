@@ -319,3 +319,11 @@ class TestPartialTyping(object):
         print_graph(self.hierarchy.node["g3"].graph)
         print(self.hierarchy.edge["g3"]["g1"].mapping)
         print(self.hierarchy.edge["g3"]["g2"].mapping)
+
+    def test_apply_rule(self):
+        instances = self.hierarchy.find_rule_matching("g3", "r1")
+        self.hierarchy.apply_rule(
+            "g3",
+            "r1",
+            instances[0]
+        )
