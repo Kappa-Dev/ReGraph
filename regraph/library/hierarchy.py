@@ -504,11 +504,11 @@ class Hierarchy(nx.DiGraph):
                 "Graph '%s' does not have a node with id '%s'!"
                 % (graph_id, node_id)
             )
-        types = []
+        types = {}
         for _, typing in self.out_edges(graph_id):
             mapping = self.edge[graph_id][typing].mapping
             if node_id in mapping.keys():
-                types.append(mapping[node_id])
+                types[typing] = mapping[node_id]
         return types
 
     def to_total(self, source, target):
@@ -535,7 +535,17 @@ class Hierarchy(nx.DiGraph):
 
     def add_node_type(self, graph_id, node_id, typing_graph, type_id):
         """Type a node in a graph."""
+
+        if (graph_id, typing_graph) not in self.edges():
+            raise ValueError(
+                "Typing `%s->%s` does not exist!" %
+                (graph_id, typing_graph)
+            )
+
         old_mapping = self.edge[graph_id][typing_graph].mapping
+        ignore_attrs = self.edge[graph_id][typing_graph].ignore_attrs
+        attrs = self.edge[graph_id][typing_graph].attrs
+
         if node_id in old_mapping.keys():
             raise ValueError(
                 "Node `%s` in `%s` is already typed by `%s` as `%s`" %
@@ -552,9 +562,6 @@ class Hierarchy(nx.DiGraph):
 
         try:
             self._check_consistency(graph_id, typing_graph, new_mapping)
-
-            ignore_attrs = self.edge[graph_id][typing_graph].ignore_attrs
-            attrs = self.edge[graph_id][typing_graph].attrs
 
             self.remove_edge(graph_id, typing_graph)
             self.add_typing(
@@ -866,7 +873,6 @@ class Hierarchy(nx.DiGraph):
                     if typing_graph in rhs_typing.keys():
                         if node in rhs_typing[typing_graph][0].keys():
                             new_type = rhs_typing[typing_graph][0][node]
-                            print("Attempt to assign new type on a merged node")
                             type_set = set()
                             for k in p_keys:
                                 old_typing =\
