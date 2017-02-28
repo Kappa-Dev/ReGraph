@@ -124,44 +124,77 @@ def new_child(hie, g_id, name):
         hie.add_typing(ch_id, g_id, {})
 
 
-def add_node(hie, g_id, parent, node_id, nodeType):
+# TODO : rules, undirected
+def add_node(hie, g_id, parent, node_id, node_type):
+    """add a node to a graph in the hierarchy"""
+    if parent is not None and node_type is None:
+        raise ValueError("node {} must have a type".format(node_id))
     if isinstance(hie.node[g_id], GraphNode):
-        if node_id not in hie.node[g_id].graph.nodes():
-            hie.node[g_id].graph.add_node(node_id)
+        if node_id in hie.node[g_id].graph.nodes():
+            raise ValueError("node {} already exists in graph".format(node_id))
+        lhs = nx.DiGraph()
+        ppp = nx.DiGraph()
+        rhs = nx.DiGraph()
+        rhs.add_node(node_id)
+        rule = Rule(lhs, ppp, rhs)
         if parent is not None:
-            hie.edge[g_id][parent].mapping[node_id] = nodeType
+            rhs_typing = {parent: {node_id: node_type}}
+            lhs_typing = {parent: {}}
+        hie.rewrite(g_id, {}, rule, lhs_typing, rhs_typing)
+
     else:
-        raise(ValueError("todo rules"))
+        raise ValueError("todo rules")
+
+# precondition : total typing by parent
+def add_edge(hie, g_id, parent, node1, node2):
+    if isinstance(hie.node[g_id], GraphNode):
+        lhs = nx.DiGraph()
+        lhs.add_node(node1)
+        lhs.add_node(node2)
+        ppp = nx.DiGraph()
+        ppp.add_node(node1)
+        ppp.add_node(node2)
+        rhs = nx.DiGraph()
+        rhs.add_node(node1)
+        rhs.add_node(node2)
+        rhs.add_edge(node1, node2)
+        rule = Rule(lhs, ppp, rhs)
+        if parent is not None:
+            typing = hie.edge[g_id][parent].mapping
+            lhs_typing = {parent: {node1: typing[node1],
+                                   node2: typing[node2]}}
+            rhs_typing = lhs_typing
+        hie.rewrite(g_id, {node1: node1, node2: node2},
+                    rule, lhs_typing, rhs_typing)
+    else:
+        raise ValueError("todo rules")
 
 
-def add_edge(self, node1, node2):
-    tr = Transformer(self.graph)
-    tr.add_edge(node1, node2)
-    self.graph = Rewriter.rewrite_simple(tr)
-    self.updateSubMetamodels(self.graph)
+def rm_node(hie, g_id, parent, node_id, force=False):
+    """remove a node from a graph """
+    if isinstance(hie.node[g_id], GraphNode):
+        if [c for c in all_children(hie, g_id)
+                if node_id in hie.edge[c, g_id].mapping.values()]:
+            if not force:
+                raise ValueError(
+                    "some nodes are typed by {}"
+                    "set the force argument to"
+                    "delete the as well"
+                    .format(node_id))
 
-
-def _do_rm_node_not_catched(self, nodeId):
-    tr = Transformer(self.graph)
-    tr.remove_node(nodeId)
-    new_graph = Rewriter.rewrite_simple(tr)
-    self.updateSubMetamodels(new_graph)
-    self.graph = new_graph
-
-
-def _do_rm_node_force_not_catched(self, nodeId):
-    for sub in self.subCmds.values():
-        for n in sub.graph.nodes():
-            if sub.graph.node[n].type_ == nodeId:
-                sub._do_rm_node_force_not_catched(n)
-    for rule in self.subRules.values():
-        rule.removeType(nodeId)
-
-    tr = Transformer(self.graph)
-    tr.remove_node(nodeId)
-    new_graph = Rewriter.rewrite_simple(tr)
-    self.updateSubMetamodels(new_graph)
-    self.graph = new_graph
+        lhs = nx.DiGraph()
+        lhs.add_node(node_id)
+        ppp = nx.DiGraph()
+        rhs = nx.DiGraph()
+        rule = Rule(lhs, ppp, rhs)
+        if parent is not None:
+            typing = hie.edge[g_id][parent].mapping
+            lhs_typing = {parent: {node_id: typing[node_id]}}
+            rhs_typing = {}
+        hie.rewrite(g_id, {node_id: node_id},
+                    rule, lhs_typing, rhs_typing)
+    else:
+        raise ValueError("todo rules")
 
 
 def remove_attrs(self, node, attr_dict, force=False):
@@ -171,29 +204,31 @@ def remove_attrs(self, node, attr_dict, force=False):
     self.graph = new_graph
 
 
-def _do_merge_nodes_not_catched(self, node1, node2, newName):
-    tr = Transformer(self.graph)
-    tr.merge_nodes(node1, node2, node_name=newName)
-    new_graph = Rewriter.rewrite_simple(tr)
-    self.updateSubMetamodels(new_graph)
-    self.graph = new_graph
+def merge_nodes(hie, g_id, parent, node1, node2, new_name):
+    if isinstance(hie.node[g_id], GraphNode):
+        if new_name in hie.node[g_id].graph.nodes():
+            raise ValueError("node {} already exists in graph".format(new_name))
+        lhs = nx.DiGraph()
+        lhs.add_node(node1)
+        lhs.add_node(node2)
+        ppp = nx.DiGraph()
+        ppp.add_node(node1)
+        ppp.add_node(node2)
+        rhs = nx.DiGraph()
+        rhs.add_node(new_name)
+        rule = Rule(lhs, ppp, rhs, None, {node1: new_name, node2: new_name})
+        if parent is not None:
+            typing = hie.edge[g_id][parent].mapping
+            lhs_typing = {parent: {node1: typing[node1],
+                                   node2: typing[node2]}}
+            rhs_typing = {parent: {new_name: typing[node1]}}
+        hie.rewrite(g_id, {node1: node1, node2: node2},
+                    rule, lhs_typing, rhs_typing)
+    else:
+        raise ValueError("todo rules")
 
 
-def _do_merge_nodes_force_not_catched(self, node1, node2, newName):
-    tr = Transformer(self.graph)
-    tr.merge_nodes(node1, node2, node_name=newName)
-    new_graph = Rewriter.rewrite_simple(tr)
-    for sub in self.subCmds.values():
-        sub.graph.convertType(node1, newName)
-        sub.graph.convertType(node2, newName)
-    for rule in self.subRules.values():
-        rule.convertType(node1, newName)
-        rule.convertType(node2, newName)
-    self.updateSubMetamodels(new_graph)
-    self.graph = new_graph
-
-
-def rename_node(self, node_id, new_name):
+def rename_node(hie, g_id, node_id, new_name):
     self.graph.myRelabelNode(node_id, new_name)
     for sub in self.subCmds.values():
         sub.graph.convertType(node_id, new_name)
@@ -201,27 +236,52 @@ def rename_node(self, node_id, new_name):
         rule.convertType(node_id, new_name)
 
 
-def _do_clone_node_not_catched(self, node1, clone_name):
-    tr = Transformer(self.graph)
-    tr.clone_node(node1, clone_name)
-    self.graph = Rewriter.rewrite_simple(tr)
-    self.updateSubMetamodels(self.graph)
+def clone_node(hie, g_id, parent, node, new_name):
+    if isinstance(hie.node[g_id], GraphNode):
+        if new_name in hie.node[g_id].graph.nodes():
+            raise ValueError("node {} already in graph".format(new_name))
+        lhs = nx.DiGraph()
+        lhs.add_node(node)
+        ppp = nx.DiGraph()
+        ppp.add_node(node)
+        ppp.add_node(new_name)
+        rhs = nx.DiGraph()
+        rhs.add_node(node)
+        rhs.add_node(new_name)
+        rule = Rule(lhs, ppp, rhs, {node: node, new_name: node}, None)
+        if parent is not None:
+            typing = hie.edge[g_id][parent].mapping
+            lhs_typing = {parent: {node: typing[node]}}
+            rhs_typing = {parent: {node: typing[node],
+                                   new_name: typing[node]}}
+        hie.rewrite(g_id, {node: node},
+                    rule, lhs_typing, rhs_typing)
+    else:
+        raise ValueError("todo rules")
 
 
-def _do_rm_edge_uncatched(self, node1, node2, force):
-    if force:
-        for sub in self.subCmds.values():
-            for (n1, n2) in sub.graph.edges():
-                if (sub.graph.node[n1].type_ == node1 and
-                        sub.graph.node[n2].type_ == node2):
-                    sub._do_rm_edge_uncatched(n1, n2, force=True)
-        for rule in self.subRules.values():
-            rule.removeEdgesByType(node1, node2)
-    tr = Transformer(self.graph)
-    tr.remove_edge(node1, node2)
-    new_graph = Rewriter.rewrite_simple(tr)
-    self.updateSubMetamodels(new_graph)
-    self.graph = new_graph
+def rm_edge(hie, g_id, parent, node1, node2):
+    if isinstance(hie.node[g_id], GraphNode):
+        lhs = nx.DiGraph()
+        lhs.add_node(node1)
+        lhs.add_node(node2)
+        lhs.add_edge(node1, node2)
+        ppp = nx.DiGraph()
+        ppp.add_node(node1)
+        ppp.add_node(node2)
+        rhs = nx.DiGraph()
+        rhs.add_node(node1)
+        rhs.add_node(node2)
+        rule = Rule(lhs, ppp, rhs)
+        if parent is not None:
+            typing = hie.edge[g_id][parent].mapping
+            lhs_typing = {parent: {node1: typing[node1],
+                                   node2: typing[node2]}}
+            rhs_typing = lhs_typing
+        hie.rewrite(g_id, {node1: node1, node2: node2},
+                    rule, lhs_typing, rhs_typing)
+    else:
+        raise ValueError("todo rules")
 
 
 def _do_new_rule(self, name, pattern):
