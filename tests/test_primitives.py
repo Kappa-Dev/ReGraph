@@ -2,8 +2,8 @@ import networkx as nx
 
 from regraph.library.rules import Rule
 from regraph.library.utils import (dict_sub,
-                                   is_subdict,
-                                   identity)
+                                   is_subdict)
+from regraph.library.category_op import identity
 from regraph.library.primitives import *
 
 

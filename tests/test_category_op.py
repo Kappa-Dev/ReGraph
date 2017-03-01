@@ -177,3 +177,37 @@ class TestCategoryOp:
         # print_graph(A)
         # print(A_B)
         # print(A_Cs)
+
+    def test_multi_pullback_clones(self):
+        B = nx.DiGraph()
+        B.add_nodes_from([
+            1,
+        ])
+
+        D1 = nx.DiGraph()
+        D1.add_nodes_from(['a'])
+
+        D2 = nx.DiGraph()
+        D2.add_nodes_from(['x'])
+
+        b_d1 = {1: 'a'}
+        b_d2 = {1: 'x'}
+
+        C1 = nx.DiGraph()
+        C1.add_nodes_from(['a', 'a1'])
+
+        C2 = nx.DiGraph()
+        C2.add_nodes_from(['x', 'x1'])
+
+        c_d1 = {'a': 'a', 'a1': 'a'}
+        c_d2 = {'x': 'x', 'x1': 'x'}
+
+        a, a_b, a_cs = nary_pullback(
+            B,
+            {
+                'd1': (C1, D1, b_d1, c_d1),
+                'd2': (C2, D2, b_d2, c_d2)
+            }
+        )
+        print(a_b)
+        print(a_cs)

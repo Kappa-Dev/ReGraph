@@ -6,7 +6,6 @@ from regraph.library.rules import Rule
 from regraph.library.hierarchy import Hierarchy
 from nose.tools import raises
 from regraph.library.primitives import print_graph
-from regraph.library.utils import is_monic
 
 
 class TestHierarchy(object):
@@ -330,6 +329,8 @@ class TestHierarchy(object):
 
     def test_to_json(self):
         res = self.hierarchy.to_json()
+        new_h = Hierarchy.from_json(res)
+        assert(self.hierarchy == new_h)
 
     def test_add_rule(self):
         lhs = nx.DiGraph()
