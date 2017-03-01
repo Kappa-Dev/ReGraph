@@ -798,6 +798,28 @@ class Hierarchy(nx.DiGraph):
                             )
         return
 
+    def _complete_typing(self, graph_id, matching, lhs_typing, rhs_typing, p_l, p_r):
+        for typing_graph in self.successors(graph_id):
+            typing = self.edge[graph_id][typing_graph].mapping
+            if typing_graph not in lhs_typing.keys():
+                lhs_typing[typing_graph] = ({}, False)
+            if typing_graph not in rhs_typing.keys():
+                rhs_typing[typing_graph] = ({}, False)
+            for (src, tgt) in matching.items():
+                if (src not in lhs_typing[typing_graph][0].keys() and
+                        tgt in typing.keys()):
+                    lhs_typing[typing_graph][0][src] = typing[tgt]
+            for (p_node, l_node) in p_l.items():
+                if l_node in lhs_typing[typing_graph][0].keys():
+                    if p_r[p_node] in rhs_typing[typing_graph][0].keys():
+                        if (rhs_typing[typing_graph][0][p_r[p_node]] !=
+                                lhs_typing[typing_graph][0][l_node]):
+                            raise ValueError("mapping does not coincide with"
+                                             " rule typing")
+                    else:
+                        rhs_typing[typing_graph][0][p_r[p_node]] =\
+                            lhs_typing[typing_graph][0][l_node]
+
     def rewrite(self, graph_id, rule, instance,
                 lhs_typing=None, rhs_typing=None):
         """Rewrite and propagate the changes up."""
@@ -809,6 +831,9 @@ class Hierarchy(nx.DiGraph):
         # validity of homomorphisms
 
         new_lhs_typing = normalize_typing(lhs_typing)
+        new_rhs_typing = normalize_typing(rhs_typing)
+        self._complete_typing(graph_id, instance, new_lhs_typing,
+                              new_rhs_typing, rule.p_lhs, rule.p_rhs)
 
         for typing_graph, (mapping, ignore_attrs) in new_lhs_typing.items():
             check_homomorphism(
@@ -820,7 +845,6 @@ class Hierarchy(nx.DiGraph):
             )
         lhs_typing = new_lhs_typing
 
-        new_rhs_typing = normalize_typing(rhs_typing)
 
         for typing_graph, (mapping, ignore_attrs) in new_rhs_typing.items():
             check_homomorphism(

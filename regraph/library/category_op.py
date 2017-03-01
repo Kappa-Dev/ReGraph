@@ -174,7 +174,8 @@ def pushout(a, b, c, a_b, a_c, total=False):
     if total:
         return total_pushout(a, b, c, a_b, a_c)
     else:
-        return partial_pushout(a, b, c, a_b, a_c)
+        return total_pushout(a, b, c, a_b, a_c)
+        # return partial_pushout(a, b, c, a_b, a_c)
 
 
 def partial_pushout(a, b, c, a_b, a_c):

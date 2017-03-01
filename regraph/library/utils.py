@@ -882,7 +882,10 @@ def check_homomorphism(source, target, dictionary,
     # check connectivity
     for s_edge in source.edges():
         try:
-            if not (dictionary[s_edge[0]], dictionary[s_edge[1]]) in target.edges():
+            if (s_edge[0] in dictionary.keys() and
+                    s_edge[1] in dictionary.keys() and
+                    not (dictionary[s_edge[0]], dictionary[s_edge[1]])
+                    in target.edges()):
                 if not target.is_directed():
                     if not (dictionary[s_edge[1]], dictionary[s_edge[0]]) in target.edges():
                         raise ValueError(
@@ -909,12 +912,13 @@ def check_homomorphism(source, target, dictionary,
         # check sets of attributes of edges (homomorphism = set inclusion)
         for s1, s2 in source.edges():
             try:
-                if not valid_attributes(
-                source.edge[s1][s2], target.edge[dictionary[s1]][dictionary[s2]]):
+                if (s1 in dictionary.keys() and s2 in dictionary.keys() and
+                        not valid_attributes(
+                            source.edge[s1][s2],
+                            target.edge[dictionary[s1]][dictionary[s2]])):
                     raise ValueError(
                         "Invalid homomorphism: Attributes of edges (%s)-(%s) and (%s)-(%s) do not match!" %
-                        (s1, s2, dictionary[s1],
-                            dictionary[s2]))
+                        (s1, s2, dictionary[s1], dictionary[s2]))
             except KeyError:
                 pass
     return True

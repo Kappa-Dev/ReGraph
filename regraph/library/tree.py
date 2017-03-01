@@ -4,7 +4,7 @@ import copy
 import networkx as nx
 
 from regraph.library.hierarchy import GraphNode
-from regraph.library.primitives import graph_to_json
+from regraph.library.primitives import graph_to_json, add_node_attrs
 from regraph.library.rules import Rule
 from regraph.library.category_op import pushout
 
@@ -57,15 +57,29 @@ def to_json_tree(hie, g_id, parent, include_rules=True,
                  "children": children}
 
     if include_graphs:
-        json_data["top_graph"] = (graph_to_json(hie.node[g_id].graph)
-                                  if hie.node[g_id].graph is not None
-                                  else None)
-        if parent is not None:
-            json_data["typing"] = hie.edge[g_id][parent].mapping
+        json_data["top_graph"] = typed_graph_to_json(hie, g_id, parent)
+        if json_data["top_graph"] is not None:
+            json_data["top_graph"]["attributes"] = hie.node[g_id].attrs
+
     if include_rules:
         json_data["rules"] = []
     #     h["rules"] = [r.to_json_like() for r in self.subRules.values()]
     return json_data
+
+
+def typed_graph_to_json(hie, g_id, parent):
+    if hie.node[g_id].graph is None:
+        return None
+    json_data = graph_to_json(hie.node[g_id].graph)
+    if parent is not None:
+        typing = hie.edge[g_id][parent].mapping
+        for node in json_data["nodes"]:
+            if node["id"] in typing.keys():
+                node["type"] = typing[node["id"]]
+            else:
+                node["type"] = ""
+    return json_data
+
 
 
 def valid_child_name(hie, g_id, new_name):
@@ -163,10 +177,13 @@ def add_node(hie, g_id, parent, node_id, node_type):
         rhs = nx.DiGraph()
         rhs.add_node(node_id)
         rule = Rule(lhs, ppp, rhs)
-        if node_type is not None:
-            rhs_typing = {parent: {node_id: node_type}}
-            lhs_typing = {parent: {}}
-        hie.rewrite(g_id, rule, {}, lhs_typing, rhs_typing)
+        # if node_type is not None:
+        #     rhs_typing = {parent: {node_id: node_type}}
+        #     lhs_typing = {parent: {}}
+        # else:
+        #     lhs_typing = None
+        #     rhs_typing = None
+        hie.rewrite(g_id, rule, {})
 
     else:
         raise ValueError("todo rules")
@@ -185,13 +202,15 @@ def add_edge(hie, g_id, parent, node1, node2):
         rhs.add_node(node2)
         rhs.add_edge(node1, node2)
         rule = Rule(lhs, ppp, rhs)
-        if parent is not None:
-            typing = hie.edge[g_id][parent].mapping
-            lhs_typing = {parent: {node1: typing[node1],
-                                   node2: typing[node2]}}
-            rhs_typing = lhs_typing
-        hie.rewrite(g_id, rule, {node1: node1, node2: node2},
-                    lhs_typing, rhs_typing)
+        # if parent is not None:
+        #     typing = hie.edge[g_id][parent].mapping
+        #     lhs_typing = {parent: {node1: typing[node1],
+        #                            node2: typing[node2]}}
+        #     rhs_typing = lhs_typing
+        # else:
+        #     lhs_typing = None
+        #     rhs_typing = None
+        hie.rewrite(g_id, rule, {node1: node1, node2: node2})
     else:
         raise ValueError("todo rules")
 
@@ -213,12 +232,14 @@ def rm_node(hie, g_id, parent, node_id, force=False):
         ppp = nx.DiGraph()
         rhs = nx.DiGraph()
         rule = Rule(lhs, ppp, rhs)
-        if parent is not None:
-            typing = hie.edge[g_id][parent].mapping
-            lhs_typing = {parent: {node_id: typing[node_id]}}
-            rhs_typing = {}
-        hie.rewrite(g_id, rule, {node_id: node_id},
-                    lhs_typing, rhs_typing)
+        # if parent is not None:
+        #     typing = hie.edge[g_id][parent].mapping
+        #     lhs_typing = {parent: {node_id: typing[node_id]}}
+        #     rhs_typing = {}
+        # else:
+        #     lhs_typing = None
+        #     rhs_typing = None
+        hie.rewrite(g_id, rule, {node_id: node_id})
     else:
         raise ValueError("todo rules")
 
@@ -236,13 +257,15 @@ def merge_nodes(hie, g_id, parent, node1, node2, new_name):
         rhs = nx.DiGraph()
         rhs.add_node(new_name)
         rule = Rule(lhs, ppp, rhs, None, {node1: new_name, node2: new_name})
-        if parent is not None:
-            typing = hie.edge[g_id][parent].mapping
-            lhs_typing = {parent: {node1: typing[node1],
-                                   node2: typing[node2]}}
-            rhs_typing = {parent: {new_name: typing[node1]}}
-        hie.rewrite(g_id, rule, {node1: node1, node2: node2},
-                    lhs_typing, rhs_typing)
+        # if parent is not None:
+        #     typing = hie.edge[g_id][parent].mapping
+        #     lhs_typing = {parent: {node1: typing[node1],
+        #                            node2: typing[node2]}}
+        #     rhs_typing = {parent: {new_name: typing[node1]}}
+        # else:
+        #     lhs_typing = None
+        #     rhs_typing = None
+        hie.rewrite(g_id, rule, {node1: node1, node2: node2})
     else:
         raise ValueError("todo rules")
 
@@ -262,13 +285,15 @@ def clone_node(hie, g_id, parent, node, new_name):
         rhs.add_node(node)
         rhs.add_node(new_name)
         rule = Rule(lhs, ppp, rhs, {node: node, new_name: node}, None)
-        if parent is not None:
-            typing = hie.edge[g_id][parent].mapping
-            lhs_typing = {parent: {node: typing[node]}}
-            rhs_typing = {parent: {node: typing[node],
-                                   new_name: typing[node]}}
-        hie.rewrite(g_id, rule, {node: node},
-                    lhs_typing, rhs_typing)
+        # if parent is not None:
+        #     typing = hie.edge[g_id][parent].mapping
+        #     lhs_typing = {parent: {node: typing[node]}}
+        #     rhs_typing = {parent: {node: typing[node],
+        #                            new_name: typing[node]}}
+        # else:
+        #     lhs_typing = None
+        #     rhs_typing = None
+        hie.rewrite(g_id, rule, {node: node})
     else:
         raise ValueError("todo rules")
 
@@ -286,13 +311,16 @@ def rm_edge(hie, g_id, parent, node1, node2):
         rhs.add_node(node1)
         rhs.add_node(node2)
         rule = Rule(lhs, ppp, rhs)
-        if parent is not None:
-            typing = hie.edge[g_id][parent].mapping
-            lhs_typing = {parent: {node1: typing[node1],
-                                   node2: typing[node2]}}
-            rhs_typing = lhs_typing
-        hie.rewrite(g_id, rule, {node1: node1, node2: node2},
-                    lhs_typing, rhs_typing)
+        # if parent is not None:
+        #     typing = hie.edge[g_id][parent].mapping
+        #     lhs_typing = {parent: {node1: typing[node1],
+        #                            node2: typing[node2]}}
+        #     rhs_typing = lhs_typing
+        # else:
+        #     lhs_typing = None
+        #     rhs_typing = None
+        hie.rewrite(g_id, rule, {node1: node1, node2: node2})
+                    
     else:
         raise ValueError("todo rules")
 
@@ -305,14 +333,16 @@ def add_attributes(hie, g_id, parent, node, attrs):
         ppp.add_node(node)
         rhs = nx.DiGraph()
         rhs.add_node(node)
-        rhs.node[node].add_attrs(attrs)
+        add_node_attrs(rhs, node, attrs)
         rule = Rule(lhs, ppp, rhs)
-        if parent is not None:
-            typing = hie.edge[g_id][parent].mapping
-            lhs_typing = {parent: {node: typing[node]}}
-            rhs_typing = lhs_typing
-        hie.rewrite(g_id, rule, {node: node},
-                    lhs_typing, rhs_typing)
+        # if parent is not None:
+        #     typing = hie.edge[g_id][parent].mapping
+        #     lhs_typing = {parent: {node: typing[node]}}
+        #     rhs_typing = lhs_typing
+        # else:
+        #     lhs_typing = None
+        #     rhs_typing = None
+        hie.rewrite(g_id, rule, {node: node})
     else:
         raise ValueError("todo rules")
 
@@ -321,18 +351,20 @@ def remove_attributes(hie, g_id, parent, node, attrs):
     if isinstance(hie.node[g_id], GraphNode):
         lhs = nx.DiGraph()
         lhs.add_node(node)
-        lhs.node[node].add_attrs(attrs)
+        add_node_attrs(lhs, node, attrs)
         ppp = nx.DiGraph()
         ppp.add_node(node)
         rhs = nx.DiGraph()
         rhs.add_node(node)
         rule = Rule(lhs, ppp, rhs)
-        if parent is not None:
-            typing = hie.edge[g_id][parent].mapping
-            lhs_typing = {parent: {node: typing[node]}}
-            rhs_typing = lhs_typing
-        hie.rewrite(g_id, rule, {node: node},
-                    lhs_typing, rhs_typing)
+        # if parent is not None:
+        #     typing = hie.edge[g_id][parent].mapping
+        #     lhs_typing = {parent: {node: typing[node]}}
+        #     rhs_typing = lhs_typing
+        # else:
+        #     lhs_typing = None
+        #     rhs_typing = None
+        hie.rewrite(g_id, rule, {node: node})
     else:
         raise ValueError("todo rules")
 
