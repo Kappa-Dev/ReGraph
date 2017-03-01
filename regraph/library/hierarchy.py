@@ -26,15 +26,10 @@ from regraph.library.utils import (is_subdict,
                                    keys_by_value,
                                    normalize_attrs,
                                    to_set,
-<<<<<<< 7e326fca06425d32d4cf66af943ad0b198ce68ec
-                                   is_total_homomorphism,
                                    normalize_typing,
                                    replace_source,
                                    replace_target)
 
-=======
-                                   normalize_typing)
->>>>>>> New propagation
 from regraph.library.rules import Rule
 from regraph.library.mu import parse_formula
 from lrparsing import ParseError
@@ -78,7 +73,8 @@ class AttributeContainter(object):
                     else:
                         pass
                         # warnings.warn(
-                        #     "Node '%s' does not have attribute '%s' with value '%s'!" %
+                        #     "Node '%s' does not have attribute '%s'"
+                        #     " with value '%s'!" %
                         #     (str(node), str(key), str(el)), RuntimeWarning)
                 for el in elements_to_remove:
                     self.attrs[key].remove(el)
@@ -201,10 +197,14 @@ class Hierarchy(nx.DiGraph):
         for n1, n2 in self.edges():
             if type(self.edge[n1][n2]) == Typing:
                 res += "%s -> %s: total == %s, ignore_attrs == %s\n" %\
-                    (n1, n2, self.edge[n1][n2].total, self.edge[n1][n2].ignore_attrs)
+                    (
+                        n1, n2, self.edge[n1][n2].total,
+                        self.edge[n1][n2].ignore_attrs
+                    )
                 # res += "mapping: %s\n" % str(self.edge[n1][n2].mapping)
             elif type(self.edge[n1][n2]) == RuleTyping:
-                res += "%s -> %s: lhs_total == %s, rhs_total == %s, ignore_attrs == %s\n" %\
+                res += ("%s -> %s: lhs_total == %s, rhs_total == %s," +
+                        " ignore_attrs == %s\n") %\
                     (
                         n1, n2, self.edge[n1][n2].lhs_total,
                         self.edge[n1][n2].rhs_total,
@@ -387,7 +387,9 @@ class Hierarchy(nx.DiGraph):
                 for t in paths_from_target.keys():
                     # find homomorphism from s to t via new path
                     if s == source:
-                        raise ValueError("Found a rule typing some node in the hierarchy!")
+                        raise ValueError(
+                            "Found a rule typing some node in the hierarchy!"
+                        )
                     new_lhs_h, new_rhs_h = self.compose_path_typing(paths_to_source[s])
                     new_lhs_h = compose_homomorphisms(mapping, new_lhs_h)
                     new_rhs_h = compose_homomorphisms(mapping, new_rhs_h)

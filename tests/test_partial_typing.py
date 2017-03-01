@@ -298,10 +298,10 @@ class TestPartialTyping(object):
                 {1: "bad_circle"}
         }
         rhs_typing = {
-            "g1":
-            {
-                # {"2_3": "red_circle"}
-            }
+            # "g1":
+            # {
+            #     # {"2_3": "red_circle"}
+            # }
         }
         instances = self.hierarchy.find_matching(
             "g3",
