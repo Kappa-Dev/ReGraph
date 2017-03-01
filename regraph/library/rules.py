@@ -4,9 +4,9 @@ import warnings
 
 from regraph.library.parser import parser
 from regraph.library.utils import (keys_by_value,
-                                   identity,
-                                   check_homomorphism,
                                    make_canonical_commands)
+from regraph.library.category_op import (identity,
+                                         check_homomorphism,)
 from regraph.library import primitives
 
 
@@ -141,9 +141,9 @@ class Rule(object):
 
     def __eq__(self, rule):
         return (
-            self.p == rule.p and
-            self.lhs == rule.lhs and
-            self.rhs == rule.rhs and
+            primitives.equal(self.p, rule.p) and
+            primitives.equal(self.lhs, rule.lhs) and
+            primitives.equal(self.rhs, rule.rhs) and
             self.p_lhs == rule.p_lhs and
             self.p_rhs == rule.p_rhs
         )
@@ -589,3 +589,24 @@ class Rule(object):
             warnings.warn(
                 "Cannot merge less than two nodes!", RuntimeWarning
             )
+
+    def to_json(self):
+        """Convert the rule to json repr."""
+        json_data = {}
+        json_data["lhs"] = primitives.graph_to_json(self.lhs)
+        json_data["p"] = primitives.graph_to_json(self.p)
+        json_data["rhs"] = primitives.graph_to_json(self.rhs)
+        json_data["p_lhs"] = self.p_lhs
+        json_data["p_rhs"] = self.p_rhs
+        return json_data
+
+    @classmethod
+    def from_json(cls, json_data):
+        """Create a rule obj from json repr."""
+        lhs = primitives.graph_from_json(json_data["lhs"])
+        p = primitives.graph_from_json(json_data["p"])
+        rhs = primitives.graph_from_json(json_data["rhs"])
+        p_lhs = json_data["p_lhs"]
+        p_rhs = json_data["p_rhs"]
+        rule = cls(p, lhs, rhs, p_lhs, p_rhs)
+        return rule
