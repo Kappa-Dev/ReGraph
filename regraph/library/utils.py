@@ -970,3 +970,14 @@ def normalize_typing(typing):
             except:
                 raise ValueError("Invalid typing typing!")
     return new_typing
+
+
+def replace_source(n1, n2, mapping):
+    mapping[n2] = mapping[n1]
+    del mapping[n1]
+
+
+def replace_target(n1, n2, mapping):
+    for (key, value) in mapping.items():
+        if value == n1:
+            mapping[key] = n2

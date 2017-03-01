@@ -14,6 +14,7 @@ from regraph.library.category_op import (pullback,
                                          pushout,
                                          nary_pullback)
 from regraph.library.primitives import (get_relabeled_graph,
+                                        relabel_node,
                                         get_edge,
                                         add_node,
                                         add_edge,
@@ -27,7 +28,10 @@ from regraph.library.utils import (compose_homomorphisms,
                                    normalize_attrs,
                                    to_set,
                                    is_total_homomorphism,
-                                   normalize_typing)
+                                   normalize_typing,
+                                   replace_source,
+                                   replace_target)
+
 from regraph.library.rules import Rule
 from regraph.library.mu import parse_formula
 from lrparsing import ParseError
@@ -127,6 +131,12 @@ class Typing(AttributeContainter):
             self.attrs = dict()
         return
 
+    def rename_source(self, old_name, new_name):
+        replace_source(old_name, new_name, self.mapping)
+
+    def rename_target(self, old_name, new_name):
+        replace_target(old_name, new_name, self.mapping)
+
 
 class RuleTyping(AttributeContainter):
     """Incapsulate rule typing in the edge of the hierarchy."""
@@ -145,6 +155,14 @@ class RuleTyping(AttributeContainter):
         else:
             self.attrs = dict()
         return
+
+    def rename_source(self, old_name, new_name):
+        replace_source(old_name, new_name, self.lhs_mapping)
+        replace_source(old_name, new_name, self.rhs_mapping)
+
+    def rename_target(self, old_name, new_name):
+        replace_target(old_name, new_name, self.lhs_mapping)
+        replace_target(old_name, new_name, self.rhs_mapping)
 
 
 class Hierarchy(nx.DiGraph):
@@ -1351,6 +1369,18 @@ class Hierarchy(nx.DiGraph):
             g.add_edge(s, t, self.edge[s][t].attrs)
         return g
 
+    def rename_node(self, graph_id, node, new_name):
+        if new_name in self.node[graph_id].graph.nodes():
+            raise ValueError("node {} already in graph {}"
+                             .format(new_name, graph_id))
+        if node not in self.node[graph_id].graph.nodes():
+            raise ValueError("node {} not present in graph {}"
+                             .format(node, graph_id))
+        relabel_node(self.node[graph_id].graph, node, new_name)
+        for (source, _) in self.in_edges(graph_id):
+            self.edge[source][graph_id].rename_target(node, new_name)
+        for (_, target) in self.out_edges(graph_id):
+            self.edge[graph_id][target].rename_source(node, new_name)
 
 def _verify(phi_str, current_typing, graph):
     phi = parse_formula(phi_str)

@@ -1,20 +1,13 @@
 """Functions for manipulating a hierarchy as a tree"""
-from regraph.library.hierarchy import GraphNode
-import networkx as nx
 
 import copy
+import networkx as nx
 
-
-from regraph.library.primitive import graph_to_json
-from regraph.library.data_structures import TypedDiGraph
-from regraph.library.data_structures import Homomorphism, TypedHomomorphism
-from regraph.library.rewriters import Transformer
-from regraph.library.rewriters import Rewriter
+from regraph.library.hierarchy import GraphNode
+from regraph.library.primitives import graph_to_json
 from regraph.library.rules import Rule
 from regraph.library.category_op import pushout
 
-import json
-from regraph.library.nugget_rules import AbstractRules
 
 
 # def unique_node_id(self, prefix):
@@ -47,6 +40,8 @@ def all_children(hie, g_id):
 def to_json_tree(hie, g_id, parent, include_rules=True,
                  include_graphs=True, depth_bound=None):
     """export a hierarchy as a json tree with root g_id"""
+    if not isinstance(hie.node[g_id], GraphNode):
+        raise ValueError("node {} must be a graph".format(g_id))
     if depth_bound and depth_bound <= 0:
         children = []
     elif depth_bound:
@@ -66,18 +61,24 @@ def to_json_tree(hie, g_id, parent, include_rules=True,
                                   if hie.node[g_id].graph is not None
                                   else None)
         if parent is not None:
-            json_data["typing"] = hie.edge[g_id, parent].mapping
-    # if include_rules:
+            json_data["typing"] = hie.edge[g_id][parent].mapping
+    if include_rules:
+        json_data["rules"] = []
     #     h["rules"] = [r.to_json_like() for r in self.subRules.values()]
     return json_data
 
 
 def valid_child_name(hie, g_id, new_name):
     """ check if node g_id already has a child named new_name"""
-    children_name = [hie.node[source].attr["name"]
+    children_name = [hie.node[source].attrs["name"]
                      for source in all_children(hie, g_id)]
     return new_name not in children_name
 
+def rename_child(hie, g_id, parent, new_name):
+    if valid_child_name(hie, parent, new_name):
+        hie.node[g_id].attrs["name"] = new_name
+    else:
+        raise ValueError("name {} is not valid".format(new_name))
 
 def _child_from_name(hie, g_id, name):
     children = [c for c in all_children(hie, g_id)
@@ -116,19 +117,44 @@ def child_from_path(hie, g_id, path):
 #         raise ValueError("Metamodel update cannot work")
 
 
-def new_child(hie, g_id, name):
+def new_graph(hie, g_id, name):
     if valid_child_name(hie, g_id, name):
         ch_id = unique_graph_id(hie, name)
         new_graph = nx.DiGraph()
         hie.add_graph(ch_id, new_graph, {"name": name})
         hie.add_typing(ch_id, g_id, {})
+    else:
+        raise ValueError("Invalid new name")
+
+
+# copying typing attributes ?
+def new_rule(hie, parent, name, pattern_name=None):
+    """create a new rule """
+    if valid_child_name(hie, parent, name):
+        if pattern_name is None:
+            pattern = nx.DiGraph()
+        else:
+            pattern_id = _child_from_name(hie, parent, pattern_name)
+            pattern = hie.node[pattern_id].graph
+        rule_id = unique_graph_id(hie, name)
+        rule = Rule(pattern, pattern, pattern)
+        hie.add_rule(rule_id, rule, {name: name})
+        if parent is not None:
+            if pattern_name is None:
+                hie.add_rule_typing(rule_id, parent, {}, {})
+            else:
+                mapping = hie.edge[pattern_id][parent].mapping
+                hie.add_rule_typing(rule_id, parent, mapping, mapping)
+    else:
+        raise ValueError("Invalid new name")
+
 
 
 # TODO : rules, undirected
 def add_node(hie, g_id, parent, node_id, node_type):
     """add a node to a graph in the hierarchy"""
-    if parent is not None and node_type is None:
-        raise ValueError("node {} must have a type".format(node_id))
+    # if parent is not None and node_type is None:
+    #     raise ValueError("node {} must have a type".format(node_id))
     if isinstance(hie.node[g_id], GraphNode):
         if node_id in hie.node[g_id].graph.nodes():
             raise ValueError("node {} already exists in graph".format(node_id))
@@ -137,10 +163,10 @@ def add_node(hie, g_id, parent, node_id, node_type):
         rhs = nx.DiGraph()
         rhs.add_node(node_id)
         rule = Rule(lhs, ppp, rhs)
-        if parent is not None:
+        if node_type is not None:
             rhs_typing = {parent: {node_id: node_type}}
             lhs_typing = {parent: {}}
-        hie.rewrite(g_id, {}, rule, lhs_typing, rhs_typing)
+        hie.rewrite(g_id, rule, {}, lhs_typing, rhs_typing)
 
     else:
         raise ValueError("todo rules")
@@ -164,8 +190,8 @@ def add_edge(hie, g_id, parent, node1, node2):
             lhs_typing = {parent: {node1: typing[node1],
                                    node2: typing[node2]}}
             rhs_typing = lhs_typing
-        hie.rewrite(g_id, {node1: node1, node2: node2},
-                    rule, lhs_typing, rhs_typing)
+        hie.rewrite(g_id, rule, {node1: node1, node2: node2},
+                    lhs_typing, rhs_typing)
     else:
         raise ValueError("todo rules")
 
@@ -174,7 +200,7 @@ def rm_node(hie, g_id, parent, node_id, force=False):
     """remove a node from a graph """
     if isinstance(hie.node[g_id], GraphNode):
         if [c for c in all_children(hie, g_id)
-                if node_id in hie.edge[c, g_id].mapping.values()]:
+                if node_id in hie.edge[c][g_id].mapping.values()]:
             if not force:
                 raise ValueError(
                     "some nodes are typed by {}"
@@ -191,17 +217,10 @@ def rm_node(hie, g_id, parent, node_id, force=False):
             typing = hie.edge[g_id][parent].mapping
             lhs_typing = {parent: {node_id: typing[node_id]}}
             rhs_typing = {}
-        hie.rewrite(g_id, {node_id: node_id},
-                    rule, lhs_typing, rhs_typing)
+        hie.rewrite(g_id, rule, {node_id: node_id},
+                    lhs_typing, rhs_typing)
     else:
         raise ValueError("todo rules")
-
-
-def remove_attrs(self, node, attr_dict, force=False):
-    new_graph = copy.deepcopy(self.graph)
-    new_graph.remove_node_attrs(node, attr_dict)
-    self.updateSubMetamodels(new_graph)
-    self.graph = new_graph
 
 
 def merge_nodes(hie, g_id, parent, node1, node2, new_name):
@@ -222,18 +241,12 @@ def merge_nodes(hie, g_id, parent, node1, node2, new_name):
             lhs_typing = {parent: {node1: typing[node1],
                                    node2: typing[node2]}}
             rhs_typing = {parent: {new_name: typing[node1]}}
-        hie.rewrite(g_id, {node1: node1, node2: node2},
-                    rule, lhs_typing, rhs_typing)
+        hie.rewrite(g_id, rule, {node1: node1, node2: node2},
+                    lhs_typing, rhs_typing)
     else:
         raise ValueError("todo rules")
 
 
-def rename_node(hie, g_id, node_id, new_name):
-    self.graph.myRelabelNode(node_id, new_name)
-    for sub in self.subCmds.values():
-        sub.graph.convertType(node_id, new_name)
-    for rule in self.subRules.values():
-        rule.convertType(node_id, new_name)
 
 
 def clone_node(hie, g_id, parent, node, new_name):
@@ -254,8 +267,8 @@ def clone_node(hie, g_id, parent, node, new_name):
             lhs_typing = {parent: {node: typing[node]}}
             rhs_typing = {parent: {node: typing[node],
                                    new_name: typing[node]}}
-        hie.rewrite(g_id, {node: node},
-                    rule, lhs_typing, rhs_typing)
+        hie.rewrite(g_id, rule, {node: node},
+                    lhs_typing, rhs_typing)
     else:
         raise ValueError("todo rules")
 
@@ -278,133 +291,124 @@ def rm_edge(hie, g_id, parent, node1, node2):
             lhs_typing = {parent: {node1: typing[node1],
                                    node2: typing[node2]}}
             rhs_typing = lhs_typing
-        hie.rewrite(g_id, {node1: node1, node2: node2},
-                    rule, lhs_typing, rhs_typing)
+        hie.rewrite(g_id, rule, {node1: node1, node2: node2},
+                    lhs_typing, rhs_typing)
     else:
         raise ValueError("todo rules")
 
 
-def _do_new_rule(self, name, pattern):
-    self.subRules[name] = Rule(
-        name, self.subCmds[pattern].graph, self)
-
-
-def get_matchings(self, rule, graphName):
-    graph = self.subCmds[graphName].graph
-    pattern = self.subRules[rule].transformer.L
-    matchings = Rewriter.find_matching(graph, pattern)
-    return matchings
-
-
-def _add_subgraph_no_catching(self, graph, name):
-    if name not in self.subCmds.keys():
-        self.subCmds[name] = self.__class__(name, self)
-        self.subCmds[name].graph = graph
+def add_attributes(hie, g_id, parent, node, attrs):
+    if isinstance(hie.node[g_id], GraphNode):
+        lhs = nx.DiGraph()
+        lhs.add_node(node)
+        ppp = nx.DiGraph()
+        ppp.add_node(node)
+        rhs = nx.DiGraph()
+        rhs.add_node(node)
+        rhs.node[node].add_attrs(attrs)
+        rule = Rule(lhs, ppp, rhs)
+        if parent is not None:
+            typing = hie.edge[g_id][parent].mapping
+            lhs_typing = {parent: {node: typing[node]}}
+            rhs_typing = lhs_typing
+        hie.rewrite(g_id, rule, {node: node},
+                    lhs_typing, rhs_typing)
     else:
-        raise(KeyError("name already exists"))
+        raise ValueError("todo rules")
 
 
-def merge_conflict(self, hierarchy):
-    if "top_graph" in hierarchy.keys() and hierarchy["top_graph"] is not None:
-        top_graph = TypedDiGraph(
-            metamodel=self.graph.metamodel_ if self.graph is not None else None)
-        top_graph.from_json_like(hierarchy["top_graph"])
+def remove_attributes(hie, g_id, parent, node, attrs):
+    if isinstance(hie.node[g_id], GraphNode):
+        lhs = nx.DiGraph()
+        lhs.add_node(node)
+        lhs.node[node].add_attrs(attrs)
+        ppp = nx.DiGraph()
+        ppp.add_node(node)
+        rhs = nx.DiGraph()
+        rhs.add_node(node)
+        rule = Rule(lhs, ppp, rhs)
+        if parent is not None:
+            typing = hie.edge[g_id][parent].mapping
+            lhs_typing = {parent: {node: typing[node]}}
+            rhs_typing = lhs_typing
+        hie.rewrite(g_id, rule, {node: node},
+                    lhs_typing, rhs_typing)
     else:
-        top_graph = None
-    if top_graph != self.graph:
-        return(True)
-    if "rules" in hierarchy.keys():
-        for r in hierarchy["rules"]:
-            if r["name"] in self.subRules.keys():
-                new_rule = Rule(r["name"],
-                                TypedDiGraph(metamodel=top_graph),
-                                self)
-                new_rule.from_json_like(r)
-                if new_rule != self.subRules[r["name"]]:
-                    return True
-    return any((self.subCmds[child["name"]].merge_conflict(child)
-                for child in hierarchy["children"]
-                if child["name"] in self.subCmds.keys()))
+        raise ValueError("todo rules")
 
 
-def merge_hierarchy(self, hierarchy):
-    if "top_graph" in hierarchy.keys() and hierarchy["top_graph"] is not None:
-        top_graph = TypedDiGraph(metamodel=self.graph.metamodel_)
-        top_graph.from_json_like(hierarchy["top_graph"])
-    else:
-        top_graph = None
-    if top_graph != self.graph:
-        print("top", top_graph)
-        print("self", self.graph)
-        raise ValueError("the top graph of the hierarchy\
-                            is not the same as the selected graph")
-    for child in hierarchy["children"]:
-        if child["name"] in self.subCmds.keys():
-            self.subCmds[child["name"]].merge_hierarchy(child)
-        else:
-            self.add_subHierarchy(child)
-    if "rules" in hierarchy.keys():
-        for r in hierarchy["rules"]:
-            if r["name"] not in self.subRules.keys():
-                new_rule = Rule(r["name"],
-                                TypedDiGraph(metamodel=top_graph),
-                                self)
-                new_rule.from_json_like(r)
-                self.subRules[r["name"]] = new_rule
+# def merge_conflict(self, hierarchy):
+#     if "top_graph" in hierarchy.keys() and hierarchy["top_graph"] is not None:
+#         top_graph = TypedDiGraph(
+#             metamodel=self.graph.metamodel_ if self.graph is not None else None)
+#         top_graph.from_json_like(hierarchy["top_graph"])
+#     else:
+#         top_graph = None
+#     if top_graph != self.graph:
+#         return(True)
+#     if "rules" in hierarchy.keys():
+#         for r in hierarchy["rules"]:
+#             if r["name"] in self.subRules.keys():
+#                 new_rule = Rule(r["name"],
+#                                 TypedDiGraph(metamodel=top_graph),
+#                                 self)
+#                 new_rule.from_json_like(r)
+#                 if new_rule != self.subRules[r["name"]]:
+#                     return True
+#     return any((self.subCmds[child["name"]].merge_conflict(child)
+#                 for child in hierarchy["children"]
+#                 if child["name"] in self.subCmds.keys()))
 
 
-def add_subHierarchy(self, subHierarchy, force=False):
-    g = TypedDiGraph(metamodel=self.graph)
-    g.from_json_like(subHierarchy["top_graph"])
-    if (subHierarchy["name"] in self.subCmds.keys() or
-        subHierarchy["name"] in self.subRules.keys()):
-        raise(KeyError("name already exists"))
-
-    # self._add_subgraph_no_catching(g,subHierarchy["name"])
-    cmd = self.__class__(subHierarchy["name"], self)
-    cmd.graph = g
-    for child in subHierarchy["children"]:
-        cmd.add_subHierarchy(child)
-    if "rules" in subHierarchy.keys():
-        for r in subHierarchy["rules"]:
-            if (r["name"] in cmd.subCmds.keys() or
-                r["name"] in cmd.subRules.keys()):
-                raise(KeyError("name " + r["name"] + " already exists"))
-            new_rule = Rule(r["name"],
-                            TypedDiGraph(metamodel=g), cmd)
-            new_rule.from_json_like(r)
-            cmd.subRules[r["name"]] = new_rule
-    self.subCmds[subHierarchy["name"]] = cmd
-
-
-def deleteSubCmd(self, name):
-    if self.subCmds[name].subCmds or self.subCmds[name].subRules:
-        raise ValueError("The graph to delete has children")
-    del self.subCmds[name]
+# def merge_hierarchy(self, hierarchy):
+#     if "top_graph" in hierarchy.keys() and hierarchy["top_graph"] is not None:
+#         top_graph = TypedDiGraph(metamodel=self.graph.metamodel_)
+#         top_graph.from_json_like(hierarchy["top_graph"])
+#     else:
+#         top_graph = None
+#     if top_graph != self.graph:
+#         print("top", top_graph)
+#         print("self", self.graph)
+#         raise ValueError("the top graph of the hierarchy\
+#                             is not the same as the selected graph")
+#     for child in hierarchy["children"]:
+#         if child["name"] in self.subCmds.keys():
+#             self.subCmds[child["name"]].merge_hierarchy(child)
+#         else:
+#             self.add_subHierarchy(child)
+#     if "rules" in hierarchy.keys():
+#         for r in hierarchy["rules"]:
+#             if r["name"] not in self.subRules.keys():
+#                 new_rule = Rule(r["name"],
+#                                 TypedDiGraph(metamodel=top_graph),
+#                                 self)
+#                 new_rule.from_json_like(r)
+#                 self.subRules[r["name"]] = new_rule
 
 
-def deleteSubRule(self, name):
-    del self.subRules[name]
+# def add_subHierarchy(self, subHierarchy, force=False):
+#     g = TypedDiGraph(metamodel=self.graph)
+#     g.from_json_like(subHierarchy["top_graph"])
+#     if (subHierarchy["name"] in self.subCmds.keys() or
+#         subHierarchy["name"] in self.subRules.keys()):
+#         raise(KeyError("name already exists"))
 
+#     # self._add_subgraph_no_catching(g,subHierarchy["name"])
+#     cmd = self.__class__(subHierarchy["name"], self)
+#     cmd.graph = g
+#     for child in subHierarchy["children"]:
+#         cmd.add_subHierarchy(child)
+#     if "rules" in subHierarchy.keys():
+#         for r in subHierarchy["rules"]:
+#             if (r["name"] in cmd.subCmds.keys() or
+#                 r["name"] in cmd.subRules.keys()):
+#                 raise(KeyError("name " + r["name"] + " already exists"))
+#             new_rule = Rule(r["name"],
+#                             TypedDiGraph(metamodel=g), cmd)
+#             new_rule.from_json_like(r)
+#             cmd.subRules[r["name"]] = new_rule
+#     self.subCmds[subHierarchy["name"]] = cmd
 
-def _do_rename_graph_no_catching(self, old_name, new_name):
-    if old_name not in self.subCmds.keys():
-        raise ValueError("The graph " + old_name + " does not exist")
-    if not self.valid_new_name(new_name):
-        raise ValueError("a rule or graph named " +
-                         new_name + " already exists")
-    self.subCmds[new_name] = self.subCmds.pop(old_name)
-    self.subCmds[new_name].name = new_name
-
-
-def _do_rename_rule_no_catching(self, old_name, new_name):
-    if old_name not in self.subRules.keys():
-        raise ValueError("The rule " + old_name + " does not exist")
-    if not self.valid_new_name(new_name):
-        raise ValueError("a rule or graph named " +
-                         new_name + " already exists")
-    self.subRules[new_name] = self.subRules.pop(old_name)
-    self.subRules[new_name].name = new_name
 
 
 def get_children(self, node_id):
