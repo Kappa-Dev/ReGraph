@@ -203,7 +203,8 @@ class Hierarchy(nx.DiGraph):
                     )
                 # res += "mapping: %s\n" % str(self.edge[n1][n2].mapping)
             elif type(self.edge[n1][n2]) == RuleTyping:
-                res += ("%s -> %s: lhs_total == %s, rhs_total == %s," +
+                res +=\
+                    ("%s -> %s: lhs_total == %s, rhs_total == %s," +
                         " ignore_attrs == %s\n") %\
                     (
                         n1, n2, self.edge[n1][n2].lhs_total,
@@ -928,6 +929,12 @@ class Hierarchy(nx.DiGraph):
                     if p_r[p_node] in rhs_typing[typing_graph][0].keys():
                         if (rhs_typing[typing_graph][0][p_r[p_node]] !=
                                 lhs_typing[typing_graph][0][l_node]):
+                            print(p_r[p_node])
+                            print(l_node)
+                            print(
+                                rhs_typing[typing_graph][0][p_r[p_node]],
+                                lhs_typing[typing_graph][0][l_node]
+                            )
                             raise ValueError("Mapping does not coincide with"
                                              " rule typing!")
                     else:
@@ -980,8 +987,10 @@ class Hierarchy(nx.DiGraph):
 
         new_lhs_typing = normalize_typing(lhs_typing)
         new_rhs_typing = normalize_typing(rhs_typing)
-        self._complete_typing(graph_id, instance, new_lhs_typing,
-                              new_rhs_typing, rule.p_lhs, rule.p_rhs)
+
+        # TODO! check and uncomment
+        # self._complete_typing(graph_id, instance, new_lhs_typing,
+        #                       new_rhs_typing, rule.p_lhs, rule.p_rhs)
 
         for typing_graph, (mapping, ignore_attrs) in new_lhs_typing.items():
             check_homomorphism(
@@ -992,7 +1001,6 @@ class Hierarchy(nx.DiGraph):
                 total=False
             )
         lhs_typing = new_lhs_typing
-
 
         for typing_graph, (mapping, ignore_attrs) in new_rhs_typing.items():
             check_homomorphism(

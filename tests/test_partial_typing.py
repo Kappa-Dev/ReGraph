@@ -297,12 +297,6 @@ class TestPartialTyping(object):
             "g2":
                 {1: "bad_circle"}
         }
-        rhs_typing = {
-            # "g1":
-            # {
-            #     # {"2_3": "red_circle"}
-            # }
-        }
         instances = self.hierarchy.find_matching(
             "g3",
             rule.lhs,
@@ -313,8 +307,7 @@ class TestPartialTyping(object):
             "g3",
             rule,
             instances[0],
-            lhs_typing,
-            rhs_typing
+            lhs_typing
         )
         print_graph(self.hierarchy.node["g3"].graph)
         print(self.hierarchy.edge["g3"]["g1"].mapping)
