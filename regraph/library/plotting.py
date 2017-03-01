@@ -7,6 +7,46 @@ from regraph.library.utils import keys_by_value
 from matplotlib import pyplot as plt
 
 
+def _ticks_off():
+    plt.tick_params(
+        axis='x',           # changes apply to the x-axis
+        which='both',       # both major and minor ticks are affected
+        bottom='off',       # ticks along the bottom edge are off
+        top='off',          # ticks along the top edge are off
+        labelbottom='off')  # labels along the bottom edge are off
+    plt.tick_params(
+        axis='y',           # changes apply to the x-axis
+        which='both',       # both major and minor ticks are affected
+        left='off',         # ticks along the bottom edge are off
+        right='off',        # ticks along the top edge are off
+        labelleft='off')    # labels along the bottom edge are off
+
+
+def _set_limits(nodes, labels, margin=0.1):
+    xmin = min([
+        p[0] for _, p in nodes.items()
+    ])
+    xmax = max([
+        p[0] for _, p in nodes.items()
+    ])
+    ymin = min([
+        p[1] for _, p in nodes.items()
+    ])
+    ymax = max([
+        p[1] for _, p in labels.items()
+    ])
+
+    plt.xlim([
+        xmin - margin * abs(xmax - xmin),
+        xmax + margin * abs(xmax - xmin)
+    ])
+    plt.ylim([
+        ymin - margin * abs(ymax - ymin),
+        ymax + margin * abs(ymax - ymin)
+    ])
+    return
+
+
 def plot_graph(graph, types=True, filename=None, parent_pos=None):
     """Plot graph with node colors corresponding to types."""
     # if types:
@@ -33,11 +73,14 @@ def plot_graph(graph, types=True, filename=None, parent_pos=None):
         labels[node] = str(node)
         # if types:
         #     labels[node] += ":" + str(graph.node[node].type_)
-    offset = 0.05
+    offset = 0.1
+    labels_pos = copy.deepcopy(pos)
     for p in pos:  # raise text positions
-        pos[p][1] += offset
-    nx.draw_networkx_labels(graph, pos, labels, font_size=11)
+        labels_pos[p][1] += offset
+    nx.draw_networkx_labels(graph, labels_pos, labels, font_size=11)
 
+    _ticks_off()
+    _set_limits(pos, labels_pos)
     # save to the file
     if filename is not None:
         # with open(filename, "w") as f:
@@ -71,13 +114,16 @@ def plot_instance(graph, pattern, instance, filename=None, pos=None):
     labels = {}
     for node in graph.nodes():
         labels[node] = node
-    offset = 0.05
+    offset = 0.1
+    labels_pos = copy.deepcopy(pos)
     for p in pos:  # raise text positions
-        pos[p][1] += offset
-    nx.draw_networkx_labels(graph, pos, labels, font_size=11)
+        labels_pos[p][1] += offset
+    nx.draw_networkx_labels(graph, labels_pos, labels, font_size=11)
 
     # color the instances
     plt.title("Graph with instance of pattern highlighted")
+    _ticks_off()
+    _set_limits(pos, labels_pos)
     if filename is not None:
         with open(filename, "w") as f:
             plt.savefig(f)
@@ -143,6 +189,7 @@ def plot_rule(rule, filename=None):
 
     plt.subplot(1, 3, 1)
     plt.title("LHS")
+    _ticks_off()
     plt.xlim([-0.5, 1.5])
     plt.ylim([-0.5, 1.5])
     nx.draw_networkx_nodes(rule.lhs, lhs_pos,
@@ -156,12 +203,14 @@ def plot_rule(rule, filename=None):
         # if types:
         #     labels[node] += ":" + str(graph.node[node].type_)
     offset = 0.2
+    lhs_label_pos = copy.deepcopy(lhs_pos)
     for p in lhs_pos:  # raise text positions
-        lhs_pos[p][1] += offset
-    nx.draw_networkx_labels(rule.lhs, lhs_pos, labels, font_size=11)
+        lhs_label_pos[p][1] += offset
+    nx.draw_networkx_labels(rule.lhs, lhs_label_pos, labels, font_size=11)
 
     plt.subplot(1, 3, 2)
     plt.title("P")
+    _ticks_off()
     plt.xlim([-0.5, 1.5])
     plt.ylim([-0.5, 1.5])
     nx.draw_networkx_nodes(rule.p, p_pos,
@@ -175,12 +224,14 @@ def plot_rule(rule, filename=None):
         # if types:
         #     labels[node] += ":" + str(graph.node[node].type_)
     offset = 0.2
+    p_label_pos = copy.deepcopy(p_pos)
     for p in p_pos:  # raise text positions
-        p_pos[p][1] += offset
-    nx.draw_networkx_labels(rule.p, p_pos, labels, font_size=11)
+        p_label_pos[p][1] += offset
+    nx.draw_networkx_labels(rule.p, p_label_pos, labels, font_size=11)
 
     plt.subplot(1, 3, 3)
     plt.title("RHS")
+    _ticks_off()
     plt.xlim([-0.5, 1.5])
     plt.ylim([-0.5, 1.5])
     nx.draw_networkx_nodes(rule.rhs, rhs_pos,
@@ -192,9 +243,10 @@ def plot_rule(rule, filename=None):
     for node in rule.rhs.nodes():
         labels[node] = str(node)
     offset = 0.2
+    rhs_label_pos = copy.deepcopy(rhs_pos)
     for p in rhs_pos:  # raise text positions
-        rhs_pos[p][1] += offset
-    nx.draw_networkx_labels(rule.rhs, rhs_pos, labels, font_size=11)
+        rhs_label_pos[p][1] += offset
+    nx.draw_networkx_labels(rule.rhs, rhs_label_pos, labels, font_size=11)
 
     if filename is not None:
         with open(filename, "w") as f:

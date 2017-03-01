@@ -119,6 +119,13 @@ class TestPartialTyping(object):
         self.hierarchy.add_typing("g2", "shapes", g2_shapes)
         self.hierarchy.add_typing("g2", "quality", g2_quality)
 
+        assert(self.hierarchy.node_type("g2", "good_guy") == {"quality": "good"})
+        self.hierarchy.add_node_type("g2", "good_guy", "shapes", "circle")
+        assert(
+            self.hierarchy.node_type("g2", "good_guy") ==
+            {"quality": "good", "shapes": "circle"}
+        )
+
         g3 = nx.DiGraph()
         g3.add_nodes_from([
             "good_red_circle",
@@ -312,3 +319,11 @@ class TestPartialTyping(object):
         print_graph(self.hierarchy.node["g3"].graph)
         print(self.hierarchy.edge["g3"]["g1"].mapping)
         print(self.hierarchy.edge["g3"]["g2"].mapping)
+
+    def test_apply_rule(self):
+        instances = self.hierarchy.find_rule_matching("g3", "r1")
+        self.hierarchy.apply_rule(
+            "g3",
+            "r1",
+            instances[0]
+        )

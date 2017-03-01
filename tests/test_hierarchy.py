@@ -302,8 +302,16 @@ class TestHierarchy(object):
         # add nice assertions here
 
     def test_node_type(self):
-        assert(set(self.hierarchy.node_type("g1", "white_circle")) == set(["white", "circle"]))
-        assert(set(self.hierarchy.node_type("g1", "black_square")) == set(["black", "square"]))
+        print(self.hierarchy.node_type("g1", "white_circle"))
+        assert(
+            self.hierarchy.node_type("g1", "white_circle") ==
+            {"g00": "white", "g0": "circle"}
+        )
+        print(self.hierarchy.node_type("g1", "black_square"))
+        assert(
+            self.hierarchy.node_type("g1", "black_square") ==
+            {"g00": "black", "g0": "square"}
+        )
 
     def test_add_partial_typing(self):
         self.hierarchy.add_typing(
