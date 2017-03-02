@@ -443,9 +443,11 @@ def pullback_complement(a, b, d, a_b, b_d):
     with rh1 : A -> C; rh2 : C -> D and C the pullback_complement.
     Doesn't work if h2 is not a matching
     """
-
-    check_homomorphism(a, b, a_b)
-    check_homomorphism(b, d, b_d)
+    print("a_b", a_b)
+    print("a",a)
+    print("b",b)
+    check_homomorphism(a, b, a_b, total=True)
+    check_homomorphism(b, d, b_d, total=True)
 
     if not is_monic(b_d):
         raise ValueError(

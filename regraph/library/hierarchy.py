@@ -913,7 +913,19 @@ class Hierarchy(nx.DiGraph):
                             )
         return
 
-    def _complete_typing(self, graph_id, matching, lhs_typing, rhs_typing, p_l, p_r):
+    def get_complete_typing(self, graph_id, matching, lhs_t, rhs_t, rule):
+        """ returns complete typings of the rule according to the matching
+           This ensures that you cannot remove node types when applying the
+           rule with the complete typings """
+
+        new_lhs_t = normalize_typing(lhs_t)
+        new_rhs_t = normalize_typing(rhs_t)
+        return self._complete_typing(graph_id, matching, new_lhs_t, new_rhs_t,
+                                     rule.p_lhs, rule.p_rhs)
+
+    def _complete_typing(self, graph_id, matching, lhs_t, rhs_t, p_l, p_r):
+        lhs_typing = copy.deepcopy(lhs_t)
+        rhs_typing = copy.deepcopy(rhs_t)
         for typing_graph in self.successors(graph_id):
             typing = self.edge[graph_id][typing_graph].mapping
             if typing_graph not in lhs_typing.keys():
@@ -940,6 +952,7 @@ class Hierarchy(nx.DiGraph):
                     else:
                         rhs_typing[typing_graph][0][p_r[p_node]] =\
                             lhs_typing[typing_graph][0][l_node]
+        return (lhs_typing, rhs_typing)
 
     def _get_common_successors(self, node_list):
         common_sucs = {}
@@ -989,7 +1002,8 @@ class Hierarchy(nx.DiGraph):
         new_rhs_typing = normalize_typing(rhs_typing)
 
         # TODO! check and uncomment
-        # self._complete_typing(graph_id, instance, new_lhs_typing,
+        # (new_lhs_typing, new_rhs_typing) =\
+        #  self._complete_typing(graph_id, instance, new_lhs_typing,
         #                       new_rhs_typing, rule.p_lhs, rule.p_rhs)
 
         for typing_graph, (mapping, ignore_attrs) in new_lhs_typing.items():
@@ -1016,7 +1030,6 @@ class Hierarchy(nx.DiGraph):
             graph_id, rule.lhs,
             instance, lhs_typing
         )
-
         # 1. Rewriting steps
         g_m, p_g_m, g_m_g = pullback_complement(
             rule.p,

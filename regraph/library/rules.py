@@ -149,10 +149,10 @@ class Rule(object):
         )
 
     def __str__(self):
-        return "Preserved part\n%s\n" % self.p +\
-               "Left hand side\n%s\n" % self.lhs +\
+        return "Preserved part\n%s\n%s\n" % (self.p.node, self.p.edges()) +\
+               "Left hand side\n%s\n%s\n" % (self.lhs.node, self.lhs.edges()) +\
                "P->L Homomorphism : %s\n" % self.p_lhs +\
-               "Right hand side\n%s\n" % self.rhs +\
+               "Right hand side\n%s\n%s\n" % (self.rhs.node, self.rhs.edges()) +\
                "P->R Homomorphism : %s\n" % self.p_rhs
 
     def __doc__(self):
@@ -610,3 +610,4 @@ class Rule(object):
         p_rhs = json_data["p_rhs"]
         rule = cls(p, lhs, rhs, p_lhs, p_rhs)
         return rule
+
