@@ -137,18 +137,14 @@ def dict_sub(a, b):
         return res
     for key, value in b.items():
         if key not in a.keys():
-            warnings.warn(
-                "Dict A does not have attribute '%s'" %
-                (str(key)), RuntimeWarning)
+            pass
         else:
             elements_to_remove = []
             for el in to_set(value):
                 if el in a[key]:
                     elements_to_remove.append(el)
                 else:
-                    warnings.warn(
-                        "Dict A doesn't have '%s' with key '%s'" %
-                        (str(el), str(key)), RuntimeWarning)
+                    pass
             for el in elements_to_remove:
                 res[key].remove(el)
     return res
@@ -862,18 +858,16 @@ def assert_graph_eq(g1, g2):
 def normalize_typing(typing):
     if typing is None:
         typing = dict()
-    if typing is None:
-        typing = dict()
     new_typing = dict()
     for key, value in typing.items():
         if type(value) == dict:
-            new_typing[key] = (value, False)
+            new_typing[key] = (copy.deepcopy(value), False)
         else:
             try:
                 if len(value) == 2:
-                    new_typing[key] = value
+                    new_typing[key] = copy.deepcopy(value)
                 elif len(value) == 1:
-                    new_typing[key] = (value[0], False)
+                    new_typing[key] = (copy.deepcopy(value[0]), False)
             except:
                 raise ValueError("Invalid typing typing!")
     return new_typing

@@ -320,3 +320,4 @@ class TestPartialTyping(object):
             "r1",
             instances[0]
         )
+        

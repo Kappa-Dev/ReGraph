@@ -77,6 +77,7 @@ def check_homomorphism(source, target, dictionary,
     for s, t in dictionary.items():
         if not ignore_attrs:
             # check sets of attributes of nodes (here homomorphism = set inclusion)
+
             if not valid_attributes(source.node[s], target.node[t]):
                 raise ValueError(
                     "Invalid homomorphism: Attributes of nodes source:'%s' and target:'%s' do not match!" %
