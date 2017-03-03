@@ -1009,8 +1009,6 @@ class Hierarchy(nx.DiGraph):
                         else:
                             if matching[l_node] in typing.keys():
                                 l_type = typing[matching[l_node]]
-                                print(p_type)
-                                print(l_type)
                                 if p_type != l_type:
                                     raise ValueError(
                                         "Typing of the rule is not valid: "
@@ -1713,7 +1711,7 @@ class Hierarchy(nx.DiGraph):
                 for suc in successors:
                     if suc in visited:
                         if suc in to_merge:
-                            # TODO!! merge edge mapping as well
+                            # merge edge mappings
                             mapping = hierarchy.edge[node][suc].mapping
                             for key, value in mapping.items():
                                 if key not in self.edge[node][suc].mapping:
@@ -1722,9 +1720,10 @@ class Hierarchy(nx.DiGraph):
                                     if value != self.edge[node][suc].mapping[key]:
                                         raise ValueError(
                                             "Cannot merge with the input hierarchy: typing of nodes"
-                                            "in `%s->%s` does not coincide with present typing!"
+                                            "in `%s->%s` does not coincide with present typing!" %
+                                            (suc, node)
                                         )
-
+                            # merge edge attrs
                             self.edge[node][suc].add_attrs(
                                 hierarchy.edge[node][suc]
                             )
@@ -1738,15 +1737,26 @@ class Hierarchy(nx.DiGraph):
                                 edge_obj = copy.deepcopy(hierarchy.edge[node][suc])
                                 self.edge[node][new_name] = edge_obj
                     else:
-                        visited.append(suc)
                         _merge_node(suc)
 
                 for pred in predecessors:
                     if pred in visited:
                         if pred in to_merge:
-                            # TODO!! merge edge mapping as well
+                            # merge edge mappings
+                            mapping = hierarchy.edge[pred][node].mapping
+                            for key, value in mapping.items():
+                                if key not in self.edge[pred][node].mapping:
+                                    self.edge[pred][node].mapping[key] = value
+                                else:
+                                    if value != self.edge[pred][node].mapping[key]:
+                                        raise ValueError(
+                                            "Cannot merge with the input hierarchy: typing of nodes"
+                                            "in `%s->%s` does not coincide with present typing!" %
+                                            (pred, node)
+                                        )
+                            # merge edge attrs
                             self.edge[pred][node].add_attrs(
-                                hierarchy.edge[pred][node]
+                                hierarchy.edge[pred][node].attrs
                             )
                         else:
                             if pred in to_rename.keys():
@@ -1780,6 +1790,7 @@ class Hierarchy(nx.DiGraph):
                             self.edge[new_name][new_suc_name] = edge_obj
                     else:
                         _merge_node(suc)
+
                 for pred in predecessors:
                     if pred in visited:
                         if pred in to_rename.keys():
