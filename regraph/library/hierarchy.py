@@ -167,9 +167,10 @@ class RuleTyping(AttributeContainter):
 class Hierarchy(nx.DiGraph):
     """Implements a hierarchy of graphs as a DAG."""
 
-    def __init__(self, directed=True, graph_node_constuctor=GraphNode):
+    def __init__(self, directed=True, graph_node_constuctor=GraphNode,
+                 data=None):
         """Initialize an hierarchy of graphs."""
-        nx.DiGraph.__init__(self)
+        nx.DiGraph.__init__(self, data)
         self.hierarchy_attrs = dict()
         self.directed = directed
         self.graph_node_constructor = graph_node_constuctor
@@ -1576,29 +1577,25 @@ class Hierarchy(nx.DiGraph):
                 pass
         return
 
-    def get_ancestors(self, graph_id, path=False):
+    def get_ancestors(self, graph_id):
         """Returns ancestors of a graph as well as the typing morphisms."""
-        def _get_ancestors_aux(known_ancestors, graph_id, path=False):
+        def _get_ancestors_aux(graph_id):
             ancestors = {}
             for _, typing in self.out_edges(graph_id):
-                if typing not in known_ancestors:
-                    mapping = self.edge[graph_id][typing].mapping
-                    typing_ancestors = _get_ancestors_aux(known_ancestors, typing, path)
-                    if path:
-                        ancestors[typing] = (mapping, [typing])
-                        for anc, (typ, path) in typing_ancestors.items():
-                            ancestors[anc] = (
-                                compose_homomorphisms(typ, mapping),
-                                path + [typing]
-                            )
-                            known_ancestors.append(anc)
+                mapping = self.edge[graph_id][typing].mapping
+                typing_ancestors = _get_ancestors_aux(typing)
+                if typing in ancestors.keys():
+                    ancestors[typing].update(mapping)
+                else:
+                    ancestors[typing] = mapping
+                for (anc, typ) in typing_ancestors.items():
+                    if anc in ancestors.keys():
+                        ancestors[anc].update(compose_homomorphisms(typ,
+                                                                    mapping))
                     else:
-                        ancestors[typing] = mapping
-                        for (anc, typ) in typing_ancestors.items():
-                            ancestors[anc] = compose_homomorphisms(typ, mapping)
-                            known_ancestors.append(anc)
+                        ancestors[anc] = compose_homomorphisms(typ, mapping)
             return ancestors
-        return _get_ancestors_aux([], graph_id, path)
+        return _get_ancestors_aux(graph_id)
 
     def to_nx_graph(self):
         g = nx.DiGraph()
@@ -1620,6 +1617,26 @@ class Hierarchy(nx.DiGraph):
             self.edge[source][graph_id].rename_target(node, new_name)
         for (_, target) in self.out_edges(graph_id):
             self.edge[graph_id][target].rename_source(node, new_name)
+
+    def descendents(self, graph_id):
+        desc = set()
+        for source, _ in self.in_edges(g_id):
+            desc |= self.descendents(source)
+        return desc
+
+    def get_typing(self, source, target):
+        desc = self.descendents(target)
+        if source not in desc:
+            return None
+        sub_hie = Hierarchy(self.subgraph(desc))
+        ancestors = sub_hie.get_ancestors(source)
+        return ancestors[target]
+
+    def new_graph_from_nodes(self, nodes, graph_id, new_name, attrs):
+        """build a subgraph from nodes and type it by these nodes"""
+        new_graph = self.node[graph_id].graph.subgraph(nodes)
+        self.add_graph(new_name, new_graph, attrs)
+        self.add_typing(new_name, graph_id, {n: n for n in nodes})
 
 
 def _verify(phi_str, current_typing, graph):

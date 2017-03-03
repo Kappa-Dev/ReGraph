@@ -3,10 +3,10 @@
 import copy
 import networkx as nx
 
-from regraph.library.hierarchy import GraphNode
+from regraph.library.hierarchy import GraphNode, RuleNode
 from regraph.library.primitives import graph_to_json, add_node_attrs
 from regraph.library.rules import Rule
-from regraph.library.category_op import pushout
+from regraph.library.category_op import pushout, compose_homomorphisms
 
 
 def _complete_rewrite(hie, g_id, rule, match, lhs_typing=None,
@@ -30,9 +30,13 @@ def unique_graph_id(hie, prefix):
         i += 1
     return "{}_{}".format(prefix, i)
 
+def rule_children(hie, g_id):
+    """Returns the rukes typed by g_id"""
+    return (source for source, _ in hie.in_edges(g_id)
+            if isinstance(hie.node[source], RuleNode))
 
 def graph_children(hie, g_id):
-    """Returns the graphs (even partially) typed by g_id"""
+    """Returns the graphs typed by g_id"""
     return (source for source, _ in hie.in_edges(g_id)
             if isinstance(hie.node[source], GraphNode))
 
@@ -68,9 +72,17 @@ def to_json_tree(hie, g_id, parent, include_rules=True,
             json_data["top_graph"]["attributes"] = hie.node[g_id].attrs
 
     if include_rules:
-        json_data["rules"] = []
-    #     h["rules"] = [r.to_json_like() for r in self.subRules.values()]
+        json_data["rules"] = [typed_rule_to_json(hie, r, g_id)
+                              for r in rule_children(hie, g_id)]
     return json_data
+
+
+def _type_json_nodes(nodes, typing):
+    for node in nodes:
+        if node["id"] in typing.keys():
+            node["type"] = typing[node["id"]]
+        else:
+            node["type"] = ""
 
 
 def typed_graph_to_json(hie, g_id, parent):
@@ -79,13 +91,33 @@ def typed_graph_to_json(hie, g_id, parent):
     json_data = graph_to_json(hie.node[g_id].graph)
     if parent is not None:
         typing = hie.edge[g_id][parent].mapping
-        for node in json_data["nodes"]:
-            if node["id"] in typing.keys():
-                node["type"] = typing[node["id"]]
-            else:
-                node["type"] = ""
+        _type_json_nodes(json_data["nodes"], typing)
     return json_data
 
+
+def typed_rule_to_json(hie, g_id, parent):
+    rule = hie.node[g_id].rule
+    json_data = {}
+    json_data["name"] = hie.node[g_id].attrs["name"]
+    json_data["L"] = graph_to_json(rule.lhs)
+    json_data["P"] = graph_to_json(rule.p)
+    json_data["R"] = graph_to_json(rule.rhs)
+    json_data["PR"] = [{"left": k, "right": v}
+                       for (k, v) in rule.p_rhs.items()]
+    json_data["PL"] = [{"left": k, "right": v}
+                       for (k, v) in rule.p_lhs.items()]
+    if parent is not None:
+        lhs_mapping = hie.edge[g_id][parent].lhs_mapping
+        rhs_mapping = hie.edge[g_id][parent].rhs_mapping
+    _type_json_nodes(json_data["R"]["nodes"], rhs_mapping)
+    p_mapping = compose_homomorphisms(rhs_mapping, rule.p_rhs)
+    _type_json_nodes(json_data["P"]["nodes"], p_mapping)
+    lhs_mapping.update({rule.p_lhs[n]: p_mapping[n]
+                        for n in rule.p
+                        if rule.p_lhs[n] not in lhs_mapping.keys() and
+                        n in p_mapping.keys()})
+    _type_json_nodes(json_data["L"]["nodes"], lhs_mapping)
+    return json_data
 
 
 def valid_child_name(hie, g_id, new_name):
@@ -158,7 +190,7 @@ def new_rule(hie, parent, name, pattern_name=None):
             pattern = hie.node[pattern_id].graph
         rule_id = unique_graph_id(hie, name)
         rule = Rule(pattern, pattern, pattern)
-        hie.add_rule(rule_id, rule, {name: name})
+        hie.add_rule(rule_id, rule, {"name": name})
         if parent is not None:
             if pattern_name is None:
                 hie.add_rule_typing(rule_id, parent, {}, {})
@@ -447,34 +479,41 @@ def remove_attributes(hie, g_id, parent, node, attrs):
 #     self.subCmds[subHierarchy["name"]] = cmd
 
 
-
-def get_children(self, node_id):
-    if node_id not in self.graph.nodes():
-        raise ValueError("the node is not in the graph")
-    nugget_list = []
-    for sub in self.subCmds.values():
-        g = sub.graph
-        for n in g.nodes():
-            if g.node[n].type_ == node_id:
-                nugget_list.append(sub.name)
-                break
-    return nugget_list
+def get_children_by_node(hie, g_id, node_id):
+    """Return the children containing a node typed by node_id"""
+    return [hie.node[child].attrs["name"]
+            for child in graph_children(hie, g_id)
+            if node_id in hie.edge[child][g_id].mapping.values()]
 
 
-def ancestors_aux(self, degree):
-    if not self.parent:
-        raise ValueError("the command does not have a parent")
-    if degree == 1:
-        return {n: self.graph.node[n].type_ for n in self.graph.nodes()}
+# only works on a tree
+def ancestor(hie, g_id, degree):
+    """get the id of ancestor of degree"""
+    if degree == 0:
+        return g_id
     else:
-        parentMapping = self.parent.ancestors_aux(degree-1)
-        return {n: parentMapping[self.graph.node[n].type_]
-                for n in self.graph.nodes()}
+        parents = [target for target, _ in hie.out_edges(g_id)]
+        if len(parents) != 1:
+            raise ValueError("ancestor can only be used on a tree")
+        return ancestor(hie, parents[0], degree-1)
 
 
-def ancestors(self, degree):
-    mapping = self.ancestors_aux(degree)
+# only works on a tree
+def ancestors_mapping(hie, g_id, degree):
+    """get the typing of g_id according to degree"""
+    if degree <= 0:
+        raise ValueError("degree should be > 0")
+    mapping = hie.get_typing(g_id, ancestor(hie, g_id, degree))
     return [{"left": n, "right": t} for (n, t) in mapping.items()]
+
+
+def new_graph_from_nodes(hie, nodes, g_id, new_name):
+    """create a child graph from a set of nodes"""
+    if valid_child_name(hie, g_id, new_name):
+        ch_id = unique_graph_id(hie, new_name)
+        hie.new_graph_from_nodes(nodes, g_id, ch_id, {"name": new_name})
+    else:
+        raise ValueError("Invalid new name")
 
 
 def merge_graphs(self, name1, name2, mapping, new_name):
@@ -499,9 +538,6 @@ def merge_graphs(self, name1, name2, mapping, new_name):
         g0.add_node(new_node, new_type)
         left_mapping[new_node] = n1
         right_mapping[new_node] = n2
-    print("g0", g0)
-    print("g1", g1)
-    print("leftMapping", left_mapping)
     h1 = Homomorphism(g0, g1, left_mapping)
     h2 = Homomorphism(g0, g2, right_mapping)
     (new_graph, g1_new_graph, g2_new_graph) = pushout(h1, h2)
