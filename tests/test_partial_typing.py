@@ -287,7 +287,7 @@ class TestPartialTyping(object):
         lhs.add_edges_from([(1, 2), (1, 3)])
 
         rule = Rule.from_transform(lhs)
-        rule.merge_nodes(2, 3)
+        # rule.merge_nodes(2, 3)
         rule.clone_node(1)
         rule.add_node(4, {"a": {1}})
 
@@ -302,6 +302,7 @@ class TestPartialTyping(object):
             rule.lhs,
             lhs_typing
         )
+        print(instances[0])
         print("\nRewriting instance: ", instances[0])
         self.hierarchy.rewrite(
             "g3",

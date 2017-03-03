@@ -450,8 +450,6 @@ class Hierarchy(nx.DiGraph):
                             for key, value in path_homomorphism.items():
                                 if key in new_homomorphism.keys():
                                     if new_homomorphism[key] != value:
-                                        print("Path: ", path_homomorphism)
-                                        print("Newpath: ", new_homomorphism)
                                         raise ValueError(
                                             "Homomorphism does not commute with an existing " +
                                             "path from '%s' to '%s'!" % (s, t)
@@ -925,7 +923,8 @@ class Hierarchy(nx.DiGraph):
                                      rule.p_lhs, rule.p_rhs)
 
     def _complete_typing(self, graph_id, matching,
-                         lhs_typing, rhs_typing, p_l, p_r):
+                         lhs_typing, rhs_typing, p_l, p_r,
+                         strong=False):
 
         for typing_graph in self.successors(graph_id):
             typing = self.edge[graph_id][typing_graph].mapping
@@ -935,40 +934,34 @@ class Hierarchy(nx.DiGraph):
             if typing_graph not in rhs_typing.keys():
                 rhs_typing[typing_graph] = (dict(), False)
 
-            # Check that no types are redefined
-            # forbidden case of * <- * -> A
-            # works only if A <- A -> A
-            for p_node in p_l.keys():
-                l_node = p_l[p_node]
-                r_node = p_r[p_node]
-                if r_node in rhs_typing[typing_graph][0].keys() and\
-                   l_node not in lhs_typing[typing_graph][0].keys():
-                    if matching[l_node] not in typing.keys():
-                        raise ValueError(
-                            "Typing of the rule is not valid: "
-                            "type of node `%s` in lhs is being redefined in the rhs!" %
-                            l_node
-                        )
-
-            # Inherit lhs typing from the matching
-            for (src, tgt) in matching.items():
-                if (src not in lhs_typing[typing_graph][0].keys() and
-                        tgt in typing.keys()):
-                    lhs_typing[typing_graph][0][src] = typing[tgt]
-
-            # Check merging cases
-            untyped_r_nodes = []
-            for r_node in p_r.keys():
-                p_nodes = keys_by_value(p_r, r_node)
-                if len(p_nodes) > 1:
-                    node_types = set()
-                    for p_node in p_nodes:
-                        if p_l[p_node] in lhs_typing[typing_graph][0].keys():
-                            node_types.add(
-                                lhs_typing[typing_graph][0][p_l[p_node]]
+            if strong:
+                # Check that no types are redefined
+                # forbidden case of * <- * -> A
+                # works only if A <- A -> A
+                for p_node in p_l.keys():
+                    l_node = p_l[p_node]
+                    r_node = p_r[p_node]
+                    if r_node in rhs_typing[typing_graph][0].keys() and\
+                       l_node not in lhs_typing[typing_graph][0].keys():
+                        if matching[l_node] not in typing.keys():
+                            raise ValueError(
+                                "Typing of the rule is not valid: "
+                                "type of node `%s` in lhs is being redefined in the rhs!" %
+                                l_node
                             )
-                        else:
-                            if r_node in rhs_typing[typing_graph][0].keys():
+
+                # Inherit lhs typing from the matching
+                for (src, tgt) in matching.items():
+                    if (src not in lhs_typing[typing_graph][0].keys() and
+                            tgt in typing.keys()):
+                        lhs_typing[typing_graph][0][src] = typing[tgt]
+
+                for (p_node, l_node) in p_l.items():
+                    # (print)
+                    if l_node in lhs_typing[typing_graph][0].keys():
+                        if p_r[p_node] in rhs_typing[typing_graph][0].keys():
+                            if (rhs_typing[typing_graph][0][p_r[p_node]] !=
+                                    lhs_typing[typing_graph][0][l_node]):
                                 raise ValueError(
                                     "Typing of the rule is not valid: "
                                     "lhs node that maps to a node of type "
@@ -976,30 +969,35 @@ class Hierarchy(nx.DiGraph):
                                     (lhs_typing[typing_graph][0][l_node],
                                      rhs_typing[typing_graph][0][p_r[p_node]])
                                 )
-                            untyped_r_nodes.append(r_node)
-                            break
-                    if r_node not in untyped_r_nodes:
-                        if len(node_types) == 1:
-                            rhs_typing[typing_graph][0][r_node] = list(node_types)[0]
-                    else:
-                        untyped_r_nodes.append(r_node)
-
-            for (p_node, l_node) in p_l.items():
-                if l_node in lhs_typing[typing_graph][0].keys():
-                    if p_r[p_node] in rhs_typing[typing_graph][0].keys():
-                        if (rhs_typing[typing_graph][0][p_r[p_node]] !=
-                                lhs_typing[typing_graph][0][l_node]):
-                            raise ValueError(
-                                "Typing of the rule is not valid: "
-                                "lhs node that maps to a node of type "
-                                "`%s` in the matching, is being mapped to `%s` in rhs!" %
-                                (lhs_typing[typing_graph][0][l_node],
-                                 rhs_typing[typing_graph][0][p_r[p_node]])
-                            )
-                    else:
-                        if p_r[p_node] not in untyped_r_nodes:
+                        else:
                             rhs_typing[typing_graph][0][p_r[p_node]] =\
                                 lhs_typing[typing_graph][0][l_node]
+            else:
+                for p_node, r_node in p_r.items():
+                    l_node = p_l[p_node]
+                    if typing_graph in rhs_typing.keys() and\
+                       r_node in rhs_typing[typing_graph][0].keys():
+                        p_type = rhs_typing[typing_graph][0][r_node]
+                        if typing_graph in lhs_typing.keys() and\
+                           l_node in lhs_typing[typing_graph][0].keys():
+                            l_type = lhs_typing[typing_graph][0][l_node]
+                            if p_type != l_type:
+                                raise ValueError(
+                                    "Typing of the rule is not valid: "
+                                    "lhs node that maps to a node of type "
+                                    "`%s` in the matching, is being mapped to `%s` in rhs!" %
+                                    (lhs_typing[typing_graph][0][l_node],
+                                     rhs_typing[typing_graph][0][p_r[p_node]])
+                                )
+                        else:
+                            if matching[l_node] in typing.keys():
+                                l_type = typing[matching[l_node]]
+                                if p_type != l_type:
+                                    raise ValueError(
+                                        "Typing of the rule is not valid: "
+                                        "type of node `%s` in lhs is being redefined in the rhs!" %
+                                        l_node
+                                    )
         return
 
     def _get_common_successors(self, node_list):
@@ -1041,7 +1039,8 @@ class Hierarchy(nx.DiGraph):
         pass
 
     def _normalize_typing(self, graph_id, rule, instance,
-                          lhs_typing, rhs_typing, total=False):
+                          lhs_typing, rhs_typing, strong=False,
+                          total=False):
         # new_lhs_typing = copy.deepcopy(lhs_typing)
         # new_rhs_typing = copy.deepcopy(rhs_typing)
         new_lhs_typing = normalize_typing(lhs_typing)
@@ -1050,6 +1049,12 @@ class Hierarchy(nx.DiGraph):
         # (new_lhs_typing, new_rhs_typing) =\
         #  self._complete_typing(graph_id, instance, new_lhs_typing,
         #                       new_rhs_typing, rule.p_lhs, rule.p_rhs)
+
+        self._complete_typing(
+            graph_id, instance, new_lhs_typing,
+            new_rhs_typing, rule.p_lhs, rule.p_rhs,
+            strong=strong
+        )
 
         for typing_graph, (mapping, ignore_attrs) in new_lhs_typing.items():
             check_homomorphism(
@@ -1068,18 +1073,13 @@ class Hierarchy(nx.DiGraph):
                 total=False
             )
 
-        self._complete_typing(
-            graph_id, instance, new_lhs_typing,
-            new_rhs_typing, rule.p_lhs, rule.p_rhs,
-        )
-
         if total:
             # check that everything typed
             for typing_graph in self.successors(graph_id):
                 if self.edge[graph_id][typing_graph].total:
                     if typing_graph in new_rhs_typing.keys():
                         for node in rule.rhs.nodes():
-                            if node not in new_rhs_typing[typing_graph].keys():
+                            if node not in new_rhs_typing[typing_graph][0].keys():
                                 raise ValueError(
                                     "Rewriting error: parameter `total` is set to True, "
                                     "typing of the node `%s` "
@@ -1098,7 +1098,7 @@ class Hierarchy(nx.DiGraph):
 
     def rewrite(self, graph_id, rule, instance,
                 lhs_typing=None, rhs_typing=None,
-                strong_typing=False, total=False, recursive=False):
+                strong_typing=True, total=False, recursive=False):
         """Rewrite and propagate the changes up."""
         if type(self.node[graph_id]) == RuleNode:
             raise ValueError("Rewriting of a rule is not implemented!")
@@ -1112,6 +1112,7 @@ class Hierarchy(nx.DiGraph):
             instance,
             lhs_typing,
             rhs_typing,
+            strong=strong_typing,
             total=total
         )
 
@@ -1119,6 +1120,7 @@ class Hierarchy(nx.DiGraph):
             graph_id, rule.lhs,
             instance, new_lhs_typing
         )
+
         # 1. Rewriting steps
         g_m, p_g_m, g_m_g = pullback_complement(
             rule.p,
@@ -1154,12 +1156,20 @@ class Hierarchy(nx.DiGraph):
                 # nodes that were removed
                 if len(p_keys) == 0:
                     removed_nodes.add(instance[node])
+                elif len(p_keys) == 1:
+                    if typing_graph not in new_rhs_typing.keys() or\
+                       rule.p_rhs[p_keys[0]] not in new_rhs_typing[typing_graph][0].keys():
+                        if r_g_prime[rule.p_rhs[p_keys[0]]] in new_hom.keys():
+                            removed_nodes.add(r_g_prime[rule.p_rhs[p_keys[0]]])
                 # nodes were clonned
                 elif len(p_keys) > 1:
-                    if instance[node] in self.edge[graph_id][typing_graph].mapping.keys():
-                        for k in p_keys:
-                            new_nodes[p_g_m[k]] =\
-                                self.edge[graph_id][typing_graph].mapping[instance[node]]
+                    for k in p_keys:
+                        if typing_graph in new_rhs_typing.keys() and\
+                           rule.p_rhs[k] in new_rhs_typing[typing_graph][0].keys():
+                            new_nodes[r_g_prime[rule.p_rhs[k]]] =\
+                                new_rhs_typing[typing_graph][0][rule.p_rhs[k]]
+                        else:
+                            removed_nodes.add(r_g_prime[rule.p_rhs[k]])
 
             for node in rule.rhs.nodes():
                 p_keys = keys_by_value(rule.p_rhs, node)
