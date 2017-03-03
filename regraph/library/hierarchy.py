@@ -1658,10 +1658,147 @@ class Hierarchy(nx.DiGraph):
         return ancestors[target]
 
     def new_graph_from_nodes(self, nodes, graph_id, new_name, attrs):
-        """build a subgraph from nodes and type it by these nodes"""
+        """Build a subgraph from nodes and type it by these nodes."""
         new_graph = self.node[graph_id].graph.subgraph(nodes)
         self.add_graph(new_name, new_graph, attrs)
         self.add_typing(new_name, graph_id, {n: n for n in nodes})
+
+    def _generate_new_name(self, node):
+        i = 1
+        new_name = "%s_%s" % (node, i)
+        while new_name in self.nodes():
+            i += 1
+            new_name = "%s_%s" % (node, i)
+        return new_name
+
+    def merge_by_id(self, hierarchy):
+        """Recursive merge with a hierarchy."""
+        common_ids = set(self.nodes()).intersection(
+            set(hierarchy.nodes())
+        )
+        to_merge = []
+        to_rename = {}
+        for node in common_ids:
+            if isinstance(self.node[node], GraphNode) and\
+               isinstance(hierarchy.node[node], GraphNode):
+                if equal(self.node[node].graph, hierarchy.node[node].graph):
+                    to_merge.append(node)
+                else:
+                    new_name = self._generate_new_name(node)
+                    to_rename[node] = new_name
+            elif isinstance(self.node[node], RuleNode) and\
+                    isinstance(hierarchy.node[node], RuleNode):
+                if self.node[node].rule == hierarchy.node[node].rule:
+                    to_merge.append(node)
+                else:
+                    new_name = self._generate_new_name(node)
+                    to_rename[node] = new_name
+            else:
+                new_name = self.__generate_new_name(node)
+                to_rename[node] = new_name
+
+        visited = []
+
+        def _merge_node(node):
+            if node in visited:
+                return
+            successors = hierarchy.successors(node)
+            predecessors = hierarchy.predecessors(node)
+            if node in to_merge:
+                # merge node attrs
+                self.node[node].add_attrs(
+                    hierarchy.node[node].attrs
+                )
+                visited.append(node)
+                for suc in successors:
+                    if suc in visited:
+                        if suc in to_merge:
+                            # TODO!! merge edge mapping as well
+                            mapping = hierarchy.edge[node][suc].mapping
+                            for key, value in mapping.items():
+                                if key not in self.edge[node][suc].mapping:
+                                    self.edge[node][suc].mapping[key] = value
+                                else:
+                                    if value != self.edge[node][suc].mapping[key]:
+                                        raise ValueError(
+                                            "Cannot merge with the input hierarchy: typing of nodes"
+                                            "in `%s->%s` does not coincide with present typing!"
+                                        )
+
+                            self.edge[node][suc].add_attrs(
+                                hierarchy.edge[node][suc]
+                            )
+                        else:
+                            if suc in to_rename.keys():
+                                new_name = to_rename[suc]
+                            else:
+                                new_name = suc
+                            if (node, new_name) not in self.edges():
+                                self.add_edge(node, new_name)
+                                edge_obj = copy.deepcopy(hierarchy.edge[node][suc])
+                                self.edge[node][new_name] = edge_obj
+                    else:
+                        visited.append(suc)
+                        _merge_node(suc)
+
+                for pred in predecessors:
+                    if pred in visited:
+                        if pred in to_merge:
+                            # TODO!! merge edge mapping as well
+                            self.edge[pred][node].add_attrs(
+                                hierarchy.edge[pred][node]
+                            )
+                        else:
+                            if pred in to_rename.keys():
+                                new_name = to_rename[pred]
+                            else:
+                                new_name = pred
+                            if (new_name, node) not in self.edges():
+                                self.add_edge(new_name, node)
+                                edge_obj = copy.deepcopy(hierarchy.edge[pred][node])
+                                self.edge[new_name][node] = edge_obj
+                    else:
+                        _merge_node(pred)
+            else:
+                if node in to_rename:
+                    new_name = to_rename[node]
+                else:
+                    new_name = node
+                self.add_node(new_name)
+                node_obj = copy.deepcopy(hierarchy.node[node])
+                self.node[new_name] = node_obj
+                visited.append(node)
+                for suc in successors:
+                    if suc in visited:
+                        if suc in to_rename.keys():
+                            new_suc_name = to_rename[suc]
+                        else:
+                            new_suc_name = suc
+                        if (new_name, new_suc_name) not in self.edges():
+                            self.add_edge(new_name, new_suc_name)
+                            edge_obj = copy.deepcopy(hierarchy.edge[node][suc])
+                            self.edge[new_name][new_suc_name] = edge_obj
+                    else:
+                        _merge_node(suc)
+                for pred in predecessors:
+                    if pred in visited:
+                        if pred in to_rename.keys():
+                            new_pred_name = to_rename[pred]
+                        else:
+                            new_pred_name = pred
+                        if (new_pred_name, new_name) not in self.edges():
+                            self.add_edge(new_pred_name, new_name)
+                            edge_obj = copy.deepcopy(hierarchy.edge[pred][node])
+                            self.edge[new_pred_name][new_name] = edge_obj
+                    else:
+                        _merge_node(pred)
+            return
+
+        for node in hierarchy.nodes():
+            _merge_node(node)
+
+    def merge_by_attr(self, hierarchy, attr):
+        pass
 
 
 def _verify(phi_str, current_typing, graph):
