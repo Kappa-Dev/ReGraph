@@ -712,6 +712,20 @@ class Hierarchy(nx.DiGraph):
             )
         return
 
+    def remove_node_type(self, graph_id, typing_graph, node_id):
+        """Remove a type a node in a graph `graph_id`."""
+        if (graph_id, typing_graph) not in self.edges():
+            raise ValueError(
+                "Typing `%s->%s` does not exist!" %
+                (graph_id, typing_graph)
+            )
+        if self.edge[graph_id][typing_graph].total:
+            warnings.warn(
+                "Total typing '%s->%s' became partial!" %
+                (graph_id, typing_graph)
+            )
+        return
+
     def find_matching(self, graph_id, pattern, pattern_typing=None):
         """Find an instance of a pattern in a specified graph.
 
@@ -913,10 +927,12 @@ class Hierarchy(nx.DiGraph):
         return
 
     def get_complete_typing(self, graph_id, matching, lhs_t, rhs_t, rule):
-        """ returns complete typings of the rule according to the matching
-           This ensures that you cannot remove node types when applying the
-           rule with the complete typings """
+        """Return complete typings of the rule.
 
+        Typing is found according to the matching
+        This ensures that you cannot remove node types when applying the
+        rule with the complete typings.
+        """
         new_lhs_t = normalize_typing(lhs_t)
         new_rhs_t = normalize_typing(rhs_t)
         return self._complete_typing(graph_id, matching, new_lhs_t, new_rhs_t,
@@ -1016,225 +1032,20 @@ class Hierarchy(nx.DiGraph):
                             suc1.intersection(suc2)
         return common_sucs
 
-    def _get_common_ancestors(self, node_list, path=False):
-        common_anc = {}
-        for n1 in node_list:
-            for n2 in node_list:
-                if n1 != n2:
-                    if (n1, n2) not in common_anc.keys() and\
-                       (n2, n1) not in common_anc.keys():
-                        anc1 = self.get_ancestors(n1, path)
-                        anc2 = self.get_ancestors(n2, path)
-                        common_keys = set(anc1.keys()).intersection(
-                            set(anc2.keys())
-                        )
-                        if len(common_keys) > 0:
-                            common_anc[(n1, n2)] = {}
-                            for k in common_keys:
-                                common_anc[(n1, n2)][k] =\
-                                    (anc1[k], anc2[k])
-        return common_anc
-
-    def _propagate(self, graph_id, g_m, g_m_g):
-        pass
-
-    def _apply_changes(self):
-        pass
-
-    def _normalize_typing(self, graph_id, rule, instance,
-                          lhs_typing, rhs_typing, strong=False,
-                          total=True):
-        # new_lhs_typing = copy.deepcopy(lhs_typing)
-        # new_rhs_typing = copy.deepcopy(rhs_typing)
-        new_lhs_typing = normalize_typing(lhs_typing)
-        new_rhs_typing = normalize_typing(rhs_typing)
-        # TODO! check and uncomment
-        # (new_lhs_typing, new_rhs_typing) =\
-        #  self._complete_typing(graph_id, instance, new_lhs_typing,
-        #                       new_rhs_typing, rule.p_lhs, rule.p_rhs)
-
-        self._complete_typing(
-            graph_id, instance, new_lhs_typing,
-            new_rhs_typing, rule.p_lhs, rule.p_rhs,
-            strong=strong
-        )
-
-        for typing_graph, (mapping, ignore_attrs) in new_lhs_typing.items():
-            check_homomorphism(
-                rule.lhs,
-                self.node[typing_graph].graph,
-                mapping,
-                ignore_attrs,
-                total=False
-            )
-        for typing_graph, (mapping, ignore_attrs) in new_rhs_typing.items():
-            check_homomorphism(
-                rule.rhs,
-                self.node[typing_graph].graph,
-                mapping,
-                ignore_attrs,
-                total=False
-            )
-
-        if total:
-            # check that everything is typed
-            for typing_graph in self.successors(graph_id):
-                typing = self.edge[graph_id][typing_graph].mapping
-                if typing_graph in new_rhs_typing.keys():
-                    for node in rule.rhs.nodes():
-                        p_nodes = keys_by_value(rule.p_rhs, node)
-                        if len(p_nodes) == 1:
-                            if instance[rule.p_lhs[p_nodes[0]]] not in typing.keys():
-                                continue
-                            elif node not in new_rhs_typing[typing_graph][0].keys():
-                                raise ValueError(
-                                    "Rewriting error: parameter `total` is set to True, "
-                                    "typing of the node `%s` "
-                                    "in rhs is required!" %
-                                    node
-                                )
-                        elif len(p_nodes) > 1:
-                            all_untyped = True
-                            for p_node in p_nodes:
-                                if instance[rule.p_lhs[p_node]] in typing.keys():
-                                    all_untyped = False
-                                    break
-                            if all_untyped:
-                                continue
-                            elif node not in new_rhs_typing[typing_graph][0].keys():
-                                raise ValueError(
-                                    "Rewriting error: parameter `total` is set to True, "
-                                    "typing of the node `%s` "
-                                    "in rhs is required!" %
-                                    node
-                                )
-                else:
-                    raise ValueError(
-                        "Rewriting error: parameter `total` is set to True, "
-                        "typing of the node `%s` "
-                        "in rhs is required!" %
-                        node
-                    )
-
-        return new_lhs_typing, new_rhs_typing
-
-    def rewrite(self, graph_id, rule, instance,
-                lhs_typing=None, rhs_typing=None,
-                strong_typing=True, total=True, recursive=False):
-        """Rewrite and propagate the changes up."""
-        if type(self.node[graph_id]) == RuleNode:
-            raise ValueError("Rewriting of a rule is not implemented!")
-
-        # 0. Check consistency of the input parameters &
-        # validity of homomorphisms
-
-        new_lhs_typing, new_rhs_typing = self._normalize_typing(
-            graph_id,
-            rule,
-            instance,
-            lhs_typing,
-            rhs_typing,
-            strong=strong_typing,
-            total=total
-        )
-
-        self._check_instance(
-            graph_id, rule.lhs,
-            instance, new_lhs_typing
-        )
-
-        # 1. Rewriting steps
-        g_m, p_g_m, g_m_g = pullback_complement(
-            rule.p,
-            rule.lhs,
-            self.node[graph_id].graph,
-            rule.p_lhs,
-            instance
-        )
-        g_prime, g_m_g_prime, r_g_prime = pushout(
-            rule.p,
-            g_m,
-            rule.rhs,
-            p_g_m,
-            rule.p_rhs
-        )
-
-        # set g_prime for the 'graph_id' node
+    def _propagate(self, graph_id, g_m, g_m_g, g_prime, g_m_g_prime):
+        """Propagation steps: based on reverse BFS on neighbours."""
         updated_graphs = {
             graph_id: (g_m, g_m_g, g_prime, g_m_g_prime)
         }
-
         updated_homomorphisms = {}
-
-        # Update typings of the graph
-        for typing_graph in self.successors(graph_id):
-
-            new_hom = copy.deepcopy(self.edge[graph_id][typing_graph].mapping)
-            removed_nodes = set()
-            new_nodes = dict()
-
-            for node in rule.lhs.nodes():
-                p_keys = keys_by_value(rule.p_lhs, node)
-                # nodes that were removed
-                if len(p_keys) == 0:
-                    removed_nodes.add(instance[node])
-                elif len(p_keys) == 1:
-                    if typing_graph not in new_rhs_typing.keys() or\
-                       rule.p_rhs[p_keys[0]] not in new_rhs_typing[typing_graph][0].keys():
-                        if r_g_prime[rule.p_rhs[p_keys[0]]] in new_hom.keys():
-                            removed_nodes.add(r_g_prime[rule.p_rhs[p_keys[0]]])
-                # nodes were clonned
-                elif len(p_keys) > 1:
-                    for k in p_keys:
-                        if typing_graph in new_rhs_typing.keys() and\
-                           rule.p_rhs[k] in new_rhs_typing[typing_graph][0].keys():
-                            new_nodes[r_g_prime[rule.p_rhs[k]]] =\
-                                new_rhs_typing[typing_graph][0][rule.p_rhs[k]]
-                        else:
-                            removed_nodes.add(r_g_prime[rule.p_rhs[k]])
-
-            for node in rule.rhs.nodes():
-                p_keys = keys_by_value(rule.p_rhs, node)
-
-                # nodes that were added
-                if len(p_keys) == 0:
-                    if typing_graph in new_rhs_typing.keys():
-                        if node in new_rhs_typing[typing_graph][0].keys():
-                            new_nodes[node] = new_rhs_typing[typing_graph][0][node]
-
-                # nodes that were merged
-                elif len(p_keys) > 1:
-                    for k in p_keys:
-                        removed_nodes.add(p_g_m[k])
-                    # assign new type of node
-                    if typing_graph in new_rhs_typing.keys():
-                        if node in new_rhs_typing[typing_graph][0].keys():
-                            new_type = new_rhs_typing[typing_graph][0][node]
-                            new_nodes[r_g_prime[node]] = new_type
-
-            # update homomorphisms
-            for n in removed_nodes:
-                if n in new_hom.keys():
-                    del new_hom[n]
-
-            ignore_attrs = False
-            new_hom.update(new_nodes)
-            if typing_graph in new_rhs_typing.keys():
-                ignore_attrs = new_rhs_typing[typing_graph][1]
-
-            updated_homomorphisms.update({
-                (graph_id, typing_graph): (new_hom, ignore_attrs)
-            })
-
-        # 2. Propagation steps reverse BFS on neighbours
-        current_level = set(self.predecessors(graph_id))
-        successors = dict([
-            (n, [graph_id]) for n in current_level
-        ])
 
         updated_rules = {}
         updated_rule_h = {}
 
+        current_level = set(self.predecessors(graph_id))
+        successors = dict([
+            (n, [graph_id]) for n in current_level
+        ])
         while len(current_level) > 0:
             next_level = set()
             for graph in current_level:
@@ -1392,8 +1203,16 @@ class Hierarchy(nx.DiGraph):
                         successors[n] = [graph]
                 del successors[graph]
             current_level = next_level
+        return (
+            updated_graphs,
+            updated_homomorphisms,
+            updated_rules,
+            updated_rule_h
+        )
 
-        # 3. Apply changes to the hierarchy
+    def _apply_changes(self, updated_graphs, updated_homomorphisms,
+                       updated_rules, updated_rule_h):
+        """Apply changes to the hierarchy."""
         for graph, (graph_m, _, graph_prime, _) in updated_graphs.items():
             if graph_prime is not None:
                 self.node[graph].graph = graph_prime
@@ -1424,26 +1243,201 @@ class Hierarchy(nx.DiGraph):
                 self.edge[s][t].ignore_attrs,
                 self.edge[s][t].attrs
             )
-
-        # # For testing (remove after fix)!!!
-        # for (s, t) in self.edges():
-        #     if isinstance(self.edge[s][t], Typing):
-        #         edge = copy.deepcopy(self.edge[s][t])
-        #         self.remove_edge(s, t)
-        #         try:
-        #             self._check_consistency(
-        #                 s, t,
-        #                 edge.mapping
-        #             )
-        #         except ValueError as e:
-        #             print(e)
-        #             print(s, t)
-        #             print(edge.mapping)
-        #         self.add_edge(s, t)
-        #         self.edge[s][t] = edge
         return
 
-    def apply_rule(self, graph_id, rule_id, instance):
+    def _normalize_typing(self, graph_id, rule, instance,
+                          lhs_typing, rhs_typing, strong=False,
+                          total=True):
+        new_lhs_typing = normalize_typing(lhs_typing)
+        new_rhs_typing = normalize_typing(rhs_typing)
+
+        self._complete_typing(
+            graph_id, instance, new_lhs_typing,
+            new_rhs_typing, rule.p_lhs, rule.p_rhs,
+            strong=strong
+        )
+
+        for typing_graph, (mapping, ignore_attrs) in new_lhs_typing.items():
+            check_homomorphism(
+                rule.lhs,
+                self.node[typing_graph].graph,
+                mapping,
+                ignore_attrs,
+                total=False
+            )
+        for typing_graph, (mapping, ignore_attrs) in new_rhs_typing.items():
+            check_homomorphism(
+                rule.rhs,
+                self.node[typing_graph].graph,
+                mapping,
+                ignore_attrs,
+                total=False
+            )
+
+        if total:
+            # check that everything is typed
+            for typing_graph in self.successors(graph_id):
+                typing = self.edge[graph_id][typing_graph].mapping
+                if typing_graph in new_rhs_typing.keys():
+                    for node in rule.rhs.nodes():
+                        p_nodes = keys_by_value(rule.p_rhs, node)
+                        if len(p_nodes) == 1:
+                            if instance[rule.p_lhs[p_nodes[0]]] not in typing.keys():
+                                continue
+                            elif node not in new_rhs_typing[typing_graph][0].keys():
+                                raise ValueError(
+                                    "Rewriting error: parameter `total` is set to True, "
+                                    "typing of the node `%s` "
+                                    "in rhs is required!" %
+                                    node
+                                )
+                        elif len(p_nodes) > 1:
+                            all_untyped = True
+                            for p_node in p_nodes:
+                                if instance[rule.p_lhs[p_node]] in typing.keys():
+                                    all_untyped = False
+                                    break
+                            if all_untyped:
+                                continue
+                            elif node not in new_rhs_typing[typing_graph][0].keys():
+                                raise ValueError(
+                                    "Rewriting error: parameter `total` is set to True, "
+                                    "typing of the node `%s` "
+                                    "in rhs is required!" %
+                                    node
+                                )
+                else:
+                    raise ValueError(
+                        "Rewriting error: parameter `total` is set to True, "
+                        "typing of the node `%s` "
+                        "in rhs is required!" %
+                        node
+                    )
+
+        return new_lhs_typing, new_rhs_typing
+
+    def rewrite(self, graph_id, rule, instance,
+                lhs_typing=None, rhs_typing=None,
+                strong_typing=True, total=True, recursive=False):
+        """Rewrite and propagate the changes up."""
+        if type(self.node[graph_id]) == RuleNode:
+            raise ValueError("Rewriting of a rule is not implemented!")
+
+        # Check consistency of the input parameters &
+        # validity of homomorphisms
+
+        new_lhs_typing, new_rhs_typing = self._normalize_typing(
+            graph_id,
+            rule,
+            instance,
+            lhs_typing,
+            rhs_typing,
+            strong=strong_typing,
+            total=total
+        )
+
+        self._check_instance(
+            graph_id, rule.lhs,
+            instance, new_lhs_typing
+        )
+
+        # 1. Rewrite a graph `graph_id`
+        g_m, p_g_m, g_m_g = pullback_complement(
+            rule.p,
+            rule.lhs,
+            self.node[graph_id].graph,
+            rule.p_lhs,
+            instance
+        )
+        g_prime, g_m_g_prime, r_g_prime = pushout(
+            rule.p,
+            g_m,
+            rule.rhs,
+            p_g_m,
+            rule.p_rhs
+        )
+
+        # Propagate rewriting up the hierarchy
+        (updated_graphs,
+         updated_homomorphisms,
+         updated_rules,
+         updated_rule_h) = self._propagate(graph_id,
+                                           g_m,
+                                           g_m_g,
+                                           g_prime,
+                                           g_m_g_prime)
+
+        # Update typings of the graph_id
+        for typing_graph in self.successors(graph_id):
+
+            new_hom = copy.deepcopy(self.edge[graph_id][typing_graph].mapping)
+            removed_nodes = set()
+            new_nodes = dict()
+
+            for node in rule.lhs.nodes():
+                p_keys = keys_by_value(rule.p_lhs, node)
+                # nodes that were removed
+                if len(p_keys) == 0:
+                    removed_nodes.add(instance[node])
+                elif len(p_keys) == 1:
+                    if typing_graph not in new_rhs_typing.keys() or\
+                       rule.p_rhs[p_keys[0]] not in new_rhs_typing[typing_graph][0].keys():
+                        if r_g_prime[rule.p_rhs[p_keys[0]]] in new_hom.keys():
+                            removed_nodes.add(r_g_prime[rule.p_rhs[p_keys[0]]])
+                # nodes were clonned
+                elif len(p_keys) > 1:
+                    for k in p_keys:
+                        if typing_graph in new_rhs_typing.keys() and\
+                           rule.p_rhs[k] in new_rhs_typing[typing_graph][0].keys():
+                            new_nodes[r_g_prime[rule.p_rhs[k]]] =\
+                                new_rhs_typing[typing_graph][0][rule.p_rhs[k]]
+                        else:
+                            removed_nodes.add(r_g_prime[rule.p_rhs[k]])
+
+            for node in rule.rhs.nodes():
+                p_keys = keys_by_value(rule.p_rhs, node)
+
+                # nodes that were added
+                if len(p_keys) == 0:
+                    if typing_graph in new_rhs_typing.keys():
+                        if node in new_rhs_typing[typing_graph][0].keys():
+                            new_nodes[node] = new_rhs_typing[typing_graph][0][node]
+
+                # nodes that were merged
+                elif len(p_keys) > 1:
+                    for k in p_keys:
+                        removed_nodes.add(p_g_m[k])
+                    # assign new type of node
+                    if typing_graph in new_rhs_typing.keys():
+                        if node in new_rhs_typing[typing_graph][0].keys():
+                            new_type = new_rhs_typing[typing_graph][0][node]
+                            new_nodes[r_g_prime[node]] = new_type
+
+            # update homomorphisms
+            for n in removed_nodes:
+                if n in new_hom.keys():
+                    del new_hom[n]
+
+            ignore_attrs = False
+            new_hom.update(new_nodes)
+            if typing_graph in new_rhs_typing.keys():
+                ignore_attrs = new_rhs_typing[typing_graph][1]
+
+            updated_homomorphisms.update({
+                (graph_id, typing_graph): (new_hom, ignore_attrs)
+            })
+
+        # Apply all the changes in the hierarchy
+
+        self._apply_changes(updated_graphs,
+                            updated_homomorphisms,
+                            updated_rules,
+                            updated_rule_h)
+
+        return
+
+    def apply_rule(self, graph_id, rule_id, instance,
+                   strong_typing=True, total=False, recursive=False):
         """Apply rule from the hierarchy."""
         if type(self.node[graph_id]) == RuleNode:
             raise ValueError("Rewriting of a rule is not implemented!")
