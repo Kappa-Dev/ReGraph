@@ -934,21 +934,22 @@ class Hierarchy(nx.DiGraph):
             if typing_graph not in rhs_typing.keys():
                 rhs_typing[typing_graph] = (dict(), False)
 
+            # Check that no types are redefined
+            # forbidden case of * <- * -> A
+            # works only if A <- A -> A
+            for p_node in p_l.keys():
+                l_node = p_l[p_node]
+                r_node = p_r[p_node]
+                if r_node in rhs_typing[typing_graph][0].keys() and\
+                   l_node not in lhs_typing[typing_graph][0].keys():
+                    if matching[l_node] not in typing.keys():
+                        raise ValueError(
+                            "Typing of the rule is not valid: "
+                            "type of node `%s` in lhs is being redefined in the rhs!" %
+                            l_node
+                        )
+
             if strong:
-                # Check that no types are redefined
-                # forbidden case of * <- * -> A
-                # works only if A <- A -> A
-                for p_node in p_l.keys():
-                    l_node = p_l[p_node]
-                    r_node = p_r[p_node]
-                    if r_node in rhs_typing[typing_graph][0].keys() and\
-                       l_node not in lhs_typing[typing_graph][0].keys():
-                        if matching[l_node] not in typing.keys():
-                            raise ValueError(
-                                "Typing of the rule is not valid: "
-                                "type of node `%s` in lhs is being redefined in the rhs!" %
-                                l_node
-                            )
 
                 # Inherit lhs typing from the matching
                 for (src, tgt) in matching.items():
@@ -992,6 +993,8 @@ class Hierarchy(nx.DiGraph):
                         else:
                             if matching[l_node] in typing.keys():
                                 l_type = typing[matching[l_node]]
+                                print(p_type)
+                                print(l_type)
                                 if p_type != l_type:
                                     raise ValueError(
                                         "Typing of the rule is not valid: "
@@ -1040,7 +1043,7 @@ class Hierarchy(nx.DiGraph):
 
     def _normalize_typing(self, graph_id, rule, instance,
                           lhs_typing, rhs_typing, strong=False,
-                          total=False):
+                          total=True):
         # new_lhs_typing = copy.deepcopy(lhs_typing)
         # new_rhs_typing = copy.deepcopy(rhs_typing)
         new_lhs_typing = normalize_typing(lhs_typing)
@@ -1074,31 +1077,50 @@ class Hierarchy(nx.DiGraph):
             )
 
         if total:
-            # check that everything typed
+            # check that everything is typed
             for typing_graph in self.successors(graph_id):
-                if self.edge[graph_id][typing_graph].total:
-                    if typing_graph in new_rhs_typing.keys():
-                        for node in rule.rhs.nodes():
-                            if node not in new_rhs_typing[typing_graph][0].keys():
+                typing = self.edge[graph_id][typing_graph].mapping
+                if typing_graph in new_rhs_typing.keys():
+                    for node in rule.rhs.nodes():
+                        p_nodes = keys_by_value(rule.p_rhs, node)
+                        if len(p_nodes) == 1:
+                            if instance[rule.p_lhs[p_nodes[0]]] not in typing.keys():
+                                continue
+                            elif node not in new_rhs_typing[typing_graph][0].keys():
                                 raise ValueError(
                                     "Rewriting error: parameter `total` is set to True, "
                                     "typing of the node `%s` "
                                     "in rhs is required!" %
                                     node
                                 )
-                    else:
-                        raise ValueError(
-                            "Rewriting error: parameter `total` is set to True, "
-                            "typing of the node `%s` "
-                            "in rhs is required!" %
-                            node
-                        )
+                        elif len(p_nodes) > 1:
+                            all_untyped = True
+                            for p_node in p_nodes:
+                                if instance[rule.p_lhs[p_node]] in typing.keys():
+                                    all_untyped = False
+                                    break
+                            if all_untyped:
+                                continue
+                            elif node not in new_rhs_typing[typing_graph][0].keys():
+                                raise ValueError(
+                                    "Rewriting error: parameter `total` is set to True, "
+                                    "typing of the node `%s` "
+                                    "in rhs is required!" %
+                                    node
+                                )
+                else:
+                    raise ValueError(
+                        "Rewriting error: parameter `total` is set to True, "
+                        "typing of the node `%s` "
+                        "in rhs is required!" %
+                        node
+                    )
 
         return new_lhs_typing, new_rhs_typing
 
     def rewrite(self, graph_id, rule, instance,
                 lhs_typing=None, rhs_typing=None,
-                strong_typing=True, total=False, recursive=False):
+                strong_typing=True, total=True, recursive=False):
         """Rewrite and propagate the changes up."""
         if type(self.node[graph_id]) == RuleNode:
             raise ValueError("Rewriting of a rule is not implemented!")
@@ -1403,22 +1425,22 @@ class Hierarchy(nx.DiGraph):
                 self.edge[s][t].attrs
             )
 
-        # For testing (remove after fix)!!!
-        for (s, t) in self.edges():
-            if isinstance(self.edge[s][t], Typing):
-                edge = copy.deepcopy(self.edge[s][t])
-                self.remove_edge(s, t)
-                try:
-                    self._check_consistency(
-                        s, t,
-                        edge.mapping
-                    )
-                except ValueError as e:
-                    print(e)
-                    print(s, t)
-                    print(edge.mapping)
-                self.add_edge(s, t)
-                self.edge[s][t] = edge
+        # # For testing (remove after fix)!!!
+        # for (s, t) in self.edges():
+        #     if isinstance(self.edge[s][t], Typing):
+        #         edge = copy.deepcopy(self.edge[s][t])
+        #         self.remove_edge(s, t)
+        #         try:
+        #             self._check_consistency(
+        #                 s, t,
+        #                 edge.mapping
+        #             )
+        #         except ValueError as e:
+        #             print(e)
+        #             print(s, t)
+        #             print(edge.mapping)
+        #         self.add_edge(s, t)
+        #         self.edge[s][t] = edge
         return
 
     def apply_rule(self, graph_id, rule_id, instance):
