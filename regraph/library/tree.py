@@ -4,16 +4,16 @@ import copy
 import networkx as nx
 
 from regraph.library.hierarchy import GraphNode, RuleNode
-from regraph.library.primitives import graph_to_json, add_node_attrs
+from regraph.library.primitives import graph_to_json, add_node_attrs, graph_from_json
 from regraph.library.rules import Rule
 from regraph.library.category_op import pushout, compose_homomorphisms
 
 
-def _complete_rewrite(hie, g_id, rule, match, lhs_typing=None,
-                      rhs_typing=None):
-    (lhs_t, rhs_t) = hie.get_complete_typing(g_id, match, lhs_typing,
-                                             rhs_typing, rule)
-    hie.rewrite(g_id, rule, match, lhs_t, rhs_t)
+# def _complete_rewrite(hie, g_id, rule, match, lhs_typing=None,
+#                       rhs_typing=None):
+#     (lhs_t, rhs_t) = hie.get_complete_typing(g_id, match, lhs_typing,
+#                                              rhs_typing, rule)
+#     hie.rewrite(g_id, rule, match, lhs_t, rhs_t)
 
 # def unique_node_id(self, prefix):
 #     """ generate a new node id """
@@ -30,10 +30,12 @@ def unique_graph_id(hie, prefix):
         i += 1
     return "{}_{}".format(prefix, i)
 
+
 def rule_children(hie, g_id):
     """Returns the rukes typed by g_id"""
     return (source for source, _ in hie.in_edges(g_id)
             if isinstance(hie.node[source], RuleNode))
+
 
 def graph_children(hie, g_id):
     """Returns the graphs typed by g_id"""
@@ -46,15 +48,41 @@ def all_children(hie, g_id):
     return (source for source, _ in hie.in_edges(g_id))
 
 
-# TODO: include rules
+def from_json_tree(hie, json_data, parent_id):
+    """convert json tree to hierarchy"""
+    if "id" not in json_data.keys():
+        json_data["id"] = unique_graph_id(hie, json_data["name"])
+    if not json_data["id"] in hie.nodes():
+        if json_data["top_graph"] is None and hie.directed:
+            hie.add_graph(json_data["id"], nx.DiGraph(),
+                          {"name": json_data["name"]})
+        elif json_data["top_graph"] is None:
+            hie.add_graph(json_data["id"], nx.Graph(),
+                          {"name": json_data["name"]})
+        else:
+            hie.add_graph(json_data["id"],
+                          graph_from_json(json_data["top_graph"]),
+                          json_data["top_graph"]["attributes"])
+            hie.node[json_data["id"]].attrs["name"] = json_data["name"]
+    if parent_id is not None:
+        if (json_data["id"], parent_id) not in hie.edges():
+            typing = {n["id"]: n["type"]
+                      for n in json_data["top_graph"]["nodes"]
+                      if n["type"] != "" and n["type"] is not None}
+            hie.add_typing(json_data["id"], parent_id, typing,
+                           ignore_attrs=True)
+    for child in json_data["children"]:
+        from_json_tree(hie, child, json_data["id"])
+
+
 def to_json_tree(hie, g_id, parent, include_rules=True,
                  include_graphs=True, depth_bound=None):
     """export a hierarchy as a json tree with root g_id"""
     if not isinstance(hie.node[g_id], GraphNode):
         raise ValueError("node {} must be a graph".format(g_id))
-    if depth_bound and depth_bound <= 0:
+    if depth_bound is not None and depth_bound <= 0:
         children = []
-    elif depth_bound:
+    elif depth_bound is not None:
         children = [to_json_tree(hie, c, g_id, include_rules, include_graphs,
                                  depth_bound - 1)
                     for c in graph_children(hie, g_id)]
@@ -63,7 +91,8 @@ def to_json_tree(hie, g_id, parent, include_rules=True,
                                  include_graphs, None)
                     for c in graph_children(hie, g_id)]
 
-    json_data = {"name": hie.node[g_id].attrs["name"],
+    json_data = {"id": g_id,
+                 "name": hie.node[g_id].attrs["name"],
                  "children": children}
 
     if include_graphs:
@@ -71,9 +100,13 @@ def to_json_tree(hie, g_id, parent, include_rules=True,
         if json_data["top_graph"] is not None:
             json_data["top_graph"]["attributes"] = hie.node[g_id].attrs
 
-    if include_rules:
-        json_data["rules"] = [typed_rule_to_json(hie, r, g_id)
+        if include_rules:
+            json_data["rules"] = [typed_rule_to_json(hie, r, g_id)
+                                  for r in rule_children(hie, g_id)]
+    elif include_rules:
+        json_data["rules"] = [hie.node[r].attrs["name"]
                               for r in rule_children(hie, g_id)]
+
     return json_data
 
 
@@ -126,11 +159,14 @@ def valid_child_name(hie, g_id, new_name):
                      for source in all_children(hie, g_id)]
     return new_name not in children_name
 
+
 def rename_child(hie, g_id, parent, new_name):
+    """rename a graph """
     if valid_child_name(hie, parent, new_name):
         hie.node[g_id].attrs["name"] = new_name
     else:
         raise ValueError("name {} is not valid".format(new_name))
+
 
 def _child_from_name(hie, g_id, name):
     children = [c for c in all_children(hie, g_id)
@@ -220,7 +256,7 @@ def add_node(hie, g_id, parent, node_id, node_type):
         else:
             lhs_typing = None
             rhs_typing = None
-        _complete_rewrite(hie, g_id, rule, {}, lhs_typing, rhs_typing)
+        hie.rewrite(g_id, rule, {}, lhs_typing, rhs_typing, strong_typing=True)
 
     else:
         raise ValueError("todo rules")
@@ -247,7 +283,7 @@ def add_edge(hie, g_id, parent, node1, node2):
         # else:
         #     lhs_typing = None
         #     rhs_typing = None
-        _complete_rewrite(hie, g_id, rule, {node1: node1, node2: node2})
+        hie.rewrite(g_id, rule, {node1: node1, node2: node2}, strong_typing=True)
     else:
         raise ValueError("todo rules")
 
@@ -276,7 +312,7 @@ def rm_node(hie, g_id, parent, node_id, force=False):
         # else:
         #     lhs_typing = None
         #     rhs_typing = None
-        _complete_rewrite(hie, g_id, rule, {node_id: node_id})
+        hie.rewrite(g_id, rule, {node_id: node_id}, strong_typing=True)
     else:
         raise ValueError("todo rules")
 
@@ -302,7 +338,7 @@ def merge_nodes(hie, g_id, parent, node1, node2, new_name):
         # else:
         #     lhs_typing = None
         #     rhs_typing = None
-        _complete_rewrite(hie, g_id, rule, {node1: node1, node2: node2})
+        hie.rewrite(g_id, rule, {node1: node1, node2: node2}, strong_typing=True)
     else:
         raise ValueError("todo rules")
 
@@ -330,7 +366,7 @@ def clone_node(hie, g_id, parent, node, new_name):
         # else:
         #     lhs_typing = None
         #     rhs_typing = None
-        _complete_rewrite(hie, g_id, rule, {node: node})
+        hie.rewrite(g_id, rule, {node: node}, strong_typing=True)
     else:
         raise ValueError("todo rules")
 
@@ -356,7 +392,7 @@ def rm_edge(hie, g_id, parent, node1, node2):
         # else:
         #     lhs_typing = None
         #     rhs_typing = None
-        _complete_rewrite(hie, g_id, rule, {node1: node1, node2: node2})
+        hie.rewrite(g_id, rule, {node1: node1, node2: node2}, strong_typing=True)
 
     else:
         raise ValueError("todo rules")
@@ -379,7 +415,7 @@ def add_attributes(hie, g_id, parent, node, attrs):
         # else:
         #     lhs_typing = None
         #     rhs_typing = None
-        _complete_rewrite(hie, g_id, rule, {node: node})
+        hie.rewrite(g_id, rule, {node: node}, strong_typing=True)
     else:
         raise ValueError("todo rules")
 
@@ -401,7 +437,7 @@ def remove_attributes(hie, g_id, parent, node, attrs):
         # else:
         #     lhs_typing = None
         #     rhs_typing = None
-        _complete_rewrite(hie, g_id, rule, {node: node})
+        hie.rewrite(g_id, rule, {node: node}, strong_typing=True)
     else:
         raise ValueError("todo rules")
 
@@ -478,7 +514,6 @@ def remove_attributes(hie, g_id, parent, node, attrs):
 #             cmd.subRules[r["name"]] = new_rule
 #     self.subCmds[subHierarchy["name"]] = cmd
 
-
 def get_children_by_node(hie, g_id, node_id):
     """Return the children containing a node typed by node_id"""
     return [hie.node[child].attrs["name"]
@@ -492,7 +527,7 @@ def ancestor(hie, g_id, degree):
     if degree == 0:
         return g_id
     else:
-        parents = [target for target, _ in hie.out_edges(g_id)]
+        parents = [target for _, target in hie.out_edges(g_id)]
         if len(parents) != 1:
             raise ValueError("ancestor can only be used on a tree")
         return ancestor(hie, parents[0], degree-1)
@@ -503,6 +538,7 @@ def ancestors_mapping(hie, g_id, degree):
     """get the typing of g_id according to degree"""
     if degree <= 0:
         raise ValueError("degree should be > 0")
+    print(g_id, "ancesto dgree", degree, ancestor(hie, g_id, degree))
     mapping = hie.get_typing(g_id, ancestor(hie, g_id, degree))
     return [{"left": n, "right": t} for (n, t) in mapping.items()]
 

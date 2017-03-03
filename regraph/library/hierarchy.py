@@ -1603,25 +1603,25 @@ class Hierarchy(nx.DiGraph):
                 pass
         return
 
-    def get_ancestors(self, graph_id):
+    def get_ancestors(self, graph_id, maybe=None):
         """Returns ancestors of a graph as well as the typing morphisms."""
-        def _get_ancestors_aux(graph_id):
-            ancestors = {}
-            for _, typing in self.out_edges(graph_id):
-                mapping = self.edge[graph_id][typing].mapping
-                typing_ancestors = _get_ancestors_aux(typing)
-                if typing in ancestors.keys():
-                    ancestors[typing].update(mapping)
+        ancestors = {}
+        for _, typing in self.out_edges(graph_id):
+            if maybe is not None and typing not in maybe:
+                continue
+            mapping = self.edge[graph_id][typing].mapping
+            typing_ancestors = self.get_ancestors(typing, maybe)
+            if typing in ancestors.keys():
+                ancestors[typing].update(mapping)
+            else:
+                ancestors[typing] = mapping
+            for (anc, typ) in typing_ancestors.items():
+                if anc in ancestors.keys():
+                    ancestors[anc].update(compose_homomorphisms(typ,
+                                                                mapping))
                 else:
-                    ancestors[typing] = mapping
-                for (anc, typ) in typing_ancestors.items():
-                    if anc in ancestors.keys():
-                        ancestors[anc].update(compose_homomorphisms(typ,
-                                                                    mapping))
-                    else:
-                        ancestors[anc] = compose_homomorphisms(typ, mapping)
-            return ancestors
-        return _get_ancestors_aux(graph_id)
+                    ancestors[anc] = compose_homomorphisms(typ, mapping)
+        return ancestors
 
     def to_nx_graph(self):
         g = nx.DiGraph()
@@ -1645,8 +1645,8 @@ class Hierarchy(nx.DiGraph):
             self.edge[graph_id][target].rename_source(node, new_name)
 
     def descendents(self, graph_id):
-        desc = set()
-        for source, _ in self.in_edges(g_id):
+        desc = {graph_id}
+        for source, _ in self.in_edges(graph_id):
             desc |= self.descendents(source)
         return desc
 
@@ -1654,8 +1654,7 @@ class Hierarchy(nx.DiGraph):
         desc = self.descendents(target)
         if source not in desc:
             return None
-        sub_hie = Hierarchy(self.subgraph(desc))
-        ancestors = sub_hie.get_ancestors(source)
+        ancestors = self.get_ancestors(source, desc)
         return ancestors[target]
 
     def new_graph_from_nodes(self, nodes, graph_id, new_name, attrs):
