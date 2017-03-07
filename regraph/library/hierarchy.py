@@ -2034,5 +2034,7 @@ class MuHierarchy(Hierarchy):
         """check every formulae on every ancestors"""
         response = {}
         for (ancestor, mapping) in self.get_ancestors(graph_id).items():
-            response[ancestor] = self.check(graph_id, ancestor, mapping)
+            rep = self.check(graph_id, ancestor, mapping)
+            if rep is not None:
+                response[ancestor] = rep
         return response
