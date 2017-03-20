@@ -7,7 +7,6 @@ import networkx as nx
 
 from copy import deepcopy
 from networkx.algorithms import isomorphism
-# from xml.dom import minidom
 
 from regraph.library.utils import (merge_attributes,
                                    normalize_attrs,

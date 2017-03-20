@@ -6,7 +6,9 @@ from regraph.library.parser import parser
 from regraph.library.utils import (keys_by_value,
                                    make_canonical_commands)
 from regraph.library.category_op import (identity,
-                                         check_homomorphism,)
+                                         check_homomorphism,
+                                         pullback_complement,
+                                         pushout)
 from regraph.library import primitives
 
 
@@ -611,3 +613,12 @@ class Rule(object):
         rule = cls(p, lhs, rhs, p_lhs, p_rhs)
         return rule
 
+    def get_rewiting_result(self, graph, instance):
+        """Perform graph rewriting with returning new G'."""
+        g_m, p_g_m, g_m_g = pullback_complement(
+            self.p, self.lhs, graph, self.p_lhs, instance
+        )
+        g_prime, g_m_g_prime, rhs_g_prime = pushout(
+            self.p, g_m, self.rhs, p_g_m, self.p_rhs, total=True
+        )
+        return g_prime

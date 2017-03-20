@@ -1609,8 +1609,8 @@ class Hierarchy(nx.DiGraph):
 
     def rewrite(self, graph_id, rule, instance,
                 lhs_typing=None, rhs_typing=None,
-                # strong_typing=True, 
-                total=True, recursive=False):
+                # strong_typing=True,
+                total=True, inplace=True):
         """Rewrite and propagate the changes up."""
         if type(self.node[graph_id]) == RuleNode:
             raise ValueError("Rewriting of a rule is not implemented!")
@@ -1670,47 +1670,23 @@ class Hierarchy(nx.DiGraph):
         updated_homomorphisms.update(typing_updates)
 
         # Apply all the changes in the hierarchy
-
-        self._apply_changes(updated_graphs,
-                            updated_homomorphisms,
-                            updated_rules,
-                            updated_rule_h)
-
-        # if recursive:
-        #     current_level = set()
-        #     for successors set(self.predecessors(graph_id))
-        #     successors = dict([
-        #         (n, [graph_id]) for n in current_level
-        #     ])
-        #     while len(current_level) > 0:
-        #         next_level = set()
-
-        #         for graph in current_level:
-
-        #             (current_updated_graphs,
-        #              current_updated_homomorphisms,
-        #              current_updated_rules,
-        #              current_updated_rule_h) = self._propagate(
-        #                 graph_id,
-        #                 g_m,
-        #                 g_m_g,
-        #                 g_prime,
-        #                 g_m_g_prime
-        #             )
-
-        #             # update step
-        #             next_level.update(self.predecessors(graph))
-        #             for n in self.predecessors(graph):
-        #                 if n in successors.keys():
-        #                     successors[n].append(graph)
-        #                 else:
-        #                     successors[n] = [graph]
-        #             del successors[graph]
-        #         current_level = next_level
-        return
+        if inplace:
+            self._apply_changes(updated_graphs,
+                                updated_homomorphisms,
+                                updated_rules,
+                                updated_rule_h)
+            return
+        else:
+            # create new hierarchy
+            new_graph = copy.deepcopy(self)
+            new_graph._apply_changes(updated_graphs,
+                                     updated_homomorphisms,
+                                     updated_rules,
+                                     updated_rule_h)
+            return new_graph
 
     def apply_rule(self, graph_id, rule_id, instance,
-                   strong_typing=True, total=False, recursive=False):
+                   strong_typing=True, total=False, inplace=True):
         """Apply rule from the hierarchy."""
         if type(self.node[graph_id]) == RuleNode:
             raise ValueError("Rewriting of a rule is not implemented!")
@@ -1731,15 +1707,18 @@ class Hierarchy(nx.DiGraph):
             rhs_typing[suc] =\
                 self.edge[rule_id][suc].rhs_mapping
 
-        self.rewrite(
+        result = self.rewrite(
             graph_id,
             rule,
             instance,
             lhs_typing,
-            rhs_typing
+            rhs_typing,
+            inplace=inplace
         )
-
-        return
+        if inplace:
+            return
+        else:
+            return result
 
     def to_json(self):
         """Return json representation of the hierarchy."""
