@@ -613,7 +613,7 @@ class Rule(object):
         rule = cls(p, lhs, rhs, p_lhs, p_rhs)
         return rule
 
-    def get_rewiting_result(self, graph, instance):
+    def apply_to(self, graph, instance):
         """Perform graph rewriting with returning new G'."""
         g_m, p_g_m, g_m_g = pullback_complement(
             self.p, self.lhs, graph, self.p_lhs, instance
