@@ -710,6 +710,7 @@ def load_graph(filename, directed=True):
             "Error loading graph: file '%s' does not exist!" %
             filename)
 
+
 def graph_to_json(graph):
     """Create Python dict from a graph."""
     j_data = {"edges": [], "nodes": []}

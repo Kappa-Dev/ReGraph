@@ -838,11 +838,19 @@ class Hierarchy(nx.DiGraph):
                         h2 = self.compose_path_typing(p2)
                         if compose_homomorphisms(h1, new_mapping_s1) !=\
                            compose_homomorphisms(h2, new_mapping_s2):
+                            if s1 not in typing_dict.keys():
+                                type_1 = None
+                            else:
+                                type_1 = typing_dict[s1]
+                            if s2 not in typing_dict.keys():
+                                type_2 = None
+                            else:
+                                type_2 = typing_dict[s2]
                             raise ValueError(
                                 "Cannot add new typing of the node `%s` in `%s`: "
                                 "typing by `%s` in  `%s` and `%s` in `%s` create "
                                 "paths that do not commute" %
-                                (node_id, graph_id, typing_dict[s1], s1, typing_dict[s2], s2)
+                                (node_id, graph_id, type_1, s1, type_2, s2)
                             )
 
         # add new types (specified + inferred)
@@ -1601,7 +1609,8 @@ class Hierarchy(nx.DiGraph):
 
     def rewrite(self, graph_id, rule, instance,
                 lhs_typing=None, rhs_typing=None,
-                strong_typing=True, total=True, recursive=False):
+                # strong_typing=True, 
+                total=True, recursive=False):
         """Rewrite and propagate the changes up."""
         if type(self.node[graph_id]) == RuleNode:
             raise ValueError("Rewriting of a rule is not implemented!")
@@ -1615,7 +1624,8 @@ class Hierarchy(nx.DiGraph):
             instance,
             lhs_typing,
             rhs_typing,
-            strong=strong_typing,
+            strong=True,
+            # strong=strong_typing,
             total=total
         )
 
