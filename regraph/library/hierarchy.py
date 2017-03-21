@@ -572,7 +572,8 @@ class Hierarchy(nx.DiGraph):
         """Add partial homomorphism A -> B."""
         raise ValueError("Deprecated: use `add_typing` with parameter `total=False`!")
 
-    def add_rule_typing(self, rule_id, graph_id, lhs_mapping, rhs_mapping,
+    def add_rule_typing(self, rule_id, graph_id, lhs_mapping,
+                        rhs_mapping=None,
                         lhs_total=False, rhs_total=False,
                         ignore_attrs=False, attrs=None):
         """Add typing of a rule."""
@@ -601,22 +602,47 @@ class Hierarchy(nx.DiGraph):
             ignore_attrs,
             total=lhs_total
         )
+
+        new_rhs_mapping = rhs_mapping
+        if new_rhs_mapping is None:
+            new_rhs_mapping = dict()
+        rule = self.node[rule_id].rule
+        for node in rule.rhs.nodes():
+            p_keys = keys_by_value(rule.p_rhs, node)
+            if len(p_keys) == 1:
+                l = rule.p_lhs[p_keys[0]]
+                if l in lhs_mapping.keys():
+                    new_rhs_mapping[node] = lhs_mapping[l]
+            if len(p_keys) > 1:
+                type_set = set()
+                for p in p_keys:
+                    l = rule.p_lhs[p]
+                    if l in lhs_mapping.keys():
+                        type_set.add(lhs_mapping[l])
+                if len(type_set) > 1:
+                    raise ValueError(
+                        "Invalid rule typing: rule merges nodes of different types (types that being merged: %s)!" %
+                        type_set
+                    )
+                elif len(type_set) == 1:
+                    new_rhs_mapping[node] = list(type_set)[0]
+
         # check if an rhs typing is valid
         check_homomorphism(
             self.node[rule_id].rule.rhs,
             self.node[graph_id].graph,
-            rhs_mapping,
+            new_rhs_mapping,
             ignore_attrs,
             total=rhs_total
         )
 
         # check if newly created path commutes with existing shortest paths
-        self._check_rule_typing(rule_id, graph_id, lhs_mapping, rhs_mapping)
+        self._check_rule_typing(rule_id, graph_id, lhs_mapping, new_rhs_mapping)
 
         self.add_edge(rule_id, graph_id)
         self.edge[rule_id][graph_id] = RuleTyping(
             lhs_mapping,
-            rhs_mapping,
+            new_rhs_mapping,
             lhs_total,
             rhs_total,
             ignore_attrs,
