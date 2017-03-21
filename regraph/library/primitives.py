@@ -817,15 +817,21 @@ def find_matching(graph, pattern, ignore_attrs=False):
     return instances
 
 
-def rewrite(graph, instance, rule):
+def rewrite(graph, instance, rule, inplace=True):
     """Rewrite an instance of a rule in a graph."""
     p_g_m = {}
+
+    if not inplace:
+        g = deepcopy(graph)
+    else:
+        g = graph
+
     # Remove/clone nodes
     for n in rule.lhs.nodes():
         p_keys = keys_by_value(rule.p_lhs, n)
         # Remove nodes
         if len(p_keys) == 0:
-            remove_node(graph, instance[n])
+            remove_node(g, instance[n])
         # Keep nodes
         elif len(p_keys) == 1:
             p_g_m[p_keys[0]] = instance[n]
@@ -836,7 +842,7 @@ def rewrite(graph, instance, rule):
                 if i == 1:
                     p_g_m[k] = instance[n]
                 else:
-                    new_name = clone_node(graph, instance[n])
+                    new_name = clone_node(g, instance[n])
                     p_g_m[k] = new_name
                 i += 1
 
@@ -847,22 +853,22 @@ def rewrite(graph, instance, rule):
         if len(p_keys_1) > 0 and len(p_keys_2) > 0:
             for k1 in p_keys_1:
                 for k2 in p_keys_2:
-                    if graph.is_directed():
+                    if g.is_directed():
                         if (k1, k2) not in rule.p.edges():
-                            if (p_g_m[k1], p_g_m[k2]) in graph.edges():
-                                remove_edge(graph, p_g_m[k1], p_g_m[k2])
+                            if (p_g_m[k1], p_g_m[k2]) in g.edges():
+                                remove_edge(g, p_g_m[k1], p_g_m[k2])
                     else:
                         if (k1, k2) not in rule.p.edges() and (k2, k1) not in rule.p.edges():
-                            if (p_g_m[k1], p_g_m[k2]) in graph.edges() or\
-                               (p_g_m[k2], p_g_m[k1]) in graph.edges():
-                                remove_edge(graph, p_g_m[k1], p_g_m[k2])
+                            if (p_g_m[k1], p_g_m[k2]) in g.edges() or\
+                               (p_g_m[k2], p_g_m[k1]) in g.edges():
+                                remove_edge(g, p_g_m[k1], p_g_m[k2])
     # Remove node attrs
     for n in rule.p.nodes():
         attrs_to_remove = dict_sub(
             rule.lhs.node[rule.p_lhs[n]],
             rule.p.node[n]
         )
-        remove_node_attrs(graph, p_g_m[n], attrs_to_remove)
+        remove_node_attrs(g, p_g_m[n], attrs_to_remove)
 
     # Remove edge attrs
     for (n1, n2) in rule.p.edges():
@@ -870,7 +876,7 @@ def rewrite(graph, instance, rule):
             get_edge(rule.lhs, rule.p_lhs[n1], rule.p_lhs[n2]),
             get_edge(rule.p, n1, n2)
         )
-        remove_edge_attrs(graph, p_g_m[n1], p_g_m[n2], attrs_to_remove)
+        remove_edge_attrs(g, p_g_m[n1], p_g_m[n2], attrs_to_remove)
 
     # Add/merge nodes
     rhs_g_prime = {}
@@ -879,7 +885,7 @@ def rewrite(graph, instance, rule):
         # Add nodes
         if len(p_keys) == 0:
             add_node(
-                graph,
+                g,
                 n,
                 rule.rhs.node[n])
             rhs_g_prime[n] = n
@@ -891,23 +897,23 @@ def rewrite(graph, instance, rule):
             nodes_to_merge = []
             for k in p_keys:
                 nodes_to_merge.append(p_g_m[k])
-            new_name = merge_nodes(graph, nodes_to_merge)
+            new_name = merge_nodes(g, nodes_to_merge)
             rhs_g_prime[n] = new_name
 
     # Add edges
     for (n1, n2) in rule.rhs.edges():
-        if graph.is_directed():
-            if (rhs_g_prime[n1], rhs_g_prime[n2]) not in graph.edges():
+        if g.is_directed():
+            if (rhs_g_prime[n1], rhs_g_prime[n2]) not in g.edges():
                 add_edge(
-                    graph,
+                    g,
                     rhs_g_prime[n1],
                     rhs_g_prime[n2],
                     get_edge(rule.rhs, n1, n2))
         else:
-            if (rhs_g_prime[n1], rhs_g_prime[n2]) not in graph.edges() and\
-               (rhs_g_prime[n2], rhs_g_prime[n1]) not in graph.edges():
+            if (rhs_g_prime[n1], rhs_g_prime[n2]) not in g.edges() and\
+               (rhs_g_prime[n2], rhs_g_prime[n1]) not in g.edges():
                 add_edge(
-                    graph,
+                    g,
                     rhs_g_prime[n1],
                     rhs_g_prime[n2],
                     get_edge(rule.rhs, n1, n2)
@@ -922,7 +928,7 @@ def rewrite(graph, instance, rule):
                 rule.rhs.node[n],
                 rule.p.node[p_keys[0]]
             )
-            add_node_attrs(graph, rhs_g_prime[n], attrs_to_add)
+            add_node_attrs(g, rhs_g_prime[n], attrs_to_add)
         # Add attributes to the nodes which were merged
         elif len(p_keys) > 1:
             merged_attrs = {}
@@ -932,7 +938,7 @@ def rewrite(graph, instance, rule):
                     rule.p.node[k]
                 )
             attrs_to_add = dict_sub(rule.rhs.node[n], merged_attrs)
-            add_node_attrs(graph, rhs_g_prime[n], attrs_to_add)
+            add_node_attrs(g, rhs_g_prime[n], attrs_to_add)
 
     # Add edge attrs
     for (n1, n2) in rule.rhs.edges():
@@ -940,14 +946,14 @@ def rewrite(graph, instance, rule):
         p_keys_2 = keys_by_value(rule.p_rhs, n2)
         for k1 in p_keys_1:
             for k2 in p_keys_2:
-                if graph.is_directed():
+                if g.is_directed():
                     if (k1, k2) in rule.p.edges():
                         attrs_to_add = dict_sub(
                             get_edge(rule.rhs, n1, n2),
                             get_edge(rule.p, k1, k2)
                         )
                         add_edge_attrs(
-                            graph,
+                            g,
                             rhs_g_prime[n1],
                             rhs_g_prime[n2],
                             attrs_to_add
@@ -959,13 +965,15 @@ def rewrite(graph, instance, rule):
                             get_edge(rule.p, k1, k2)
                         )
                         add_edge_attrs(
-                            graph,
+                            g,
                             rhs_g_prime[n1],
                             rhs_g_prime[n2],
                             attrs_to_add
                         )
-
-    return rhs_g_prime
+    if inplace:
+        return rhs_g_prime
+    else:
+        return (g, rhs_g_prime)
 
 
 def print_graph(graph):

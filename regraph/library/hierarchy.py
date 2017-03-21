@@ -1530,6 +1530,14 @@ class Hierarchy(nx.DiGraph):
                                     "in rhs is required!" %
                                     node
                                 )
+                        else:
+                            if node not in new_rhs_typing[typing_graph][0].keys():
+                                raise ValueError(
+                                    "Rewriting error: parameter `total` is set to True, "
+                                    "typing of the node `%s` "
+                                    "in rhs is required!" %
+                                    node
+                                )
                 else:
                     raise ValueError(
                         "Rewriting error: parameter `total` is set to True, "
@@ -1607,6 +1615,64 @@ class Hierarchy(nx.DiGraph):
 
         return updated_homomorphisms
 
+    def _check_rhs(self, graph_id, rule, instance, typing_dict):
+        for typing_graph, (mapping, ignore_attrs) in typing_dict.items():
+            # check rhs typing is valid
+            check_homomorphism(
+                rule.rhs,
+                self.node[typing_graph].graph,
+                mapping,
+                ignore_attrs,
+                total=False
+            )
+            # check edges out of the g-(im(g->lhs)) do not violate typing
+            for node in rule.rhs.nodes():
+                p_keys = keys_by_value(rule.p_rhs, node)
+                if len(p_keys) > 1:
+                    if self.directed:
+                        succs = set()
+                        preds = set()
+                        for p in p_keys:
+                            g_node = instance[rule.p_lhs[p]]
+                            succs.update(
+                                self.node[graph_id].graph.successors(g_node)
+                            )
+                            preds.update(
+                                self.node[graph_id].graph.predecessors(g_node)
+                            )
+                        for s in succs:
+                            graph_mapping = self.edge[graph_id][typing_graph].mapping
+                            if s in graph_mapping.keys():
+                                if (mapping[node], graph_mapping[s]) not in self.node[typing_graph].graph.edges():
+                                    raise ValueError(
+                                        "Merge produces forbidden edge between nodes of types `%s` and `%s`!" %
+                                        (mapping[node], graph_mapping[s])
+                                    )
+                        for p in preds:
+                            graph_mapping = self.edge[graph_id][typing_graph].mapping
+                            if p in graph_mapping.keys():
+                                if (graph_mapping[p], mapping[node]) not in self.node[typing_graph].graph.edges():
+                                    raise ValueError(
+                                        "Merge produces forbidden edge between nodes of types `%s` and `%s`!" %
+                                        (graph_mapping[p], mapping[node])
+                                    )
+                    else:
+                        neighbours = set()
+                        for p in p_keys:
+                            g_node = instance[rule.p_lhs[p]]
+                            neighbours.update(
+                                self.node[graph_id].graph.neighbors(g_node)
+                            )
+                        for n in neighbours:
+                            graph_mapping = self.edge[graph_id][typing_graph].mapping
+                            if s in graph_mapping.keys():
+                                if (mapping[node], graph_mapping[s]) not in self.node[typing_graph].graph.edges():
+                                    raise ValueError(
+                                        "Merge produces forbidden edge between nodes of types `%s` and `%s`!" %
+                                        (mapping[node], graph_mapping[s])
+                                    )
+        return
+
     def rewrite(self, graph_id, rule, instance,
                 lhs_typing=None, rhs_typing=None,
                 # strong_typing=True,
@@ -1632,6 +1698,14 @@ class Hierarchy(nx.DiGraph):
         self._check_instance(
             graph_id, rule.lhs,
             instance, new_lhs_typing
+        )
+
+        # check rhs -> T is a valid homomorphism
+        self._check_rhs(
+            graph_id,
+            rule,
+            instance,
+            new_rhs_typing
         )
 
         # 1. Rewrite a graph `graph_id`
