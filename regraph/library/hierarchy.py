@@ -34,6 +34,12 @@ from regraph.library.rules import Rule
 from regraph.library.mu import parse_formula
 from lrparsing import ParseError
 
+from regraph.library.exceptions import (HierarchyError,
+                                        TotalityWarning,
+                                        ReGraphError,
+                                        RewritingError,
+                                        InvalidHomomorphism)
+
 
 class AttributeContainter(object):
     """Abstract class for a container with attributes."""
@@ -187,7 +193,7 @@ class Hierarchy(nx.DiGraph):
             elif type(self.node[n]) == RuleNode:
                 res += "Rule:"
             else:
-                raise ValueError(
+                raise HierarchyError(
                     "Hierarchy error: unknown type '%s' of the node '%s'!" %
                     (type(self.node[n]), n)
                 )
@@ -215,7 +221,7 @@ class Hierarchy(nx.DiGraph):
                 # res += "lhs mapping: %s\n" % str(self.edge[n1][n2].lhs_mapping)
                 # res += "rhs mapping: %s\n" % str(self.edge[n1][n2].rhs_mapping)
             else:
-                raise ValueError(
+                raise HierarchyError(
                     "Hierarchy error: unknown type '%s' of the edge '%s->%s'!" %
                     (type(self.edge[n1][n2]), n1, n2)
                 )
@@ -294,14 +300,14 @@ class Hierarchy(nx.DiGraph):
         """Add graph to the hierarchy."""
         if self.directed != graph.is_directed():
             if self.directed:
-                raise ValueError(
+                raise HierarchyError(
                     "Hierarchy is defined for directed == %s graphs!" %
                     self.directed
                 )
             else:
-                raise ValueError("Hierarchy is defined for undirected graphs!")
+                raise HierarchyError("Hierarchy is defined for undirected graphs!")
         if graph_id in self.nodes():
-            raise ValueError(
+            raise HierarchyError(
                 "Node '%s' already exists in the hierarchy!" %
                 graph_id
             )
@@ -312,25 +318,25 @@ class Hierarchy(nx.DiGraph):
     def add_rule(self, rule_id, rule, rule_attrs=None):
         """Add rule to the hierarchy."""
         if self.directed != rule.lhs.is_directed():
-            raise ValueError(
+            raise HierarchyError(
                 "Hierarchy is defined for directed == %s graphs: " +
                 "lhs of the rule is directed == %s!" %
                 (self.directed, rule.lhs.is_directed())
             )
         if self.directed != rule.p.is_directed():
-            raise ValueError(
+            raise HierarchyError(
                 "Hierarchy is defined for directed == %s graphs: " +
                 "p of the rule is directed == %s!" %
                 (self.directed, rule.p.is_directed())
             )
         if self.directed != rule.rhs.is_directed():
-            raise ValueError(
+            raise HierarchyError(
                 "Hierarchy is defined for directed == %s graphs: " +
                 "rhs of the rule is directed == %s!" %
                 (self.directed, rule.rhs.is_directed())
             )
         if rule_id in self.nodes():
-            raise ValueError(
+            raise HierarchyError(
                 "Node '%s' already exists in the hierarchy!" %
                 rule_id
             )
@@ -397,12 +403,12 @@ class Hierarchy(nx.DiGraph):
                     for path in s_t_paths:
                         lhs_h, rhs_h = self.compose_path_typing(path)
                         if lhs_h != new_lhs_h:
-                            raise ValueError(
+                            raise HierarchyError(
                                 "Invalid lhs typing: homomorphism does not commute with an existing " +
                                 "path from '%s' to '%s'!" % (s, t)
                             )
                         if rhs_h != new_rhs_h:
-                            raise ValueError(
+                            raise HierarchyError(
                                 "Invalid rhs typing: homomorphism does not commute with an existing " +
                                 "path from '%s' to '%s'!" % (s, t)
                             )
@@ -427,7 +433,7 @@ class Hierarchy(nx.DiGraph):
                 for t in paths_from_target.keys():
                     # find homomorphism from s to t via new path
                     if s == source:
-                        raise ValueError(
+                        raise HierarchyError(
                             "Found a rule typing some node in the hierarchy!"
                         )
                     new_lhs_h, new_rhs_h = self.compose_path_typing(paths_to_source[s])
@@ -449,12 +455,12 @@ class Hierarchy(nx.DiGraph):
                         for path in s_t_paths:
                             lhs_h, rhs_h = self.compose_path_typing(path)
                             if lhs_h != new_lhs_h:
-                                raise ValueError(
+                                raise HierarchyError(
                                     "Invalid lhs typing: homomorphism does not commute with an existing " +
                                     "path from '%s' to '%s'!" % (s, t)
                                 )
                             if rhs_h != new_rhs_h:
-                                raise ValueError(
+                                raise HierarchyError(
                                     "Invalid rhs typing: homomorphism does not commute with an existing " +
                                     "path from '%s' to '%s'!" % (s, t)
                                 )
@@ -496,7 +502,7 @@ class Hierarchy(nx.DiGraph):
                         for path in s_t_paths:
                             path_homomorphism = self.compose_path_typing(path)
                             if path_homomorphism != new_homomorphism:
-                                raise ValueError(
+                                raise HierarchyError(
                                     "Homomorphism does not commute with an existing " +
                                     "path from '%s' to '%s'!" % (s, t)
                                 )
@@ -514,29 +520,29 @@ class Hierarchy(nx.DiGraph):
                    total=False, ignore_attrs=False, attrs=None):
         """Add homomorphism to the hierarchy."""
         if source not in self.nodes():
-            raise ValueError(
+            raise HierarchyError(
                 "Node '%s' is not defined in the hierarchy!" % source)
         if target not in self.nodes():
-            raise ValueError(
+            raise HierarchyError(
                 "Node '%s' is not defined in the hierarchy!" % target)
 
         if (source, target) in self.edges():
-            raise ValueError(
+            raise HierarchyError(
                 "Edge '%s->%s' already exists in the hierarchy: no muliple edges allowed!" %
                 (source, target)
             )
         if not isinstance(self.node[source], GraphNode):
             if type(self.node[source]) == RuleNode:
-                raise ValueError(
+                raise HierarchyError(
                     "Source node is a rule, use `add_rule_typing` method instead!"
                 )
             else:
-                raise ValueError(
+                raise HierarchyError(
                     "Source of a typing should be a graph, `%s` is provided!" %
                     type(self.node[source])
                 )
         if not isinstance(self.node[target], GraphNode):
-            raise ValueError(
+            raise HierarchyError(
                 "Target of a typing should be a graph, `%s` is provided!" %
                 type(self.node[target])
             )
@@ -545,7 +551,7 @@ class Hierarchy(nx.DiGraph):
         self.add_edge(source, target)
         if not nx.is_directed_acyclic_graph(self):
             self.remove_edge(source, target)
-            raise ValueError(
+            raise HierarchyError(
                 "Edge '%s->%s' creates a cycle in the hierarchy!" %
                 (source, target)
             )
@@ -570,7 +576,7 @@ class Hierarchy(nx.DiGraph):
     def add_partial_typing(self, source, target,
                            mapping, ignore_attrs=False, attrs=None):
         """Add partial homomorphism A -> B."""
-        raise ValueError("Deprecated: use `add_typing` with parameter `total=False`!")
+        raise ReGraphError("Deprecated: use `add_typing` with parameter `total=False`!")
 
     def add_rule_typing(self, rule_id, graph_id, lhs_mapping,
                         rhs_mapping=None,
@@ -578,19 +584,19 @@ class Hierarchy(nx.DiGraph):
                         ignore_attrs=False, attrs=None):
         """Add typing of a rule."""
         if rule_id not in self.nodes():
-            raise ValueError(
+            raise HierarchyError(
                 "Node '%s' is not defined in the hierarchy!" % rule_id)
         if graph_id not in self.nodes():
-            raise ValueError(
+            raise HierarchyError(
                 "Node '%s' is not defined in the hierarchy!" % graph_id)
 
         if type(self.node[rule_id]) != RuleNode:
-            raise ValueError(
+            raise HierarchyError(
                 "Source of a rule typing should be a rule, `%s` is provided!" %
                 type(self.node[rule_id])
             )
         if not isinstance(self.node[graph_id], GraphNode):
-            raise ValueError(
+            raise HierarchyError(
                 "Target of a rule typing should be a graph, `%s` is provided!" %
                 type(self.node[graph_id])
             )
@@ -620,7 +626,7 @@ class Hierarchy(nx.DiGraph):
                     if l in lhs_mapping.keys():
                         type_set.add(lhs_mapping[l])
                 if len(type_set) > 1:
-                    raise ValueError(
+                    raise HierarchyError(
                         "Invalid rule typing: rule merges nodes of different types (types that being merged: %s)!" %
                         type_set
                     )
@@ -657,7 +663,7 @@ class Hierarchy(nx.DiGraph):
         of this graph to its parents.
         """
         if graph_id not in self.nodes():
-            raise ValueError(
+            raise HierarchyError(
                 "Graph `%s` is not defined in the hierarchy!" % graph_id)
 
         if reconnect:
@@ -711,12 +717,12 @@ class Hierarchy(nx.DiGraph):
     def node_type(self, graph_id, node_id):
         """Get a list of the immediate types of a node."""
         if graph_id not in self.nodes():
-            raise ValueError(
+            raise HierarchyError(
                 "Graph '%s' is not defined in the hierarchy!"
                 % graph_id
             )
         if node_id not in self.node[graph_id].graph.nodes():
-            raise ValueError(
+            raise HierarchyError(
                 "Graph '%s' does not have a node with id '%s'!"
                 % (graph_id, node_id)
             )
@@ -730,10 +736,12 @@ class Hierarchy(nx.DiGraph):
     def to_total(self, source, target):
         """Make a typing total (if mapping is total)."""
         if source not in self.nodes():
-            raise ValueError("Node `%s` does not exist!" % source)
+            raise HierarchyError("Node '%s' is not defined in the hierarchy!" % source)
         if (source, target) not in self.edges():
-            raise ValueError("Typing `%s->%s` does not exist!" %
-                             (source, target))
+            raise HierarchyError(
+                "Typing `%s->%s` does not exist!" %
+                (source, target)
+            )
         nodes = self.node[source].graph.nodes()
         typing = self.edge[source][target]
         if is_total_homomorphism(nodes, typing.mapping):
@@ -742,7 +750,7 @@ class Hierarchy(nx.DiGraph):
             untyped_nodes = [
                 node for node in nodes if node not in typing.mapping.keys()
             ]
-            raise ValueError(
+            raise HierarchyError(
                 "Cannot make `%s->%s` typing total: nodes [%s] "
                 "do not have types, please type them first!" %
                 (source, target, ", ".join(untyped_nodes))
@@ -770,15 +778,15 @@ class Hierarchy(nx.DiGraph):
     def add_node_type(self, graph_id, node_id, typing_dict):
         """Type a node in a graph according to `typing_dict`."""
         if node_id not in self.node[graph_id].graph.nodes():
-            raise ValueError(
-                "Node `%s` does not exist in `%s`!" %
+            raise HierarchyError(
+                "Node `%s` is not defined in the hierarchy!" %
                 (node_id, graph_id)
             )
 
         # check edges exist
         for typing_graph, _ in typing_dict.items():
             if (graph_id, typing_graph) not in self.edges():
-                raise ValueError(
+                raise HierarchyError(
                     "Typing `%s->%s` does not exist!" %
                     (graph_id, typing_graph)
                 )
@@ -872,7 +880,7 @@ class Hierarchy(nx.DiGraph):
                                 type_2 = None
                             else:
                                 type_2 = typing_dict[s2]
-                            raise ValueError(
+                            raise HierarchyError(
                                 "Cannot add new typing of the node `%s` in `%s`: "
                                 "typing by `%s` in  `%s` and `%s` in `%s` create "
                                 "paths that do not commute" %
@@ -935,7 +943,7 @@ class Hierarchy(nx.DiGraph):
     def remove_node_type(self, graph_id, typing_graph, node_id):
         """Remove a type a node in a graph `graph_id`."""
         if (graph_id, typing_graph) not in self.edges():
-            raise ValueError(
+            raise HierarchyError(
                 "Typing `%s->%s` does not exist!" %
                 (graph_id, typing_graph)
             )
@@ -957,7 +965,8 @@ class Hierarchy(nx.DiGraph):
         if self.edge[graph_id][typing_graph].total:
             warnings.warn(
                 "Total typing '%s->%s' became partial!" %
-                (graph_id, typing_graph)
+                (graph_id, typing_graph),
+                TotalityWarning
             )
 
         # remove typing
@@ -989,7 +998,7 @@ class Hierarchy(nx.DiGraph):
         of nodes from pattern to the typing graph;
         """
         if type(self.node[graph_id]) == RuleNode:
-            raise ValueError("Pattern matching in a rule is not implemented!")
+            raise ReGraphError("Pattern matching in a rule is not implemented!")
         # Check that 'typing_graph' and 'pattern_typing' are correctly specified
 
         if len(self.successors(graph_id)) != 0:
@@ -1003,7 +1012,7 @@ class Hierarchy(nx.DiGraph):
             if pattern_typing is not None:
                 for typing_graph, _ in pattern_typing.items():
                     if typing_graph not in self.successors(graph_id):
-                        raise ValueError(
+                        raise HierarchyError(
                             "Pattern typing graph '%s' is not in "
                             "the typing graphs of '%s'!" %
                             (typing_graph, graph_id)
@@ -1020,7 +1029,7 @@ class Hierarchy(nx.DiGraph):
                             elif len(value) == 1:
                                 new_pattern_typing[key] = (value[0], False)
                         except:
-                            raise ValueError("Invalid pattern typing!")
+                            raise HierarchyError("Invalid pattern typing!")
 
                 # Check pattern typing is a valid homomorphism
                 for typing_graph, (mapping, ignore_attrs) in new_pattern_typing.items():
@@ -1132,10 +1141,10 @@ class Hierarchy(nx.DiGraph):
     def find_rule_matching(self, graph_id, rule_id):
         """Find matching of a rule `rule_id` form the hierarchy."""
         if type(self.node[graph_id]) == RuleNode:
-            raise ValueError("Pattern matching in a rule is not implemented!")
+            raise ReGraphError("Pattern matching in a rule is not implemented!")
 
         if type(self.node[rule_id]) != RuleNode:
-            raise ValueError("Invalid rule `%s` to match!" % rule_id)
+            raise HierarchyError("Invalid rule `%s` to match!" % rule_id)
 
         rule = self.node[rule_id].rule
 
@@ -1172,7 +1181,7 @@ class Hierarchy(nx.DiGraph):
                     if node in pattern_typing.keys() and\
                        instance[node] in self.edge[graph_id][typing_graph].mapping.keys():
                         if lhs_mapping[node] != self.edge[graph_id][typing_graph].mapping[instance[node]]:
-                            raise ValueError(
+                            raise RewritingError(
                                 "Typing of the instance of LHS does not " +
                                 " coincide with typing of LHS!"
                             )
@@ -1211,7 +1220,7 @@ class Hierarchy(nx.DiGraph):
                 if r_node in rhs_typing[typing_graph][0].keys() and\
                    l_node not in lhs_typing[typing_graph][0].keys():
                     if matching[l_node] not in typing.keys():
-                        raise ValueError(
+                        raise RewritingError(
                             "Typing of the rule is not valid: "
                             "type of node `%s` in lhs is being redefined in the rhs!" %
                             l_node
@@ -1231,7 +1240,7 @@ class Hierarchy(nx.DiGraph):
                         if p_r[p_node] in rhs_typing[typing_graph][0].keys():
                             if (rhs_typing[typing_graph][0][p_r[p_node]] !=
                                     lhs_typing[typing_graph][0][l_node]):
-                                raise ValueError(
+                                raise RewritingError(
                                     "Typing of the rule is not valid: "
                                     "lhs node that maps to a node of type "
                                     "`%s` in the matching, is being mapped to `%s` in rhs!" %
@@ -1251,7 +1260,7 @@ class Hierarchy(nx.DiGraph):
                            l_node in lhs_typing[typing_graph][0].keys():
                             l_type = lhs_typing[typing_graph][0][l_node]
                             if p_type != l_type:
-                                raise ValueError(
+                                raise RewritingError(
                                     "Typing of the rule is not valid: "
                                     "lhs node that maps to a node of type "
                                     "`%s` in the matching, is being mapped to `%s` in rhs!" %
@@ -1262,7 +1271,7 @@ class Hierarchy(nx.DiGraph):
                             if matching[l_node] in typing.keys():
                                 l_type = typing[matching[l_node]]
                                 if p_type != l_type:
-                                    raise ValueError(
+                                    raise RewritingError(
                                         "Typing of the rule is not valid: "
                                         "type of node `%s` in lhs is being redefined in the rhs!" %
                                         l_node
@@ -1439,8 +1448,8 @@ class Hierarchy(nx.DiGraph):
                             (lhs_m_suc_m, rhs_m_suc_m)
 
                 else:
-                    raise ValueError(
-                        "Rewriting error: unknown type '%s' of the node '%s'!" %
+                    raise RewritingError(
+                        "Unknown type '%s' of the node '%s'!" %
                         (type(self.node[graph]), graph)
                     )
 
@@ -1475,7 +1484,8 @@ class Hierarchy(nx.DiGraph):
                 if not is_total_homomorphism(self.node[s].graph.nodes(), mapping):
                     warnings.warn(
                         "Total typing '%s->%s' became partial after rewriting!" %
-                        (s, t)
+                        (s, t),
+                        TotalityWarning
                     )
                 else:
                     total = True
@@ -1508,21 +1518,34 @@ class Hierarchy(nx.DiGraph):
         )
 
         for typing_graph, (mapping, ignore_attrs) in new_lhs_typing.items():
-            check_homomorphism(
-                rule.lhs,
-                self.node[typing_graph].graph,
-                mapping,
-                ignore_attrs,
-                total=False
-            )
+            try:
+                check_homomorphism(
+                    rule.lhs,
+                    self.node[typing_graph].graph,
+                    mapping,
+                    ignore_attrs,
+                    total=False
+                )
+            except InvalidHomomorphism as e:
+                raise RewritingError(
+                    "Invalid lhs of the rule, namely, "
+                    "invalid homomorphism with a typing graph '%s', "
+                    "error message: %s" % (typing_graph, str(e)))
+
         for typing_graph, (mapping, ignore_attrs) in new_rhs_typing.items():
-            check_homomorphism(
-                rule.rhs,
-                self.node[typing_graph].graph,
-                mapping,
-                ignore_attrs,
-                total=False
-            )
+            try:
+                check_homomorphism(
+                    rule.rhs,
+                    self.node[typing_graph].graph,
+                    mapping,
+                    ignore_attrs,
+                    total=False
+                )
+            except InvalidHomomorphism as e:
+                raise RewritingError(
+                    "Invalid rhs of the rule, namely, "
+                    "invalid homomorphism with a typing graph '%s', "
+                    "error message: %s" % (typing_graph, str(e)))
 
         if total:
             # check that everything is typed
@@ -1535,8 +1558,8 @@ class Hierarchy(nx.DiGraph):
                             if instance[rule.p_lhs[p_nodes[0]]] not in typing.keys():
                                 continue
                             elif node not in new_rhs_typing[typing_graph][0].keys():
-                                raise ValueError(
-                                    "Rewriting error: parameter `total` is set to True, "
+                                raise RewritingError(
+                                    "Rewriting parameter `total` is set to True, "
                                     "typing of the node `%s` "
                                     "in rhs is required!" %
                                     node
@@ -1550,23 +1573,23 @@ class Hierarchy(nx.DiGraph):
                             if all_untyped:
                                 continue
                             elif node not in new_rhs_typing[typing_graph][0].keys():
-                                raise ValueError(
-                                    "Rewriting error: parameter `total` is set to True, "
+                                raise RewritingError(
+                                    "Rewriting parameter `total` is set to True, "
                                     "typing of the node `%s` "
                                     "in rhs is required!" %
                                     node
                                 )
                         else:
                             if node not in new_rhs_typing[typing_graph][0].keys():
-                                raise ValueError(
-                                    "Rewriting error: parameter `total` is set to True, "
+                                raise RewritingError(
+                                    "Rewriting parameter `total` is set to True, "
                                     "typing of the node `%s` "
                                     "in rhs is required!" %
                                     node
                                 )
                 else:
-                    raise ValueError(
-                        "Rewriting error: parameter `total` is set to True, "
+                    raise RewritingError(
+                        "Rewriting parameter `total` is set to True, "
                         "typing of the node `%s` "
                         "in rhs is required!" %
                         node
@@ -1643,14 +1666,7 @@ class Hierarchy(nx.DiGraph):
 
     def _check_rhs(self, graph_id, rule, instance, typing_dict):
         for typing_graph, (mapping, ignore_attrs) in typing_dict.items():
-            # check rhs typing is valid
-            check_homomorphism(
-                rule.rhs,
-                self.node[typing_graph].graph,
-                mapping,
-                ignore_attrs,
-                total=False
-            )
+
             # check edges out of the g-(im(g->lhs)) do not violate typing
             for node in rule.rhs.nodes():
                 p_keys = keys_by_value(rule.p_rhs, node)
@@ -1670,7 +1686,7 @@ class Hierarchy(nx.DiGraph):
                             graph_mapping = self.edge[graph_id][typing_graph].mapping
                             if s in graph_mapping.keys():
                                 if (mapping[node], graph_mapping[s]) not in self.node[typing_graph].graph.edges():
-                                    raise ValueError(
+                                    raise RewritingError(
                                         "Merge produces forbidden edge between nodes of types `%s` and `%s`!" %
                                         (mapping[node], graph_mapping[s])
                                     )
@@ -1678,7 +1694,7 @@ class Hierarchy(nx.DiGraph):
                             graph_mapping = self.edge[graph_id][typing_graph].mapping
                             if p in graph_mapping.keys():
                                 if (graph_mapping[p], mapping[node]) not in self.node[typing_graph].graph.edges():
-                                    raise ValueError(
+                                    raise RewritingError(
                                         "Merge produces forbidden edge between nodes of types `%s` and `%s`!" %
                                         (graph_mapping[p], mapping[node])
                                     )
@@ -1693,7 +1709,7 @@ class Hierarchy(nx.DiGraph):
                             graph_mapping = self.edge[graph_id][typing_graph].mapping
                             if s in graph_mapping.keys():
                                 if (mapping[node], graph_mapping[s]) not in self.node[typing_graph].graph.edges():
-                                    raise ValueError(
+                                    raise RewritingError(
                                         "Merge produces forbidden edge between nodes of types `%s` and `%s`!" %
                                         (mapping[node], graph_mapping[s])
                                     )
@@ -1705,7 +1721,7 @@ class Hierarchy(nx.DiGraph):
                 total=True, inplace=True):
         """Rewrite and propagate the changes up."""
         if type(self.node[graph_id]) == RuleNode:
-            raise ValueError("Rewriting of a rule is not implemented!")
+            raise ReGraphError("Rewriting of a rule is not implemented!")
 
         # Check consistency of the input parameters &
         # validity of homomorphisms
@@ -1789,10 +1805,10 @@ class Hierarchy(nx.DiGraph):
                    strong_typing=True, total=False, inplace=True):
         """Apply rule from the hierarchy."""
         if type(self.node[graph_id]) == RuleNode:
-            raise ValueError("Rewriting of a rule is not implemented!")
+            raise ReGraphError("Rewriting of a rule is not implemented!")
 
         if type(self.node[rule_id]) != RuleNode:
-            raise ValueError("Invalid rewriting rule `%s`!" % rule_id)
+            raise RewritingError("Invalid rewriting rule `%s`!" % rule_id)
 
         rule = self.node[rule_id].rule
 
@@ -1842,7 +1858,7 @@ class Hierarchy(nx.DiGraph):
                     "attrs": self.node[node].attrs
                 })
             else:
-                raise ValueError("Unknown type of the node '%s'!" % node)
+                raise HierarchyError("Unknown type of the node '%s'!" % node)
         for s, t in self.edges():
             if isinstance(self.edge[s][t], Typing):
                 json_data["typing"].append({
@@ -1865,7 +1881,7 @@ class Hierarchy(nx.DiGraph):
                     "attrs": self.edge[s][t].attrs
                 })
             else:
-                raise ValueError(
+                raise HierarchyError(
                     "Unknown type of the edge '%s->%s'!" % (s, t)
                 )
         return json_data
@@ -1927,7 +1943,7 @@ class Hierarchy(nx.DiGraph):
                 hierarchy = Hierarchy.from_json(json_data, directed)
             return hierarchy
         else:
-            raise ValueError("File '%s' does not exist!" % filename)
+            raise HierarchyError("File '%s' does not exist!" % filename)
 
     def export(self, filename):
         """Export the hierarchy to a file."""
@@ -2004,11 +2020,15 @@ class Hierarchy(nx.DiGraph):
 
     def rename_node(self, graph_id, node, new_name):
         if new_name in self.node[graph_id].graph.nodes():
-            raise ValueError("node {} already in graph {}"
-                             .format(new_name, graph_id))
+            raise GraphError(
+                "Node '%s' already in graph '%s'" %
+                (new_name, graph_id)
+            )
         if node not in self.node[graph_id].graph.nodes():
-            raise ValueError("node {} not present in graph {}"
-                             .format(node, graph_id))
+            raise GraphError(
+                "Node '%s' does not exist in graph %s" %
+                (node, graph_id)
+            )
         relabel_node(self.node[graph_id].graph, node, new_name)
         for (source, _) in self.in_edges(graph_id):
             self.edge[source][graph_id].rename_target(node, new_name)
@@ -2078,7 +2098,7 @@ class Hierarchy(nx.DiGraph):
                     for key, value in mapping.items():
                         if key in self.edge[n1][n2].mapping.keys():
                             if self.edge[n1][n2].maping[key] != value:
-                                raise ValueError(
+                                raise HierarchyError(
                                     "Cannot merge with the input hierarchy: typing of nodes"
                                     "in `%s->%s` does not coincide with present typing!" %
                                     (n1, n2)
@@ -2190,7 +2210,7 @@ class Hierarchy(nx.DiGraph):
                     if attr in hierarchy.node[n2].attrs.keys():
                         if hierarchy.node[n2].attrs[attr] == value:
                             if n1 in to_merge.keys() or n2 in to_merge.values():
-                                raise ValueError(
+                                raise HierarchyError(
                                     "Cannot merge with the input hierarchy: "
                                     "matching of nodes by attr '%s' with value '%s'"
                                     " is ambiguous!" % (attr, value)
@@ -2219,7 +2239,7 @@ class Hierarchy(nx.DiGraph):
                     for key, value in mapping:
                         if key in self.edge[n1][n2].mapping.keys():
                             if self.edge[n1][n2].maping[key] != value:
-                                raise ValueError(
+                                raise HierarchyError(
                                     "Cannot merge with the input hierarchy: typing of nodes"
                                     "in `%s->%s` does not coincide with present typing!" %
                                     (str(n1), str(n2))

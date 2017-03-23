@@ -15,6 +15,7 @@ from regraph.library.utils import (keys_by_value,
                                    merge_attributes,
                                    dict_sub,
                                    valid_attributes)
+from regraph.library.exceptions import InvalidHomomorphism, ReGraphError
 
 
 def compose_homomorphisms(d2, d1):
@@ -33,8 +34,8 @@ def is_total_homomorphism(elements, mapping):
 def check_totality(elements, dictionary):
     """Check that a mapping is total."""
     if set(elements) != set(dictionary.keys()):
-        raise ValueError(
-            "Invalid homomorphism: Mapping is not "
+        raise InvalidHomomorphism(
+            "Mapping is not "
             "covering all the nodes of source graph!")
 
 
@@ -49,28 +50,28 @@ def check_homomorphism(source, target, dictionary,
     if total:
         check_totality(source.nodes(), dictionary)
     if not set(dictionary.values()).issubset(target.nodes()):
-        raise ValueError(
-            "invalid homomorphism: image not in target graph"
+        raise InvalidHomomorphism(
+            "Image not in target graph"
         )
 
     # check connectivity
-    for s_edge in source.edges():
+    for s, t in source.edges():
         try:
-            if (s_edge[0] in dictionary.keys() and
-                    s_edge[1] in dictionary.keys() and
-                    not (dictionary[s_edge[0]], dictionary[s_edge[1]])
+            if (s in dictionary.keys() and
+                    t in dictionary.keys() and
+                    not (dictionary[s], dictionary[t])
                     in target.edges()):
                 if not target.is_directed():
-                    if not (dictionary[s_edge[1]], dictionary[s_edge[0]]) in target.edges():
-                        raise ValueError(
-                            "Invalid homomorphism: Connectivity is not preserved!" +\
-                            " Was expecting an edge '%s' and '%s'" %
-                            (dictionary[s_edge[1]], dictionary[s_edge[0]]))
+                    if not (dictionary[t], dictionary[s]) in target.edges():
+                        raise InvalidHomomorphism(
+                            "Connectivity is not preserved: " +
+                            "edge between '%s' and '%s' does not exist in a target graph" %
+                            (dictionary[t], dictionary[s]))
                 else:
-                    raise ValueError(
-                        "Invalid homomorphism: Connectivity is not preserved!" +\
-                        " Was expecting an edge between '%s' and '%s'" %
-                        (dictionary[s_edge[0]], dictionary[s_edge[1]]))
+                    raise InvalidHomomorphism(
+                        "Connectivity is not preserved: " +
+                        "edge between '%s' and '%s' does not exist in a target graph" %
+                        (dictionary[s], dictionary[t]))
         except KeyError:
             pass
 
@@ -79,21 +80,23 @@ def check_homomorphism(source, target, dictionary,
             # check sets of attributes of nodes (here homomorphism = set inclusion)
 
             if not valid_attributes(source.node[s], target.node[t]):
-                raise ValueError(
-                    "Invalid homomorphism: Attributes of nodes source:'%s' and target:'%s' do not match!" %
-                    (str(s), str(t)))
+                raise InvalidHomomorphism(
+                    "Attributes of nodes source:'%s' and target:'%s' do not match!" %
+                    (s, t)
+                )
 
     if not ignore_attrs:
         # check sets of attributes of edges (homomorphism = set inclusion)
-        for s1, s2 in source.edges():
+        for s, t in source.edges():
             try:
-                if (s1 in dictionary.keys() and s2 in dictionary.keys() and
+                if (s in dictionary.keys() and t in dictionary.keys() and
                         not valid_attributes(
-                            source.edge[s1][s2],
-                            target.edge[dictionary[s1]][dictionary[s2]])):
-                    raise ValueError(
-                        "Invalid homomorphism: Attributes of edges (%s)-(%s) and (%s)-(%s) do not match!" %
-                        (s1, s2, dictionary[s1], dictionary[s2]))
+                            source.edge[s][t],
+                            target.edge[dictionary[s]][dictionary[t]])):
+                    raise InvalidHomomorphism(
+                        "Attributes of an edge '%s->%s' in source and '%s->%s'"
+                        " in target do not match!" %
+                        (s, t, dictionary[s], dictionary[t]))
             except KeyError:
                 pass
     return True
@@ -122,7 +125,7 @@ def get_unique_map(a, b, c, d, a_b, b_d, c_d):
                     d_node
                 )
                 if len(a_keys) != len(c_keys):
-                    raise ValueError("Map is not unique!")
+                    raise ReGraphError("Map is not unique!")
                 else:
                     for i, a_key in enumerate(a_keys):
                         a_c[a_key] = c_keys[i]
@@ -135,8 +138,8 @@ def identity(a, b):
         if n in b.nodes():
             dic[n] = n
         else:
-            raise ValueError(
-                "Node '%s' not found in the second graph!" % n
+            raise ReGraphError(
+                "Cannot construct morphism by names: node '%s' not found in the second graph!" % n
             )
     return dic
 
@@ -197,7 +200,7 @@ def partial_pullback(b, c, d, b_d, c_d):
         check_totality(c, c_d)
         return total_pullback(b, c, d, b_d, c_d)
 
-    except ValueError:
+    except InvalidHomomorphism:
         check_homomorphism(b, d, b_d, total=False)
         check_homomorphism(c, d, c_d, total=False)
 
@@ -306,7 +309,7 @@ def partial_pushout(a, b, c, a_b, a_c):
         check_totality(a, a_c)
         return total_pushout(a, b, c, a_b, a_c)
 
-    except ValueError:
+    except InvalidHomomorphism:
         check_homomorphism(a, b, a_b, total=False)
         check_homomorphism(a, c, a_c, total=False)
         if a.is_directed():
@@ -449,7 +452,7 @@ def pullback_complement(a, b, d, a_b, b_d):
     check_homomorphism(b, d, b_d, total=True)
 
     if not is_monic(b_d):
-        raise ValueError(
+        raise InvalidHomomorphism(
             "Second homomorphism is not monic, "
             "cannot find final pullback complement!"
         )

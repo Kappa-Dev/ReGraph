@@ -4,6 +4,7 @@ from nose.tools import raises
 
 from regraph.library.rules import Rule
 from regraph.library.utils import assert_graph_eq
+from regraph.library.exceptions import RuleError
 
 
 class TestRule(object):
@@ -106,7 +107,7 @@ class TestRule(object):
         assert(('s', 'y') in rule.rhs.edges())
         return
 
-    @raises(ValueError)
+    @raises(RuleError)
     def test_remove_non_existing_edge(self):
         rule = Rule(self.p, self.pattern, self.rhs,
                     self.p_lhs, self.p_rhs)

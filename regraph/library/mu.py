@@ -6,6 +6,8 @@
 import lrparsing
 from lrparsing import Keyword, List, Prio, Ref, Token
 
+from regraph.library.exceptions import ParsingError, FormulaError
+
 
 class MuParser(lrparsing.Grammar):
     '''Parse a mu-calculus formula'''
@@ -60,7 +62,7 @@ def parsed_tree_to_formula(parsed_tree):
         sub_formula = parsed_tree_to_formula(parsed_tree[3])
         rep = Not(sub_formula)
     else:
-        raise ValueError("parsing of formula failed")
+        raise ParsingError("Parsing of formula failed")
 
     return rep
 
@@ -231,8 +233,10 @@ class Cnt(Formula):
 
     def evaluate_aux(self, env, nodes, relations, constants):
         if self.name not in constants.keys():
-            raise ValueError("constant {} is not in the environment"
-                             .format(self.name))
+            raise FormulaError(
+                "Constant %s is not in the environment" %
+                self.name
+            )
         test = constants[self.name]
         return {n: test(n) for n in nodes}
 
@@ -244,7 +248,9 @@ class Geq(Formula):
     """ dynamic operator"""
     def __init__(self, lower_bound, rel_name, sub_formula):
         if lower_bound < 1:
-            raise ValueError("lowerbound must be greater or equal to 1")
+            raise FormulaError(
+                "Lower bound must be greater or equal to 1"
+            )
         self.lower_bound = lower_bound
         self.name = rel_name
         self.sub_formulas = [sub_formula]
@@ -258,8 +264,10 @@ class Geq(Formula):
 
     def evaluate_aux(self, env, nodes, relations, constants):
         if self.name not in relations.keys():
-            raise ValueError("relation {} is not in the environment"
-                             .format(self.name))
+            raise FormulaError(
+                "Relation %s is not in the environment" %
+                self.name
+            )
 
         successors = relations[self.name]
         rep = self.sub_formulas[0].evaluate_aux(env, nodes, relations, constants)

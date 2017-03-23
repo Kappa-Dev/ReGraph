@@ -7,6 +7,7 @@ from matplotlib import pyplot as plt
 import networkx as nx
 
 from regraph.library.parser import parser
+from regraph.library.exceptions import ReGraphError, ParsingError
 
 
 def valid_attributes(source, target):
@@ -126,7 +127,7 @@ def merge_attributes(attr1, attr2, method="union"):
                     elif len(intersect) > 1:
                         result.update({key1: intersect})
     else:
-        raise ValueError("Merging method %s is not defined!" % method)
+        raise ReGraphError("Merging method %s is not defined!" % method)
     return result
 
 
@@ -164,7 +165,7 @@ def simplify_commands(commands, di=False):
             parsed = parser.parseString(command).asDict()
             actions.append(parsed)
         except:
-            raise ValueError("Cannot parse command '%s'" % command)
+            raise ParsingError("Cannot parse command '%s'" % command)
 
     # We keep updated a list of the element we added, the lines of
     # transformations that added them or added attributes to them
@@ -549,7 +550,7 @@ def make_canonical_commands(g, commands, di=False):
                 parsed = parser.parseString(command).asDict()
                 actions.append(parsed)
             except:
-                raise ValueError("Cannot parse command '%s'" % command)
+                raise ParsingError("Cannot parse command '%s'" % command)
 
         next_step = ''
 
@@ -831,7 +832,7 @@ def make_canonical_commands(g, commands, di=False):
                 env_nodes.append(el)
 
         if del_step + clone_step + add_step == '':
-            raise ValueError(
+            raise ReGraphError(
                 "Can't find any new transformations and actions is non-empty :\n%s" %
                 next_step
             )
@@ -869,7 +870,7 @@ def normalize_typing(typing):
                 elif len(value) == 1:
                     new_typing[key] = (copy.deepcopy(value[0]), False)
             except:
-                raise ValueError("Invalid typing typing!")
+                raise ReGraphError("Typing format is not valid!")
     return new_typing
 
 

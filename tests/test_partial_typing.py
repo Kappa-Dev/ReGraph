@@ -225,9 +225,6 @@ class TestPartialTyping(object):
 
         for node in self.hierarchy.node["new_g"].graph.nodes():
             print(node, self.hierarchy.node_type("new_g", node))
-        # self.hierarchy.remove_graph("g3", reconnect=True)
-        # for node in self.hierarchy.node["new_g"].graph.nodes():
-        #     print(node, self.hierarchy.node_type("new_g", node))
 
         lhs = nx.DiGraph()
         lhs.add_nodes_from(["a", "b"])

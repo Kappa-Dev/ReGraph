@@ -2,10 +2,12 @@ import copy
 
 import networkx as nx
 
+from nose.tools import raises
+
 from regraph.library.rules import Rule
 from regraph.library.hierarchy import Hierarchy
-from nose.tools import raises
 from regraph.library.primitives import print_graph
+from regraph.library.exceptions import (HierarchyError)
 
 
 class TestHierarchy(object):
@@ -189,7 +191,7 @@ class TestHierarchy(object):
         # add nice assertions here!
         return
 
-    @raises(ValueError)
+    @raises(HierarchyError)
     def test_add_typing_cycle(self):
         self.hierarchy.add_typing(
             "g0", "g1",
@@ -594,7 +596,7 @@ class TestHierarchy(object):
         assert("g0" in anc.keys())
         assert("g00" in anc.keys())
 
-    @raises(ValueError)
+    @raises(HierarchyError)
     def test_add_typing_advanced(self):
         hierarchy = Hierarchy()
 

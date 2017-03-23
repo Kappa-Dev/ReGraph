@@ -10,6 +10,7 @@ from regraph.library.category_op import (identity,
                                          pullback_complement,
                                          pushout)
 from regraph.library import primitives
+from regraph.library.exceptions import ReGraphWarning, ParsingError, RuleError
 
 
 class Rule(object):
@@ -82,7 +83,7 @@ class Rule(object):
                     parsed = parser.parseString(command).asDict()
                     actions.append(parsed)
                 except:
-                    raise ValueError("Cannot parse command '%s'" % command)
+                    raise ParsingError("Cannot parse command '%s'" % command)
 
             for action in actions:
                 if action["keyword"] == "clone":
@@ -138,7 +139,7 @@ class Rule(object):
                         action["node_2"],
                         action["attributes"])
                 else:
-                    raise ValueError("Unknown command %s" % action["keyword"])
+                    raise ParsingError("Unknown command %s" % action["keyword"])
         return rule
 
     def __eq__(self, rule):
@@ -172,13 +173,13 @@ class Rule(object):
             for k in p_keys:
                 lhs_key = self.p_lhs[k]
                 if lhs_key == node_id:
-                    raise ValueError(
+                    raise RuleError(
                         "Node with the id '%s' already exists in the left hand side of the rule" %
                         node_id
                     )
             primitives.add_node(self.rhs, node_id, attrs)
         else:
-            raise ValueError(
+            raise RuleError(
                 "Node with the id '%s' already exists in the right hand side of the rule" %
                 node_id
             )
@@ -206,28 +207,28 @@ class Rule(object):
 
         for k1 in p_keys_1:
             if k1 not in self.p.nodes():
-                raise ValueError(
+                raise RuleError(
                     "Node with the id '%s' does not exist in the preserved part of the rule" % k2
                 )
             for k2 in p_keys_2:
                 if k2 not in self.p.nodes():
-                    raise ValueError(
+                    raise RuleError(
                         "Node with the id '%s' does not exist in the preserved part of the rule" % k2
                     )
                 rhs_key_1 = self.p_rhs[k1]
                 rhs_key_2 = self.p_rhs[k2]
                 if self.rhs.is_directed():
                     if (rhs_key_1, rhs_key_2) in self.rhs.edges():
-                        raise ValueError(
-                            "Edge %s-%s already exists in the right hand side of the rule" % 
+                        raise RuleError(
+                            "Edge '%s->%s' already exists in the right hand side of the rule" % 
                             (rhs_key_1, rhs_key_2)
                         )
                     primitives.add_edge(self.rhs, rhs_key_1, rhs_key_2, attrs)
                 else:
                     if (rhs_key_1, rhs_key_2) in self.rhs.edges() or\
                        (rhs_key_2, rhs_key_1) in self.rhs.edges():
-                        raise ValueError(
-                            "Edge %s-%s already exists in the right hand side of the rule" % 
+                        raise RuleError(
+                            "Edge '%s->%s' already exists in the right hand side of the rule" % 
                             (rhs_key_1, rhs_key_2)
                         )
                     primitives.add_edge(self.rhs, rhs_key_1, rhs_key_2, attrs)
@@ -242,24 +243,24 @@ class Rule(object):
         # Remove edge from the preserved part & rhs of the rule
         for k1 in p_keys_1:
             if k1 not in self.p.nodes():
-                raise ValueError(
+                raise RuleError(
                     "Node with the id '%s' does not exist in the preserved part" % k1
                 )
             for k2 in p_keys_2:
                 if k2 not in self.p.nodes():
-                    raise ValueError(
+                    raise RuleError(
                         "Node with the id '%s' does not exist in the preserved part" % k2
                     )
                 rhs_key_1 = self.p_rhs[k1]
                 rhs_key_2 = self.p_rhs[k2]
                 if self.p.is_directed():
                     if (k1, k2) not in self.p.edges():
-                        raise ValueError(
+                        raise RuleError(
                             "Edge '%s->%s' does not exist in the preserved part of the rule " %
                             (k1, k2)
                         )
                     if (rhs_key_1, rhs_key_2) not in self.rhs.edges():
-                        raise ValueError(
+                        raise RuleError(
                             "Edge '%s->%s' does not exist in the right hand side of the rule " %
                             (rhs_key_1, rhs_key_2)
                         )
@@ -267,14 +268,14 @@ class Rule(object):
                     primitives.remove_edge(self.rhs, rhs_key_1, rhs_key_2)
                 else:
                     if (k1, k2) not in self.p.edges() and (k2, k1) not in self.p.edges():
-                        raise ValueError(
-                            "Edge '%s-%s' does not exist in the preserved part of the rule " %
+                        raise RuleError(
+                            "Edge '%s->%s' does not exist in the preserved part of the rule " %
                             (k1, k2)
                         )
                     if (rhs_key_1, rhs_key_2) not in self.rhs.edges() and\
                        (rhs_key_2, rhs_key_1) not in self.rhs.edges():
-                        raise ValueError(
-                            "Edge '%s-%s' does not exist in the right hand side of the rule " %
+                        raise RuleError(
+                            "Edge '%s->%s' does not exist in the right hand side of the rule " %
                             (rhs_key_1, rhs_key_2)
                         )
                     primitives.remove_edge(self.p, k1, k2)
@@ -306,12 +307,12 @@ class Rule(object):
         nodes_to_merge = set()
         for k1 in p_keys_1:
             if k1 not in self.p.nodes():
-                raise ValueError(
+                raise RuleError(
                     "Node with the id '%s' does not exist in the preserved part of the rule" % k1
                 )
             for k2 in p_keys_2:
                 if k2 not in self.p.nodes():
-                    raise ValueError(
+                    raise RuleError(
                         "Node with the id '%s' does not exist in the preserved part of the rule" % k2
                     )
                 nodes_to_merge.add(self.p_rhs[k1])
@@ -331,10 +332,10 @@ class Rule(object):
     def add_node_attrs(self, n, attrs):
         """Add node attributes to a node in the graph."""
         if n not in self.lhs.nodes():
-            raise ValueError("Node %s does not exist in the left hand side of the rule" % n)
+            raise RuleError("Node '%s' does not exist in the left hand side of the rule" % n)
         p_keys = keys_by_value(self.p_lhs, n)
         if len(p_keys) == 0:
-            raise ValueError("Node %s is being removed by the rule, cannot add attributes" % n)
+            raise RuleError("Node '%s' is being removed by the rule, cannot add attributes" % n)
         for k in p_keys:
             primitives.add_node_attrs(self.rhs, self.p_rhs[k], attrs)
         return
@@ -342,13 +343,13 @@ class Rule(object):
     def remove_node_attrs(self, n, attrs):
         """Remove nodes attributes from a node in the graph."""
         if n not in self.lhs.nodes():
-            raise ValueError(
-                "Node %s does not exist in the left hand side of the rule" % n)
+            raise RuleError(
+                "Node '%s' does not exist in the left hand side of the rule" % n)
 
         p_keys = keys_by_value(self.p_lhs, n)
         if len(p_keys) == 0:
-            raise ValueError(
-                "Node %s is being removed by the rule, cannot remove attributes" % n)
+            raise RuleError(
+                "Node '%s' is being removed by the rule, cannot remove attributes" % n)
 
         for k in p_keys:
             primitives.remove_node_attrs(self.p, k, attrs)
@@ -358,13 +359,13 @@ class Rule(object):
     def update_node_attrs(self, n, attrs):
         """Update attributes of a node."""
         if n not in self.lhs.nodes():
-            raise ValueError(
-                "Node %s does not exist in the left hand side of the rule" % n)
+            raise RuleError(
+                "Node '%s' does not exist in the left hand side of the rule" % n)
 
         p_keys = keys_by_value(self.p_lhs, n)
         if len(p_keys) == 0:
-            raise ValueError(
-                "Node %s is being removed by the rule, cannot update attributes" % n)
+            raise RuleError(
+                "Node '%s' is being removed by the rule, cannot update attributes" % n)
         for k in p_keys:
             self.p.node[k] = None
             primitives.update_node_attrs(self.rhs, self.p_rhs[k], attrs)
@@ -373,31 +374,33 @@ class Rule(object):
     def add_edge_attrs(self, n1, n2, attrs):
         """Add attributes to an edge."""
         if n1 not in self.lhs.nodes():
-            raise ValueError(
-                "Node %s does not exist in the left hand side of the rule" % n1
+            raise RuleError(
+                "Node '%s' does not exist in the left hand side of the rule" % n1
             )
 
         if n2 not in self.lhs.nodes():
-            raise ValueError(
-                "Node %s does not exist in the left hand side of the rule" % n2
+            raise RuleError(
+                "Node '%s' does not exist in the left hand side of the rule" % n2
             )
 
         if self.lhs.is_directed():
             if (n1, n2) not in self.lhs.edges():
-                raise ValueError(
+                raise RuleError(
                     "Edge '%s->%s' does not exist in the left hand side of the rule" %
                     (n1, n2)
                 )
             p_keys_1 = keys_by_value(self.p_lhs, n1)
             p_keys_2 = keys_by_value(self.p_lhs, n2)
             if len(p_keys_1) == 0:
-                raise ValueError(
-                    "Node %s is being removed by the rule, cannot add attributes to the incident edge" %
+                raise RuleError(
+                    "Node '%s' is being removed by the rule, cannot add "
+                    "attributes to the incident edge" %
                     n1
                 )
             if len(p_keys_2) == 0:
-                raise ValueError(
-                    "Node %s is being removed by the rule, cannot add attributes to the incident edge" %
+                raise RuleError(
+                    "Node '%s' is being removed by the rule, cannot add "
+                    "attributes to the incident edge" %
                     n2
                 )
             for k1 in p_keys_1:
@@ -410,7 +413,7 @@ class Rule(object):
                     )
         else:
             if (n1, n2) not in self.lhs.edges() and (n2, n1) not in self.lhs.edges():
-                raise ValueError(
+                raise RuleError(
                     "Edge '%s->%s' does not exist in the left hand side of the rule" %
                     (n1, n2)
                 )
@@ -418,13 +421,15 @@ class Rule(object):
             p_keys_1 = keys_by_value(self.p_lhs, n1)
             p_keys_2 = keys_by_value(self.p_lhs, n2)
             if len(p_keys_1) == 0:
-                raise ValueError(
-                    "Node %s is being removed by the rule, cannot add attributes to the incident edge" %
+                raise RuleError(
+                    "Node '%s' is being removed by the rule, cannot add "
+                    "attributes to the incident edge" %
                     n1
                 )
             if len(p_keys_2) == 0:
-                raise ValueError(
-                    "Node %s is being removed by the rule, cannot add attributes to the incident edge" %
+                raise RuleError(
+                    "Node '%s' is being removed by the rule, cannot add "
+                    "attributes to the incident edge" %
                     n2
                 )
             for k1 in p_keys_1:
@@ -440,16 +445,16 @@ class Rule(object):
     def remove_edge_attrs(self, n1, n2, attrs):
         """Remove edge attributes from an edge in the graph."""
         if n1 not in self.lhs.nodes():
-            raise ValueError(
-                "Node %s does not exist in the left hand side of the rule" % n1
+            raise RuleError(
+                "Node '%s' does not exist in the left hand side of the rule" % n1
             )
         if n2 not in self.lhs.nodes():
-            raise ValueError(
-                "Node %s does not exist in the left hand side of the rule" % n2
+            raise RuleError(
+                "Node '%s' does not exist in the left hand side of the rule" % n2
             )
         if self.lhs.is_directed():
             if (n1, n2) not in self.lhs.edges():
-                raise ValueError(
+                raise RuleError(
                     "Edge '%s->%s' does not exist in the left hand side of the rule" %
                     (n1, n2)
                 )
@@ -457,13 +462,15 @@ class Rule(object):
             p_keys_1 = keys_by_value(self.p_lhs, n1)
             p_keys_2 = keys_by_value(self.p_lhs, n2)
             if len(p_keys_1) == 0:
-                raise ValueError(
-                    "Node %s is being removed by the rule, cannot remove attributes from the incident edge" %
+                raise RuleError(
+                    "Node '%s' is being removed by the rule, cannot remove "
+                    "attributes from the incident edge" %
                     n1
                 )
             if len(p_keys_2) == 0:
-                raise ValueError(
-                    "Node %s is being removed by the rule, cannot remove attributes from the incident edge" %
+                raise RuleError(
+                    "Node '%s' is being removed by the rule, cannot remove "
+                    "attributes from the incident edge" %
                     n2
                 )
             for k1 in p_keys_1:
@@ -477,20 +484,22 @@ class Rule(object):
                     )
         else:
             if (n1, n2) not in self.lhs.edges() and (n2, n1) not in self.lhs.edges():
-                raise ValueError(
+                raise RuleError(
                     "Edge '%s->%s' does not exist in the left hand side of the rule" %
                     (n1, n2)
                 )
             p_keys_1 = keys_by_value(self.p_lhs, n1)
             p_keys_2 = keys_by_value(self.p_lhs, n2)
             if len(p_keys_1) == 0:
-                raise ValueError(
-                    "Node %s is being removed by the rule, cannot remove attributes from the incident edge" %
+                raise RuleError(
+                    "Node '%s' is being removed by the rule, cannot remove "
+                    "attributes from the incident edge" %
                     n1
                 )
             if len(p_keys_2) == 0:
-                raise ValueError(
-                    "Node %s is being removed by the rule, cannot remove attributes from the incident edge" %
+                raise RuleError(
+                    "Node '%s' is being removed by the rule, cannot remove "
+                    "attributes from the incident edge" %
                     n2
                 )
             for k1 in p_keys_1:
@@ -512,16 +521,16 @@ class Rule(object):
     def update_edge_attrs(self, n1, n2, attrs):
         """Update the attributes of an edge with a new set `attrs`."""
         if n1 not in self.lhs.nodes():
-            raise ValueError(
-                "Node %s does not exist in the left hand side of the rule" % n1
+            raise RuleError(
+                "Node '%s' does not exist in the left hand side of the rule" % n1
             )
         if n2 not in self.lhs.nodes():
-            raise ValueError(
-                "Node %s does not exist in the left hand side of the rule" % n2
+            raise RuleError(
+                "Node '%s' does not exist in the left hand side of the rule" % n2
             )
         if self.lhs.is_directed():
             if (n1, n2) not in self.lhs.edges():
-                raise ValueError(
+                raise RuleError(
                     "Edge '%s->%s' does not exist in the left hand side of the rule" %
                     (n1, n2)
                 )
@@ -530,13 +539,15 @@ class Rule(object):
             p_keys_2 = keys_by_value(self.p_lhs, n2)
 
             if len(p_keys_1) == 0:
-                raise ValueError(
-                    "Node %s is being removed by the rule, cannot update attributes from the incident edge" %
+                raise RuleError(
+                    "Node '%s' is being removed by the rule, cannot update "
+                    "attributes from the incident edge" %
                     n2
                 )
             if len(p_keys_2) == 0:
-                raise ValueError(
-                    "Node %s is being removed by the rule, cannot update attributes from the incident edge" %
+                raise RuleError(
+                    "Node '%s' is being removed by the rule, cannot update "
+                    "attributes from the incident edge" %
                     n1
                 )
             for k1 in p_keys_1:
@@ -550,7 +561,7 @@ class Rule(object):
                     )
         else:
             if (n1, n2) not in self.lhs.edges() and (n2, n1) not in self.lhs.edges():
-                raise ValueError(
+                raise RuleError(
                     "Edge '%s->%s' does not exist in the left hand side of the rule" %
                     (n1, n2)
                 )
@@ -558,13 +569,15 @@ class Rule(object):
             p_keys_1 = keys_by_value(self.p_lhs, n1)
             p_keys_2 = keys_by_value(self.p_lhs, n2)
             if len(p_keys_1) == 0:
-                raise ValueError(
-                    "Node %s is being removed by the rule, cannot update attributes from the incident edge" %
+                raise RuleError(
+                    "Node '%s' is being removed by the rule, cannot update "
+                    "attributes from the incident edge" %
                     n1
                 )
             if len(p_keys_2) == 0:
-                raise ValueError(
-                    "Node %s is being removed by the rule, cannot update attributes from the incident edge" %
+                raise RuleError(
+                    "Node '%s' is being removed by the rule, cannot update "
+                    "attributes from the incident edge" %
                     n2
                 )
             for k1 in p_keys_1:
@@ -589,7 +602,7 @@ class Rule(object):
                 node_name = self.merge_nodes(node_list[i], node_name, node_name)
         else:
             warnings.warn(
-                "Cannot merge less than two nodes!", RuntimeWarning
+                "Cannot merge less than two nodes!", ReGraphWarning
             )
 
     def to_json(self):

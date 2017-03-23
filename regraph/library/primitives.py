@@ -14,6 +14,9 @@ from regraph.library.utils import (merge_attributes,
                                    keys_by_value,
                                    is_subdict,
                                    dict_sub)
+from regraph.library.exceptions import (ReGraphError,
+                                        GraphError,
+                                        GraphAttrsWarning)
 
 
 def add_node(graph, node_id, attrs=None):
@@ -25,7 +28,7 @@ def add_node(graph, node_id, attrs=None):
         graph.node[node_id] = new_attrs
         # self.unckecked_nodes.add(node_id)
     else:
-        raise ValueError("Node '%s' already exists!" % node_id)
+        raise GraphError("Node '%s' already exists!" % node_id)
 
 
 def remove_node(graph, node):
@@ -36,7 +39,7 @@ def remove_node(graph, node):
         graph.remove_node(node)
         # self.unckecked_nodes |= neighbors
     else:
-        raise ValueError("Node %s does not exist!" % str(node))
+        raise GraphError("Node %s does not exist!" % str(node))
     return
 
 
@@ -49,7 +52,7 @@ def add_nodes_from(graph, node_list):
             node_id, node_attrs = n
             add_node(graph, node_id, node_attrs)
         else:
-            raise ValueError(
+            raise ReGraphError(
                 "Each element of the node list should be either " +
                 "'node_id' or ('node_id', 'node_attrs')!"
             )
@@ -59,7 +62,7 @@ def add_node_attrs(graph, node, attrs_dict):
     """Add new attributes to the node."""
     new_attrs = deepcopy(attrs_dict)
     if node not in graph.nodes():
-        raise ValueError("Node '%s' does not exist!" % str(node))
+        raise GraphError("Node '%s' does not exist!" % str(node))
     elif new_attrs is None:
         pass
     else:
@@ -82,10 +85,11 @@ def update_node_attrs(graph, node, attrs):
     """Update attributes of a node."""
     new_attrs = deepcopy(attrs)
     if node not in graph.nodes():
-        raise ValueError("Node '%s' does not exist!" % str(node))
+        raise GraphError("Node '%s' does not exist!" % str(node))
     elif new_attrs is None:
         warnings.warn(
-            "You want to update '%s' attrs with an empty attrs_dict!" % node
+            "You want to update '%s' attrs with an empty attrs_dict!" % node,
+            GraphAttrsWarning
         )
     else:
         # if not self.valid_attributes(node, new_attrs):
@@ -98,16 +102,16 @@ def update_node_attrs(graph, node, attrs):
 def remove_node_attrs(graph, node, attrs_dict):
     """Remove attrs of a node specified by attrs_dict."""
     if node not in graph.nodes():
-        raise ValueError("Node '%s' does not exist!" % str(node))
+        raise GraphError("Node '%s' does not exist!" % str(node))
     elif attrs_dict is None:
         pass
-        # warnings.warn(
-        #     "You want to remove attrs from '%s' with an empty attrs_dict!" %
-        #     (node, RuntimeWarning)
-        # )
+        warnings.warn(
+            "You want to remove attrs from '%s' with an empty attrs_dict!" % node, 
+            GraphAttrsWarning
+        )
     elif graph.node[node] is None:
         warnings.warn(
-            "Node '%s' does not have any attribute!" % node, RuntimeWarning
+            "Node '%s' does not have any attribute!" % node, GraphAttrsWarning
         )
     else:
         normalize_attrs(graph.node[node])
@@ -115,7 +119,8 @@ def remove_node_attrs(graph, node, attrs_dict):
             if key not in graph.node[node].keys():
                 warnings.warn(
                     "Node '%s' does not have attribute '%s'!" %
-                    (str(node), str(key)), RuntimeWarning)
+                    (node, key), GraphAttrsWarning
+                )
             else:
                 elements_to_remove = []
                 for el in to_set(value):
@@ -124,7 +129,9 @@ def remove_node_attrs(graph, node, attrs_dict):
                     else:
                         warnings.warn(
                             "Node '%s' does not have attribute '%s' with value '%s'!" %
-                            (str(node), str(key), str(el)), RuntimeWarning)
+                            (node, key, el),
+                            GraphAttrsWarning
+                        )
                 for el in elements_to_remove:
                     graph.node[node][key].remove(el)
     return
@@ -139,14 +146,14 @@ def add_edge(graph, s, t, attrs=None, **attr):
         try:
             attrs.update(attr)
         except AttributeError:
-            raise ValueError(
+            raise ReGraphError(
                 "The attr_dict argument must be a dictionary."
             )
     new_attrs = deepcopy(attrs)
     if s not in graph.nodes():
-        raise ValueError("Node '%s' is not defined!" % s)
+        raise GraphError("Node '%s' does not exist!" % s)
     if t not in graph.nodes():
-        raise ValueError("Node '%s' is not defined!" % t)
+        raise GraphError("Node '%s' does not exist!" % t)
     normalize_attrs(new_attrs)
 
     if graph.is_directed():
@@ -166,7 +173,7 @@ def add_edges_from(graph, edge_list):
         elif len(e) == 3:
             add_edge(graph, e[0], e[1], e[2])
         else:
-            raise ValueError(
+            raise ReGraphError(
                 "Was expecting 2 or 3 elements per tuple, got %s." %
                 str(len(e))
             )
@@ -176,7 +183,7 @@ def remove_edge(graph, source, target):
     """Remove edge from a graph."""
     if graph.is_directed():
         if (source, target) not in graph.edges():
-            raise ValueError(
+            raise GraphError(
                 "Edge '%s->%s' does not exist!" % (str(source), str(target)))
     graph.remove_edge(source, target)
 
@@ -186,7 +193,7 @@ def add_edge_attrs(graph, node_1, node_2, attrs_dict):
     new_attrs = deepcopy(attrs_dict)
     if (node_1, node_2) not in graph.edges():
         raise(
-            ValueError("Edge '%s->%s' does not exist" %
+            GraphError("Edge '%s->%s' does not exist" %
                        (str(node_1), str(node_2)))
         )
     elif new_attrs is None:
@@ -208,11 +215,11 @@ def add_edge_attrs(graph, node_1, node_2, attrs_dict):
 def update_edge_attrs(graph, node_1, node_2, attrs):
     """Update attributes of an edge in a graph."""
     if (node_1, node_2) not in graph.edges():
-        raise ValueError("Edge '%s->%s' does not exist!" % (str(node_1), str(node_2)))
+        raise GraphError("Edge '%s->%s' does not exist!" % (str(node_1), str(node_2)))
     elif attrs is None:
         warnings.warn(
             "You want to update '%s->%s' attrs with an empty attrs_dict" %
-            (str(node_1), str(node_2))
+            (str(node_1), str(node_2)), GraphAttrsWarning
         )
     else:
         new_attrs = deepcopy(attrs)
@@ -225,11 +232,11 @@ def update_edge_attrs(graph, node_1, node_2, attrs):
 def remove_edge_attrs(graph, node_1, node_2, attrs_dict):
     """Remove attributes of an edge in a graph."""
     if (node_1, node_2) not in graph.edges():
-        raise ValueError("Edge %s-%s does not exist" % (str(node_1), str(node_2)))
+        raise GraphError("Edge %s-%s does not exist" % (str(node_1), str(node_2)))
     elif attrs_dict is None:
         warnings.warn(
             "You want to remove attrs from %s-%s attrs with an empty attrs_dict" %\
-            (str(node_1), str(node_2))
+            (str(node_1), str(node_2)), GraphAttrsWarning
         )
     else:
 
@@ -240,7 +247,7 @@ def remove_edge_attrs(graph, node_1, node_2, attrs_dict):
             if key not in new_attrs.keys():
                 warnings.warn(
                     "Edge %s-%s does not have attribute '%s'" %
-                    (str(node_1), str(node_2), str(key)), RuntimeWarning)
+                    (str(node_1), str(node_2), str(key)), GraphAttrsWarning)
             else:
                 elements_to_remove = []
                 for el in to_set(value):
@@ -249,7 +256,7 @@ def remove_edge_attrs(graph, node_1, node_2, attrs_dict):
                     else:
                         warnings.warn(
                             "Edge %s-%s does not have attribute '%s' with value '%s'" %
-                            (str(node_1), str(node_2), str(key), str(el)), RuntimeWarning)
+                            (str(node_1), str(node_2), str(key), str(el)), GraphAttrsWarning)
                 for el in elements_to_remove:
                     new_attrs[key].remove(el)
 
@@ -261,7 +268,7 @@ def remove_edge_attrs(graph, node_1, node_2, attrs_dict):
                         else:
                             warnings.warn(
                                 "Edge %s-%s does not have attribute '%s' with value '%s'" %
-                                (str(node_1), str(node_2), str(key), str(el)), RuntimeWarning)
+                                (str(node_1), str(node_2), str(key), str(el)), GraphAttrsWarning)
                     for el in elements_to_remove:
                         new_attrs[key].remove(el)
         set_edge(graph, node_1, node_2, new_attrs)
@@ -302,8 +309,8 @@ def set_edge(graph, source, target, attrs):
     """Set edge attrs."""
     new_attrs = deepcopy(attrs)
     if not (source, target) in graph.edges():
-        raise ValueError(
-            "Edge %s-%s does not exist" % (str(source), str(target)))
+        raise GraphError(
+            "Edge %s->%s does not exist" % (str(source), str(target)))
 
     normalize_attrs(new_attrs)
     graph.edge[source][target] = new_attrs
@@ -314,7 +321,7 @@ def set_edge(graph, source, target, attrs):
 def clone_node(graph, node, name=None):
     """Clone existing node and all its edges."""
     if node not in graph.nodes():
-        raise ValueError("Node '%s' does not exist!" % str(node))
+        raise GraphError("Node '%s' does not exist!" % str(node))
 
     # generate new name for a clone
     if name is None:
@@ -325,7 +332,7 @@ def clone_node(graph, node, name=None):
             new_node = str(node) + str(i)
     else:
         if name in graph.nodes():
-            raise ValueError("Node '%s' already exist!" % str(name))
+            raise GraphError("Node '%s' already exists!" % str(name))
         else:
             new_node = name
 
@@ -378,7 +385,7 @@ def relabel_nodes(graph, mapping):
     """
     unique_names = set(mapping.values())
     if len(unique_names) != len(graph.nodes()):
-        raise ValueError("Attempt to relabel nodes failed: the IDs are not unique!") 
+        raise ReGraphError("Attempt to relabel nodes failed: the IDs are not unique!") 
 
     temp_names = {}
     # Relabeling of the nodes: if at some point new ID conflicts
@@ -419,7 +426,7 @@ def get_relabeled_graph(graph, mapping):
                 new_node,
                 graph.node[old_node])
         except KeyError:
-            raise ValueError("Node '%s' does not exist!" % old_node)
+            raise GraphError("Node '%s' does not exist!" % old_node)
 
     new_edges = list()
     attributes = dict()
@@ -463,8 +470,10 @@ def merge_nodes(graph, nodes, node_name=None, method="union", edge_method="union
         if node_name is None:
             node_name = "_".join([str(n) for n in nodes])
         elif node_name in graph.nodes() and (node_name not in nodes):
-            raise ValueError(
-                "Node with name '%s' already exists!" % str(node_name))
+            raise ReGraphError(
+                "New name for merged node is not valid: "
+                "node with name '%s' already exists!" % node_name
+            )
 
         # Merge data attached to node according to the method specified
         # restore proper connectivity
@@ -473,7 +482,7 @@ def merge_nodes(graph, nodes, node_name=None, method="union", edge_method="union
         elif method == "intersection":
             attr_accumulator = deepcopy(graph.node[nodes[0]])
         else:
-            raise ValueError("Merging method '%s' is not defined!" % method)
+            raise ReGraphError("Merging method '%s' is not defined!" % method)
 
         self_loop = False
         self_loop_attrs = {}
@@ -659,14 +668,14 @@ def graph_from_json(j_data, directed=True):
             if "id" in node.keys():
                 node_id = node["id"]
             else:
-                raise ValueError(
+                raise ReGraphError(
                     "Error loading graph: node id is not specified!")
             attrs = None
             if "attrs" in node.keys():
                 attrs = node["attrs"]
             loaded_nodes.append((node_id, attrs))
     else:
-        raise ValueError(
+        raise ReGraphError(
             "Error loading graph: no nodes specified!")
     loaded_edges = []
     if "edges" in j_data.keys():
@@ -675,12 +684,12 @@ def graph_from_json(j_data, directed=True):
             if "from" in edge.keys():
                 s_node = edge["from"]
             else:
-                raise ValueError(
+                raise ReGraphError(
                     "Error loading graph: edge source is not specified!")
             if "to" in edge.keys():
                 t_node = edge["to"]
             else:
-                raise ValueError(
+                raise ReGraphError(
                     "Error loading graph: edge target is not specified!")
             if "attrs" in edge.keys():
                 attrs = edge["attrs"]
@@ -705,9 +714,10 @@ def load_graph(filename, directed=True):
             j_data = json.loads(f.read())
             return graph_from_json(j_data, directed)
     else:
-        raise ValueError(
+        raise ReGraphError(
             "Error loading graph: file '%s' does not exist!" %
-            filename)
+            filename
+        )
 
 
 def graph_to_json(graph):
