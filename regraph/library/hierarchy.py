@@ -150,8 +150,8 @@ class RuleTyping(AttributeContainter):
                  lhs_total=False, rhs_total=False,
                  ignore_attrs=False, attrs=None):
         """Initialize homomorphism."""
-        self.lhs_mapping = lhs_mapping
-        self.rhs_mapping = rhs_mapping
+        self.lhs_mapping = copy.deepcopy(lhs_mapping)
+        self.rhs_mapping = copy.deepcopy(rhs_mapping)
         self.ignore_attrs = ignore_attrs
         self.lhs_total = lhs_total
         self.rhs_total = rhs_total
@@ -1201,15 +1201,15 @@ class Hierarchy(nx.DiGraph):
 
     def _complete_typing(self, graph_id, matching,
                          lhs_typing, rhs_typing, p_l, p_r,
-                         strong=False):
+                         strong=False, ignore_attrs=False):
 
         for typing_graph in self.successors(graph_id):
             typing = self.edge[graph_id][typing_graph].mapping
 
             if typing_graph not in lhs_typing.keys():
-                lhs_typing[typing_graph] = (dict(), False)
+                lhs_typing[typing_graph] = (dict(), ignore_attrs)
             if typing_graph not in rhs_typing.keys():
-                rhs_typing[typing_graph] = (dict(), False)
+                rhs_typing[typing_graph] = (dict(), ignore_attrs)
 
             # Check that no types are redefined
             # forbidden case of * <- * -> A
@@ -1495,7 +1495,7 @@ class Hierarchy(nx.DiGraph):
             )
         for rule, new_rule in updated_rules.items():
             self.node[rule] = RuleNode(
-                new_rule, self.node[graph].attrs
+                new_rule, self.node[rule].attrs
             )
         for (s, t), (lhs_h, rhs_h) in updated_rule_h.items():
             self.edge[s][t] = RuleTyping(
@@ -1505,18 +1505,19 @@ class Hierarchy(nx.DiGraph):
             )
         return
 
+    # ignore attributes argument used if none is specified in the typing 
     def _normalize_typing(self, graph_id, rule, instance,
                           lhs_typing, rhs_typing, strong=False,
-                          total=True):
-        new_lhs_typing = normalize_typing(lhs_typing)
-        new_rhs_typing = normalize_typing(rhs_typing)
+                          total=True, ignore_attrs=False):
+        new_lhs_typing = normalize_typing(lhs_typing, ignore_attrs)
+        new_rhs_typing = normalize_typing(rhs_typing, ignore_attrs)
 
         self._complete_typing(
             graph_id, instance, new_lhs_typing,
             new_rhs_typing, rule.p_lhs, rule.p_rhs,
-            strong=strong
+            strong=strong, ignore_attrs=ignore_attrs
         )
-
+        
         for typing_graph, (mapping, ignore_attrs) in new_lhs_typing.items():
             try:
                 check_homomorphism(
@@ -1718,7 +1719,7 @@ class Hierarchy(nx.DiGraph):
     def rewrite(self, graph_id, rule, instance,
                 lhs_typing=None, rhs_typing=None,
                 # strong_typing=True,
-                total=True, inplace=True):
+                total=True, inplace=True, ignore_attrs=False):
         """Rewrite and propagate the changes up."""
         if type(self.node[graph_id]) == RuleNode:
             raise ReGraphError("Rewriting of a rule is not implemented!")
@@ -1734,7 +1735,8 @@ class Hierarchy(nx.DiGraph):
             rhs_typing,
             strong=True,
             # strong=strong_typing,
-            total=total
+            total=total,
+            ignore_attrs=ignore_attrs
         )
 
         self._check_instance(
@@ -1800,6 +1802,8 @@ class Hierarchy(nx.DiGraph):
                                      updated_rules,
                                      updated_rule_h)
             return new_graph
+
+        return updated_graphs
 
     def apply_rule(self, graph_id, rule_id, instance,
                    strong_typing=True, total=False, inplace=True):
@@ -2048,11 +2052,43 @@ class Hierarchy(nx.DiGraph):
         ancestors = self.get_ancestors(source, desc)
         return ancestors[target]
 
+    def get_rule_typing(self, source, target):
+        desc = self.descendents(target)
+        if source not in desc:
+            return None
+        lhs_typing = {}
+        rhs_typing = {}
+        for (_, parent) in self.out_edges(source):
+            parent_lhs = self.edge[source][parent].lhs_mapping
+            parent_rhs = self.edge[source][parent].rhs_mapping
+            if parent == target:
+                lhs_typing.update(parent_lhs)
+                rhs_typing.update(parent_rhs)
+            elif parent in desc:
+                parent_typing = self.get_typing(parent, target)
+                lhs_typing.update(compose_homomorphisms(parent_typing,
+                                                        parent_lhs))
+                rhs_typing.update(compose_homomorphisms(parent_typing,
+                                                        parent_rhs))
+        # the typing of the preserved part coresponds to the typing
+        # of the right hand side
+        rule = self.node[source].rule
+        p_typing = {n: rhs_typing[rule.p_rhs[n]] for n in rule.p.nodes()}
+        return (lhs_typing, p_typing, rhs_typing)
+
     def new_graph_from_nodes(self, nodes, graph_id, new_name, attrs):
         """Build a subgraph from nodes and type it by these nodes."""
         new_graph = self.node[graph_id].graph.subgraph(nodes)
         self.add_graph(new_name, new_graph, attrs)
         self.add_typing(new_name, graph_id, {n: n for n in nodes})
+
+    def child_rule_from_nodes(self, nodes, graph_id, new_name, attrs):
+        """Build a subrule from nodes and type it by these nodes."""
+        pattern = self.node[graph_id].graph.subgraph(nodes)
+        new_rule = Rule(pattern, pattern, pattern)
+        self.add_rule(new_name, new_rule, attrs)
+        mapping = {n: n for n in nodes}
+        self.add_rule_typing(new_name, graph_id, mapping, mapping, attrs=attrs)
 
     def _generate_new_name(self, node):
         i = 1
@@ -2366,6 +2402,72 @@ class Hierarchy(nx.DiGraph):
             _merge_node(node)
 
         return
+
+    def unique_graph_id(self, prefix):
+        """ generate a new graph id """
+        if prefix not in self.nodes():
+            return prefix
+        i = 0
+        while "{}_{}".format(prefix, i) in self.nodes():
+            i += 1
+        return "{}_{}".format(prefix, i)
+
+    def duplicate_subgraph(self, nodes, suffix):
+        new = {}
+        for node in nodes:
+            new_id = self.unique_graph_id(node+suffix)
+            new[node] = new_id
+            self.add_node(new_id)
+            self.node[new_id] = copy.deepcopy(self.node[node])
+        for (source, target) in self.edges():
+            if source in nodes:
+                if target in nodes:
+                    self.add_edge(new[source], new[target])
+                    self.edge[new[source]][new[target]] =\
+                        copy.deepcopy(self.edge[source][target])
+                else:
+                    self.add_edge(new[source], target)
+                    self.edge[new[source]][target] =\
+                        copy.deepcopy(self.edge[source][target])
+            elif target in nodes:
+                self.add_edge(source, new[target])
+                self.edge[source][new[target]] =\
+                    copy.deepcopy(self.edge[source][target])
+        return new
+
+    # build new nuggets after rewriting of old one following rewriting of the
+    # action graph.
+    def create_valid_nuggets(self, old_nugget, new_nugget, updated_graphs):
+        pattern = copy.deepcopy(self.node[old_nugget].graph)
+        for node in pattern.nodes():
+            pattern.node[node] = None
+        pattern_typing = {"typing": {node: node for node in pattern.nodes()}}
+        tmp_hie = Hierarchy(self.directed, GraphNode)
+        # tmp_hie.add_graph("old", pattern)
+        tmp_hie.add_graph("typing", self.node[old_nugget].graph)
+        # tmp_hie.add_typing("old", "typing", pattern_typing)
+        tmp_hie.add_graph("new", self.node[new_nugget].graph)
+        tmp_hie.add_typing("new", "typing", updated_graphs[new_nugget][1])
+        matchings = tmp_hie.find_matching("new", pattern, pattern_typing)
+        new_nuggets = []
+        for matching in matchings:
+            instance = copy.deepcopy(self.node[old_nugget].graph)
+            for node in instance.nodes():
+                attrs = instance.node[node]
+                if attrs is None:
+                    continue
+                for (k, v) in attrs.items():
+                    nw_attrs = self.node[new_nugget].graph.node[matching[node]]
+                    attrs[k] = v & nw_attrs[k]
+            instance_id = self.unique_graph_id(old_nugget)
+            self.add_graph(instance_id, instance, copy.deepcopy(self.node[old_nugget].attrs))
+            for (_, typing) in self.out_edges(new_nugget):
+                instance_typing =\
+                   compose_homomorphisms(self.edge[new_nugget][typing].mapping,
+                                         matching)
+                self.add_typing(instance_id, typing, instance_typing)
+            new_nuggets.append(instance_id)
+        return new_nuggets
 
 
 def _verify(phi_str, current_typing, graph):

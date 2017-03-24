@@ -184,6 +184,13 @@ class Rule(object):
                 node_id
             )
 
+    def remove_node_rhs(self, n):
+        p_keys = keys_by_value(self.p_rhs, n)
+        for p_node in p_keys:
+            primitives.remove_node(self.p, p_node)
+            del self.p_rhs[p_node]
+        primitives.remove_node(self.rhs, n)
+
     def remove_node(self, n):
         """Remove a node in the graph."""
         # remove corresponding nodes from p and rhs
@@ -198,6 +205,9 @@ class Rule(object):
                     del self.p_rhs[node]
             del self.p_lhs[k]
         return
+
+    def add_edge_rhs(self, n1, n2, attrs=None):
+        primitives.add_edge(self.rhs, n1, n2, attrs)
 
     def add_edge(self, n1, n2, attrs=None):
         """Add an edge in the graph."""
@@ -233,6 +243,16 @@ class Rule(object):
                         )
                     primitives.add_edge(self.rhs, rhs_key_1, rhs_key_2, attrs)
         return
+
+    def remove_edge_rhs(self, node1, node2):
+        """Remove edge from the rhs of the graph"""
+        primitives.remove_edge(self.rhs, node1, node2)
+        for pn1 in keys_by_value(self.p_rhs, node1):
+            for pn2 in keys_by_value(self.p_rhs, node2):
+                try:
+                    primitives.remove_edge(self.p, pn1, pn2)
+                except ValueError:
+                    continue
 
     def remove_edge(self, n1, n2):
         """Remove edge from the graph."""
@@ -281,6 +301,22 @@ class Rule(object):
                     primitives.remove_edge(self.p, k1, k2)
         return
 
+    def clone_rhs_node(self, node, new_name=None):
+        """clone a rhs node"""
+        if node not in self.rhs.nodes():
+            raise ValueError("{} is not a node of right hand side"
+                             .format(node))
+        p_keys = keys_by_value(self.p_rhs, node)
+        if len(p_keys) == 0:
+            primitives.clone_node(self.rhs, node, new_name)
+        elif len(p_keys) == 1:
+            primitives.clone_node(self.rhs, node, new_name)
+            new_p_node = primitives.clone_node(self.p, p_keys[0])
+            self.p_rhs[new_p_node] = new_name
+            self.p_lhs[new_p_node] = self.p_lhs[p_keys[0]]
+        else:
+            raise ValueError("cannot clone node that is result of merge")
+
     def clone_node(self, n, node_name=None):
         """Clone a node of the graph."""
         p_new_nodes = []
@@ -296,6 +332,16 @@ class Rule(object):
             self.p_lhs[p_new_node] = n
             self.p_rhs[p_new_node] = rhs_new_node
         return (p_new_nodes, rhs_new_nodes)
+
+    def merge_nodes_rhs(self, n1, n2, new_name):
+        if n1 not in self.rhs.nodes():
+            raise ValueError("{} is not a node of the rhs".format(n1))
+        if n2 not in self.rhs.nodes():
+            raise ValueError("{} is not a node of the rhs".format(n2))
+        primitives.merge_nodes(self.rhs, [n1, n2], node_name=new_name)
+        for (source, target) in self.p_rhs.items():
+            if target == n1 or target == n2:
+                self.p_rhs[source] = new_name
 
     def merge_nodes(self, n1, n2, node_name=None):
         """Merge two nodes of the graph."""
@@ -329,6 +375,11 @@ class Rule(object):
             self.p_rhs[k] = new_name
         return new_name
 
+    def add_node_attrs_rhs(self, n, attrs):
+        if n not in self.rhs.nodes():
+            raise ValueError("Node %s does not exist in the right hand side of the rule" % n)
+        primitives.add_node_attrs(self.rhs, n, attrs)
+
     def add_node_attrs(self, n, attrs):
         """Add node attributes to a node in the graph."""
         if n not in self.lhs.nodes():
@@ -339,6 +390,15 @@ class Rule(object):
         for k in p_keys:
             primitives.add_node_attrs(self.rhs, self.p_rhs[k], attrs)
         return
+
+    def remove_node_attrs_rhs(self, n, attrs):
+        if n not in self.rhs.nodes():
+            raise ValueError("Node %s does not exist in the right hand side of the rule" % n)
+
+        p_keys = keys_by_value(self.p_rhs, n)
+        for p_node in p_keys:
+            primitives.remove_node_attrs(self.p, p_node, attrs)
+        primitives.remove_node_attrs(self.rhs, n, attrs)
 
     def remove_node_attrs(self, n, attrs):
         """Remove nodes attributes from a node in the graph."""

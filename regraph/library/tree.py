@@ -1,6 +1,7 @@
 """Functions for manipulating a hierarchy as a tree"""
 
 import copy
+import itertools
 import networkx as nx
 
 from regraph.library.hierarchy import GraphNode, RuleNode
@@ -8,6 +9,8 @@ from regraph.library.primitives import (graph_to_json, add_node_attrs,
                                         graph_from_json)
 from regraph.library.rules import Rule
 from regraph.library.category_op import (pushout, compose_homomorphisms,
+                                         check_totality,
+                                         is_monic,
                                          check_homomorphism)
 
 
@@ -22,13 +25,18 @@ from regraph.library.category_op import (pushout, compose_homomorphisms,
 #     return self.graph.unique_node_id(prefix)
 
 
-# TODO: put inside hierarchy
-def unique_graph_id(hie, prefix):
-    """ generate a new graph id """
-    if prefix not in hie.nodes():
+def _valid_name(hie, g_id, new_name):
+    for parent in hie.out_edges(g_id):
+        if not valid_child_name(hie, parent, new_name):
+            return False
+    return True
+
+
+def get_valid_name(hie, g_id, prefix):
+    if _valid_name(hie, g_id, prefix):
         return prefix
     i = 0
-    while "{}_{}".format(prefix, i) in hie.nodes():
+    while not _valid_name(hie, g_id, "{}_{}".format(prefix, i)):
         i += 1
     return "{}_{}".format(prefix, i)
 
@@ -71,7 +79,7 @@ def check_rule_typings(typings, rule):
 def from_json_tree(hie, json_data, parent_id):
     """convert json tree to hierarchy"""
     if "id" not in json_data.keys():
-        json_data["id"] = unique_graph_id(hie, json_data["name"])
+        json_data["id"] = hie.unique_graph_id(json_data["name"])
     if not json_data["id"] in hie.nodes():
         if json_data["top_graph"] is None and hie.directed:
             hie.add_graph(json_data["id"], nx.DiGraph(),
@@ -117,8 +125,8 @@ def to_json_tree(hie, g_id, parent, include_rules=True,
 
     if include_graphs:
         json_data["top_graph"] = typed_graph_to_json(hie, g_id, parent)
-        if json_data["top_graph"] is not None:
-            json_data["top_graph"]["attributes"] = hie.node[g_id].attrs
+        # if json_data["top_graph"] is not None:
+        #     json_data["top_graph"]["attributes"] = hie.node[g_id].attrs
 
         if include_rules:
             json_data["rules"] = [typed_rule_to_json(hie, r, g_id)
@@ -142,6 +150,7 @@ def typed_graph_to_json(hie, g_id, parent):
     if hie.node[g_id].graph is None:
         return None
     json_data = graph_to_json(hie.node[g_id].graph)
+    json_data["attributes"] = hie.node[g_id].attrs
     if parent is not None:
         typing = hie.edge[g_id][parent].mapping
         _type_json_nodes(json_data["nodes"], typing)
@@ -190,7 +199,8 @@ def rename_child(hie, g_id, parent, new_name):
         raise ValueError("name {} is not valid".format(new_name))
 
 
-def _child_from_name(hie, g_id, name):
+def child_from_name(hie, g_id, name):
+    """return the id of the child of g_id named name"""
     children = [c for c in all_children(hie, g_id)
                 if hie.node[c].attrs["name"] == name]
     if len(children) == 0:
@@ -208,7 +218,7 @@ def child_from_path(hie, g_id, path):
     elif path[0] == "":
         return child_from_path(hie, g_id, path[1:])
     else:
-        child = _child_from_name(hie, g_id, path[0])
+        child = child_from_name(hie, g_id, path[0])
         return child_from_path(hie, child, path[1:])
 
 # def updateMetamodel(self, new_typing_graph):
@@ -229,7 +239,7 @@ def child_from_path(hie, g_id, path):
 
 def new_graph(hie, g_id, name):
     if valid_child_name(hie, g_id, name):
-        ch_id = unique_graph_id(hie, name)
+        ch_id = hie.unique_graph_id(name)
         new_graph = nx.DiGraph()
         hie.add_graph(ch_id, new_graph, {"name": name})
         hie.add_typing(ch_id, g_id, {})
@@ -244,9 +254,9 @@ def new_rule(hie, parent, name, pattern_name=None):
         if pattern_name is None:
             pattern = nx.DiGraph()
         else:
-            pattern_id = _child_from_name(hie, parent, pattern_name)
+            pattern_id = child_from_name(hie, parent, pattern_name)
             pattern = hie.node[pattern_id].graph
-        rule_id = unique_graph_id(hie, name)
+        rule_id = hie.unique_graph_id(name)
         rule = Rule(pattern, pattern, pattern)
         hie.add_rule(rule_id, rule, {"name": name})
         if parent is not None:
@@ -254,7 +264,9 @@ def new_rule(hie, parent, name, pattern_name=None):
                 hie.add_rule_typing(rule_id, parent, {}, {})
             else:
                 mapping = hie.edge[pattern_id][parent].mapping
-                hie.add_rule_typing(rule_id, parent, mapping, mapping)
+                ignore = hie.edge[pattern_id][parent].ignore_attrs
+                hie.add_rule_typing(rule_id, parent, mapping, mapping,
+                                    ignore_attrs=ignore)
     else:
         raise ValueError("Invalid new name")
 
@@ -282,18 +294,20 @@ def add_node(hie, g_id, parent, node_id, node_type):
     elif isinstance(hie.node[g_id], RuleNode):
         tmp_rule = copy.deepcopy(hie.node[g_id].rule)
         tmp_rule.add_node(node_id)
-        if parent is not None and node_type is not None:
-            parent_typing = copy.deepcopy(hie.edge[g_id][parent])
-            parent_typing.rhs_mapping[node_id] = node_type
         typings = [(hie.node[typing].graph, hie.edge[g_id][typing])
                    for _, typing in hie.out_edges(g_id)
                    if typing != parent]
-        tmp_parent_typing = hie.edge[g_id][parent]
-        tmp_parent_typing.rhs_mapping[node_id] = node_type
-        typings.append((hie.node[parent].graph, tmp_parent_typing))
+        # tmp_parent_typing = copy.deepcopy(hie.edge[g_id][parent])
+        # tmp_parent_typing.rhs_mapping[node_id] = node_type
+        if parent is not None and node_type is not None:
+            parent_typing = copy.deepcopy(hie.edge[g_id][parent])
+            if node_type is not None:
+                parent_typing.rhs_mapping[node_id] = node_type
+            typings.append((hie.node[parent].graph, parent_typing))
         check_rule_typings(typings, tmp_rule)
         hie.node[g_id].rule = tmp_rule
-        hie.edge[g_id][parent] = tmp_parent_typing
+        if parent is not None:
+            hie.edge[g_id][parent] = parent_typing
     else:
         raise ValueError("node is neither a rule nor a graph")
 
@@ -316,7 +330,7 @@ def add_edge(hie, g_id, parent, node1, node2):
                     strong_typing=True)
     elif isinstance(hie.node[g_id], RuleNode):
         tmp_rule = copy.deepcopy(hie.node[g_id].rule)
-        tmp_rule.add_edge(node1, node2)
+        tmp_rule.add_edge_rhs(node1, node2)
         typings = [(hie.node[typing].graph, hie.edge[g_id][typing])
                    for _, typing in hie.out_edges(g_id)]
         check_rule_typings(typings, tmp_rule)
@@ -344,7 +358,7 @@ def rm_node(hie, g_id, parent, node_id, force=False):
         rule = Rule(ppp, lhs, rhs)
         hie.rewrite(g_id, rule, {node_id: node_id}, strong_typing=True)
     elif isinstance(hie.node[g_id], RuleNode):
-        hie.node[g_id].rule.remove_node(node_id)
+        hie.node[g_id].rule.remove_node_rhs(node_id)
         for _, typing in hie.out_edges(g_id):
             if node_id in hie.edge[g_id][typing].rhs_mapping.keys():
                 del hie.edge[g_id][typing].rhs_mapping[node_id]
@@ -371,15 +385,17 @@ def merge_nodes(hie, g_id, parent, node1, node2, new_name):
                     strong_typing=True)
     elif isinstance(hie.node[g_id], RuleNode):
         tmp_rule = copy.deepcopy(hie.node[g_id].rule)
-        tmp_rule.merge_nodes(node1, node2, new_name)
+        tmp_rule.merge_nodes_rhs(node1, node2, new_name)
         typings = {typing: copy.deepcopy(hie.edge[g_id][typing])
                    for _, typing in hie.out_edges(g_id)}
         for typing_rule in typings.values():
-            mapping = typing_rule.mapping
+            mapping = typing_rule.rhs_mapping
             if node1 in mapping.keys():
                 if node2 in mapping.keys():
                     if mapping[node1] == mapping[node2]:
                         mapping[new_name] = mapping[node1]
+                        del mapping[node1]
+                        del mapping[node2]
                     else:
                         raise ValueError("merge nodes of different types")
                 else:
@@ -409,7 +425,11 @@ def clone_node(hie, g_id, parent, node, new_name):
         rule = Rule(ppp, lhs, rhs, {node: node, new_name: node}, None)
         hie.rewrite(g_id, rule, {node: node}, strong_typing=True)
     elif isinstance(hie.node[g_id], RuleNode):
-        hie.node[g_id]
+        hie.node[g_id].rule.clone_rhs_node(node, new_name)
+        for _, typing in hie.out_edges(g_id):
+            mapping = hie.edge[g_id][typing].rhs_mapping
+            if node in mapping.keys():
+                mapping[new_name] = mapping[node]
 
     else:
         raise ValueError("node is neither a rule nor a graph")
@@ -428,18 +448,13 @@ def rm_edge(hie, g_id, parent, node1, node2):
         rhs.add_node(node1)
         rhs.add_node(node2)
         rule = Rule(ppp, lhs, rhs)
-        # if parent is not None:
-        #     typing = hie.edge[g_id][parent].mapping
-        #     lhs_typing = {parent: {node1: typing[node1],
-        #                            node2: typing[node2]}}
-        #     rhs_typing = lhs_typing
-        # else:
-        #     lhs_typing = None
-        #     rhs_typing = None
-        hie.rewrite(g_id, rule, {node1: node1, node2: node2}, strong_typing=True)
+        hie.rewrite(g_id, rule, {node1: node1, node2: node2},
+                    strong_typing=True)
 
+    elif isinstance(hie.node[g_id], RuleNode):
+        hie.node[g_id].rule.remove_edge_rhs(node1, node2)
     else:
-        raise ValueError("todo rules")
+        raise ValueError("node is neither a rule nor a graph")
 
 
 def add_attributes(hie, g_id, parent, node, attrs):
@@ -460,8 +475,10 @@ def add_attributes(hie, g_id, parent, node, attrs):
         #     lhs_typing = None
         #     rhs_typing = None
         hie.rewrite(g_id, rule, {node: node}, strong_typing=True)
+    elif isinstance(hie.node[g_id], RuleNode):
+        hie.node[g_id].rule.add_node_attrs_rhs(node, attrs)
     else:
-        raise ValueError("todo rules")
+        raise ValueError("node is neither a rule nor a graph")
 
 
 def remove_attributes(hie, g_id, parent, node, attrs):
@@ -482,8 +499,10 @@ def remove_attributes(hie, g_id, parent, node, attrs):
         #     lhs_typing = None
         #     rhs_typing = None
         hie.rewrite(g_id, rule, {node: node}, strong_typing=True)
+    elif isinstance(hie.node[g_id], RuleNode):
+        hie.node[g_id].rule.remove_node_attrs_rhs(node, attrs)
     else:
-        raise ValueError("todo rules")
+        raise ValueError("node is neither a rule nor a graph")
 
 
 # def merge_conflict(self, hierarchy):
@@ -577,27 +596,102 @@ def ancestor(hie, g_id, degree):
         return ancestor(hie, parents[0], degree-1)
 
 
+def _mapping_to_json(mapping):
+    return [{"left": n, "right": t} for (n, t) in mapping.items()]
+
+
 # only works on a tree
 def ancestors_mapping(hie, g_id, degree):
     """get the typing of g_id according to degree"""
     if degree <= 0:
         raise ValueError("degree should be > 0")
-    print(g_id, "ancesto dgree", degree, ancestor(hie, g_id, degree))
     mapping = hie.get_typing(g_id, ancestor(hie, g_id, degree))
-    return [{"left": n, "right": t} for (n, t) in mapping.items()]
+    return _mapping_to_json(mapping)
+
+
+def ancestors_rule_mapping(hie, top, g_id, ancestor_path):
+    """get the typing of rule g_id by ancestor"""
+    path_list = [s for s in ancestor_path.split("/") if s and not s.isspace()]
+    ancestor_id = child_from_path(hie, top, path_list)
+    rule_mappings = hie.get_rule_typing(g_id, ancestor_id)
+    (lhs_t, p_t, rhs_t) = tuple(map(_mapping_to_json, rule_mappings))
+    return {"lhs_typing": lhs_t,
+            "p_typing": p_t,
+            "rhs_typing": rhs_t}
 
 
 def new_graph_from_nodes(hie, nodes, g_id, new_name):
     """create a child graph from a set of nodes"""
     if valid_child_name(hie, g_id, new_name):
-        ch_id = unique_graph_id(hie, new_name)
+        ch_id = hie.unique_graph_id(new_name)
         hie.new_graph_from_nodes(nodes, g_id, ch_id, {"name": new_name})
     else:
         raise ValueError("Invalid new name")
 
+ 
+def child_rule_from_nodes(hie, nodes, g_id, new_name):
+    """create a rule typed by g_id"""
+    if valid_child_name(hie, g_id, new_name):
+        ch_id = hie.unique_graph_id(new_name)
+        hie.child_rule_from_nodes(nodes, g_id, ch_id, {"name": new_name})
+    else:
+        raise ValueError("Invalid new name")
+
+
+def rewrite_parent(hie, g_id, parent, suffix):
+    """rewrite the parent of rule g_id, using typing as a matching"""
+    if not isinstance(hie.node[g_id], RuleNode):
+        raise ValueError("{} is not a rule".format(g_id))
+    rule = hie.node[g_id].rule
+    mapping = hie.edge[g_id][parent]
+    if not mapping.lhs_total:
+        check_totality(rule.lhs, mapping.lhs_mapping)
+    if not is_monic(mapping.lhs_mapping):
+        raise ValueError("matching must be monic")
+    new_names = hie.duplicate_subgraph(hie.descendents(parent), suffix)
+    for new_id in new_names.values():
+        old_name = hie.node[new_id].attrs["name"]
+        hie.node[new_id].attrs["name"] = \
+            get_valid_name(hie, new_id, old_name+"_"+suffix)
+    ignore_attrs = True
+    updated_graphs = hie.rewrite(new_names[parent], rule,
+                                 mapping.lhs_mapping,
+                                 ignore_attrs=ignore_attrs,
+                                 strong_typing=True)
+    for (old_id, new_id) in new_names.items():
+        if old_id != parent and isinstance(hie.node[old_id], GraphNode):
+            valid_nuggets = hie.create_valid_nuggets(old_id, new_id,
+                                                     updated_graphs)
+            for nug_id in valid_nuggets:
+                nug_name = get_valid_name(hie, nug_id,
+                                          hie.node[new_id].attrs["name"])
+                hie.node[nug_id].attrs["name"] = nug_name
+            hie.remove_graph(new_id)
+
+def unfold_nuggets(hie, ag_id, metamodel_id, nug_list=None):
+    """creates nuggets with exactly one value per node
+    ag_id: id of the action graph
+    warning: do not modify returned typings as they point to the old typings
+    """
+    if nug_list is None:
+        nug_list = graph_children(hie, ag_id)
+    new_nug_list = []
+    for nug_id in nug_list:
+        meta_typing = hie.get_typing(nug_id, metamodel_id)
+        nug = hie.node[nug_id].graph
+        states = {n: nug.node[n]["value"] for n in nug.nodes()
+                  if (meta_typing[n] == "state" and
+                      "value" in nug.node[n].keys())}
+        for values in itertools.product(states.values()):
+            new_nug = copy.deepcopy(hie.node[nug_id])
+            for (i, node) in enumerate(states.keys()):
+                new_nug.graph.node[node]["value"] = values[i]
+            new_nug_list.append((new_nug, hie.edge[nug_id][ag_id]))
+    return new_nug_list
+
 
 def merge_graphs(self, name1, name2, mapping, new_name):
-    """ merge two graph based on an identity relation
+    """ merge two graph based  on an identity relation
         between their nodes.
         We first build a span from the given relation.
         The new graph is then computed as the pushout. """
@@ -641,3 +735,4 @@ def merge_graphs(self, name1, name2, mapping, new_name):
         copy_nugget(sub, g1_new_graph.mapping_)
     for sub in self.subCmds[name2].subCmds.values():
         copy_nugget(sub, g2_new_graph.mapping_)
+

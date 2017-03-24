@@ -856,19 +856,19 @@ def assert_graph_eq(g1, g2):
     return
 
 
-def normalize_typing(typing):
+def normalize_typing(typing, ignore_attrs=False):
     if typing is None:
         typing = dict()
     new_typing = dict()
     for key, value in typing.items():
         if type(value) == dict:
-            new_typing[key] = (copy.deepcopy(value), False)
+            new_typing[key] = (copy.deepcopy(value), ignore_attrs)
         else:
             try:
                 if len(value) == 2:
                     new_typing[key] = copy.deepcopy(value)
                 elif len(value) == 1:
-                    new_typing[key] = (copy.deepcopy(value[0]), False)
+                    new_typing[key] = (copy.deepcopy(value[0]), ignore_attrs)
             except:
                 raise ReGraphError("Typing format is not valid!")
     return new_typing
