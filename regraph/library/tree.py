@@ -290,7 +290,7 @@ def add_node(hie, g_id, parent, node_id, node_type):
         else:
             lhs_typing = None
             rhs_typing = None
-        hie.rewrite(g_id, rule, {}, lhs_typing, rhs_typing, strong_typing=True)
+        hie.rewrite(g_id, rule, {}, lhs_typing, rhs_typing)
     elif isinstance(hie.node[g_id], RuleNode):
         tmp_rule = copy.deepcopy(hie.node[g_id].rule)
         tmp_rule.add_node(node_id)
@@ -326,8 +326,7 @@ def add_edge(hie, g_id, parent, node1, node2):
         rhs.add_node(node2)
         rhs.add_edge(node1, node2)
         rule = Rule(ppp, lhs, rhs)
-        hie.rewrite(g_id, rule, {node1: node1, node2: node2},
-                    strong_typing=True)
+        hie.rewrite(g_id, rule, {node1: node1, node2: node2})
     elif isinstance(hie.node[g_id], RuleNode):
         tmp_rule = copy.deepcopy(hie.node[g_id].rule)
         tmp_rule.add_edge_rhs(node1, node2)
@@ -356,7 +355,7 @@ def rm_node(hie, g_id, parent, node_id, force=False):
         ppp = nx.DiGraph()
         rhs = nx.DiGraph()
         rule = Rule(ppp, lhs, rhs)
-        hie.rewrite(g_id, rule, {node_id: node_id}, strong_typing=True)
+        hie.rewrite(g_id, rule, {node_id: node_id})
     elif isinstance(hie.node[g_id], RuleNode):
         hie.node[g_id].rule.remove_node_rhs(node_id)
         for _, typing in hie.out_edges(g_id):
@@ -381,8 +380,7 @@ def merge_nodes(hie, g_id, parent, node1, node2, new_name):
         rhs = nx.DiGraph()
         rhs.add_node(new_name)
         rule = Rule(ppp, lhs, rhs, None, {node1: new_name, node2: new_name})
-        hie.rewrite(g_id, rule, {node1: node1, node2: node2},
-                    strong_typing=True)
+        hie.rewrite(g_id, rule, {node1: node1, node2: node2})
     elif isinstance(hie.node[g_id], RuleNode):
         tmp_rule = copy.deepcopy(hie.node[g_id].rule)
         tmp_rule.merge_nodes_rhs(node1, node2, new_name)
@@ -423,7 +421,7 @@ def clone_node(hie, g_id, parent, node, new_name):
         rhs.add_node(node)
         rhs.add_node(new_name)
         rule = Rule(ppp, lhs, rhs, {node: node, new_name: node}, None)
-        hie.rewrite(g_id, rule, {node: node}, strong_typing=True)
+        hie.rewrite(g_id, rule, {node: node})
     elif isinstance(hie.node[g_id], RuleNode):
         hie.node[g_id].rule.clone_rhs_node(node, new_name)
         for _, typing in hie.out_edges(g_id):
@@ -448,8 +446,7 @@ def rm_edge(hie, g_id, parent, node1, node2):
         rhs.add_node(node1)
         rhs.add_node(node2)
         rule = Rule(ppp, lhs, rhs)
-        hie.rewrite(g_id, rule, {node1: node1, node2: node2},
-                    strong_typing=True)
+        hie.rewrite(g_id, rule, {node1: node1, node2: node2})
 
     elif isinstance(hie.node[g_id], RuleNode):
         hie.node[g_id].rule.remove_edge_rhs(node1, node2)
@@ -474,7 +471,7 @@ def add_attributes(hie, g_id, parent, node, attrs):
         # else:
         #     lhs_typing = None
         #     rhs_typing = None
-        hie.rewrite(g_id, rule, {node: node}, strong_typing=True)
+        hie.rewrite(g_id, rule, {node: node})
     elif isinstance(hie.node[g_id], RuleNode):
         hie.node[g_id].rule.add_node_attrs_rhs(node, attrs)
     else:
@@ -498,7 +495,7 @@ def remove_attributes(hie, g_id, parent, node, attrs):
         # else:
         #     lhs_typing = None
         #     rhs_typing = None
-        hie.rewrite(g_id, rule, {node: node}, strong_typing=True)
+        hie.rewrite(g_id, rule, {node: node})
     elif isinstance(hie.node[g_id], RuleNode):
         hie.node[g_id].rule.remove_node_attrs_rhs(node, attrs)
     else:
@@ -656,8 +653,8 @@ def rewrite_parent(hie, g_id, parent, suffix):
     ignore_attrs = True
     updated_graphs = hie.rewrite(new_names[parent], rule,
                                  mapping.lhs_mapping,
-                                 ignore_attrs=ignore_attrs,
-                                 strong_typing=True)
+                                 ignore_attrs=ignore_attrs)
+                                 
     for (old_id, new_id) in new_names.items():
         if old_id != parent and isinstance(hie.node[old_id], GraphNode):
             valid_nuggets = hie.create_valid_nuggets(old_id, new_id,

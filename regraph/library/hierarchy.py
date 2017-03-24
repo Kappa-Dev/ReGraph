@@ -1793,7 +1793,7 @@ class Hierarchy(nx.DiGraph):
                                 updated_homomorphisms,
                                 updated_rules,
                                 updated_rule_h)
-            return
+            return updated_graphs
         else:
             # create new hierarchy
             new_graph = copy.deepcopy(self)
@@ -1801,9 +1801,7 @@ class Hierarchy(nx.DiGraph):
                                      updated_homomorphisms,
                                      updated_rules,
                                      updated_rule_h)
-            return new_graph
-
-        return updated_graphs
+            return (new_graph, updated_graphs)
 
     def apply_rule(self, graph_id, rule_id, instance,
                    strong_typing=True, total=False, inplace=True):
@@ -1827,18 +1825,13 @@ class Hierarchy(nx.DiGraph):
             rhs_typing[suc] =\
                 self.edge[rule_id][suc].rhs_mapping
 
-        result = self.rewrite(
+        return self.rewrite(
             graph_id,
             rule,
             instance,
             lhs_typing,
             rhs_typing,
-            inplace=inplace
-        )
-        if inplace:
-            return
-        else:
-            return result
+            inplace=inplace)
 
     def to_json(self):
         """Return json representation of the hierarchy."""
