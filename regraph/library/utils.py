@@ -51,6 +51,18 @@ def is_subdict(small_dict, big_dict):
     return True
 
 
+def attrs_intersection(attrs1, attrs2):
+    normalize_attrs(attrs1)
+    normalize_attrs(attrs2)
+    res = dict()
+    common_keys = set(attrs1.keys()).intersection(attrs2.keys())
+    for k in common_keys:
+        common_value = attrs1[k].intersection(attrs2[k])
+        if len(common_value) > 0:
+            res[k] = copy.deepcopy(common_value)
+    return res
+
+
 def keys_by_value(dictionary, val):
     res = []
     for key, value in dictionary.items():
