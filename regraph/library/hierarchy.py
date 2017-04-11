@@ -23,11 +23,16 @@ from regraph.library.primitives import (add_node_attrs,
                                         get_edge,
                                         graph_to_json,
                                         graph_from_json,
+                                        add_node_attrs,
+                                        remove_node_attrs,
+                                        find_match,
                                         equal)
 from regraph.library.utils import (is_subdict,
+                                   valid_attributes,
                                    keys_by_value,
                                    normalize_attrs,
                                    to_set,
+                                   id_of,
                                    normalize_typing,
                                    replace_source,
                                    replace_target,
@@ -1104,9 +1109,27 @@ class Hierarchy(nx.DiGraph):
     #         )
     #     return
 
+    # TODO? ignore artributes
+    # TODO? check that tmp key
+
+    def find_matching2(self, graph_id, pattern, pattern_typings=None):
+        """find matchings of pattern in graph_id"""
+        graph = self.node[graph_id].graph
+        graph_typings = {}
+        typing_graphs = {}
+        if pattern_typings is None:
+            pat_typing = {}
+        else:
+            for (typ_id, typ_map) in pattern_typings.items():
+                typing = self.get_typing(graph_id, typ_id)
+                if typing is None:
+                    typing = {}
+                graph_typings[typ_id] = typing
+                typing_graphs[typ_id] = self.node[typ_id].graph
+        return find_match(graph, pattern, graph_typings, pattern_typings, typing_graphs)
+
     def find_matching(self, graph_id, pattern, pattern_typing=None):
         """Find an instance of a pattern in a specified graph.
-
         `graph_id` -- id of a graph in the hierarchy to search for matches;
         `pattern` -- nx.(Di)Graph object defining a pattern to match;
         `pattern_typing` -- a dictionary that specifies a typing of a pattern,
@@ -1318,15 +1341,16 @@ class Hierarchy(nx.DiGraph):
 
     def _complete_typing(self, graph_id, matching,
                          lhs_typing, rhs_typing, p_l, p_r,
-                         strong=False, ignore_attrs=False):
+                         strong=False):
 
         for typing_graph in self.successors(graph_id):
             typing = self.edge[graph_id][typing_graph].mapping
+            typ_ignore_attrs = self.edge[graph_id][typing_graph].ignore_attrs
 
             if typing_graph not in lhs_typing.keys():
-                lhs_typing[typing_graph] = (dict(), ignore_attrs)
+                lhs_typing[typing_graph] = (dict(), typ_ignore_attrs)
             if typing_graph not in rhs_typing.keys():
-                rhs_typing[typing_graph] = (dict(), ignore_attrs)
+                rhs_typing[typing_graph] = (dict(), typ_ignore_attrs)
 
             # Check that no types are redefined
             # forbidden case of * <- * -> A
@@ -1433,12 +1457,15 @@ class Hierarchy(nx.DiGraph):
                         self.compose_path_typing(path)
                     )
                 if isinstance(self.node[graph], GraphNode):
-                    origin_typing = {}
-                    for node in self.node[graph].graph.nodes():
-                        for hom in paths_homomorphism:
-                            if node in hom.keys():
-                                origin_typing[node] = hom[node]
-                                break
+                    # origin_typing = {}
+                    # for node in self.node[graph].graph.nodes():
+                    #     for hom in paths_homomorphism:
+                    #         if node in hom.keys():
+                    #             origin_typing[node] = hom[node]
+                    #             break
+
+                    origin_typing = self.get_typing(graph, graph_id)
+
                     g_m, g_m_g, g_m_origin_m = pullback(
                         self.node[graph].graph,
                         updated_graphs[graph_id][0],
@@ -1447,7 +1474,7 @@ class Hierarchy(nx.DiGraph):
                         updated_graphs[graph_id][1]
                     )
                     updated_graphs[graph] = (
-                        g_m, g_m_g, None, None
+                        g_m, g_m_g, g_m, id_of(g_m)
                     )
                     # find homomorphisms g_m -> suc_m
                     for suc in successors[graph]:
@@ -1461,7 +1488,8 @@ class Hierarchy(nx.DiGraph):
                             updated_graphs[suc][1]
                         )
                         updated_homomorphisms[(graph, suc)] =\
-                            (g_m_suc_m,
+                            (compose_homomorphisms(updated_graphs[suc][3],
+                                                   g_m_suc_m),
                              self.edge[graph][suc].ignore_attrs)
 
                     # propagate changes to adjacent relations
@@ -1722,16 +1750,18 @@ class Hierarchy(nx.DiGraph):
     # ignore attributes argument used if none is specified in the typing 
     def _normalize_typing(self, graph_id, rule, instance,
                           lhs_typing, rhs_typing, strong=False,
-                          total=True, ignore_attrs=False):
-        new_lhs_typing = normalize_typing(lhs_typing, ignore_attrs)
-        new_rhs_typing = normalize_typing(rhs_typing, ignore_attrs)
+                          total=True):
+        ignore_attrs_dict =\
+            {typing_id: self.edge[graph_id][typing_id].ignore_attrs
+             for typing_id in self.successors(graph_id)}
+        new_lhs_typing = normalize_typing(lhs_typing, ignore_attrs_dict)
+        new_rhs_typing = normalize_typing(rhs_typing, ignore_attrs_dict)
 
         self._complete_typing(
             graph_id, instance, new_lhs_typing,
             new_rhs_typing, rule.p_lhs, rule.p_rhs,
-            strong=strong, ignore_attrs=ignore_attrs
-        )
-        
+            strong=strong)
+
         for typing_graph, (mapping, ignore_attrs) in new_lhs_typing.items():
             try:
                 check_homomorphism(
@@ -1949,8 +1979,7 @@ class Hierarchy(nx.DiGraph):
             rhs_typing,
             strong=True,
             # strong=strong_typing,
-            total=total,
-            ignore_attrs=ignore_attrs
+            total=total
         )
 
         self._check_instance(
@@ -2024,7 +2053,7 @@ class Hierarchy(nx.DiGraph):
                                 updated_rules,
                                 updated_rule_h,
                                 updated_relations)
-            return
+            return (None, updated_graphs)
         else:
             # create new hierarchy
             new_graph = copy.deepcopy(self)
@@ -2115,7 +2144,7 @@ class Hierarchy(nx.DiGraph):
                 )
         return json_data
 
-    @classmethod
+    #@classmethod
     def from_json(cls, json_data, directed=True):
         """Create hierarchy obj from json repr."""
         hierarchy = cls()
@@ -2123,6 +2152,8 @@ class Hierarchy(nx.DiGraph):
         # add graphs
         for graph_data in json_data["graphs"]:
             graph = graph_from_json(graph_data["graph"], directed)
+            if "attrs" not in graph_data.keys():
+                graph_data["attrs"]={}
             hierarchy.add_graph(
                 graph_data["id"],
                 graph,
@@ -2130,37 +2161,42 @@ class Hierarchy(nx.DiGraph):
             )
 
         # add rules
-        for rule_data in json_data["rules"]:
-            rule = Rule.from_json(rule_data["rule"])
-            hierarchy.add_rule(
-                rule_data["id"],
-                rule,
-                rule_data["attrs"]
-            )
+        if "rules" in json_data.keys():
+            for rule_data in json_data["rules"]:
+                rule = Rule.from_json(rule_data["rule"])
+                hierarchy.add_rule(
+                    rule_data["id"],
+                    rule,
+                    rule_data["attrs"]
+                )
 
         # add typing
-        for typing_data in json_data["typing"]:
-            hierarchy.add_typing(
-                typing_data["from"],
-                typing_data["to"],
-                typing_data["mapping"],
-                typing_data["total"],
-                typing_data["ignore_attrs"],
-                typing_data["attrs"]
-            )
+        if "typing" in json_data.keys():
+            for typing_data in json_data["typing"]:
+                if "attrs" not in typing_data.keys():
+                    typing_data["attrs"] = {}
+                hierarchy.add_typing(
+                    typing_data["from"],
+                    typing_data["to"],
+                    typing_data["mapping"],
+                    typing_data["total"],
+                    typing_data["ignore_attrs"],
+                    typing_data["attrs"]
+                )
 
         # add rule typing
-        for rule_typing_data in json_data["rule_typing"]:
-            hierarchy.add_rule_typing(
-                rule_typing_data["from"],
-                rule_typing_data["to"],
-                rule_typing_data["lhs_mapping"],
-                rule_typing_data["rhs_mapping"],
-                rule_typing_data["lhs_total"],
-                rule_typing_data["rhs_total"],
-                rule_typing_data["ignore_attrs"],
-                rule_typing_data["attrs"]
-            )
+        if "rule_typing" in json_data.keys():
+            for rule_typing_data in json_data["rule_typing"]:
+                hierarchy.add_rule_typing(
+                    rule_typing_data["from"],
+                    rule_typing_data["to"],
+                    rule_typing_data["lhs_mapping"],
+                    rule_typing_data["rhs_mapping"],
+                    rule_typing_data["lhs_total"],
+                    rule_typing_data["rhs_total"],
+                    rule_typing_data["ignore_attrs"],
+                    rule_typing_data["attrs"]
+                )
         return hierarchy
 
     @classmethod
@@ -2673,7 +2709,7 @@ class Hierarchy(nx.DiGraph):
         # tmp_hie.add_typing("old", "typing", pattern_typing)
         tmp_hie.add_graph("new", self.node[new_nugget].graph)
         tmp_hie.add_typing("new", "typing", updated_graphs[new_nugget][1])
-        matchings = tmp_hie.find_matching("new", pattern, pattern_typing)
+        matchings = tmp_hie.find_matching2("new", pattern, pattern_typing)
         new_nuggets = []
         for matching in matchings:
             instance = copy.deepcopy(self.node[old_nugget].graph)
@@ -2687,10 +2723,17 @@ class Hierarchy(nx.DiGraph):
             instance_id = self.unique_graph_id(old_nugget)
             self.add_graph(instance_id, instance, copy.deepcopy(self.node[old_nugget].attrs))
             for (_, typing) in self.out_edges(new_nugget):
+                new_typing = self.edge[new_nugget][typing]
                 instance_typing =\
-                   compose_homomorphisms(self.edge[new_nugget][typing].mapping,
+                   compose_homomorphisms(new_typing.mapping,
                                          matching)
-                self.add_typing(instance_id, typing, instance_typing)
+                # print("new_typing", instance_typing)
+                # print("stating nodes",self.node[old_nugget].graph.nodes())
+                # print("ending nodes", self.node[typing].graph.nodes())
+                print("typing_new_nugget", new_typing.mapping)
+                # print("new_nugget_nodes", self.node[new_nugget].graph.nodes())
+                self.add_typing(instance_id, typing, instance_typing, total=new_typing.total,
+                                ignore_attrs=new_typing.ignore_attrs, attrs=new_typing.attrs)
             new_nuggets.append(instance_id)
         return new_nuggets
 

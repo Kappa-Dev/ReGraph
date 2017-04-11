@@ -1,5 +1,6 @@
 """Category operations used by graph rewriting tool."""
 import networkx as nx
+import copy
 
 from regraph.library.primitives import (add_node,
                                         add_edge,
@@ -9,12 +10,22 @@ from regraph.library.primitives import (add_node,
                                         add_edge_attrs,
                                         clone_node,
                                         update_node_attrs,
+                                        remove_node,
+                                        unique_node_id,
                                         subtract,
                                         print_graph)
 from regraph.library.utils import (keys_by_value,
                                    merge_attributes,
                                    dict_sub,
                                    valid_attributes)
+
+
+def _subgraph(gr, nodes):
+    subg = copy.deepcopy(gr)
+    for node in gr.nodes():
+        if node not in nodes:
+            remove_node(subg, node)
+    return subg
 
 
 def compose_homomorphisms(d2, d1):
@@ -50,7 +61,7 @@ def check_homomorphism(source, target, dictionary,
         check_totality(source.nodes(), dictionary)
     if not set(dictionary.values()).issubset(target.nodes()):
         raise ValueError(
-            "invalid homomorphism: image not in target graph"
+           f"invalid homomorphism: image not in target graph\nimage:{dictionary.values()}\ntarget nodes : {target.nodes()}"
         )
 
     # check connectivity
@@ -125,6 +136,8 @@ def get_unique_map(a, b, c, d, a_b, b_d, c_d):
                 else:
                     for i, a_key in enumerate(a_keys):
                         a_c[a_key] = c_keys[i]
+    # print("cnodes", c.nodes())
+    # print("a_c", a_c)
     return a_c
 
 
@@ -200,15 +213,20 @@ def partial_pullback(b, c, d, b_d, c_d):
         check_homomorphism(b, d, b_d, total=False)
         check_homomorphism(c, d, c_d, total=False)
 
-        if b.is_directed():
-            bd_dom = nx.DiGraph(b.subgraph(b_d.keys()))
-            cd_dom = nx.DiGraph(c.subgraph(c_d.keys()))
-        else:
-            bd_dom = nx.Graph(b.subgraph(b_d.keys()))
-            cd_dom = nx.Graph(c.subgraph(c_d.keys()))
+        # if b.is_directed():
+        #     bd_dom = nx.DiGraph(b.subgraph(b_d.keys()))
+        #     print("c",c.subgraph(c_d.keys()))
+        #     cd_dom = nx.DiGraph(c.subgraph(c_d.keys()))
+        # else:
+        #     bd_dom = nx.Graph(b.subgraph(b_d.keys()))
+        #     cd_dom = nx.Graph(c.subgraph(c_d.keys()))
+        bd_dom = _subgraph(b, b_d.keys())
+        cd_dom = _subgraph(c, c_d.keys())
 
         bd_b = {n: n for n in bd_dom.nodes()}
         cd_c = {n: n for n in cd_dom.nodes()}
+        print("bd_dom", bd_dom.nodes())
+        print("b_d", b_d)
         (tmp, tmp_bddom, tmp_cddom) = total_pullback(bd_dom, cd_dom, d, b_d, c_d)
         (b2, tmp_b2, b2_b) = pullback_complement(tmp, bd_dom, b, tmp_bddom, bd_b)
         (c2, tmp_c2, c2_c) = pullback_complement(tmp, cd_dom, c, tmp_cddom, cd_c)
@@ -231,7 +249,6 @@ def total_pullback(b, c, d, b_d, c_d):
 
     # Check homomorphisms
     check_homomorphism(b, d, b_d)
-
     check_homomorphism(c, d, c_d)
 
     hom1 = {}
@@ -328,6 +345,19 @@ def partial_pushout(a, b, c, a_b, a_c):
         return(d, b_d, c_d)
 
 
+def _merge_classes(equ_elems, classes):
+    new_classes = []
+    merged_class = set()
+    for cl in classes:
+        if len(cl & equ_elems) > 0:
+            merged_class |= cl
+        else:
+            new_classes.append(cl)
+    if len(merged_class) > 0:
+        new_classes.append(merged_class)
+    return new_classes
+
+
 def total_pushout(a, b, c, a_b, a_c):
     # if h1.source_ != h2.source_:
     #     raise ValueError(
@@ -345,10 +375,39 @@ def total_pushout(a, b, c, a_b, a_c):
     g = a_c
 
     # add nodes to the graph
+
+    classes = [{node} for node in a.nodes()]
+    for node in c.nodes():
+        a_keys = set(keys_by_value(g, node))
+        if len(a_keys) >= 2:
+            classes = _merge_classes(a_keys, classes)
+    for node in b.nodes():
+        a_keys = set(keys_by_value(f, node))
+        if len(a_keys) >= 2:
+            classes = _merge_classes(a_keys, classes)
+
+    for cl in classes:
+        b_nodes = {f[node] for node in cl}
+        c_nodes = {g[node] for node in cl}
+        if len(b_nodes) < len(c_nodes):
+            new_name = "_".join((str(b_node) for b_node in b_nodes))
+        else:
+            new_name = "_".join((str(c_node) for c_node in c_nodes))
+        new_name = unique_node_id(d, new_name)
+        new_attrs = {}
+        for node in b_nodes:
+            new_attrs = merge_attributes(new_attrs, b.node[node])
+            hom1[node] = new_name
+        for node in c_nodes:
+            new_attrs = merge_attributes(new_attrs, c.node[node])
+            hom2[node] = new_name
+        add_node(d, new_name, new_attrs)
+
     for n in c.nodes():
-        a_keys = keys_by_value(g, n)
+        # a_keys = keys_by_value(g, n)
         # addition of new nodes
-        if len(a_keys) == 0:
+        # if len(a_keys) == 0:
+        if n not in g.values():
             new_name = n
             i = 1
             while new_name in d.nodes():
@@ -361,28 +420,28 @@ def total_pushout(a, b, c, a_b, a_c):
             )
             hom2[n] = n
         # addition of preserved nodes
-        elif len(a_keys) == 1:
-            a_key = a_keys[0]
-            add_node(d, f[a_key],
-                     b.node[f[a_key]])
-            add_node_attrs(d, f[a_key],
-                           dict_sub(c.node[g[a_key]], a.node[a_key]))
-            hom1[f[a_key]] = f[a_key]
-            hom2[g[a_key]] = f[a_key]
+        # elif len(a_keys) == 1:
+        #     a_key = a_keys[0]
+        #     add_node(d, f[a_key],
+        #              b.node[f[a_key]])
+        #     add_node_attrs(d, f[a_key],
+        #                    dict_sub(c.node[g[a_key]], a.node[a_key]))
+        #     hom1[f[a_key]] = f[a_key]
+        #     hom2[g[a_key]] = f[a_key]
         # addition of merged nodes
-        else:
-            merging_nodes = []
-            attrs = {}
-            for a_key in a_keys:
-                merging_nodes.append(f[a_key])
-                attrs = merge_attributes(attrs, b.node[f[a_key]])
-            new_name = "_".join([str(node) for node in merging_nodes])
-            add_node(d, new_name, attrs)
-            add_node_attrs(d, new_name, dict_sub(c.node[n], attrs))
+        # else:
+        #     merging_nodes = []
+        #     attrs = {}
+        #     for a_key in a_keys:
+        #         merging_nodes.append(f[a_key])
+        #         attrs = merge_attributes(attrs, b.node[f[a_key]])
+        #     new_name = "_".join([str(node) for node in merging_nodes])
+        #     add_node(d, new_name, attrs)
+        #     add_node_attrs(d, new_name, dict_sub(c.node[n], attrs))
 
-            for a_key in a_keys:
-                hom1[f[a_key]] = new_name
-                hom2[n] = new_name
+        #     for a_key in a_keys:
+        #         hom1[f[a_key]] = new_name
+        #         hom2[n] = new_name
 
     for n in b.nodes():
         if n not in f.values():
@@ -533,3 +592,15 @@ def pullback_complement(a, b, d, a_b, b_d):
     check_homomorphism(c, d, hom2)
 
     return (c, hom1, hom2)
+
+
+def pullback_pushout(b, c, d, b_d, c_d):
+    """do a pullback and then a pushout"""
+    (a, a_b, a_c) = pullback(b, c, d, b_d, c_d)
+    (d2, b_d2, c_d2) = pushout(a, b, c, a_b, a_c)
+    d2_d = {}
+    for node in b.nodes():
+        d2_d[b_d2[node]] = b_d[node]
+    for node in c.nodes():
+        d2_d[c_d2[node]] = c_d[node]
+    return(d2, b_d2, c_d2, d2_d)

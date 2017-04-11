@@ -2,7 +2,7 @@ import warnings
 import os
 import json
 import itertools
-
+import copy
 import networkx as nx
 
 from copy import deepcopy
@@ -10,6 +10,7 @@ from networkx.algorithms import isomorphism
 
 from regraph.library.utils import (merge_attributes,
                                    normalize_attrs,
+                                   valid_attributes,
                                    to_set,
                                    keys_by_value,
                                    is_subdict,
@@ -17,6 +18,18 @@ from regraph.library.utils import (merge_attributes,
 from regraph.library.exceptions import (ReGraphError,
                                         GraphError,
                                         GraphAttrsWarning)
+
+
+def unique_node_id(graph, prefix):
+    """get a unique id starting by prefix"""
+    if prefix not in graph.nodes():
+        return prefix
+    idx = 0
+    new_id = "{}_{}".format(prefix, idx)
+    while new_id in graph.nodes():
+        idx += 1
+        new_id = "{}_{}".format(prefix, idx)
+    return new_id
 
 
 def add_node(graph, node_id, attrs=None):
@@ -781,23 +794,23 @@ def find_matching(graph, pattern, ignore_attrs=False):
     isomorphic_subgraphs = []
     for sub_nodes in itertools.combinations(reduced_graph.nodes(),
                                             len(pattern.nodes())):
-            subg = reduced_graph.subgraph(sub_nodes)
-            for edgeset in itertools.combinations(subg.edges(),
-                                                  len(pattern.edges())):
-                if g.is_directed():
-                    edge_induced_graph = nx.DiGraph(list(edgeset))
-                    edge_induced_graph.add_nodes_from(
-                        [n for n in subg.nodes() if n not in edge_induced_graph.nodes()])
-                    matching_obj = isomorphism.DiGraphMatcher(pattern, edge_induced_graph)
-                    for isom in matching_obj.isomorphisms_iter():
-                        isomorphic_subgraphs.append((subg, isom))
-                else:
-                    edge_induced_graph = nx.Graph(edgeset)
-                    edge_induced_graph.add_nodes_from(
-                        [n for n in subg.nodes() if n not in edge_induced_graph.nodes()])
-                    matching_obj = isomorphism.GraphMatcher(pattern, edge_induced_graph)
-                    for isom in matching_obj.isomorphisms_iter():
-                        isomorphic_subgraphs.append((subg, isom))
+        subg = reduced_graph.subgraph(sub_nodes)
+        for edgeset in itertools.combinations(subg.edges(),
+                                              len(pattern.edges())):
+            if g.is_directed():
+                edge_induced_graph = nx.DiGraph(list(edgeset))
+                edge_induced_graph.add_nodes_from(
+                    [n for n in subg.nodes() if n not in edge_induced_graph.nodes()])
+                matching_obj = isomorphism.DiGraphMatcher(pattern, edge_induced_graph)
+                for isom in matching_obj.isomorphisms_iter():
+                    isomorphic_subgraphs.append((subg, isom))
+            else:
+                edge_induced_graph = nx.Graph(edgeset)
+                edge_induced_graph.add_nodes_from(
+                    [n for n in subg.nodes() if n not in edge_induced_graph.nodes()])
+                matching_obj = isomorphism.GraphMatcher(pattern, edge_induced_graph)
+                for isom in matching_obj.isomorphisms_iter():
+                    isomorphic_subgraphs.append((subg, isom))
 
     for subgraph, mapping in isomorphic_subgraphs:
         # check node matches
@@ -1014,3 +1027,80 @@ def equal(graph1, graph2):
         if get_edge(graph1, s, t) != get_edge(graph2, s, t):
             return False
     return True
+
+
+def find_match(graph, pattern, graph_typings, pattern_typings, typing_graphs,
+               decr_types=False):
+    """
+    graph_typings = dictionnary of typings of the graph
+    pattern_typings = dictionnary of typings of the pattern
+    typing_graph = dictionnary of the graphs typing the pattern
+
+    networkX can only look at nodes attributes to compare them
+    so we put the typings inside during matching
+    we assume that no key is named:
+    regraph_tmp_typings_key_that_you_should_not_use
+    """
+    typing_key = "regraph_tmp_typings_key_that_you_should_not_use"
+
+    def _allowed_edge(source, target, typings):
+        for (typ_id, typ_map) in typings.items():
+            if typ_id not in typing_graphs.keys():
+                raise ValueError("typing graph or pattern not in typing_graphs")
+            typ_gr = typing_graphs[typ_id]
+            if (source in typ_map.keys() and
+                    target in typ_map.keys() and
+                    typ_map[target] not in typ_gr.successors(typ_map[source])):
+                return False
+        return True
+
+    may_edges = [edge for edge in itertools.product(pattern.nodes(),
+                                                    pattern.nodes())
+                 if (_allowed_edge(*edge, pattern_typings) and
+                     edge not in pattern.edges())]
+    may_edges_subsets = itertools.chain.from_iterable(
+        itertools.combinations(may_edges, r) for r in range(len(may_edges)+1))
+
+    def _put_typings_in_attrs(gr, typings):
+        for (node, (typ_id, typ_map)) in\
+                itertools.product(gr.nodes(), typings.items()):
+            if node in typ_map.keys():
+                add_node_attrs(
+                    gr, node, {typing_key: (typ_id, typ_map[node])})
+
+    _put_typings_in_attrs(pattern, pattern_typings)
+    _put_typings_in_attrs(graph, graph_typings)
+
+    if decr_types:
+        def _compare_dicts(d1, d2):
+            types1 = d1[typing_key]
+            types2 = d2[typing_key]
+            d1_without_types = copy.copy(d1)
+            d2_without_types = copy.copy(d1)
+            del d1_without_types[typing_key]
+            del d2_without_types[typing_key]
+            return (valid_attributes(types2, types1) and
+                    valid_attributes(d1_without_types, d2_without_types))
+
+    else:
+        def _compare_dicts(d1, d2):
+            return valid_attributes(d2, d1)
+
+    matchings = []
+    for added_edges in may_edges_subsets:
+        pat = copy.deepcopy(pattern)
+        pat.add_edges_from(added_edges)
+        matcher = isomorphism.DiGraphMatcher(graph, pat, _compare_dicts,
+                                             _compare_dicts)
+        for sub in matcher.subgraph_isomorphisms_iter():
+            matchings.append({v: k for (k, v) in sub.items()})
+
+    def _remove_typings_in_attrs(gr):
+        for node in gr.nodes():
+            if typing_key in gr.node[node].keys():
+                del gr.node[node][typing_key]
+
+    _remove_typings_in_attrs(graph)
+    _remove_typings_in_attrs(pattern)
+    print(matchings)
+    return matchings

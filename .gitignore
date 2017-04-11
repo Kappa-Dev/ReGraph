@@ -26,3 +26,4 @@ js_tests/node_modules/*
 push.js
 RegraphGui
 examples/.ipynb_checkpoints/
+.pylintrc

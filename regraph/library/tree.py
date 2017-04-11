@@ -4,8 +4,11 @@ import copy
 import itertools
 import networkx as nx
 
-from regraph.library.hierarchy import GraphNode, RuleNode
-from regraph.library.primitives import (graph_to_json, add_node_attrs,
+import regraph.library.primitives as prim
+from regraph.library.hierarchy import GraphNode, RuleNode, Hierarchy
+from regraph.library.primitives import (graph_to_json,
+                                        add_node_attrs,
+                                        unique_node_id,
                                         graph_from_json)
 from regraph.library.rules import Rule
 from regraph.library.category_op import (pushout, compose_homomorphisms,
@@ -23,6 +26,28 @@ from regraph.library.category_op import (pushout, compose_homomorphisms,
 # def unique_node_id(self, prefix):
 #     """ generate a new node id """
 #     return self.graph.unique_node_id(prefix)
+
+def _rewrite(hie, g_id, rule, mapping, lhs_typing=None, rhs_typing=None,
+             total=None, inplace=True, ignore_attrs=False):
+    if total is None:
+        if g_id in graph_children(hie, "/"):
+            return hie.rewrite(g_id, rule, mapping, lhs_typing, rhs_typing,
+                               total=False, inplace=inplace,
+                               ignore_attrs=ignore_attrs)
+        else:
+            return hie.rewrite(g_id, rule, mapping, lhs_typing, rhs_typing,
+                               total=True, inplace=inplace,
+                               ignore_attrs=ignore_attrs)
+    else:
+        return hie.rewrite(g_id, rule, mapping, lhs_typing, rhs_typing,
+                           total=total, inplace=inplace,
+                           ignore_attrs=ignore_attrs)
+
+
+def fmap(hie, g_id, f):
+    f(g_id)
+    for child in all_children(hie, g_id):
+        fmap(hie, child, f)
 
 
 def _valid_name(hie, g_id, new_name):
@@ -96,11 +121,12 @@ def from_json_tree(hie, json_data, parent_id):
         if (json_data["id"], parent_id) not in hie.edges():
             typing = {n["id"]: n["type"]
                       for n in json_data["top_graph"]["nodes"]
-                      if n["type"] != "" and n["type"] is not None}
+                      if n["type"] != "" and n["type"] is not None and n["type"] != "notype"}
             hie.add_typing(json_data["id"], parent_id, typing,
-                           ignore_attrs=True)
+                           ignore_attrs=True, total=False)
     for child in json_data["children"]:
         from_json_tree(hie, child, json_data["id"])
+    return json_data["id"]
 
 
 def to_json_tree(hie, g_id, parent, include_rules=True,
@@ -118,7 +144,6 @@ def to_json_tree(hie, g_id, parent, include_rules=True,
         children = [to_json_tree(hie, c, g_id, include_rules,
                                  include_graphs, None)
                     for c in graph_children(hie, g_id)]
-
     json_data = {"id": g_id,
                  "name": hie.node[g_id].attrs["name"],
                  "children": children}
@@ -290,7 +315,7 @@ def add_node(hie, g_id, parent, node_id, node_type):
         else:
             lhs_typing = None
             rhs_typing = None
-        hie.rewrite(g_id, rule, {}, lhs_typing, rhs_typing)
+        _rewrite(hie,g_id, rule, {}, lhs_typing, rhs_typing)
     elif isinstance(hie.node[g_id], RuleNode):
         tmp_rule = copy.deepcopy(hie.node[g_id].rule)
         tmp_rule.add_node(node_id)
@@ -326,7 +351,7 @@ def add_edge(hie, g_id, parent, node1, node2):
         rhs.add_node(node2)
         rhs.add_edge(node1, node2)
         rule = Rule(ppp, lhs, rhs)
-        hie.rewrite(g_id, rule, {node1: node1, node2: node2})
+        _rewrite(hie,g_id, rule, {node1: node1, node2: node2})
     elif isinstance(hie.node[g_id], RuleNode):
         tmp_rule = copy.deepcopy(hie.node[g_id].rule)
         tmp_rule.add_edge_rhs(node1, node2)
@@ -355,7 +380,7 @@ def rm_node(hie, g_id, parent, node_id, force=False):
         ppp = nx.DiGraph()
         rhs = nx.DiGraph()
         rule = Rule(ppp, lhs, rhs)
-        hie.rewrite(g_id, rule, {node_id: node_id})
+        _rewrite(hie,g_id, rule, {node_id: node_id})
     elif isinstance(hie.node[g_id], RuleNode):
         hie.node[g_id].rule.remove_node_rhs(node_id)
         for _, typing in hie.out_edges(g_id):
@@ -380,7 +405,7 @@ def merge_nodes(hie, g_id, parent, node1, node2, new_name):
         rhs = nx.DiGraph()
         rhs.add_node(new_name)
         rule = Rule(ppp, lhs, rhs, None, {node1: new_name, node2: new_name})
-        hie.rewrite(g_id, rule, {node1: node1, node2: node2})
+        _rewrite(hie,g_id, rule, {node1: node1, node2: node2})
     elif isinstance(hie.node[g_id], RuleNode):
         tmp_rule = copy.deepcopy(hie.node[g_id].rule)
         tmp_rule.merge_nodes_rhs(node1, node2, new_name)
@@ -421,7 +446,7 @@ def clone_node(hie, g_id, parent, node, new_name):
         rhs.add_node(node)
         rhs.add_node(new_name)
         rule = Rule(ppp, lhs, rhs, {node: node, new_name: node}, None)
-        hie.rewrite(g_id, rule, {node: node})
+        _rewrite(hie,g_id, rule, {node: node})
     elif isinstance(hie.node[g_id], RuleNode):
         hie.node[g_id].rule.clone_rhs_node(node, new_name)
         for _, typing in hie.out_edges(g_id):
@@ -446,7 +471,7 @@ def rm_edge(hie, g_id, parent, node1, node2):
         rhs.add_node(node1)
         rhs.add_node(node2)
         rule = Rule(ppp, lhs, rhs)
-        hie.rewrite(g_id, rule, {node1: node1, node2: node2})
+        _rewrite(hie,g_id, rule, {node1: node1, node2: node2})
 
     elif isinstance(hie.node[g_id], RuleNode):
         hie.node[g_id].rule.remove_edge_rhs(node1, node2)
@@ -471,7 +496,7 @@ def add_attributes(hie, g_id, parent, node, attrs):
         # else:
         #     lhs_typing = None
         #     rhs_typing = None
-        hie.rewrite(g_id, rule, {node: node})
+        _rewrite(hie, g_id, rule, {node: node})
     elif isinstance(hie.node[g_id], RuleNode):
         hie.node[g_id].rule.add_node_attrs_rhs(node, attrs)
     else:
@@ -495,7 +520,7 @@ def remove_attributes(hie, g_id, parent, node, attrs):
         # else:
         #     lhs_typing = None
         #     rhs_typing = None
-        hie.rewrite(g_id, rule, {node: node})
+        _rewrite(hie,g_id, rule, {node: node})
     elif isinstance(hie.node[g_id], RuleNode):
         hie.node[g_id].rule.remove_node_attrs_rhs(node, attrs)
     else:
@@ -651,10 +676,10 @@ def rewrite_parent(hie, g_id, parent, suffix):
         hie.node[new_id].attrs["name"] = \
             get_valid_name(hie, new_id, old_name+"_"+suffix)
     ignore_attrs = True
-    updated_graphs = hie.rewrite(new_names[parent], rule,
-                                 mapping.lhs_mapping,
-                                 ignore_attrs=ignore_attrs)
-                                 
+    (_, updated_graphs) = _rewrite(hie, new_names[parent], rule,
+                                   mapping.lhs_mapping,
+                                   ignore_attrs=ignore_attrs)
+    print("updated_graph:tree 682")
     for (old_id, new_id) in new_names.items():
         if old_id != parent and isinstance(hie.node[old_id], GraphNode):
             valid_nuggets = hie.create_valid_nuggets(old_id, new_id,
@@ -664,6 +689,7 @@ def rewrite_parent(hie, g_id, parent, suffix):
                                           hie.node[new_id].attrs["name"])
                 hie.node[nug_id].attrs["name"] = nug_name
             hie.remove_graph(new_id)
+
 
 def unfold_nuggets(hie, ag_id, metamodel_id, nug_list=None):
     """creates nuggets with exactly one value per node
@@ -687,49 +713,117 @@ def unfold_nuggets(hie, ag_id, metamodel_id, nug_list=None):
     return new_nug_list
 
 
-def merge_graphs(self, name1, name2, mapping, new_name):
+def merge_graphs(hie, g_id, name1, name2, mapping, new_name):
     """ merge two graph based  on an identity relation
         between their nodes.
         We first build a span from the given relation.
         The new graph is then computed as the pushout. """
-    if not self.valid_new_name(new_name):
-        raise ValueError("name {} already exists")
-    if name1 not in self.subCmds.keys():
-        raise ValueError("{} not found".format(name1))
-    if name2 not in self.subCmds.keys():
-        raise ValueError("{} not found".format(name2))
-    g1 = self.subCmds[name1].graph
-    g2 = self.subCmds[name2].graph
-    g0 = TypedDiGraph(self.graph)
+    new_name = get_valid_name(hie, g_id, new_name)
+    id1 = child_from_name(hie, g_id, name1)
+    id2 = child_from_name(hie, g_id, name2)
+    g1 = hie.node[id1].graph
+    g2 = hie.node[id2].graph
+    if hie.directed:
+        g0 = nx.DiGraph()
+    else:
+        g0 = nx.Graph()
     left_mapping = {}
     right_mapping = {}
     for (n1, n2) in mapping:
-        new_node = g0.unique_node_id(n2)
-        new_type = g2.node[n2].type_ if self.graph is not None else None
-        g0.add_node(new_node, new_type)
+        new_node = unique_node_id(g0, n2)
+        prim.add_node(g0, new_node)
         left_mapping[new_node] = n1
         right_mapping[new_node] = n2
-    h1 = Homomorphism(g0, g1, left_mapping)
-    h2 = Homomorphism(g0, g2, right_mapping)
-    (new_graph, g1_new_graph, g2_new_graph) = pushout(h1, h2)
-    new_cmd = self.__class__(new_name, self)
-    new_cmd.graph = new_graph
-    self.subCmds[new_name] = new_cmd
+    (new_graph, g1_new_graph, g2_new_graph) = \
+        pushout(g0, g1, g2, left_mapping, right_mapping)
+    new_id = hie.unique_graph_id(new_name)
+    hie.add_graph(new_id, new_graph, {"name": new_name})
 
-    def copy_nugget(sub, type_mapping):
-        sub_copy = copy.deepcopy(sub)
-        sub_copy.parent = new_cmd
-        sub_copy.graph.convert_types(type_mapping)
-        sub_copy.graph.updateMetamodel(new_graph)
-        if new_cmd.valid_new_name(sub.name):
-            new_cmd.subCmds[sub.name] = sub
-        else:
-            new_sub_name = new_cmd.unique_graph_id(sub.name)
-            sub.name = new_sub_name
-            new_cmd.subCmds[new_sub_name] = sub
+    # def copy_nugget(sub, type_mapping):
+    #     sub_copy = copy.deepcopy(sub)
+    #     sub_copy.parent = new_cmd
+    #     sub_copy.graph.convert_types(type_mapping)
+    #     sub_copy.graph.updateMetamodel(new_graph)
+    #     if new_cmd.valid_new_name(sub.name):
+    #         new_cmd.subCmds[sub.name] = sub
+    #     else:
+    #         new_sub_name = new_cmd.unique_graph_id(sub.name)
+    #         sub.name = new_sub_name
+    #         new_cmd.subCmds[new_sub_name] = sub
 
-    for sub in self.subCmds[name1].subCmds.values():
-        copy_nugget(sub, g1_new_graph.mapping_)
-    for sub in self.subCmds[name2].subCmds.values():
-        copy_nugget(sub, g2_new_graph.mapping_)
+    # for sub in self.subCmds[name1].subCmds.values():
+    #     copy_nugget(sub, g1_new_graph.mapping_)
+    # for sub in self.subCmds[name2].subCmds.values():
+    #     copy_nugget(sub, g2_new_graph.mapping_)
+
+
+def _put_path_in_attr(hie, top, tmp_key):
+    def _put_path_aux(g_id, path):
+        new_path = path + [hie.node[g_id]["name"]]
+        hie.node[g_id].add_attrs({tmp_key: new_path})
+        for child in all_children(hie, g_id):
+            _put_path_aux(child, new_path)
+
+    _put_path_aux(top, [])
+
+
+def _remove_path_from_attr(hie, top, tmp_key):
+    def _remove_path(g_id):
+        del hie.node[g_id].attrs[tmp_key]
+    fmap(hie, top, _remove_path)
+
+
+def merge_json_into_hierarchy(hie, json_data, top):
+    """incorporate json hierarchy into existing one"""
+    tmp_key = "tmp_path_for_merge"
+    new_hie = Hierarchy(hie.directed, graph_node_constuctor=GraphNode)
+    new_top = from_json_tree(new_hie, json_data, None)
+    _put_path_in_attr(new_hie, new_top, tmp_key)
+    _put_path_in_attr(hie, top, tmp_key)
+    hie.merge_by_attr(new_hie, tmp_key)
+    _remove_path_from_attr(hie, top, tmp_key)
+
+
+def new_action_graph(hie, nug_typings):
+    """replace partial ag by total ag"""
+
+    nugs = nug_typings.keys()
+    ag = hie.node["action_graph"].graph
+    ag_kami = {}
+    for nug in nugs:
+        nug_kami = hie.edge[nug]["kami"].mapping
+        nug_ag = nug_typings[nug]
+        for nug_node, ag_node in nug_ag.items():
+            ag_kami[ag_node] = nug_kami[nug_node]
+
+    for nug in nugs:
+        graph = hie.node[nug].graph
+        nug_kami = hie.edge[nug]["kami"].mapping
+        nug_ag = nug_typings[nug]
+        bot = nx.DiGraph()
+        bot.add_nodes_from(nug_ag.keys())
+        bot_nug = {node: node for node in bot.nodes()}
+        bot_ag = {node: nug_ag[node] for node in bot.nodes()}
+        (new_ag, ag_newag, nug_newag) = pushout(bot, ag, graph, bot_ag,
+                                                bot_nug)
+        for other_nug in nug_typings:
+            if other_nug != nug:
+                nug_typings[other_nug] =\
+                    compose_homomorphisms(ag_newag, nug_typings[other_nug])
+        nug_typings[nug] = nug_newag
+        newag_kami = {}
+        for node in ag:
+            newag_kami[ag_newag[node]] = ag_kami[node]
+        for node in graph:
+            newag_kami[nug_newag[node]] = nug_kami[node]
+        hie.remove_edge(nug, "kami")
+        ag = new_ag
+        ag_kami = newag_kami
+
+    hie.remove_graph("action_graph")
+    hie.add_graph("action_graph", ag, {"name": "action_graph"})
+    hie.add_typing("action_graph", "kami", ag_kami, total=True,
+                   ignore_attrs=True)
+    for nug in nug_typings:
+        hie.add_typing(nug, "action_graph", nug_typings[nug], total=True)
 

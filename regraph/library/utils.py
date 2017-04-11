@@ -1,5 +1,6 @@
 """."""
 import copy
+import itertools
 import warnings
 
 from matplotlib import pyplot as plt
@@ -868,19 +869,25 @@ def assert_graph_eq(g1, g2):
     return
 
 
-def normalize_typing(typing, ignore_attrs=False):
+def normalize_typing(typing, ignore_attrs_dict={}):
     if typing is None:
         typing = dict()
     new_typing = dict()
     for key, value in typing.items():
         if type(value) == dict:
-            new_typing[key] = (copy.deepcopy(value), ignore_attrs)
+            if key in ignore_attrs_dict.keys():
+                new_typing[key] = (copy.deepcopy(value), ignore_attrs_dict[key])
+            else:
+                new_typing[key] = (copy.deepcopy(value), False)
         else:
             try:
                 if len(value) == 2:
                     new_typing[key] = copy.deepcopy(value)
                 elif len(value) == 1:
-                    new_typing[key] = (copy.deepcopy(value[0]), ignore_attrs)
+                    if key in ignore_attrs_dict.keys():
+                        new_typing[key] = (copy.deepcopy(value[0]), ignore_attrs_dict[key])
+                    else:
+                        new_typing[key] = (copy.deepcopy(value[0]), False)
             except:
                 raise ReGraphError("Typing format is not valid!")
     return new_typing
@@ -895,3 +902,6 @@ def replace_target(n1, n2, mapping):
     for (key, value) in mapping.items():
         if value == n1:
             mapping[key] = n2
+
+def id_of(graph):
+    return {node: node for node in graph.nodes()}
