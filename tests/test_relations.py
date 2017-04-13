@@ -111,7 +111,7 @@ class TestRelations(object):
         #     rule.lhs
         # )
 
-        new_hierarchy = self.hierarchy.rewrite(
+        new_hierarchy, _ = self.hierarchy.rewrite(
             "base",
             rule,
             {"s": "square", "c": "circle"},

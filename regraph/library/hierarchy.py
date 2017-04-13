@@ -2144,7 +2144,7 @@ class Hierarchy(nx.DiGraph):
                 )
         return json_data
 
-    #@classmethod
+    @classmethod
     def from_json(cls, json_data, directed=True):
         """Create hierarchy obj from json repr."""
         hierarchy = cls()

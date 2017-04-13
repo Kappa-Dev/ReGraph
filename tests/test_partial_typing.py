@@ -312,7 +312,7 @@ class TestPartialTyping(object):
     def test_apply_rule(self):
         instances = self.hierarchy.find_rule_matching("g3", "r1")
         old_h = copy.deepcopy(self.hierarchy)
-        new_h = self.hierarchy.apply_rule(
+        new_h, _ = self.hierarchy.apply_rule(
             "g3",
             "r1",
             instances[0],

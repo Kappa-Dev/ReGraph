@@ -359,11 +359,7 @@ def _merge_classes(equ_elems, classes):
 
 
 def total_pushout(a, b, c, a_b, a_c):
-    # if h1.source_ != h2.source_:
-    #     raise ValueError(
-    #         "Domain of homomorphism 1 and domain of homomorphism 2 " +
-    #         "don't match, can't do pushout"
-    #     )
+
     check_homomorphism(a, b, a_b)
     check_homomorphism(a, c, a_c)
 
@@ -404,9 +400,7 @@ def total_pushout(a, b, c, a_b, a_c):
         add_node(d, new_name, new_attrs)
 
     for n in c.nodes():
-        # a_keys = keys_by_value(g, n)
-        # addition of new nodes
-        # if len(a_keys) == 0:
+
         if n not in g.values():
             new_name = n
             i = 1
@@ -419,29 +413,6 @@ def total_pushout(a, b, c, a_b, a_c):
                 c.node[n]
             )
             hom2[n] = n
-        # addition of preserved nodes
-        # elif len(a_keys) == 1:
-        #     a_key = a_keys[0]
-        #     add_node(d, f[a_key],
-        #              b.node[f[a_key]])
-        #     add_node_attrs(d, f[a_key],
-        #                    dict_sub(c.node[g[a_key]], a.node[a_key]))
-        #     hom1[f[a_key]] = f[a_key]
-        #     hom2[g[a_key]] = f[a_key]
-        # addition of merged nodes
-        # else:
-        #     merging_nodes = []
-        #     attrs = {}
-        #     for a_key in a_keys:
-        #         merging_nodes.append(f[a_key])
-        #         attrs = merge_attributes(attrs, b.node[f[a_key]])
-        #     new_name = "_".join([str(node) for node in merging_nodes])
-        #     add_node(d, new_name, attrs)
-        #     add_node_attrs(d, new_name, dict_sub(c.node[n], attrs))
-
-        #     for a_key in a_keys:
-        #         hom1[f[a_key]] = new_name
-        #         hom2[n] = new_name
 
     for n in b.nodes():
         if n not in f.values():
