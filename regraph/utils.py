@@ -7,8 +7,8 @@ from matplotlib import pyplot as plt
 
 import networkx as nx
 
-from regraph.library.parser import parser
-from regraph.library.exceptions import ReGraphError, ParsingError
+from regraph.parser import parser
+from regraph.exceptions import ReGraphError, ParsingError
 
 
 def valid_attributes(source, target):

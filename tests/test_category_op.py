@@ -1,16 +1,15 @@
-import copy
 import networkx as nx
 
 
 from nose.tools import assert_equals
 
-from regraph.library.primitives import (get_relabeled_graph,
-                                        print_graph)
-from regraph.library.utils import assert_graph_eq
-from regraph.library.category_op import (pullback,
-                                         pushout,
-                                         pullback_complement,
-                                         nary_pullback)
+from regraph.primitives import (get_relabeled_graph,
+                                print_graph)
+from regraph.utils import assert_graph_eq
+from regraph.category_op import (pullback,
+                                 pushout,
+                                 pullback_complement,
+                                 nary_pullback)
 
 
 def assert_edges_undir(edges1, edges2):
@@ -25,7 +24,7 @@ def assert_edges_undir(edges1, edges2):
 
 class TestCategoryOp:
     def __init__(self):
-        D = nx.Graph()
+        D = nx.DiGraph()
 
         D.add_node('square')
         D.add_node('circle')
@@ -38,7 +37,7 @@ class TestCategoryOp:
 
         self.D = D
 
-        A = nx.Graph()
+        A = nx.DiGraph()
 
         A.add_node(2)
         A.add_node(3)
@@ -46,7 +45,7 @@ class TestCategoryOp:
 
         self.A = A
 
-        B = nx.Graph()
+        B = nx.DiGraph()
 
         B.add_node(1)
         B.add_node(2)
@@ -56,7 +55,7 @@ class TestCategoryOp:
 
         self.B = B
 
-        C = nx.Graph()
+        C = nx.DiGraph()
 
         C.add_node(2)
         C.add_node(3)
@@ -92,7 +91,7 @@ class TestCategoryOp:
         A, homAB, homAC = pullback(
             self.B, self.C, self.D, self.homBD, self.homCD
         )
-        assert_equals(type(A), nx.Graph)
+        assert_equals(type(A), nx.DiGraph)
         assert_equals(set(A.nodes()), set(self.A.nodes()))
         assert_edges_undir(A.edges(), self.A.edges())
         assert_equals(homAB, self.homAB)
@@ -102,7 +101,7 @@ class TestCategoryOp:
         C, homAC, homCD = pullback_complement(
             self.A, self.B, self.D, self.homAB, self.homBD
         )
-        assert_equals(type(C), nx.Graph)
+        assert_equals(type(C), nx.DiGraph)
         test_graph = get_relabeled_graph(
             self.C, {2: "circle", 3: "dark_circle", "dark_square": "dark_square"}
         )
@@ -112,13 +111,44 @@ class TestCategoryOp:
         D, homBD, homCD = pushout(
             self.A, self.B, self.C, self.homAB, self.homAC
         )
-        assert_equals(type(D), nx.Graph)
+        assert_equals(type(D), nx.DiGraph)
 
         assert_equals(len(D.nodes()),
                       len(self.D.nodes()))
 
         assert_equals(len(D.edges()),
                       len(self.D.edges()))
+
+    def test_pushout_symmetry_directed(self):
+
+        A = nx.DiGraph()
+        A.add_nodes_from(["a", "b"])
+        A.add_edges_from([("a", "b")])
+
+        B = nx.DiGraph()
+        B.add_nodes_from([1, 2, 3])
+        B.add_edges_from([(2, 3), (3, 2), (1, 3)])
+
+        C = nx.DiGraph()
+        C.add_nodes_from(["x", "y"])
+        C.add_edges_from([("x", "x"), ("x", "y")])
+
+        homAB = {"a": 2, "b": 3}
+        homAC = {"a": "x", "b": "x"}
+
+        D, homBD, homCD = pushout(
+            A, B, C, homAB, homAC
+        )
+        D_inv, homCD_inv, homBD_inv = pushout(
+            A, C, B, homAC, homAB
+        )
+
+        print("\n\n\n\n\n\n\n")
+        print_graph(D)
+        print_graph(D_inv)
+        print(homBD, homBD_inv)
+        print(homCD, homCD_inv)
+        print("\n\n\n\n\n\n\n")
 
     def test_multi_pullback(self):
         B = nx.DiGraph()

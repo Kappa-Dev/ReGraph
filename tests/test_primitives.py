@@ -1,10 +1,10 @@
 import networkx as nx
 
-from regraph.library.rules import Rule
-from regraph.library.utils import (dict_sub,
+from regraph.rules import Rule
+from regraph.utils import (dict_sub,
                                    is_subdict)
-from regraph.library.category_op import identity
-from regraph.library.primitives import *
+from regraph.category_op import identity
+from regraph.primitives import *
 
 
 class TestPrimitives(object):

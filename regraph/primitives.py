@@ -8,14 +8,14 @@ import networkx as nx
 from copy import deepcopy
 from networkx.algorithms import isomorphism
 
-from regraph.library.utils import (merge_attributes,
+from regraph.utils import (merge_attributes,
                                    normalize_attrs,
                                    valid_attributes,
                                    to_set,
                                    keys_by_value,
                                    is_subdict,
                                    dict_sub)
-from regraph.library.exceptions import (ReGraphError,
+from regraph.exceptions import (ReGraphError,
                                         GraphError,
                                         GraphAttrsWarning)
 

@@ -2,15 +2,15 @@
 import copy
 import warnings
 
-from regraph.library.parser import parser
-from regraph.library.utils import (keys_by_value,
-                                   make_canonical_commands)
-from regraph.library.category_op import (identity,
-                                         check_homomorphism,
-                                         pullback_complement,
-                                         pushout)
-from regraph.library import primitives
-from regraph.library.exceptions import ReGraphWarning, ParsingError, RuleError
+from regraph.parser import parser
+from regraph.utils import (keys_by_value,
+                           make_canonical_commands)
+from regraph.category_op import (identity,
+                                 check_homomorphism,
+                                 pullback_complement,
+                                 pushout)
+from regraph import primitives
+from regraph.exceptions import ReGraphWarning, ParsingError, RuleError
 
 
 class Rule(object):

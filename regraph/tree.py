@@ -4,17 +4,17 @@ import copy
 import itertools
 import networkx as nx
 
-import regraph.library.primitives as prim
-from regraph.library.hierarchy import GraphNode, RuleNode, Hierarchy
-from regraph.library.primitives import (graph_to_json,
-                                        add_node_attrs,
-                                        unique_node_id,
-                                        graph_from_json)
-from regraph.library.rules import Rule
-from regraph.library.category_op import (pushout, compose_homomorphisms,
-                                         check_totality,
-                                         is_monic,
-                                         check_homomorphism)
+from regraph.hierarchy import GraphNode, RuleNode, Hierarchy
+from regraph.primitives import (graph_to_json,
+                                add_node_attrs,
+                                unique_node_id,
+                                graph_from_json,
+                                prim)
+from regraph.rules import Rule
+from regraph.category_op import (pushout, compose_homomorphisms,
+                                 check_totality,
+                                 is_monic,
+                                 check_homomorphism)
 
 
 # def _complete_rewrite(hie, g_id, rule, match, lhs_typing=None,

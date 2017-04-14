@@ -1,52 +1,51 @@
 """."""
-import itertools
 import copy
-import os
+import itertools
 import json
+import os
 import warnings
 
-import networkx as nx
-# import copy
-
-from networkx.algorithms import isomorphism
-from regraph.library.category_op import (compose_homomorphisms,
-                                         check_homomorphism,
-                                         is_total_homomorphism,
-                                         get_unique_map,
-                                         pullback,
-                                         pullback_complement,
-                                         pushout)
-from regraph.library.primitives import (add_node_attrs,
-                                        add_edge_attrs,
-                                        get_relabeled_graph,
-                                        relabel_node,
-                                        get_edge,
-                                        graph_to_json,
-                                        graph_from_json,
-                                        add_node_attrs,
-                                        remove_node_attrs,
-                                        find_match,
-                                        equal)
-from regraph.library.utils import (is_subdict,
-                                   valid_attributes,
-                                   keys_by_value,
-                                   normalize_attrs,
-                                   to_set,
-                                   id_of,
-                                   normalize_typing,
-                                   replace_source,
-                                   replace_target,
-                                   attrs_intersection)
-
-from regraph.library.rules import Rule
-from regraph.library.mu import parse_formula
 from lrparsing import ParseError
 
-from regraph.library.exceptions import (HierarchyError,
-                                        TotalityWarning,
-                                        ReGraphError,
-                                        RewritingError,
-                                        InvalidHomomorphism)
+import networkx as nx
+
+from networkx.algorithms import isomorphism
+
+from regraph.category_op import (compose_homomorphisms,
+                                 check_homomorphism,
+                                 is_total_homomorphism,
+                                 get_unique_map,
+                                 pullback,
+                                 pullback_complement,
+                                 pushout)
+
+from regraph.primitives import (add_node_attrs,
+                                add_edge_attrs,
+                                get_relabeled_graph,
+                                relabel_node,
+                                get_edge,
+                                graph_to_json,
+                                graph_from_json,
+                                find_match,
+                                equal,
+                                print_graph)
+from regraph.utils import (is_subdict,
+                           valid_attributes,
+                           keys_by_value,
+                           normalize_attrs,
+                           to_set,
+                           id_of,
+                           normalize_typing,
+                           replace_source,
+                           replace_target,
+                           attrs_intersection)
+from regraph.rules import Rule
+from regraph.mu import parse_formula
+from regraph.exceptions import (HierarchyError,
+                                TotalityWarning,
+                                ReGraphError,
+                                RewritingError,
+                                InvalidHomomorphism)
 
 
 class AttributeContainter(object):
@@ -921,20 +920,6 @@ class Hierarchy(nx.DiGraph):
                                     "Invalid rhs typing: homomorphism does not commute with an existing " +
                                     "path from '%s' to '%s'!" % (s, t)
                                 )
-                            # for key, value in lhs_h.items():
-                            #     if key in new_lhs_h.keys():
-                            #         if new_lhs_h[key] != value:
-                            #             raise ValueError(
-                            #                 "Homomorphism does not commute with an existing " +
-                            #                 "path from '%s' to '%s'!" % (s, t)
-                            #             )
-                            # for key, value in rhs_h.items():
-                            #     if key in new_rhs_h.keys():
-                            #         if new_rhs_h[key] != value:
-                            #             raise ValueError(
-                            #                 "Homomorphism does not commute with an existing " +
-                            #                 "path from '%s' to '%s'!" % (s, t)
-                            #             )
                     except(nx.NetworkXNoPath):
                         pass
             else:
@@ -1376,7 +1361,6 @@ class Hierarchy(nx.DiGraph):
                         lhs_typing[typing_graph][0][src] = typing[tgt]
 
                 for (p_node, l_node) in p_l.items():
-                    # (print)
                     if l_node in lhs_typing[typing_graph][0].keys():
                         if p_r[p_node] in rhs_typing[typing_graph][0].keys():
                             if (rhs_typing[typing_graph][0][p_r[p_node]] !=
@@ -1707,6 +1691,7 @@ class Hierarchy(nx.DiGraph):
 
         # update graphs
         for graph, (graph_m, _, graph_prime, _) in updated_graphs.items():
+
             if graph_prime is not None:
                 self.node[graph].graph = graph_prime
             else:
@@ -1730,7 +1715,9 @@ class Hierarchy(nx.DiGraph):
                     )
                 else:
                     total = True
-
+            # old_edge_attrs = copy.deepcopy(self.edge[s][t].attrs)
+            # self.remove_edge(s, t)
+            # self.add_typing(s, t, mapping, total, ignore_attrs, old_edge_attrs)
             self.edge[s][t] = Typing(
                 mapping, total, ignore_attrs, self.edge[s][t].attrs
             )
@@ -1739,6 +1726,13 @@ class Hierarchy(nx.DiGraph):
                 new_rule, self.node[rule].attrs
             )
         for (s, t), (lhs_h, rhs_h) in updated_rule_h.items():
+            # old_edge_attrs = copy.deepcopy(self.edge[s][t].attrs)
+            # self.remove_edge(s, t)
+            # self.add_rule_typing(
+            #     s, t, lhs_h, rhs_h,
+            #     self.edge[s][t].ignore_attrs,
+            #     old_edge_attrs
+            # )
             self.edge[s][t] = RuleTyping(
                 lhs_h, rhs_h,
                 self.edge[s][t].ignore_attrs,
@@ -2021,16 +2015,6 @@ class Hierarchy(nx.DiGraph):
         base_relations_update = dict()
         for related_g in self.adjacent_relations(graph_id):
             base_relations_update.append((graph_id, related_g))
-            # g, left_h, right_h = self.relation_to_span(graph_id, related_g)
-            # rel_g_m, rel_g_m_g, rel_g_m_g_m =\
-            #     pullback(g, g_m, self.node[graph_id].graph, left_h, g_m_g)
-            # base_relations_update.update({
-            #     (graph_id, related_g): (
-            #         rel_g_m,
-            #         rel_g_m_g_m,
-            #         rel_g_m_g
-            #     )
-            # })
 
         # Propagate rewriting up the hierarchy
         (updated_graphs,

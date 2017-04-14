@@ -2,9 +2,9 @@
 import copy
 import networkx as nx
 
-from regraph.library.hierarchy import Hierarchy
-from regraph.library.rules import Rule
-from regraph.library.primitives import print_graph
+from regraph.hierarchy import Hierarchy
+from regraph.rules import Rule
+from regraph.primitives import print_graph
 
 
 class TestPartialTyping(object):

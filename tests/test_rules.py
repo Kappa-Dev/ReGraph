@@ -2,9 +2,9 @@ import networkx as nx
 
 from nose.tools import raises
 
-from regraph.library.rules import Rule
-from regraph.library.utils import assert_graph_eq
-from regraph.library.exceptions import RuleError
+from regraph.rules import Rule
+from regraph.utils import assert_graph_eq
+from regraph.exceptions import RuleError
 
 
 class TestRule(object):

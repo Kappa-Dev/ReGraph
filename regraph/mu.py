@@ -6,7 +6,7 @@
 import lrparsing
 from lrparsing import Keyword, List, Prio, Ref, Token
 
-from regraph.library.exceptions import ParsingError, FormulaError
+from regraph.exceptions import ParsingError, FormulaError
 
 
 class MuParser(lrparsing.Grammar):
