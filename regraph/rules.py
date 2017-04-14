@@ -10,7 +10,8 @@ from regraph.category_op import (identity,
                                  pullback_complement,
                                  pushout)
 from regraph import primitives
-from regraph.exceptions import ReGraphWarning, ParsingError, RuleError
+from regraph.exceptions import (ReGraphWarning, ParsingError, RuleError,
+                                GraphError)
 
 
 class Rule(object):
@@ -251,7 +252,7 @@ class Rule(object):
             for pn2 in keys_by_value(self.p_rhs, node2):
                 try:
                     primitives.remove_edge(self.p, pn1, pn2)
-                except ValueError:
+                except GraphError:
                     continue
 
     def remove_edge(self, n1, n2):
@@ -304,8 +305,10 @@ class Rule(object):
     def clone_rhs_node(self, node, new_name=None):
         """clone a rhs node"""
         if node not in self.rhs.nodes():
-            raise ValueError("{} is not a node of right hand side"
-                             .format(node))
+            raise RuleError(
+                "Node '%s' is not a node of right hand side" %
+                node
+            )
         p_keys = keys_by_value(self.p_rhs, node)
         if len(p_keys) == 0:
             primitives.clone_node(self.rhs, node, new_name)
@@ -315,7 +318,7 @@ class Rule(object):
             self.p_rhs[new_p_node] = new_name
             self.p_lhs[new_p_node] = self.p_lhs[p_keys[0]]
         else:
-            raise ValueError("cannot clone node that is result of merge")
+            raise RuleError("Cannot clone node that is result of merge!")
 
     def clone_node(self, n, node_name=None):
         """Clone a node of the graph."""
@@ -335,9 +338,9 @@ class Rule(object):
 
     def merge_nodes_rhs(self, n1, n2, new_name):
         if n1 not in self.rhs.nodes():
-            raise ValueError("{} is not a node of the rhs".format(n1))
+            raise RuleError("Node '%s' is not a node of the rhs" % n1)
         if n2 not in self.rhs.nodes():
-            raise ValueError("{} is not a node of the rhs".format(n2))
+            raise RuleError("Node '%s' is not a node of the rhs" % n2)
         primitives.merge_nodes(self.rhs, [n1, n2], node_name=new_name)
         for (source, target) in self.p_rhs.items():
             if target == n1 or target == n2:
@@ -377,7 +380,7 @@ class Rule(object):
 
     def add_node_attrs_rhs(self, n, attrs):
         if n not in self.rhs.nodes():
-            raise ValueError("Node %s does not exist in the right hand side of the rule" % n)
+            raise RuleError("Node %s does not exist in the right hand side of the rule" % n)
         primitives.add_node_attrs(self.rhs, n, attrs)
 
     def add_node_attrs(self, n, attrs):
@@ -393,7 +396,7 @@ class Rule(object):
 
     def remove_node_attrs_rhs(self, n, attrs):
         if n not in self.rhs.nodes():
-            raise ValueError("Node %s does not exist in the right hand side of the rule" % n)
+            raise RuleError("Node '%s' does not exist in the right hand side of the rule" % n)
 
         p_keys = keys_by_value(self.p_rhs, n)
         for p_node in p_keys:
