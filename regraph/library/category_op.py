@@ -357,6 +357,130 @@ def _merge_classes(equ_elems, classes):
         new_classes.append(merged_class)
     return new_classes
 
+# def total_pushout_old(a, b, c, a_b, a_c):
+
+#     check_homomorphism(a, b, a_b)
+#     check_homomorphism(a, c, a_c)
+
+#     hom1 = {}
+#     hom2 = {}
+
+#     d = type(b)()
+#     f = a_b
+#     g = a_c
+
+#     # add nodes to the graph
+#     for n in c.nodes():
+#         a_keys = keys_by_value(g, n)
+#         # addition of new nodes
+#         if len(a_keys) == 0:
+#             new_name = n
+#             i = 1
+#             while new_name in d.nodes():
+#                 new_name = str(n) + "_" + str(i)
+#                 i += 1
+#             add_node(
+#                 d,
+#                 new_name,
+#                 c.node[n]
+#             )
+#             hom2[n] = n
+#         # addition of preserved nodes
+#         elif len(a_keys) == 1:
+#             a_key = a_keys[0]
+#             if f[a_key] not in d.nodes():
+#                 add_node(d, f[a_key],
+#                          b.node[f[a_key]])
+#                 add_node_attrs(d, f[a_key],
+#                                dict_sub(c.node[g[a_key]], a.node[a_key]))
+#             else:
+#                 i = 1
+#                 new_name = str(f[a_key]) + str(i)
+#                 while new_name in d.nodes():
+#                     i += 1
+#                     new_name = str(f[a_key]) + str(i)
+#                 add_node(d, new_name,
+#                          b.node[f[a_key]])
+#                 add_node_attrs(d, new_name,
+#                                dict_sub(c.node[g[a_key]], a.node[a_key]))
+
+#             hom1[f[a_key]] = f[a_key]
+#             hom2[g[a_key]] = f[a_key]
+#         # addition of merged nodes
+#         else:
+#             merging_nodes = []
+#             attrs = {}
+#             for a_key in a_keys:
+#                 merging_nodes.append(f[a_key])
+#                 attrs = merge_attributes(attrs, b.node[f[a_key]])
+#             new_name = "_".join([str(node) for node in merging_nodes])
+#             add_node(d, new_name, attrs)
+#             add_node_attrs(d, new_name, dict_sub(c.node[n], attrs))
+
+#             for a_key in a_keys:
+#                 hom1[f[a_key]] = new_name
+#                 hom2[n] = new_name
+
+#     for n in b.nodes():
+#         if n not in f.values():
+#             # if n not in d.nodes():
+#             new_name = n
+#             i = 1
+#             while new_name in d.nodes():
+#                 new_name = str(n) + "_" + str(i)
+#                 i += 1
+#             add_node(
+#                 d,
+#                 new_name,
+#                 b.node[n]
+#             )
+#             hom1[n] = new_name
+
+#     # add edges to the graph
+#     for (n1, n2) in c.edges():
+#         a_keys_1 = keys_by_value(g, n1)
+#         a_keys_2 = keys_by_value(g, n2)
+#         if len(a_keys_1) == 0 or len(a_keys_2) == 0:
+#             add_edge(d, hom2[n1], hom2[n2], get_edge(c, n1, n2))
+#         else:
+#             for a_key_1 in a_keys_1:
+#                 for a_key_2 in a_keys_2:
+#                     if (f[a_key_1], f[a_key_2]) in b.edges():
+#                         if (hom2[n1], hom2[n2]) not in d.edges():
+#                             add_edge(d, hom2[n1], hom2[n2], get_edge(b, f[a_key_1], f[a_key_2]))
+#                             if (a_key_1, a_key_2) in a.edges():
+#                                 add_edge_attrs(d, hom2[n1],
+#                                                hom2[n2],
+#                                                dict_sub(get_edge(c, n1, n2),
+#                                                get_edge(a, a_key_1, a_key_2)))
+
+#                             else:
+#                                 add_edge_attrs(d, hom2[n1],
+#                                                hom2[n2],
+#                                                get_edge(c, n1, n2))
+#                         else:
+#                             add_edge_attrs(d, hom2[n1],
+#                                            hom2[n2],
+#                                            get_edge(b, f[a_key_1], f[a_key_2]))
+#                             add_edge_attrs(d, hom2[n1],
+#                                            hom2[n2],
+#                                            dict_sub(get_edge(c, n1, n2),
+#                                                     get_edge(a, a_key_1, a_key_2)))
+#                     elif (hom2[n1], hom2[n2]) not in d.edges():
+#                         add_edge(d, hom2[n1], hom2[n2], get_edge(c, n1, n2))
+
+#     for (n1, n2) in b.edges():
+#         a_keys_1 = keys_by_value(f, n1)
+#         a_keys_2 = keys_by_value(f, n2)
+#         if len(a_keys_1) == 0 or len(a_keys_2) == 0:
+#             add_edge(d, hom1[n1], hom1[n2], get_edge(b, n1, n2))
+#         elif (hom1[n1], hom1[n2]) not in d.edges():
+#             add_edge(d, hom1[n1], hom1[n2], get_edge(b, n1, n2))
+
+#     check_homomorphism(b, d, hom1)
+#     check_homomorphism(c, d, hom2)
+#     return (d, hom1, hom2)
+
 
 def total_pushout(a, b, c, a_b, a_c):
 
@@ -373,6 +497,10 @@ def total_pushout(a, b, c, a_b, a_c):
     # add nodes to the graph
 
     classes = [{node} for node in a.nodes()]
+    print("\n\n\n\n\n\n")
+    print(classes)
+    print("\n\n\n\n\n\n")
+
     for node in c.nodes():
         a_keys = set(keys_by_value(g, node))
         if len(a_keys) >= 2:
@@ -386,9 +514,16 @@ def total_pushout(a, b, c, a_b, a_c):
         b_nodes = {f[node] for node in cl}
         c_nodes = {g[node] for node in cl}
         if len(b_nodes) < len(c_nodes):
-            new_name = "_".join((str(b_node) for b_node in b_nodes))
+            if len(b_nodes) > 1:
+                new_name = "_".join((str(b_node) for b_node in b_nodes))
+            else:
+                new_name = list(b_nodes)[0]
         else:
-            new_name = "_".join((str(c_node) for c_node in c_nodes))
+            if len(c_nodes) > 1:
+                new_name = "_".join((str(c_node) for c_node in c_nodes))
+            else:
+                new_name = list(c_nodes)[0]
+
         new_name = unique_node_id(d, new_name)
         new_attrs = {}
         for node in b_nodes:
@@ -416,7 +551,6 @@ def total_pushout(a, b, c, a_b, a_c):
 
     for n in b.nodes():
         if n not in f.values():
-            # if n not in d.nodes():
             new_name = n
             i = 1
             while new_name in d.nodes():
