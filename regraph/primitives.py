@@ -1104,3 +1104,20 @@ def find_match(graph, pattern, graph_typings, pattern_typings, typing_graphs,
     _remove_typings_in_attrs(pattern)
     print(matchings)
     return matchings
+
+
+def maximal_machings(gr):
+    """ not the same matchings (couplage in french)"""
+    return set(map(frozenset, _naive_maximal_machings(gr)))
+
+
+def _naive_maximal_machings(gr):
+    matchings = []
+    for (source, target) in gr.edges():
+        gr_copy = copy.copy(gr)
+        remove_node(gr_copy, source)
+        remove_node(gr_copy, target)
+        submatchings = _naive_maximal_machings(gr_copy)
+        matchings += [subm.add((source, target)) for subm in submatchings]
+    return matchings
+

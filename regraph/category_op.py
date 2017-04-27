@@ -583,3 +583,13 @@ def pullback_pushout(b, c, d, b_d, c_d):
     for node in c.nodes():
         d2_d[c_d2[node]] = c_d[node]
     return(d2, b_d2, c_d2, d2_d)
+
+
+def typing_of_pushout(b, c, p, b_p, c_p, b_typgr, c_typgr):
+    """get the typing of the pushout for total typings"""
+    p_typgr = {}
+    for node in b.nodes():
+        p_typgr[b_p[node]] = b_typgr[node]
+    for node in c.nodes():
+        p_typgr[c_p[node]] = c_typgr[node]
+    return p_typgr

@@ -5,14 +5,15 @@ import itertools
 import networkx as nx
 
 from regraph.hierarchy import GraphNode, RuleNode, Hierarchy
+import regraph.primitives as prim
 from regraph.primitives import (graph_to_json,
                                 add_node_attrs,
                                 unique_node_id,
-                                graph_from_json,
-                                prim)
+                                graph_from_json)
 from regraph.rules import Rule
 from regraph.category_op import (pushout, compose_homomorphisms,
                                  check_totality,
+                                 typing_of_pushout,
                                  is_monic,
                                  check_homomorphism)
 
@@ -631,6 +632,14 @@ def ancestors_mapping(hie, g_id, degree):
     return _mapping_to_json(mapping)
 
 
+def ancestors_graph_mapping(hie, top, g_id, ancestor_path):
+    """get the typing of graph g_id by ancestor"""
+    path_list = [s for s in ancestor_path.split("/") if s and not s.isspace()]
+    ancestor_id = child_from_path(hie, top, path_list)
+    mapping = hie.get_typing(g_id, ancestor_id)
+    return {"typing": _mapping_to_json(mapping)}
+
+
 def ancestors_rule_mapping(hie, top, g_id, ancestor_path):
     """get the typing of rule g_id by ancestor"""
     path_list = [s for s in ancestor_path.split("/") if s and not s.isspace()]
@@ -713,6 +722,9 @@ def unfold_nuggets(hie, ag_id, metamodel_id, nug_list=None):
     return new_nug_list
 
 
+# for total typings
+# TODO: test if name is valid
+# TODO: typing types
 def merge_graphs(hie, g_id, name1, name2, mapping, new_name):
     """ merge two graph based  on an identity relation
         between their nodes.
@@ -723,6 +735,8 @@ def merge_graphs(hie, g_id, name1, name2, mapping, new_name):
     id2 = child_from_name(hie, g_id, name2)
     g1 = hie.node[id1].graph
     g2 = hie.node[id2].graph
+    g1_typ = hie.get_typing(id1, g_id)
+    g2_typ = hie.get_typing(id2, g_id)
     if hie.directed:
         g0 = nx.DiGraph()
     else:
@@ -738,23 +752,30 @@ def merge_graphs(hie, g_id, name1, name2, mapping, new_name):
         pushout(g0, g1, g2, left_mapping, right_mapping)
     new_id = hie.unique_graph_id(new_name)
     hie.add_graph(new_id, new_graph, {"name": new_name})
+    hie.add_typing(new_id, g_id, typing_of_pushout(g1, g2, new_graph,
+                                                   g1_new_graph,
+                                                   g2_new_graph,
+                                                   g1_typ, g2_typ))
 
-    # def copy_nugget(sub, type_mapping):
-    #     sub_copy = copy.deepcopy(sub)
-    #     sub_copy.parent = new_cmd
-    #     sub_copy.graph.convert_types(type_mapping)
-    #     sub_copy.graph.updateMetamodel(new_graph)
-    #     if new_cmd.valid_new_name(sub.name):
-    #         new_cmd.subCmds[sub.name] = sub
-    #     else:
-    #         new_sub_name = new_cmd.unique_graph_id(sub.name)
-    #         sub.name = new_sub_name
-    #         new_cmd.subCmds[new_sub_name] = sub
+    for nug in graph_children(hie, id1):
+        new_nug_id = hie.unique_graph_id(nug)
+        nug_typing = hie.edge[nug][id1].mapping
+        # use name instead  of id
+        new_nug_name = get_valid_name(hie, new_id, nug)
+        hie.add_graph(new_nug_id, copy.deepcopy(hie.node[nug].graph),
+                      {"name": new_nug_name})
+        hie.add_typing(new_nug_id, new_id,
+                       compose_homomorphisms(g1_new_graph, nug_typing))
 
-    # for sub in self.subCmds[name1].subCmds.values():
-    #     copy_nugget(sub, g1_new_graph.mapping_)
-    # for sub in self.subCmds[name2].subCmds.values():
-    #     copy_nugget(sub, g2_new_graph.mapping_)
+    for nug in graph_children(hie, id2):
+        new_nug_id = hie.unique_graph_id(nug)
+        nug_typing = hie.edge[nug][id2].mapping
+        # use name instead  of id
+        new_nug_name = get_valid_name(hie, new_id, nug)
+        hie.add_graph(new_nug_id, copy.deepcopy(hie.node[nug].graph),
+                      {"name": new_nug_name})
+        hie.add_typing(new_nug_id, new_id,
+                       compose_homomorphisms(g2_new_graph, nug_typing))
 
 
 def _put_path_in_attr(hie, top, tmp_key):
