@@ -21,7 +21,7 @@ from regraph.utils import (keys_by_value,
 from regraph.exceptions import (InvalidHomomorphism, ReGraphError)
 
 
-def _subgraph(gr, nodes):
+def subgraph(gr, nodes):
     subg = copy.deepcopy(gr)
     for node in gr.nodes():
         if node not in nodes:
@@ -48,7 +48,8 @@ def check_totality(elements, dictionary):
         raise InvalidHomomorphism(
             "Invalid homomorphism: Mapping is not "
             "covering all the nodes of source graph!"
-        )
+            "domain:{}, domain of definition:{}"
+            .format(set(elements), set(dictionary.keys())))
 
 
 def check_homomorphism(source, target, dictionary,
@@ -90,13 +91,17 @@ def check_homomorphism(source, target, dictionary,
             pass
 
     for s, t in dictionary.items():
-        if not ignore_attrs:
+        if (ignore_attrs is False or
+            (isinstance(ignore_attrs, set) and
+             s not in ignore_attrs)):
             # check sets of attributes of nodes (here homomorphism = set inclusion)
             if not valid_attributes(source.node[s], target.node[t]):
                 raise InvalidHomomorphism(
                     "Attributes of nodes source:'%s' and target:'%s' do not match!" %
                     (s, t)
                 )
+
+    # Needed ? more precise ignore_attrs for edges
 
     if not ignore_attrs:
         # check sets of attributes of edges (homomorphism = set inclusion)
@@ -202,30 +207,36 @@ def nary_pullback(b, cds):
         return (a, a_b, a_c)
 
 
-def pullback(b, c, d, b_d, c_d, total=False):
+def pullback(b, c, d, b_d, c_d, total=False, ignore_attrs_bd=None,
+             ignore_attrs_cd=None):
+
+    print("ignore_bd", ignore_attrs_bd)
+    print("ignore_cd", ignore_attrs_cd)
     if total:
-        return total_pullback(b, c, d, b_d, c_d)
+        return total_pullback(b, c, d, b_d, c_d,
+                              ignore_attrs_bd, ignore_attrs_cd)
     else:
-        return partial_pullback(b, c, d, b_d, c_d)
+        return partial_pullback(b, c, d, b_d, c_d,
+                                ignore_attrs_bd, ignore_attrs_cd)
 
 
-def partial_pullback(b, c, d, b_d, c_d):
+def partial_pullback(b, c, d, b_d, c_d, ignore_attrs_bd=None,
+                     ignore_attrs_cd=None):
     try:
         check_totality(b, b_d)
         check_totality(c, c_d)
-        return total_pullback(b, c, d, b_d, c_d)
+        return total_pullback(b, c, d, b_d, c_d,
+                              ignore_attrs_bd, ignore_attrs_cd)
 
-    except InvalidHomomorphism:
+    except InvalidHomomorphism as e:
         check_homomorphism(b, d, b_d, total=False)
         check_homomorphism(c, d, c_d, total=False)
 
-        bd_dom = _subgraph(b, b_d.keys())
-        cd_dom = _subgraph(c, c_d.keys())
+        bd_dom = subgraph(b, b_d.keys())
+        cd_dom = subgraph(c, c_d.keys())
 
         bd_b = {n: n for n in bd_dom.nodes()}
         cd_c = {n: n for n in cd_dom.nodes()}
-        print("bd_dom", bd_dom.nodes())
-        print("b_d", b_d)
         (tmp, tmp_bddom, tmp_cddom) = total_pullback(bd_dom, cd_dom, d, b_d, c_d)
         (b2, tmp_b2, b2_b) = pullback_complement(tmp, bd_dom, b, tmp_bddom, bd_b)
         (c2, tmp_c2, c2_c) = pullback_complement(tmp, cd_dom, c, tmp_cddom, cd_c)
@@ -235,20 +246,24 @@ def partial_pullback(b, c, d, b_d, c_d):
         return(new, hom1, hom2)
 
 
-def total_pullback(b, c, d, b_d, c_d):
+def total_pullback(b, c, d, b_d, c_d,
+                   ignore_attrs_bd=None,
+                   ignore_attrs_cd=None):
     """Find pullback.
 
     Given h1 : B -> D; h2 : C -> D returns A, rh1, rh2
     with rh1 : A -> B; rh2 : A -> C and A the pullback.
     """
+    print("ignore_bd", ignore_attrs_bd)
+    print("ignore_cd", ignore_attrs_cd)
     if b.is_directed():
         a = nx.DiGraph()
     else:
         a = nx.Graph()
 
     # Check homomorphisms
-    check_homomorphism(b, d, b_d)
-    check_homomorphism(c, d, c_d)
+    check_homomorphism(b, d, b_d, ignore_attrs=ignore_attrs_bd)
+    check_homomorphism(c, d, c_d, ignore_attrs=ignore_attrs_cd)
 
     hom1 = {}
     hom2 = {}
@@ -256,17 +271,38 @@ def total_pullback(b, c, d, b_d, c_d):
     f = b_d
     g = c_d
 
+    if ignore_attrs_bd is None:
+        ignore_attrs_bd = set()
+    if ignore_attrs_cd is None:
+        ignore_attrs_cd = set()
+    ignore_attrs_ab = set()
+    ignore_attrs_ac = set()
+
     for n1 in b.nodes():
         for n2 in c.nodes():
             if f[n1] == g[n2]:
+                ignore_n1 = n1 in ignore_attrs_bd
+                ignore_n2 = n2 in ignore_attrs_cd
+                if ignore_n1 and ignore_n2:
+                    new_attrs = merge_attributes(b.node[n1],
+                                                 c.node[n2],
+                                                 'union')
+                elif ignore_n1:
+                    new_attrs = copy.deepcopy(b.node[n1])
+                elif ignore_n2:
+                    new_attrs = copy.deepcopy(c.node[n2])
+                else:
+                    new_attrs = merge_attributes(b.node[n1],
+                                                 c.node[n2],
+                                                 'intersection')
                 if n1 not in a.nodes():
-                    add_node(a,
-                             n1,
-                             merge_attributes(b.node[n1],
-                                              c.node[n2],
-                                              'intersection'))
+                    add_node(a, n1, new_attrs)
                     hom1[n1] = n1
                     hom2[n1] = n2
+                    if ignore_n1:
+                        ignore_attrs_ac.add(n1)
+                    if ignore_n2:
+                        ignore_attrs_ab.add(n1)
                 else:
                     i = 1
                     new_name = str(n1) + str(i)
@@ -274,13 +310,13 @@ def total_pullback(b, c, d, b_d, c_d):
                         i += 1
                         new_name = str(n1) + str(i)
                     # if n2 not in a.nodes():
-                    add_node(a,
-                             new_name,
-                             merge_attributes(b.node[n1],
-                                              c.node[n2],
-                                              'intersection'))
+                    add_node(a, new_name, new_attrs)
                     hom1[new_name] = n1
                     hom2[new_name] = n2
+                    if ignore_n1:
+                        ignore_attrs_ac.add(new_name)
+                    if ignore_n2:
+                        ignore_attrs_ab.add(new_name)
 
     for n1 in a.nodes():
         for n2 in a.nodes():
@@ -297,8 +333,8 @@ def total_pullback(b, c, d, b_d, c_d):
                             get_edge(b, hom1[n1], hom1[n2]),
                             get_edge(c, hom2[n1], hom2[n2]),
                             'intersection'))
-    check_homomorphism(a, b, hom1)
-    check_homomorphism(a, c, hom2)
+    check_homomorphism(a, b, hom1, ignore_attrs_ab)
+    check_homomorphism(a, c, hom2, ignore_attrs_ac)
     return (a, hom1, hom2)
 
 
@@ -467,12 +503,12 @@ def total_pushout(a, b, c, a_b, a_c):
         a_keys_1 = keys_by_value(f, n1)
         a_keys_2 = keys_by_value(f, n2)
         if len(a_keys_1) == 0 or len(a_keys_2) == 0:
-            print("Adding an edge to D: ", hom1[n1], hom1[n2])
-            print("Reason: some of the mapped nodes was not in a")
+            # print("Adding an edge to D: ", hom1[n1], hom1[n2])
+            # print("Reason: some of the mapped nodes was not in a")
             add_edge(d, hom1[n1], hom1[n2], get_edge(b, n1, n2))
         elif (hom1[n1], hom1[n2]) not in d.edges():
-            print("Adding an edge to D: ", hom1[n1], hom1[n2])
-            print("Reason: edge corresponding to these guys was not in a")
+            # print("Adding an edge to D: ", hom1[n1], hom1[n2])
+            # print("Reason: edge corresponding to these guys was not in a")
             add_edge(d, hom1[n1], hom1[n2], get_edge(b, n1, n2))
 
     check_homomorphism(b, d, hom1)
@@ -583,6 +619,19 @@ def pullback_pushout(b, c, d, b_d, c_d):
     for node in c.nodes():
         d2_d[c_d2[node]] = c_d[node]
     return(d2, b_d2, c_d2, d2_d)
+
+
+def multi_pullback_pushout(d, graphs):
+    """graphs: list of graphs and typings by d
+               [(g1, t1), (g2, t2), ...] """
+    if graphs == []:
+        raise ReGraphError("multi pullback_pushout with empty list")
+    tmp_graph = graphs[0][0]
+    tmp_typing = graphs[0][1]
+    for (graph, typing) in graphs[1:]:
+        (tmp_graph, _, _, tmp_typing) = pullback_pushout(tmp_graph, graph, d,
+                                                         tmp_typing, typing)
+    return (tmp_graph, tmp_typing)
 
 
 def typing_of_pushout(b, c, p, b_p, c_p, b_typgr, c_typgr):

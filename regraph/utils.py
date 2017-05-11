@@ -885,7 +885,8 @@ def normalize_typing(typing, ignore_attrs_dict={}):
                     new_typing[key] = copy.deepcopy(value)
                 elif len(value) == 1:
                     if key in ignore_attrs_dict.keys():
-                        new_typing[key] = (copy.deepcopy(value[0]), ignore_attrs_dict[key])
+                        new_typing[key] = (copy.deepcopy(value[0]),
+                                           ignore_attrs_dict[key])
                     else:
                         new_typing[key] = (copy.deepcopy(value[0]), False)
             except:
@@ -903,5 +904,13 @@ def replace_target(n1, n2, mapping):
         if value == n1:
             mapping[key] = n2
 
+
 def id_of(graph):
     return {node: node for node in graph.nodes()}
+
+
+def restrict_mapping(nodes, mapping):
+    new_mapping = {}
+    for node in nodes:
+        new_mapping[node] = mapping[node]
+    return new_mapping

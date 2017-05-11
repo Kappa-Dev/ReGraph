@@ -1416,7 +1416,8 @@ class Hierarchy(nx.DiGraph):
                             suc1.intersection(suc2)
         return common_sucs
 
-    def _propagate(self, graph_id, g_m, g_m_g, g_prime, g_m_g_prime):
+    def _propagate(self, graph_id, g_m, g_m_g, g_prime, g_m_g_prime,
+                   ignore_attrs=False):
         """Propagation steps: based on reverse BFS on neighbours."""
         updated_graphs = {
             graph_id: (g_m, g_m_g, g_prime, g_m_g_prime)
@@ -1449,13 +1450,22 @@ class Hierarchy(nx.DiGraph):
                     #             break
 
                     origin_typing = self.get_typing(graph, graph_id)
+                    origin_ignore = set(self.node[graph].graph.nodes()) -\
+                        self.get_ignore_mapping(graph, graph_id)
+                    if ignore_attrs:
+                        ignore = set(updated_graphs[graph_id][0].nodes())
+                    else:
+                        ignore = set()
 
                     g_m, g_m_g, g_m_origin_m = pullback(
                         self.node[graph].graph,
                         updated_graphs[graph_id][0],
                         self.node[graph_id].graph,
                         origin_typing,
-                        updated_graphs[graph_id][1]
+                        updated_graphs[graph_id][1],
+                        total=False,
+                        ignore_attrs_bd=origin_ignore,
+                        ignore_attrs_cd=ignore
                     )
                     updated_graphs[graph] = (
                         g_m, g_m_g, g_m, id_of(g_m)
@@ -2025,7 +2035,8 @@ class Hierarchy(nx.DiGraph):
                                               g_m,
                                               g_m_g,
                                               g_prime,
-                                              g_m_g_prime)
+                                              g_m_g_prime,
+                                              ignore_attrs)
 
         updated_homomorphisms.update(typing_updates)
         updated_relations += base_relations_update
@@ -2240,6 +2251,35 @@ class Hierarchy(nx.DiGraph):
                     ancestors[anc] = compose_homomorphisms(typ, mapping)
         return ancestors
 
+    def get_ignore_values(self, graph_id, maybe=None):
+        """Return the ignore attributes values for each node of the graph and
+           ancestor"""
+        ancestors = {}
+        for _, typing in self.out_edges(graph_id):
+            if maybe is not None and typing not in maybe:
+                continue
+            mapping = self.edge[graph_id][typing].mapping
+            if self.edge[graph_id][typing].ignore_attrs:
+                not_ignored_nodes = set()
+            else:
+                not_ignored_nodes = set(mapping.keys())
+            if typing in ancestors.keys():
+                ancestors[typing] |= not_ignored_nodes
+            else:
+                ancestors[typing] = not_ignored_nodes
+
+            typing_ancestors = self.get_ignore_values(typing, maybe)
+            for (anc, anc_non_ignored) in typing_ancestors.items():
+                not_ignored_through_typing =\
+                    (ancestors[typing] &
+                     {node for node in not_ignored_nodes
+                      if mapping[node] in anc_non_ignored})
+                if anc in ancestors.keys():
+                    ancestors[anc] |= not_ignored_through_typing
+                else:
+                    ancestors[anc] = not_ignored_through_typing
+        return ancestors
+
     def to_nx_graph(self):
         g = nx.DiGraph()
         for node in self.nodes():
@@ -2295,6 +2335,13 @@ class Hierarchy(nx.DiGraph):
         if source not in desc:
             return None
         ancestors = self.get_ancestors(source, desc)
+        return ancestors[target]
+
+    def get_ignore_mapping(self, source, target):
+        desc = self.descendents(target)
+        if source not in desc:
+            return None
+        ancestors = self.get_ignore_values(source, desc)
         return ancestors[target]
 
     def get_rule_typing(self, source, target):

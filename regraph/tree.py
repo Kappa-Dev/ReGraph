@@ -67,6 +67,15 @@ def get_valid_name(hie, g_id, prefix):
     return "{}_{}".format(prefix, i)
 
 
+# must be fully typed
+def add_graph(hie, graph, g_id, parent, typing):
+    """add a graph as a child of parent"""
+    new_id = hie.unique_graph_id(g_id)
+    new_name = get_valid_child_name(hie, parent, new_id)
+    hie.add_graph(new_id, graph, {"name":new_name})
+    hie.add_typing(new_id, parent, typing, total=True, ignore_attrs=False)
+
+
 def rule_children(hie, g_id):
     """Returns the rukes typed by g_id"""
     return (source for source, _ in hie.in_edges(g_id)
@@ -215,6 +224,16 @@ def valid_child_name(hie, g_id, new_name):
     children_name = [hie.node[source].attrs["name"]
                      for source in all_children(hie, g_id)]
     return new_name not in children_name
+
+
+def get_valid_child_name(hie, g_id, new_name):
+    """ builds a valid name from new name for a new child of g_id"""
+    if valid_child_name(hie, g_id, new_name):
+        return new_name
+    i = 0
+    while not valid_child_name(hie, g_id, "{}_{}".format(new_name, i)):
+        i += 1
+    return "{}_{}".format(new_name, i)
 
 
 def rename_child(hie, g_id, parent, new_name):
@@ -688,7 +707,6 @@ def rewrite_parent(hie, g_id, parent, suffix):
     (_, updated_graphs) = _rewrite(hie, new_names[parent], rule,
                                    mapping.lhs_mapping,
                                    ignore_attrs=ignore_attrs)
-    print("updated_graph:tree 682")
     for (old_id, new_id) in new_names.items():
         if old_id != parent and isinstance(hie.node[old_id], GraphNode):
             valid_nuggets = hie.create_valid_nuggets(old_id, new_id,
