@@ -567,10 +567,13 @@ def pullback_complement(a, b, d, a_b, b_d):
                 is_in_a = True
                 break
         if not is_in_a:
-            # print(is_in_a)
-            # print(n)
             # print(c.nodes())
-            add_node(c, n, d_m_b.node[n])
+            new_name = n
+            i = 1
+            while new_name in c.nodes():
+                new_name = str(n) + "_" + str(i)
+                i += 1
+            add_node(c, new_name, d_m_b.node[n])
             hom2[n] = n
 
     # Add edges from preserved part

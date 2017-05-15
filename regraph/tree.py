@@ -8,8 +8,8 @@ from regraph.hierarchy import GraphNode, RuleNode, Hierarchy
 import regraph.primitives as prim
 from regraph.primitives import (graph_to_json,
                                 add_node_attrs,
-                                unique_node_id,
-                                graph_from_json)
+                                graph_from_json,
+                                unique_node_id)
 from regraph.rules import Rule
 from regraph.category_op import (pushout, compose_homomorphisms,
                                  check_totality,
@@ -453,27 +453,34 @@ def merge_nodes(hie, g_id, parent, node1, node2, new_name):
         raise ValueError("node is neither a rule nor a graph")
 
 
-def clone_node(hie, g_id, parent, node, new_name):
+def clone_node(hie, g_id, parent, node, new_name, propagate=False):
     if isinstance(hie.node[g_id], GraphNode):
         if new_name in hie.node[g_id].graph.nodes():
             raise ValueError("node {} already in graph".format(new_name))
-        lhs = nx.DiGraph()
-        lhs.add_node(node)
-        ppp = nx.DiGraph()
-        ppp.add_node(node)
-        ppp.add_node(new_name)
-        rhs = nx.DiGraph()
-        rhs.add_node(node)
-        rhs.add_node(new_name)
-        rule = Rule(ppp, lhs, rhs, {node: node, new_name: node}, None)
-        _rewrite(hie,g_id, rule, {node: node})
+        if propagate:
+            lhs = nx.DiGraph()
+            lhs.add_node(node)
+            ppp = nx.DiGraph()
+            ppp.add_node(node)
+            ppp.add_node(new_name)
+            rhs = nx.DiGraph()
+            rhs.add_node(node)
+            rhs.add_node(new_name)
+            rule = Rule(ppp, lhs, rhs, {node: node, new_name: node}, None)
+            _rewrite(hie, g_id, rule, {node: node})
+        else:
+            prim.clone_node(hie.node[g_id].graph, node, new_name)
+            for _, typing in hie.out_edges(g_id):
+                mapping = hie.edge[g_id][typing].mapping
+                if node in mapping.keys():
+                    mapping[new_name] = mapping[node]
+
     elif isinstance(hie.node[g_id], RuleNode):
         hie.node[g_id].rule.clone_rhs_node(node, new_name)
         for _, typing in hie.out_edges(g_id):
             mapping = hie.edge[g_id][typing].rhs_mapping
             if node in mapping.keys():
                 mapping[new_name] = mapping[node]
-
     else:
         raise ValueError("node is neither a rule nor a graph")
 

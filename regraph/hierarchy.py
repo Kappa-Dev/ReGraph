@@ -2739,7 +2739,7 @@ class Hierarchy(nx.DiGraph):
         tmp_hie.add_graph("typing", self.node[old_nugget].graph)
         # tmp_hie.add_typing("old", "typing", pattern_typing)
         tmp_hie.add_graph("new", self.node[new_nugget].graph)
-        tmp_hie.add_typing("new", "typing", updated_graphs[new_nugget][1])
+        tmp_hie.add_typing("new", "typing", updated_graphs[new_nugget][1], ignore_attrs=True)
         matchings = tmp_hie.find_matching2("new", pattern, pattern_typing)
         new_nuggets = []
         for matching in matchings:
