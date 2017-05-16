@@ -574,7 +574,7 @@ def pullback_complement(a, b, d, a_b, b_d):
                 new_name = str(n) + "_" + str(i)
                 i += 1
             add_node(c, new_name, d_m_b.node[n])
-            hom2[n] = n
+            hom2[new_name] = n
 
     # Add edges from preserved part
     for (n1, n2) in a.edges():

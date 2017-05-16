@@ -873,3 +873,31 @@ def new_action_graph(hie, nug_typings):
     for nug in nug_typings:
         hie.add_typing(nug, "action_graph", nug_typings[nug], total=True)
 
+
+def get_metadata(hie, graph_id, path):
+    """ returns information about the graph and it's direct children"""
+
+    def _graph_data(graph_id, path):
+        node = hie.node[graph_id]
+        tmp_data = {}
+        tmp_data["id"] = graph_id
+        tmp_data["name"] = node.attrs["name"]
+        tmp_data["path"] = path
+        if path == "/":
+            tmp_data["type"] = "top"
+        elif "type" in node.attrs:
+            tmp_data["type"] = node.attrs["type"]
+        elif isinstance(node, RuleNode):
+            tmp_data["type"] = "rule"
+        elif isinstance(node, GraphNode):
+            tmp_data["type"] = "graph"
+        return tmp_data
+
+    json_data = _graph_data(graph_id, path)
+
+    json_data["children"] =\
+        [_graph_data(child,
+                     "{}/{}".format(path, hie.node[child].attrs["name"]))
+         for child in all_children(hie, graph_id)]
+    return json_data
+
