@@ -883,6 +883,12 @@ def get_metadata(hie, graph_id, path):
         tmp_data["id"] = graph_id
         tmp_data["name"] = node.attrs["name"]
         tmp_data["path"] = path
+        if "children_types" in node.attrs:
+            tmp_data["children_types"] = node.attrs["children_types"]
+        else:
+            tmp_data["children_types"] = ["graph", "rule"]
+        if "rate" in node.attrs:
+            tmp_data["rate"] = node.attrs["rate"]
         if path == "/":
             tmp_data["type"] = "top"
         elif "type" in node.attrs:
@@ -895,9 +901,15 @@ def get_metadata(hie, graph_id, path):
 
     json_data = _graph_data(graph_id, path)
 
-    json_data["children"] =\
-        [_graph_data(child,
-                     "{}/{}".format(path, hie.node[child].attrs["name"]))
-         for child in all_children(hie, graph_id)]
+    if path == "/":
+        json_data["children"] =\
+            [_graph_data(child,
+                         "/{}".format(hie.node[child].attrs["name"]))
+             for child in all_children(hie, graph_id)]
+    else:
+        json_data["children"] =\
+            [_graph_data(child,
+                         "{}/{}".format(path, hie.node[child].attrs["name"]))
+             for child in all_children(hie, graph_id)]
     return json_data
 
