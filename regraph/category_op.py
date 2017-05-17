@@ -129,6 +129,27 @@ def compose_chain_homomorphisms(chain):
     return homomorphism
 
 
+def get_unique_map_to_pullback(a, b, p, z, p_a, p_b, z_a, z_b):
+    # imagine its total
+    z_p = dict()
+    for node in p.nodes():
+        a_node = p_a[node]
+        z_keys_from_a = set(keys_by_value(z_a, a_node))
+
+        z_keys_from_b = set()
+        if node in p_b.keys():
+            b_node = p_b[node]
+            z_keys_from_b.update(keys_by_value(z_b, b_node))
+
+        print(z_keys_from_a)
+        print(z_keys_from_b)
+        z_keys = z_keys_from_a.intersection(z_keys_from_b)
+        for z_key in z_keys:
+            z_p[z_key] = node
+
+    return z_p
+
+
 def get_unique_map(a, b, c, d, a_b, b_d, c_d):
     a_c = dict()
     for node in b.nodes():
