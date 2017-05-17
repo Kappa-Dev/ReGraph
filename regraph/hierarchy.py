@@ -17,7 +17,8 @@ from regraph.category_op import (compose_homomorphisms,
                                  get_unique_map,
                                  pullback,
                                  pullback_complement,
-                                 pushout)
+                                 pushout,
+                                 get_unique_map_to_pullback)
 
 from regraph.primitives import (add_node_attrs,
                                 add_edge_attrs,
@@ -45,7 +46,8 @@ from regraph.exceptions import (HierarchyError,
                                 TotalityWarning,
                                 ReGraphError,
                                 RewritingError,
-                                InvalidHomomorphism)
+                                InvalidHomomorphism,
+                                GraphError)
 
 
 class AttributeContainter(object):
@@ -1416,11 +1418,11 @@ class Hierarchy(nx.DiGraph):
                             suc1.intersection(suc2)
         return common_sucs
 
-    def _propagate(self, graph_id, g_m, g_m_g, g_prime, g_m_g_prime,
-                   ignore_attrs=False):
+    def _propagate(self, graph_id, origin_m, origin_m_origin,
+                   origin_prime, origin_m_origin_prime, ignore_attrs=False):
         """Propagation steps: based on reverse BFS on neighbours."""
         updated_graphs = {
-            graph_id: (g_m, g_m_g, g_prime, g_m_g_prime)
+            graph_id: (origin_m, origin_m_origin, origin_prime, origin_m_origin_prime)
         }
         updated_homomorphisms = {}
 
@@ -1429,35 +1431,31 @@ class Hierarchy(nx.DiGraph):
         updated_relations = []
 
         current_level = set(self.predecessors(graph_id))
-        successors = dict([
-            (n, [graph_id]) for n in current_level
-        ])
+
+        visited = set()
+
+        g_m_origin_m = dict()
+
         while len(current_level) > 0:
+
             next_level = set()
+
             for graph in current_level:
-                paths_to_origin = nx.all_shortest_paths(self, graph, graph_id)
-                paths_homomorphism = []
-                for path in paths_to_origin:
-                    paths_homomorphism.append(
-                        self.compose_path_typing(path)
-                    )
+
+                visited.add(graph)
+
                 if isinstance(self.node[graph], GraphNode):
-                    # origin_typing = {}
-                    # for node in self.node[graph].graph.nodes():
-                    #     for hom in paths_homomorphism:
-                    #         if node in hom.keys():
-                    #             origin_typing[node] = hom[node]
-                    #             break
 
                     origin_typing = self.get_typing(graph, graph_id)
                     origin_ignore = set(self.node[graph].graph.nodes()) -\
                         self.get_ignore_mapping(graph, graph_id)
+
                     if ignore_attrs:
                         ignore = set(updated_graphs[graph_id][0].nodes())
                     else:
                         ignore = set()
 
-                    g_m, g_m_g, g_m_origin_m = pullback(
+                    g_m, g_m_g, g_m_origin_m[graph] = pullback(
                         self.node[graph].graph,
                         updated_graphs[graph_id][0],
                         self.node[graph_id].graph,
@@ -1470,136 +1468,55 @@ class Hierarchy(nx.DiGraph):
                     updated_graphs[graph] = (
                         g_m, g_m_g, g_m, id_of(g_m)
                     )
-                    # find homomorphisms g_m -> suc_m
-                    for suc in successors[graph]:
-                        g_m_suc_m = get_unique_map(
-                            g_m,
-                            self.node[graph].graph,
-                            updated_graphs[suc][0],
-                            self.node[suc].graph,
-                            g_m_g,
-                            self.edge[graph][suc].mapping,
-                            updated_graphs[suc][1]
-                        )
-                        updated_homomorphisms[(graph, suc)] =\
-                            (compose_homomorphisms(updated_graphs[suc][3],
-                                                   g_m_suc_m),
-                             self.edge[graph][suc].ignore_attrs)
+
+                    for suc in self.successors(graph):
+                        if suc in visited:
+                            graph_m_suc_m = get_unique_map_to_pullback(
+                                self.node[suc].graph,
+                                origin_m,
+                                updated_graphs[suc][0],
+                                g_m,
+                                updated_graphs[suc][1],
+                                g_m_origin_m[suc],
+                                compose_homomorphisms(
+                                    self.edge[graph][suc].mapping,
+                                    g_m_g
+                                ),
+                                g_m_origin_m[graph]
+                            )
+                            updated_homomorphisms[(graph, suc)] =\
+                                (graph_m_suc_m,
+                                 self.edge[graph][suc].ignore_attrs)
+                        else:
+                            graph_m_suc = compose_homomorphisms(
+                                self.edge[graph][suc].mapping, g_m_g
+                            )
+                            updated_homomorphisms[(graph, suc)] =\
+                                (graph_m_suc,
+                                 self.edge[graph][suc].ignore_attrs)
+
+                    for pred in self.predecessors(graph):
+                        if pred in visited:
+                            pred_m_graph_m = get_unique_map_to_pullback(
+                                self.node[graph].graph,
+                                origin_m,
+                                g_m,
+                                updated_graphs[pred][0],
+                                g_m_g,
+                                g_m_origin_m[graph],
+                                self.edge[pred][graph].mapping,
+                                g_m_origin_m[pred]
+                            )
+                            updated_homomorphisms[(pred, graph)] =\
+                                (pred_m_graph_m,
+                                 self.edge[pred][graph].ignore_attrs)
 
                     # propagate changes to adjacent relations
                     for related_g in self.adjacent_relations(graph):
-                        # g, left_h, right_h = self.relation_to_span(graph, related_g)
-                        # rel_g_m, rel_g_m_g, rel_g_m_g_m =\
-                        #     pullback(g, g_m, self.node[graph].graph, left_h, g_m_g)
-                        # updated_relations.update({
-                        #     (graph, related_g): (
-                        #         rel_g_m,
-                        #         rel_g_m_g_m,
-                        #         rel_g_m_g
-                        #     )
-                        # })
                         updated_relations.append((graph, related_g))
 
                 elif type(self.node[graph]) == RuleNode:
-                    rule = self.node[graph].rule
-
-                    # propagation to lhs
-                    lhs_origin_typing = {}
-                    for node in rule.lhs.nodes():
-                        for hom in paths_homomorphism:
-                            if node in hom[0].keys():
-                                lhs_origin_typing[node] = hom[0][node]
-                                break
-                    lhs_m, lhs_m_lhs, lhs_m_origin_m = pullback(
-                        rule.lhs,
-                        updated_graphs[graph_id][0],
-                        self.node[graph_id].graph,
-                        lhs_origin_typing,
-                        updated_graphs[graph_id][1]
-                    )
-
-                    # propagation to p
-                    p_origin_typing = {}
-                    for node in rule.p.nodes():
-                        for hom in paths_homomorphism:
-                            if rule.p_lhs[node] in hom[0].keys():
-                                p_origin_typing[node] =\
-                                    hom[0][rule.p_lhs[node]]
-                                break
-                    p_m, p_m_p, p_m_origin_m = pullback(
-                        rule.p,
-                        updated_graphs[graph_id][0],
-                        self.node[graph_id].graph,
-                        p_origin_typing,
-                        updated_graphs[graph_id][1]
-                    )
-
-                    # propagation to rhs
-                    rhs_origin_typing = {}
-                    for node in rule.rhs.nodes():
-                        for hom in paths_homomorphism:
-                            if node in hom[1].keys():
-                                rhs_origin_typing[node] = hom[1][node]
-                                break
-                    rhs_m, rhs_m_rhs, rhs_m_origin_m = pullback(
-                        rule.rhs,
-                        updated_graphs[graph_id][0],
-                        self.node[graph_id].graph,
-                        rhs_origin_typing,
-                        updated_graphs[graph_id][1]
-                    )
-
-                    # compose homomorphisms to get p_m -> lhs_m
-                    new_p_lhs = get_unique_map(
-                        p_m,
-                        rule.p,
-                        rule.lhs,
-                        lhs_m,
-                        p_m_p,
-                        rule.p_lhs,
-                        lhs_m_lhs
-                    )
-
-                    # compose homomorphisms to get p_m -> rhs_m
-                    new_p_rhs = get_unique_map(
-                        p_m,
-                        rule.p,
-                        rule.rhs,
-                        rhs_m,
-                        p_m_p,
-                        rule.p_rhs,
-                        rhs_m_rhs
-                    )
-
-                    new_rule = Rule(
-                        p_m, lhs_m, rhs_m, new_p_lhs, new_p_rhs
-                    )
-
-                    updated_rules[graph] = new_rule
-
-                    for suc in successors[graph]:
-                        lhs_m_suc_m = get_unique_map(
-                            lhs_m,
-                            rule.lhs,
-                            updated_graphs[suc][0],
-                            self.node[suc].graph,
-                            lhs_m_lhs,
-                            self.edge[graph][suc].lhs_mapping,
-                            updated_graphs[suc][1]
-                        )
-
-                        rhs_m_suc_m = get_unique_map(
-                            rhs_m,
-                            rule.rhs,
-                            updated_graphs[suc][0],
-                            self.node[suc].graph,
-                            rhs_m_rhs,
-                            self.edge[graph][suc].rhs_mapping,
-                            updated_graphs[suc][1]
-                        )
-
-                        updated_rule_h[(graph, suc)] =\
-                            (lhs_m_suc_m, rhs_m_suc_m)
+                    pass
 
                 else:
                     raise RewritingError(
@@ -1608,14 +1525,12 @@ class Hierarchy(nx.DiGraph):
                     )
 
                 # update step
-                next_level.update(self.predecessors(graph))
-                for n in self.predecessors(graph):
-                    if n in successors.keys():
-                        successors[n].append(graph)
-                    else:
-                        successors[n] = [graph]
-                del successors[graph]
+                next_level.update(
+                    [p for p in self.predecessors(graph) if p not in visited]
+                )
+
             current_level = next_level
+
         return (
             updated_graphs,
             updated_homomorphisms,

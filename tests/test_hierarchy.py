@@ -767,3 +767,70 @@ class TestHierarchy(object):
             },
             total=True
         )
+
+    def test_triangle_1(self):
+        h = Hierarchy()
+
+        g1 = nx.DiGraph()
+        g1.add_nodes_from([
+            "1", "2"
+        ])
+
+        g2 = nx.DiGraph()
+        g2.add_nodes_from([
+            "1a", "1b", "2a", "2b"
+        ])
+
+        g3 = nx.DiGraph()
+        g3.add_nodes_from([
+            "1x", "1y", "2x", "2y"
+        ])
+
+        h.add_graph("g1", g1)
+        h.add_graph("g2", g2)
+        h.add_graph("g3", g3)
+        h.add_typing(
+            "g2", "g1",
+            {
+                "1a": "1",
+                "1b": "1",
+                "2a": "2",
+                "2b": "2"
+            },
+            total=True
+        )
+        h.add_typing(
+            "g3", "g1",
+            {
+                "1x": "1",
+                "1y": "1",
+                "2x": "2",
+                "2y": "2"
+            },
+            total=True
+        )
+        h.add_typing(
+            "g2", "g3",
+            {
+                "1a": "1x",
+                "1b": "1y",
+                "2a": "2y",
+                "2b": "2x"
+            },
+            total=True
+        )
+
+        pattern = nx.DiGraph()
+        pattern.add_nodes_from([
+            1, 2
+        ])
+        rule = Rule.from_transform(pattern)
+        rule.remove_node(1)
+        rule.clone_node(2)
+
+        instances = h.find_matching("g1", pattern)
+        new_h, _ = h.rewrite("g1", rule, instances[0], inplace=False)
+        print(new_h)
+        print_graph(new_h.node["g2"].graph)
+        print_graph(new_h.node["g3"].graph)
+        print(new_h.edge["g2"]["g3"].mapping)

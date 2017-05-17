@@ -2,7 +2,7 @@ import networkx as nx
 
 from regraph.rules import Rule
 from regraph.utils import (dict_sub,
-                                   is_subdict)
+                           is_subdict)
 from regraph.category_op import identity
 from regraph.primitives import *
 
@@ -47,11 +47,6 @@ class TestPrimitives(object):
         add_edges_from(self.graph, edges)
 
     def test_add_node(self):
-        try:
-            add_node(self.graph, "1")
-            raise ValueError()
-        except:
-            pass
         attrs = {"a": {1}}
         add_node(self.graph, "a", attrs)
         assert("a" in self.graph.nodes())
