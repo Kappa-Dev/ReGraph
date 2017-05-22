@@ -1491,7 +1491,9 @@ class Hierarchy(nx.DiGraph):
                     for suc in self.successors(graph):
                         if suc == graph_id:
                             updated_homomorphisms[(graph, suc)] =\
-                                (g_m_origin_m[graph],
+                                (compose_homomorphisms(updated_graphs[suc][3],
+                                                       g_m_origin_m[graph]),
+                                 # (g_m_origin_m[graph],
                                  self.edge[graph][suc].ignore_attrs)
                         else:
                             if suc in visited:
@@ -2804,7 +2806,7 @@ class Hierarchy(nx.DiGraph):
                 # print("new_typing", instance_typing)
                 # print("stating nodes",self.node[old_nugget].graph.nodes())
                 # print("ending nodes", self.node[typing].graph.nodes())
-                print("typing_new_nugget", new_typing.mapping)
+                print("typing_new_nugget",typing, new_typing.mapping)
                 # print("new_nugget_nodes", self.node[new_nugget].graph.nodes())
                 self.add_typing(instance_id, typing, instance_typing,
                                 total=new_typing.total,

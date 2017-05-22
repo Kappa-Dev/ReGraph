@@ -139,6 +139,20 @@ def from_json_tree(hie, json_data, parent_id):
     return json_data["id"]
 
 
+# temporary
+def add_types(hie):
+    for node in hie.nodes():
+        if "kami" in hie[node] and isinstance(hie.node[node], GraphNode):
+            hie.node[node].attrs["children_types"] = ["nugget", "rule",
+                                                      "variant"]
+            for child in all_children(hie, node):
+                if "type" not in hie.node[child].attrs:
+                    if isinstance(hie.node[child], GraphNode):
+                        hie.node[child].attrs["type"] = "nugget"
+                    elif isinstance(hie.node[child], RuleNode):
+                        hie.node[child].attrs["type"] = "rule"
+
+
 def to_json_tree(hie, g_id, parent, include_rules=True,
                  include_graphs=True, depth_bound=None):
     """export a hierarchy as a json tree with root g_id"""
