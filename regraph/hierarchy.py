@@ -362,7 +362,6 @@ class Hierarchy(nx.DiGraph):
             normalize_attrs(hierarchy.edge[s][t].attrs)
             if self.edge[s][t].attrs != hierarchy.edge[s][t].attrs:
                 return False
-
             if isinstance(self.edge[s][t], self.graph_typing_cls) and\
                isinstance(hierarchy.edge[s][t], self.graph_typing_cls):
 
@@ -372,10 +371,8 @@ class Hierarchy(nx.DiGraph):
                     return False
                 if self.edge[s][t].total != hierarchy.edge[s][t].total:
                     return False
-
             elif isinstance(self.edge[s][t], self.rule_typing_cls) and\
                     isinstance(hierarchy.edge[s][t], self.rule_typing_cls):
-
                 if self.edge[s][t].lhs_mapping != hierarchy.edge[s][t].lhs_mapping:
                     return False
                 if self.edge[s][t].rhs_mapping != hierarchy.edge[s][t].rhs_mapping:
@@ -496,9 +493,7 @@ class Hierarchy(nx.DiGraph):
         self._check_consistency(source, target, mapping)
 
         self.add_edge(source, target)
-
         self.edge[source][target] = self.graph_typing_cls(mapping, total, ignore_attrs, attrs)
-
         return
 
     def add_partial_typing(self, source, target,
@@ -712,9 +707,7 @@ class Hierarchy(nx.DiGraph):
 
             for source in in_graphs:
                 for target in out_graphs:
-
                     if isinstance(self.edge[source][graph_id], self.rule_typing_cls):
-
                         lhs_mapping = compose_homomorphisms(
                             self.edge[graph_id][target].mapping,
                             self.edge[source][graph_id].lhs_mapping
@@ -736,9 +729,7 @@ class Hierarchy(nx.DiGraph):
                                 self.edge[source][graph_id].ignore_attrs or
                                 self.edge[graph_id][target].ignore_attrs
                             )
-
                     elif isinstance(self.edge[source][graph_id], self.graph_typing_cls):
-
                         # compose two homomorphisms
                         mapping = compose_homomorphisms(
                             self.edge[graph_id][target].mapping,
@@ -1549,7 +1540,6 @@ class Hierarchy(nx.DiGraph):
                         updated_relations.append((graph, related_g))
 
                 elif isinstance(self.node[graph], self.rule_node_cls):
-
                     rule = self.node[graph].rule
                     (
                         lhs_origin_typing, p_origin_typing, rhs_origin_typing
@@ -1666,7 +1656,7 @@ class Hierarchy(nx.DiGraph):
                 )
 
             current_level = next_level
-
+        print("Updated homomorphisms: ", updated_homomorphisms)
         return (
             updated_graphs,
             updated_homomorphisms,
@@ -1795,9 +1785,7 @@ class Hierarchy(nx.DiGraph):
             #     self.edge[s][t].ignore_attrs,
             #     old_edge_attrs
             # )
-
             self.edge[s][t] = self.rule_typing_cls(
-
                 lhs_h, rhs_h,
                 self.edge[s][t].ignore_attrs,
                 self.edge[s][t].attrs
@@ -2167,7 +2155,6 @@ class Hierarchy(nx.DiGraph):
             else:
                 raise HierarchyError("Unknown type of the node '%s'!" % node)
         for s, t in self.edges():
-
             if isinstance(self.edge[s][t], self.graph_typing_cls):
                 json_data["typing"].append({
                     "from": s,
@@ -2177,7 +2164,6 @@ class Hierarchy(nx.DiGraph):
                     "ignore_attrs": self.edge[s][t].ignore_attrs,
                     "attrs": self.edge[s][t].attrs
                 })
-
             elif isinstance(self.edge[s][t], self.rule_typing_cls):
                 json_data["rule_typing"].append({
                     "from": s,
