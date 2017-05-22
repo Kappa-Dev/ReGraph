@@ -121,7 +121,7 @@ def plot_instance(graph, pattern, instance, filename=None, pos=None):
     nx.draw_networkx_labels(graph, labels_pos, labels, font_size=11)
 
     # color the instances
-    plt.title("Graph with instance of pattern highlighted")
+    # plt.title("Graph with instance of pattern highlighted")
     _ticks_off()
     _set_limits(pos, labels_pos)
     if filename is not None:

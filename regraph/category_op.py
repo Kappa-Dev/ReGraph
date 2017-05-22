@@ -141,8 +141,6 @@ def get_unique_map_to_pullback(a, b, p, z, p_a, p_b, z_a, z_b):
             b_node = p_b[node]
             z_keys_from_b.update(keys_by_value(z_b, b_node))
 
-        print(z_keys_from_a)
-        print(z_keys_from_b)
         z_keys = z_keys_from_a.intersection(z_keys_from_b)
         for z_key in z_keys:
             z_p[z_key] = node
@@ -167,8 +165,6 @@ def get_unique_map(a, b, c, d, a_b, b_d, c_d):
                 else:
                     for i, a_key in enumerate(a_keys):
                         a_c[a_key] = c_keys[i]
-    # print("cnodes", c.nodes())
-    # print("a_c", a_c)
     return a_c
 
 
@@ -524,12 +520,8 @@ def total_pushout(a, b, c, a_b, a_c):
         a_keys_1 = keys_by_value(f, n1)
         a_keys_2 = keys_by_value(f, n2)
         if len(a_keys_1) == 0 or len(a_keys_2) == 0:
-            # print("Adding an edge to D: ", hom1[n1], hom1[n2])
-            # print("Reason: some of the mapped nodes was not in a")
             add_edge(d, hom1[n1], hom1[n2], get_edge(b, n1, n2))
         elif (hom1[n1], hom1[n2]) not in d.edges():
-            # print("Adding an edge to D: ", hom1[n1], hom1[n2])
-            # print("Reason: edge corresponding to these guys was not in a")
             add_edge(d, hom1[n1], hom1[n2], get_edge(b, n1, n2))
 
     check_homomorphism(b, d, hom1)
@@ -588,7 +580,6 @@ def pullback_complement(a, b, d, a_b, b_d):
                 is_in_a = True
                 break
         if not is_in_a:
-            # print(c.nodes())
             new_name = n
             i = 1
             while new_name in c.nodes():

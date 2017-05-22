@@ -1090,8 +1090,12 @@ def find_match(graph, pattern, graph_typings, pattern_typings, typing_graphs,
     for added_edges in may_edges_subsets:
         pat = copy.deepcopy(pattern)
         pat.add_edges_from(added_edges)
-        matcher = isomorphism.DiGraphMatcher(graph, pat, _compare_dicts,
-                                             _compare_dicts)
+        if graph.is_directed():
+            matcher = isomorphism.DiGraphMatcher(graph, pat, _compare_dicts,
+                                                 _compare_dicts)
+        else:
+            matcher = isomorphism.GraphMatcher(graph, pat, _compare_dicts,
+                                               _compare_dicts)
         for sub in matcher.subgraph_isomorphisms_iter():
             matchings.append({v: k for (k, v) in sub.items()})
 
