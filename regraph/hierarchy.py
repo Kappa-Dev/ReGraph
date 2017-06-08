@@ -33,6 +33,8 @@ from regraph.primitives import (add_node_attrs,
 from regraph.utils import (is_subdict,
                            valid_attributes,
                            keys_by_value,
+                           merge_attributes,
+                           recursive_merge,
                            normalize_attrs,
                            to_set,
                            id_of,
@@ -73,26 +75,29 @@ class AttributeContainter(object):
 
     def remove_attrs(self, attrs):
         """Remove attributes."""
-        normalize_attrs(self.attrs)
-        for key, value in attrs.items():
-            if key not in self.attrs.keys():
-                pass
-                # warnings.warn(
-                #     "Node '%s' does not have attribute '%s'!" %
-                #     (str(node), str(key)), RuntimeWarning)
-            else:
-                elements_to_remove = []
-                for el in to_set(value):
-                    if el in self.attrs[key]:
-                        elements_to_remove.append(el)
-                    else:
-                        pass
-                        # warnings.warn(
-                        #     "Node '%s' does not have attribute '%s'"
-                        #     " with value '%s'!" %
-                        #     (str(node), str(key), str(el)), RuntimeWarning)
-                for el in elements_to_remove:
-                    self.attrs[key].remove(el)
+        if attrs is None:
+            pass
+        else:
+            normalize_attrs(self.attrs)
+            for key, value in attrs.items():
+                if key not in self.attrs.keys():
+                    pass
+                    # warnings.warn(
+                    #     "Node '%s' does not have attribute '%s'!" %
+                    #     (str(node), str(key)), RuntimeWarning)
+                else:
+                    elements_to_remove = []
+                    for el in to_set(value):
+                        if el in self.attrs[key]:
+                            elements_to_remove.append(el)
+                        else:
+                            pass
+                            # warnings.warn(
+                            #     "Node '%s' does not have attribute '%s'"
+                            #     " with value '%s'!" %
+                            #     (str(node), str(key), str(el)), RuntimeWarning)
+                    for el in elements_to_remove:
+                        self.attrs[key].remove(el)
 
     def update_attrs(self, attrs):
         """Update attribures."""
@@ -116,6 +121,12 @@ class GraphNode(AttributeContainter):
             self.attrs = dict()
         return
 
+    def __eq__(self, other):
+        return isinstance(other, GraphNode) and self.graph == other.graph
+
+    def __ne__(self, other):
+        return not (self == other)
+
 
 class RuleNode(AttributeContainter):
     """Data structure incapsulating a rule in the node of the hierarchy."""
@@ -129,15 +140,19 @@ class RuleNode(AttributeContainter):
             self.attrs = dict()
         return
 
+    def __eq__(self, other):
+        return isinstance(other, RuleNode) and self.rule == other.rule
+
+    def __ne__(self, other):
+        return not (self == other)
+
 
 class Typing(AttributeContainter):
     """Incapsulate homomorphism in the edge of the hierarchy."""
 
-    def __init__(self, mapping, total=False, ignore_attrs=False,
-                 attrs=None):
+    def __init__(self, mapping, total=False, attrs=None):
         """Initialize homomorphism."""
         self.mapping = mapping
-        self.ignore_attrs = ignore_attrs
         self.total = total
         if attrs:
             self.attrs = attrs
@@ -145,23 +160,48 @@ class Typing(AttributeContainter):
             self.attrs = dict()
         return
 
+    def all_total(self):
+        return self.total
+
     def rename_source(self, old_name, new_name):
         replace_source(old_name, new_name, self.mapping)
 
     def rename_target(self, old_name, new_name):
         replace_target(old_name, new_name, self.mapping)
 
+    # def __rmul__(self, other):
+    #     if isinstance(other, Typing):
+    #         return Typing(
+    #             compose_homomorphisms(other.mapping),
+    #             self.total and other.total,
+    #             self.attrs)
+    #     else:
+    #         return NotImplemented
+
+    def __mul__(self, other):
+        if isinstance(other, Typing):
+            return Typing(
+                compose_homomorphisms(self.mapping, other.mapping),
+                self.total and other.total)
+
+        elif isinstance(other, RuleTyping):
+            return RuleTyping(
+                compose_homomorphisms(self.mapping, other.lhs_mapping),
+                compose_homomorphisms(self.mapping, other.rhs_mapping),
+                other.lhs_total and self.total,
+                other.rhs_total and self.total)
+        else:
+            return NotImplemented
+
 
 class RuleTyping(AttributeContainter):
     """Incapsulate rule typing in the edge of the hierarchy."""
 
     def __init__(self, lhs_mapping, rhs_mapping,
-                 lhs_total=False, rhs_total=False,
-                 ignore_attrs=False, attrs=None):
+                 lhs_total=False, rhs_total=False, attrs=None):
         """Initialize homomorphism."""
         self.lhs_mapping = copy.deepcopy(lhs_mapping)
         self.rhs_mapping = copy.deepcopy(rhs_mapping)
-        self.ignore_attrs = ignore_attrs
         self.lhs_total = lhs_total
         self.rhs_total = rhs_total
         if attrs:
@@ -177,6 +217,20 @@ class RuleTyping(AttributeContainter):
     def rename_target(self, old_name, new_name):
         replace_target(old_name, new_name, self.lhs_mapping)
         replace_target(old_name, new_name, self.rhs_mapping)
+
+    def all_total(self):
+        return self.lhs_total and self.rhs_total
+
+    def __rmul__(self, other):
+        if isinstance(other, Typing):
+            return RuleTyping(
+                compose_homomorphisms(other.mapping, self.lhs_mapping),
+                compose_homomorphisms(other.mapping, self.rhs_mapping),
+                self.lhs_total and other.total,
+                self.rhs_total and other.total,
+                self.attrs)
+        else:
+            return NotImplemented
 
 
 class Relation(AttributeContainter):
@@ -211,8 +265,7 @@ class RuleGraphRelation(Relation):
 class RuleRelation(Relation):
     """Implements relations on rules."""
 
-    def __init__(self, lhs_pairs, p_pairs, rhs_pairs,
-                 ignore_attrs=True, attrs=None):
+    def __init__(self, lhs_pairs, p_pairs, rhs_pairs, attrs=None):
         """Initialize graph relation."""
         pass
 
@@ -298,20 +351,17 @@ class Hierarchy(nx.DiGraph):
         res += "Typing homomorphisms: \n"
         for n1, n2 in self.edges():
             if isinstance(self.edge[n1][n2], self.graph_typing_cls):
-                res += "%s -> %s: total == %s, ignore_attrs == %s\n" %\
+                res += "%s -> %s: total == %s" %\
                     (
-                        n1, n2, self.edge[n1][n2].total,
-                        self.edge[n1][n2].ignore_attrs
+                        n1, n2, self.edge[n1][n2].total
                     )
                 # res += "mapping: %s\n" % str(self.edge[n1][n2].mapping)
             elif isinstance(self.edge[n1][n2], self.rule_typing_cls):
                 res +=\
-                    ("%s -> %s: lhs_total == %s, rhs_total == %s," +
-                        " ignore_attrs == %s\n") %\
+                    ("%s -> %s: lhs_total == %s, rhs_total == %s,") %\
                     (
                         n1, n2, self.edge[n1][n2].lhs_total,
-                        self.edge[n1][n2].rhs_total,
-                        self.edge[n1][n2].ignore_attrs
+                        self.edge[n1][n2].rhs_total
                     )
                 # res += "lhs mapping: %s\n" % str(self.edge[n1][n2].lhs_mapping)
                 # res += "rhs mapping: %s\n" % str(self.edge[n1][n2].rhs_mapping)
@@ -367,8 +417,6 @@ class Hierarchy(nx.DiGraph):
 
                 if self.edge[s][t].mapping != hierarchy.edge[s][t].mapping:
                     return False
-                if self.edge[s][t].ignore_attrs != hierarchy.edge[s][t].ignore_attrs:
-                    return False
                 if self.edge[s][t].total != hierarchy.edge[s][t].total:
                     return False
             elif isinstance(self.edge[s][t], self.rule_typing_cls) and\
@@ -376,8 +424,6 @@ class Hierarchy(nx.DiGraph):
                 if self.edge[s][t].lhs_mapping != hierarchy.edge[s][t].lhs_mapping:
                     return False
                 if self.edge[s][t].rhs_mapping != hierarchy.edge[s][t].rhs_mapping:
-                    return False
-                if self.edge[s][t].ignore_attrs != hierarchy.edge[s][t].ignore_attrs:
                     return False
                 if self.edge[s][t].lhs_total != hierarchy.edge[s][t].lhs_total:
                     return False
@@ -440,7 +486,7 @@ class Hierarchy(nx.DiGraph):
         return
 
     def add_typing(self, source, target, mapping,
-                   total=False, ignore_attrs=False, attrs=None):
+                   total=False, attrs=None):
         """Add homomorphism to the hierarchy."""
         if source not in self.nodes():
             raise HierarchyError(
@@ -485,7 +531,6 @@ class Hierarchy(nx.DiGraph):
             self.node[source].graph,
             self.node[target].graph,
             mapping,
-            ignore_attrs,
             total=total
         )
 
@@ -493,18 +538,18 @@ class Hierarchy(nx.DiGraph):
         self._check_consistency(source, target, mapping)
 
         self.add_edge(source, target)
-        self.edge[source][target] = self.graph_typing_cls(mapping, total, ignore_attrs, attrs)
+        self.edge[source][target] = self.graph_typing_cls(mapping, total, attrs)
         return
 
     def add_partial_typing(self, source, target,
-                           mapping, ignore_attrs=False, attrs=None):
+                           mapping, attrs=None):
         """Add partial homomorphism A -> B."""
         raise ReGraphError("Deprecated: use `add_typing` with parameter `total=False`!")
 
     def add_rule_typing(self, rule_id, graph_id, lhs_mapping,
                         rhs_mapping=None,
                         lhs_total=False, rhs_total=False,
-                        ignore_attrs=False, attrs=None):
+                        attrs=None):
         """Add typing of a rule."""
         if rule_id not in self.nodes():
             raise HierarchyError(
@@ -528,7 +573,6 @@ class Hierarchy(nx.DiGraph):
             self.node[rule_id].rule.lhs,
             self.node[graph_id].graph,
             lhs_mapping,
-            ignore_attrs,
             total=lhs_total
         )
 
@@ -561,7 +605,6 @@ class Hierarchy(nx.DiGraph):
             self.node[rule_id].rule.rhs,
             self.node[graph_id].graph,
             new_rhs_mapping,
-            ignore_attrs,
             total=rhs_total
         )
 
@@ -575,7 +618,6 @@ class Hierarchy(nx.DiGraph):
             new_rhs_mapping,
             lhs_total,
             rhs_total,
-            ignore_attrs,
             attrs
         )
         return
@@ -725,9 +767,7 @@ class Hierarchy(nx.DiGraph):
                                 self.edge[source][graph_id].lhs_total and
                                 self.edge[graph_id][target].lhs_total,
                                 self.edge[source][graph_id].rhs_total and
-                                self.edge[graph_id][target].rhs_total,
-                                self.edge[source][graph_id].ignore_attrs or
-                                self.edge[graph_id][target].ignore_attrs
+                                self.edge[graph_id][target].rhs_total
                             )
                     elif isinstance(self.edge[source][graph_id], self.graph_typing_cls):
                         # compose two homomorphisms
@@ -742,9 +782,7 @@ class Hierarchy(nx.DiGraph):
                                 target,
                                 mapping,
                                 self.edge[source][graph_id].total and
-                                self.edge[graph_id][target].total,
-                                self.edge[source][graph_id].ignore_attrs or
-                                self.edge[graph_id][target].ignore_attrs
+                                self.edge[graph_id][target].total
                             )
 
         self.remove_node(graph_id)
@@ -1171,12 +1209,11 @@ class Hierarchy(nx.DiGraph):
                             raise HierarchyError("Invalid pattern typing!")
 
                 # Check pattern typing is a valid homomorphism
-                for typing_graph, (mapping, ignore_attrs) in new_pattern_typing.items():
+                for typing_graph, mapping in new_pattern_typing.items():
                     check_homomorphism(
                         pattern,
                         self.node[typing_graph].graph,
                         mapping,
-                        ignore_attrs,
                         total=False
                     )
                 pattern_typing = new_pattern_typing
@@ -1298,7 +1335,7 @@ class Hierarchy(nx.DiGraph):
             rhs_typing[suc] =\
                 self.edge[rule_id][suc].rhs_mapping
 
-        instances = self.find_matching(
+        instances = self.find_matching2(
             graph_id,
             rule.lhs,
             lhs_typing
@@ -1316,7 +1353,7 @@ class Hierarchy(nx.DiGraph):
         # check instance typing and lhs typing coincide
         for node in pattern.nodes():
             if pattern_typing:
-                for typing_graph, (lhs_mapping, _) in pattern_typing.items():
+                for typing_graph, lhs_mapping in pattern_typing.items():
                     if node in pattern_typing.keys() and\
                        instance[node] in self.edge[graph_id][typing_graph].mapping.keys():
                         if lhs_mapping[node] != self.edge[graph_id][typing_graph].mapping[instance[node]]:
@@ -1344,12 +1381,11 @@ class Hierarchy(nx.DiGraph):
 
         for typing_graph in self.successors(graph_id):
             typing = self.edge[graph_id][typing_graph].mapping
-            typ_ignore_attrs = self.edge[graph_id][typing_graph].ignore_attrs
 
             if typing_graph not in lhs_typing.keys():
-                lhs_typing[typing_graph] = (dict(), typ_ignore_attrs)
+                lhs_typing[typing_graph] = dict()
             if typing_graph not in rhs_typing.keys():
-                rhs_typing[typing_graph] = (dict(), typ_ignore_attrs)
+                rhs_typing[typing_graph] = dict()
 
             # Check that no types are redefined
             # forbidden case of * <- * -> A
@@ -1357,8 +1393,8 @@ class Hierarchy(nx.DiGraph):
             for p_node in p_l.keys():
                 l_node = p_l[p_node]
                 r_node = p_r[p_node]
-                if r_node in rhs_typing[typing_graph][0].keys() and\
-                   l_node not in lhs_typing[typing_graph][0].keys():
+                if r_node in rhs_typing[typing_graph].keys() and\
+                   l_node not in lhs_typing[typing_graph].keys():
                     if matching[l_node] not in typing.keys():
                         raise RewritingError(
                             "Typing of the rule is not valid: "
@@ -1370,41 +1406,41 @@ class Hierarchy(nx.DiGraph):
 
                 # Inherit lhs typing from the matching
                 for (src, tgt) in matching.items():
-                    if (src not in lhs_typing[typing_graph][0].keys() and
+                    if (src not in lhs_typing[typing_graph].keys() and
                             tgt in typing.keys()):
-                        lhs_typing[typing_graph][0][src] = typing[tgt]
+                        lhs_typing[typing_graph][src] = typing[tgt]
 
                 for (p_node, l_node) in p_l.items():
-                    if l_node in lhs_typing[typing_graph][0].keys():
-                        if p_r[p_node] in rhs_typing[typing_graph][0].keys():
-                            if (rhs_typing[typing_graph][0][p_r[p_node]] !=
-                                    lhs_typing[typing_graph][0][l_node]):
+                    if l_node in lhs_typing[typing_graph].keys():
+                        if p_r[p_node] in rhs_typing[typing_graph].keys():
+                            if (rhs_typing[typing_graph][p_r[p_node]] !=
+                                    lhs_typing[typing_graph][l_node]):
                                 raise RewritingError(
                                     "Typing of the rule is not valid: "
                                     "lhs node that maps to a node of type "
                                     "`%s` in the matching, is being mapped to `%s` in rhs!" %
-                                    (lhs_typing[typing_graph][0][l_node],
-                                     rhs_typing[typing_graph][0][p_r[p_node]])
+                                    (lhs_typing[typing_graph][l_node],
+                                     rhs_typing[typing_graph][p_r[p_node]])
                                 )
                         else:
-                            rhs_typing[typing_graph][0][p_r[p_node]] =\
-                                lhs_typing[typing_graph][0][l_node]
+                            rhs_typing[typing_graph][p_r[p_node]] =\
+                                lhs_typing[typing_graph][l_node]
             else:
                 for p_node, r_node in p_r.items():
                     l_node = p_l[p_node]
                     if typing_graph in rhs_typing.keys() and\
-                       r_node in rhs_typing[typing_graph][0].keys():
-                        p_type = rhs_typing[typing_graph][0][r_node]
+                       r_node in rhs_typing[typing_graph].keys():
+                        p_type = rhs_typing[typing_graph][r_node]
                         if typing_graph in lhs_typing.keys() and\
-                           l_node in lhs_typing[typing_graph][0].keys():
-                            l_type = lhs_typing[typing_graph][0][l_node]
+                           l_node in lhs_typing[typing_graph].keys():
+                            l_type = lhs_typing[typing_graph][l_node]
                             if p_type != l_type:
                                 raise RewritingError(
                                     "Typing of the rule is not valid: "
                                     "lhs node that maps to a node of type "
                                     "`%s` in the matching, is being mapped to `%s` in rhs!" %
-                                    (lhs_typing[typing_graph][0][l_node],
-                                     rhs_typing[typing_graph][0][p_r[p_node]])
+                                    (lhs_typing[typing_graph][l_node],
+                                     rhs_typing[typing_graph][p_r[p_node]])
                                 )
                         else:
                             if matching[l_node] in typing.keys():
@@ -1431,7 +1467,7 @@ class Hierarchy(nx.DiGraph):
         return common_sucs
 
     def _propagate(self, graph_id, origin_m, origin_m_origin,
-                   origin_prime, origin_m_origin_prime, ignore_attrs=False):
+                   origin_prime, origin_m_origin_prime):
         """Propagation steps: based on reverse BFS on neighbours."""
         updated_graphs = {
             graph_id: (
@@ -1467,23 +1503,13 @@ class Hierarchy(nx.DiGraph):
 
                     origin_typing = self.get_typing(graph, graph_id)
 
-                    origin_ignore = set(self.node[graph].graph.nodes()) -\
-                        self.get_ignore_mapping(graph, graph_id)
-
-                    if ignore_attrs:
-                        ignore = set(updated_graphs[graph_id][0].nodes())
-                    else:
-                        ignore = set()
-
                     g_m, g_m_g, g_m_origin_m[graph] = pullback(
                         self.node[graph].graph,
                         updated_graphs[graph_id][0],
                         self.node[graph_id].graph,
                         origin_typing,
                         updated_graphs[graph_id][1],
-                        total=False,
-                        ignore_attrs_bd=origin_ignore,
-                        ignore_attrs_cd=ignore
+                        total=False
                     )
                     updated_graphs[graph] = (
                         g_m, g_m_g, g_m, id_of(g_m)
@@ -1491,10 +1517,9 @@ class Hierarchy(nx.DiGraph):
                     for suc in self.successors(graph):
                         if suc == graph_id:
                             updated_homomorphisms[(graph, suc)] =\
-                                (compose_homomorphisms(updated_graphs[suc][3],
-                                                       g_m_origin_m[graph]),
+                                compose_homomorphisms(updated_graphs[suc][3],
+                                                       g_m_origin_m[graph])
                                  # (g_m_origin_m[graph],
-                                 self.edge[graph][suc].ignore_attrs)
                         else:
                             if suc in visited:
                                 graph_m_suc_m = get_unique_map_to_pullback(
@@ -1510,16 +1535,12 @@ class Hierarchy(nx.DiGraph):
                                     ),
                                     g_m_origin_m[graph]
                                 )
-                                updated_homomorphisms[(graph, suc)] =\
-                                    (graph_m_suc_m,
-                                     self.edge[graph][suc].ignore_attrs)
+                                updated_homomorphisms[(graph, suc)] = graph_m_suc_m
                             else:
                                 graph_m_suc = compose_homomorphisms(
                                     self.edge[graph][suc].mapping, g_m_g
                                 )
-                                updated_homomorphisms[(graph, suc)] =\
-                                    (graph_m_suc,
-                                     self.edge[graph][suc].ignore_attrs)
+                                updated_homomorphisms[(graph, suc)] = graph_m_suc
 
                     for pred in self.predecessors(graph):
                         if pred in visited:
@@ -1533,9 +1554,7 @@ class Hierarchy(nx.DiGraph):
                                 self.edge[pred][graph].mapping,
                                 g_m_origin_m[pred]
                             )
-                            updated_homomorphisms[(pred, graph)] =\
-                                (pred_m_graph_m,
-                                 self.edge[pred][graph].ignore_attrs)
+                            updated_homomorphisms[(pred, graph)] = pred_m_graph_m
 
                     # propagate changes to adjacent relations
                     for related_g in self.adjacent_relations(graph):
@@ -1756,7 +1775,7 @@ class Hierarchy(nx.DiGraph):
             self.add_relation(g1, g2, rel, old_attrs)
 
         # update homomorphisms
-        for (s, t), (mapping, ignore_attrs) in updated_homomorphisms.items():
+        for (s, t), mapping in updated_homomorphisms.items():
             total = False
 
             if self.edge[s][t].total:
@@ -1773,7 +1792,7 @@ class Hierarchy(nx.DiGraph):
             # self.add_typing(s, t, mapping, total, ignore_attrs, old_edge_attrs)
 
             self.edge[s][t] = self.graph_typing_cls(
-                mapping, total, ignore_attrs, self.edge[s][t].attrs
+                mapping, total, self.edge[s][t].attrs
             )
         for rule, new_rule in updated_rules.items():
             self.node[rule] = RuleNode(
@@ -1789,7 +1808,6 @@ class Hierarchy(nx.DiGraph):
             # )
             self.edge[s][t] = self.rule_typing_cls(
                 lhs_h, rhs_h,
-                self.edge[s][t].ignore_attrs,
                 self.edge[s][t].attrs
             )
 
@@ -1799,24 +1817,20 @@ class Hierarchy(nx.DiGraph):
     def _normalize_typing(self, graph_id, rule, instance,
                           lhs_typing, rhs_typing, strong=False,
                           total=True):
-        ignore_attrs_dict =\
-            {typing_id: self.edge[graph_id][typing_id].ignore_attrs
-             for typing_id in self.successors(graph_id)}
-        new_lhs_typing = normalize_typing(lhs_typing, ignore_attrs_dict)
-        new_rhs_typing = normalize_typing(rhs_typing, ignore_attrs_dict)
+        new_lhs_typing = normalize_typing(lhs_typing)
+        new_rhs_typing = normalize_typing(rhs_typing)
 
         self._complete_typing(
             graph_id, instance, new_lhs_typing,
             new_rhs_typing, rule.p_lhs, rule.p_rhs,
             strong=strong)
 
-        for typing_graph, (mapping, ignore_attrs) in new_lhs_typing.items():
+        for typing_graph, mapping in new_lhs_typing.items():
             try:
                 check_homomorphism(
                     rule.lhs,
                     self.node[typing_graph].graph,
                     mapping,
-                    ignore_attrs,
                     total=False
                 )
             except InvalidHomomorphism as e:
@@ -1825,13 +1839,12 @@ class Hierarchy(nx.DiGraph):
                     "invalid homomorphism with a typing graph '%s', "
                     "error message: %s" % (typing_graph, str(e)))
 
-        for typing_graph, (mapping, ignore_attrs) in new_rhs_typing.items():
+        for typing_graph, mapping in new_rhs_typing.items():
             try:
                 check_homomorphism(
                     rule.rhs,
                     self.node[typing_graph].graph,
                     mapping,
-                    ignore_attrs,
                     total=False
                 )
             except InvalidHomomorphism as e:
@@ -1850,7 +1863,7 @@ class Hierarchy(nx.DiGraph):
                         if len(p_nodes) == 1:
                             if instance[rule.p_lhs[p_nodes[0]]] not in typing.keys():
                                 continue
-                            elif node not in new_rhs_typing[typing_graph][0].keys():
+                            elif node not in new_rhs_typing[typing_graph].keys():
                                 raise RewritingError(
                                     "Rewriting parameter `total` is set to True, "
                                     "typing of the node `%s` "
@@ -1865,7 +1878,7 @@ class Hierarchy(nx.DiGraph):
                                     break
                             if all_untyped:
                                 continue
-                            elif node not in new_rhs_typing[typing_graph][0].keys():
+                            elif node not in new_rhs_typing[typing_graph].keys():
                                 raise RewritingError(
                                     "Rewriting parameter `total` is set to True, "
                                     "typing of the node `%s` "
@@ -1873,7 +1886,7 @@ class Hierarchy(nx.DiGraph):
                                     node
                                 )
                         else:
-                            if node not in new_rhs_typing[typing_graph][0].keys():
+                            if node not in new_rhs_typing[typing_graph].keys():
                                 raise RewritingError(
                                     "Rewriting parameter `total` is set to True, "
                                     "typing of the node `%s` "
@@ -1909,16 +1922,16 @@ class Hierarchy(nx.DiGraph):
                     removed_nodes.add(instance[node])
                 elif len(p_keys) == 1:
                     if typing_graph not in new_rhs_typing.keys() or\
-                       rule.p_rhs[p_keys[0]] not in new_rhs_typing[typing_graph][0].keys():
+                       rule.p_rhs[p_keys[0]] not in new_rhs_typing[typing_graph].keys():
                         if r_g_prime[rule.p_rhs[p_keys[0]]] in new_hom.keys():
                             removed_nodes.add(r_g_prime[rule.p_rhs[p_keys[0]]])
                 # nodes were clonned
                 elif len(p_keys) > 1:
                     for k in p_keys:
                         if typing_graph in new_rhs_typing.keys() and\
-                           rule.p_rhs[k] in new_rhs_typing[typing_graph][0].keys():
+                           rule.p_rhs[k] in new_rhs_typing[typing_graph].keys():
                             new_nodes[r_g_prime[rule.p_rhs[k]]] =\
-                                new_rhs_typing[typing_graph][0][rule.p_rhs[k]]
+                                new_rhs_typing[typing_graph][rule.p_rhs[k]]
                         else:
                             removed_nodes.add(r_g_prime[rule.p_rhs[k]])
 
@@ -1928,8 +1941,8 @@ class Hierarchy(nx.DiGraph):
                 # nodes that were added
                 if len(p_keys) == 0:
                     if typing_graph in new_rhs_typing.keys():
-                        if node in new_rhs_typing[typing_graph][0].keys():
-                            new_nodes[node] = new_rhs_typing[typing_graph][0][node]
+                        if node in new_rhs_typing[typing_graph].keys():
+                            new_nodes[node] = new_rhs_typing[typing_graph][node]
 
                 # nodes that were merged
                 elif len(p_keys) > 1:
@@ -1937,8 +1950,8 @@ class Hierarchy(nx.DiGraph):
                         removed_nodes.add(p_g_m[k])
                     # assign new type of node
                     if typing_graph in new_rhs_typing.keys():
-                        if node in new_rhs_typing[typing_graph][0].keys():
-                            new_type = new_rhs_typing[typing_graph][0][node]
+                        if node in new_rhs_typing[typing_graph].keys():
+                            new_type = new_rhs_typing[typing_graph][node]
                             new_nodes[r_g_prime[node]] = new_type
 
             # update homomorphisms
@@ -1946,19 +1959,16 @@ class Hierarchy(nx.DiGraph):
                 if n in new_hom.keys():
                     del new_hom[n]
 
-            ignore_attrs = False
             new_hom.update(new_nodes)
-            if typing_graph in new_rhs_typing.keys():
-                ignore_attrs = new_rhs_typing[typing_graph][1]
 
             updated_homomorphisms.update({
-                (graph_id, typing_graph): (new_hom, ignore_attrs)
+                (graph_id, typing_graph): new_hom
             })
 
         return updated_homomorphisms
 
     def _check_rhs(self, graph_id, rule, instance, typing_dict):
-        for typing_graph, (mapping, ignore_attrs) in typing_dict.items():
+        for typing_graph, mapping in typing_dict.items():
 
             # check edges out of the g-(im(g->lhs)) do not violate typing
             for node in rule.rhs.nodes():
@@ -2011,7 +2021,7 @@ class Hierarchy(nx.DiGraph):
     def rewrite(self, graph_id, rule, instance,
                 lhs_typing=None, rhs_typing=None,
                 # strong_typing=True,
-                total=True, inplace=True, ignore_attrs=False):
+                total=True, inplace=True):
         """Rewrite and propagate the changes up."""
         if type(self.node[graph_id]) == RuleNode:
             raise ReGraphError("Rewriting of a rule is not implemented!")
@@ -2079,8 +2089,7 @@ class Hierarchy(nx.DiGraph):
                                               g_m,
                                               g_m_g,
                                               g_prime,
-                                              g_m_g_prime,
-                                              ignore_attrs)
+                                              g_m_g_prime)
 
         updated_homomorphisms.update(typing_updates)
         updated_relations += base_relations_update
@@ -2163,7 +2172,6 @@ class Hierarchy(nx.DiGraph):
                     "to": t,
                     "mapping": self.edge[s][t].mapping,
                     "total": self.edge[s][t].total,
-                    "ignore_attrs": self.edge[s][t].ignore_attrs,
                     "attrs": self.edge[s][t].attrs
                 })
             elif isinstance(self.edge[s][t], self.rule_typing_cls):
@@ -2174,7 +2182,6 @@ class Hierarchy(nx.DiGraph):
                     "rhs_mapping": self.edge[s][t].rhs_mapping,
                     "lhs_total": self.edge[s][t].lhs_total,
                     "rhs_total": self.edge[s][t].rhs_total,
-                    "ignore_attrs": self.edge[s][t].ignore_attrs,
                     "attrs": self.edge[s][t].attrs
                 })
             else:
@@ -2219,7 +2226,6 @@ class Hierarchy(nx.DiGraph):
                     typing_data["to"],
                     typing_data["mapping"],
                     typing_data["total"],
-                    typing_data["ignore_attrs"],
                     typing_data["attrs"]
                 )
 
@@ -2233,7 +2239,6 @@ class Hierarchy(nx.DiGraph):
                     rule_typing_data["rhs_mapping"],
                     rule_typing_data["lhs_total"],
                     rule_typing_data["rhs_total"],
-                    rule_typing_data["ignore_attrs"],
                     rule_typing_data["attrs"]
                 )
         return hierarchy
@@ -2261,8 +2266,7 @@ class Hierarchy(nx.DiGraph):
         children = self.predecessors(graph_id)
         typing_with_attrs = set()
         for child in children:
-            if self.edge[child][graph_id].ignore_attrs is False:
-                typing_with_attrs.add(child)
+            typing_with_attrs.add(child)
 
         if len(typing_with_attrs) == 0:
             pass
@@ -2295,33 +2299,33 @@ class Hierarchy(nx.DiGraph):
                     ancestors[anc] = compose_homomorphisms(typ, mapping)
         return ancestors
 
-    def get_ignore_values(self, graph_id, maybe=None):
-        """Return the ignore attrs for each node of the graph and ancestor."""
-        ancestors = {}
-        for _, typing in self.out_edges(graph_id):
-            if maybe is not None and typing not in maybe:
-                continue
-            mapping = self.edge[graph_id][typing].mapping
-            if self.edge[graph_id][typing].ignore_attrs:
-                not_ignored_nodes = set()
-            else:
-                not_ignored_nodes = set(mapping.keys())
-            if typing in ancestors.keys():
-                ancestors[typing] |= not_ignored_nodes
-            else:
-                ancestors[typing] = not_ignored_nodes
+    # def get_ignore_values(self, graph_id, maybe=None):
+    #     """Return the ignore attrs for each node of the graph and ancestor."""
+    #     ancestors = {}
+    #     for _, typing in self.out_edges(graph_id):
+    #         if maybe is not None and typing not in maybe:
+    #             continue
+    #         mapping = self.edge[graph_id][typing].mapping
+    #         if self.edge[graph_id][typing].ignore_attrs:
+    #             not_ignored_nodes = set()
+    #         else:
+    #             not_ignored_nodes = set(mapping.keys())
+    #         if typing in ancestors.keys():
+    #             ancestors[typing] |= not_ignored_nodes
+    #         else:
+    #             ancestors[typing] = not_ignored_nodes
 
-            typing_ancestors = self.get_ignore_values(typing, maybe)
-            for (anc, anc_non_ignored) in typing_ancestors.items():
-                not_ignored_through_typing =\
-                    (ancestors[typing] &
-                     {node for node in not_ignored_nodes
-                      if mapping[node] in anc_non_ignored})
-                if anc in ancestors.keys():
-                    ancestors[anc] |= not_ignored_through_typing
-                else:
-                    ancestors[anc] = not_ignored_through_typing
-        return ancestors
+    #         typing_ancestors = self.get_ignore_values(typing, maybe)
+    #         for (anc, anc_non_ignored) in typing_ancestors.items():
+    #             not_ignored_through_typing =\
+    #                 (ancestors[typing] &
+    #                  {node for node in not_ignored_nodes
+    #                   if mapping[node] in anc_non_ignored})
+    #             if anc in ancestors.keys():
+    #                 ancestors[anc] |= not_ignored_through_typing
+    #             else:
+    #                 ancestors[anc] = not_ignored_through_typing
+    #     return ancestors
 
     def to_nx_graph(self):
         g = nx.DiGraph()
@@ -2381,12 +2385,12 @@ class Hierarchy(nx.DiGraph):
         ancestors = self.get_ancestors(source, desc)
         return ancestors[target]
 
-    def get_ignore_mapping(self, source, target):
-        desc = self.descendents(target)
-        if source not in desc:
-            return None
-        ancestors = self.get_ignore_values(source, desc)
-        return ancestors[target]
+    # def get_ignore_mapping(self, source, target):
+    #     desc = self.descendents(target)
+    #     if source not in desc:
+    #         return None
+    #     ancestors = self.get_ignore_values(source, desc)
+    #     return ancestors[target]
 
     def get_rule_typing(self, source, target):
         """Get typing dict of `source` by `target` (`source` is rule)."""
@@ -2632,9 +2636,11 @@ class Hierarchy(nx.DiGraph):
                 new_name = str(original_node) + "_" + str(node)
                 new_names[original_node] = new_name
                 self.rename_graph(original_node, new_name)
+                print("attrs", hierarchy.node[node].attrs)
                 self.node[new_name].add_attrs(
                     hierarchy.node[node].attrs
                 )
+                # recursive_merge(self.node[new_name].attrs, hierarchy.node[node].attrs)
                 visited.append(node)
 
                 successors = hierarchy.successors(node)
@@ -2703,7 +2709,10 @@ class Hierarchy(nx.DiGraph):
                 for suc in successors:
                     if suc in visited:
                         if suc in to_merge.values():
-                            new_suc_name = new_names[original_node]
+                            # new_suc_name = new_names[original_node]
+                            original_suc = keys_by_value(to_merge, suc)[0]
+                            new_suc_name = new_names[suc]
+                            #new_suc_name = new_names[original_suc]
                         elif suc in to_rename.keys():
                             new_suc_name = to_rename[suc]
                         else:
@@ -2738,7 +2747,7 @@ class Hierarchy(nx.DiGraph):
         for node in hierarchy.nodes():
             _merge_node(node)
 
-        return
+        return new_names
 
     def unique_graph_id(self, prefix):
         """Generate a new graph id."""
@@ -2777,25 +2786,30 @@ class Hierarchy(nx.DiGraph):
     def create_valid_nuggets(self, old_nugget, new_nugget, updated_graphs):
         pattern = copy.deepcopy(self.node[old_nugget].graph)
         for node in pattern.nodes():
-            pattern.node[node] = None
+            pattern.node[node] = dict()
         pattern_typing = {"typing": {node: node for node in pattern.nodes()}}
         tmp_hie = Hierarchy(self.directed, GraphNode)
         # tmp_hie.add_graph("old", pattern)
         tmp_hie.add_graph("typing", self.node[old_nugget].graph)
         # tmp_hie.add_typing("old", "typing", pattern_typing)
         tmp_hie.add_graph("new", self.node[new_nugget].graph)
-        tmp_hie.add_typing("new", "typing", updated_graphs[new_nugget][1], ignore_attrs=True)
+        tmp_hie.add_typing("new", "typing", updated_graphs[new_nugget][1])
         matchings = tmp_hie.find_matching2("new", pattern, pattern_typing)
         new_nuggets = []
         for matching in matchings:
             instance = copy.deepcopy(self.node[old_nugget].graph)
             for node in instance.nodes():
-                attrs = instance.node[node]
-                if attrs is None:
-                    continue
-                for (k, v) in attrs.items():
-                    nw_attrs = self.node[new_nugget].graph.node[matching[node]]
-                    attrs[k] = v & nw_attrs[k]
+                attrs = merge_attributes(instance.node[node],
+                                         self.node[new_nugget].graph.node[matching[node]],
+                                         "intersection")
+                # attrs = instance.node[node]
+                # if attrs is None:
+                #     continue
+                # for (k, v) in attrs.items():
+                #     nw_attrs = self.node[new_nugget].graph.node[matching[node]]
+                #     print("image",matching[node], nw_attrs)
+                #     print("ante",node, attrs)
+                #     attrs[k] = v & nw_attrs[k]
             instance_id = self.unique_graph_id(old_nugget)
             self.add_graph(instance_id, instance, copy.deepcopy(self.node[old_nugget].attrs))
             for (_, typing) in self.out_edges(new_nugget):
@@ -2810,10 +2824,14 @@ class Hierarchy(nx.DiGraph):
                 # print("new_nugget_nodes", self.node[new_nugget].graph.nodes())
                 self.add_typing(instance_id, typing, instance_typing,
                                 total=new_typing.total,
-                                ignore_attrs=new_typing.ignore_attrs,
                                 attrs=new_typing.attrs)
             new_nuggets.append(instance_id)
         return new_nuggets
+
+    def delete_all_children(self, graph_id):
+        desc = self.descendents(graph_id)
+        for node in desc:
+            self.remove_node(node)
 
 
 def _verify(phi_str, current_typing, graph):

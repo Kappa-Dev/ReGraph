@@ -12,12 +12,10 @@ from regraph.exceptions import ReGraphError, ParsingError
 
 
 def valid_attributes(source, target):
-    # pred = typed_node_target.attributes_typing
-    # # print("")
-    # # print("target",typed_node_target)
-    # # print("node",attrs)
-    # if pred is not None:
-    #     return pred(attrs)
+    # if target is None:
+    #     return True
+    # if source is None:
+    #     return False
     return is_subdict(source, target)
 
 
@@ -53,6 +51,12 @@ def is_subdict(small_dict, big_dict):
 
 
 def attrs_intersection(attrs1, attrs2):
+    # consider None as the set of everything
+    # if attrs1 is None:
+    #     return attrs2
+    # if attrs2 is None:
+    #     normalize_attrs(attrs1)
+    #     return attrs1
     normalize_attrs(attrs1)
     normalize_attrs(attrs2)
     res = dict()
@@ -99,13 +103,16 @@ def normalize_attrs(attrs_):
 
 
 def merge_attributes(attr1, attr2, method="union"):
-    """Merge two dictionaries of attributes."""
+    """Merge two dictionaries of attributes.
+    None seen as the dictionary that contains everything """
     result = {}
-    if attr1 is None:
-        attr1 = {}
-    if attr2 is None:
-        attr2 = {}
     if method == "union":
+        # if attr1 is None or attr2 is None:
+        #     return None
+        if attr1 is None:
+            attr1 = dict()
+        if attr2 is None:
+            attr2 = dict()
         for key1 in attr1.keys():
             if key1 in attr2.keys():
                 if attr1[key1] == attr2[key1]:
@@ -124,6 +131,14 @@ def merge_attributes(attr1, attr2, method="union"):
             if key2 not in result:
                 result.update({key2: attr2[key2]})
     elif method == "intersection":
+        if attr1 is None:
+            attr1 = dict()
+        if attr2 is None:
+            attr2 = dict()
+        # if attr1 is None:
+        #     return attr2
+        # if attr2 is None:
+        #     return attr1
         for key1 in attr1.keys():
             if key1 in attr2.keys():
                 if attr1[key1] == attr2[key1]:
@@ -149,6 +164,8 @@ def dict_sub(a, b):
     normalize_attrs(res)
     if b is None:
         return res
+    if a is None:
+        return None
     for key, value in b.items():
         if key not in a.keys():
             pass
@@ -869,26 +886,19 @@ def assert_graph_eq(g1, g2):
     return
 
 
-def normalize_typing(typing, ignore_attrs_dict={}):
+def normalize_typing(typing):
     if typing is None:
         typing = dict()
     new_typing = dict()
     for key, value in typing.items():
         if type(value) == dict:
-            if key in ignore_attrs_dict.keys():
-                new_typing[key] = (copy.deepcopy(value), ignore_attrs_dict[key])
-            else:
-                new_typing[key] = (copy.deepcopy(value), False)
+            new_typing[key] = copy.deepcopy(value)
         else:
             try:
                 if len(value) == 2:
                     new_typing[key] = copy.deepcopy(value)
                 elif len(value) == 1:
-                    if key in ignore_attrs_dict.keys():
-                        new_typing[key] = (copy.deepcopy(value[0]),
-                                           ignore_attrs_dict[key])
-                    else:
-                        new_typing[key] = (copy.deepcopy(value[0]), False)
+                    new_typing[key] = copy.deepcopy(value[0])
             except:
                 raise ReGraphError("Typing format is not valid!")
     return new_typing
@@ -914,3 +924,28 @@ def restrict_mapping(nodes, mapping):
     for node in nodes:
         new_mapping[node] = mapping[node]
     return new_mapping
+
+
+def reverse_image(mapping, nodes):
+    return [node for node in mapping if mapping[node] in nodes]
+
+
+def union_mappings(map1, map2):
+    new_mapping = copy.deepcopy(map1)
+    for (source, target) in map2.items():
+        if source in new_mapping:
+            if new_mapping[source] != target:
+                raise ReGraphError("merging uncompatible mappings")
+        else:
+            new_mapping[source] = target
+    return new_mapping
+
+
+def recursive_merge(dict1, dict2):
+    for k, v in dict2.items():
+        if (k in dict1.keys() and
+                isinstance(dict1[k], dict) and
+                isinstance(v, dict)):
+            recursive_merge(dict1[k], v)
+        else:
+            dict1[k] = v

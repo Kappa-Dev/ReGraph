@@ -35,6 +35,8 @@ def unique_node_id(graph, prefix):
 def add_node(graph, node_id, attrs=None):
     """Add node to a nx.(Di)Graph."""
     new_attrs = deepcopy(attrs)
+    if new_attrs is None:
+        new_attrs = dict()
     if node_id not in graph.nodes():
         graph.add_node(node_id)
         normalize_attrs(new_attrs)

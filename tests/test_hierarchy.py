@@ -16,23 +16,23 @@ class TestHierarchy(object):
         self.hierarchy = Hierarchy(directed=True)
 
         g0 = nx.DiGraph()
-        g0.add_node("circle"),  # , {"a": {1, 2, 3}})
-        g0.add_node("square"),  # , {"a": {1}})
-        g0.add_node("triangle")
-
+        g0.add_node("circle", {"a": {1, 2, 3}})
+        g0.add_node("square", {"a": {1, 2, 3, 5}})
+        g0.add_node("triangle", {"new_attrs":{1}})
         g0.add_edges_from([
             ("circle", "circle"),  # , {"b": {1, 2, 3, 4}}),
             ("circle", "square"),
-            ("square", "circle"),
-            ("square", "triangle")
+            ("square", "circle", {"new_attrs": {2}}),
+            ("square", "triangle", {"new_attrs": {3, 4}})
         ])
         self.hierarchy.add_graph("g0", g0, {"name": "Shapes"})
 
         g00 = nx.DiGraph()
-        g00.add_nodes_from(['white', 'black'])
+        g00.add_node('black', {"a": {1, 2, 3}, "new_attrs": {1}})
+        g00.add_node('white', {"a": {1, 2, 3, 5}})
         g00.add_edges_from([
-            ('white', 'white'),
-            ('white', 'black'),
+            ('white', 'white', {"new_attrs": 2}),
+            ('white', 'black', {"new_attrs": {4, 3}}),
             ('black', 'black'),
             ('black', 'white')
         ])
@@ -49,7 +49,7 @@ class TestHierarchy(object):
         ])
 
         g1.add_edges_from([
-            ("black_circle", "black_circle", {"b": {1, 2, 3, 4}}),
+            ("black_circle", "black_circle"),# {"b": {1, 2, 3, 4}}),
             ("black_circle", "white_circle"),
             ("black_circle", "black_square"),
             ("white_circle", "black_circle"),
@@ -71,8 +71,7 @@ class TestHierarchy(object):
              "white_square": "square",
              "black_triangle": "triangle",
              "white_triangle": "triangle"},
-            total=True,
-            ignore_attrs=True
+            total=True
         )
 
         self.hierarchy.add_typing(
@@ -85,8 +84,7 @@ class TestHierarchy(object):
                 "white_circle": "white",
                 "white_triangle": "white"
             },
-            total=True,
-            ignore_attrs=True
+            total=True
         )
 
         g2 = nx.DiGraph()
@@ -101,7 +99,7 @@ class TestHierarchy(object):
         ])
 
         g2.add_edges_from([
-            (1, 2, {"b": {1, 2, 3}}),
+            (1, 2),# {"b": {1, 2, 3}}),
             (2, 3),
             (3, 6),
             (3, 7),
@@ -119,23 +117,22 @@ class TestHierarchy(object):
              5: "white_square",
              6: "white_triangle",
              7: "black_triangle"},
-            total=True,
-            ignore_attrs=False
+            total=True
         )
 
         g3 = nx.DiGraph()
         g3.add_nodes_from([
-            (1, {"a": {1, 2}}),
+            (1),# {"a": {1, 2}}),
             2,
             3,
             5,
-            (4, {"a": {1}}),
+            (4 ),# {"a": {1}}),
             6,
             7,
         ])
 
         g3.add_edges_from([
-            (1, 1, {"b": {1, 2, 3}}),
+            (1, 1),#, {"b": {1, 2, 3}}),
             (1, 2),
             (1, 3),
             (1, 5),
@@ -156,8 +153,7 @@ class TestHierarchy(object):
              4: "white_square",
              6: "white_triangle",
              7: "black_triangle"},
-            total=True,
-            ignore_attrs=False
+            total=True
         )
 
         g4 = nx.DiGraph()
@@ -173,14 +169,14 @@ class TestHierarchy(object):
 
         g5 = nx.DiGraph()
         g5.add_nodes_from([
-            ("black_circle", {"a": {255}}),
-            ("black_square", {"a": {256}}),
-            ("white_triangle", {"a": {257}}),
-            ("star", {"a": {258}})
+            ("black_circle"),# {"a": {255}}),
+            ("black_square"),# {"a": {256}}),
+            ("white_triangle"),# {"a": {257}}),
+            ("star")#, {"a": {258}})
         ])
         g5.add_edges_from([
             ("black_circle", "black_square"),
-            ("black_square", "white_triangle", {"b": {11}}),
+            ("black_square", "white_triangle"),#, {"b": {11}}),
             ("star", "black_square"),
             ("star", "white_triangle")
         ])
@@ -198,8 +194,7 @@ class TestHierarchy(object):
             {"circle": "black_circle",
              "square": "white_square",
              "triangle": "black_triangle"},
-            total=True,
-            ignore_attrs=True)
+            total=True)
 
     def test_remove_graph(self):
         h = copy.deepcopy(self.hierarchy)
@@ -220,12 +215,12 @@ class TestHierarchy(object):
         ])
         pattern_typing = {1: "circle", 2: "square", 3: "triangle"}
 
-        instances = self.hierarchy.find_matching(
+        instances = self.hierarchy.find_matching2(
             graph_id="g1",
             pattern=pattern,
-            pattern_typing={
-                "g0": (pattern_typing, True),
-                "g00": ({1: "white", 2: "white", 3: "black"}, True)
+            pattern_typings={
+                "g0": pattern_typing,
+                "g00": {1: "white", 2: "white", 3: "black"}
             }
         )
         assert(len(instances) == 1)
@@ -242,8 +237,8 @@ class TestHierarchy(object):
             (2, 3)
         ])
         lhs_typing = {
-            "g0": ({1: "circle", 2: "square", 3: "triangle"}, True),
-            "g00": ({1: "white", 2: "white", 3: "black"}, True)
+            "g0": {1: "circle", 2: "square", 3: "triangle"},
+            "g00": {1: "white", 2: "white", 3: "black"}
         }
 
         p = nx.DiGraph()
@@ -273,21 +268,21 @@ class TestHierarchy(object):
 
         rule = Rule(p, pattern, rhs, p_lhs, p_rhs)
         rhs_typing = {
-            "g0": ({
+            "g0": {
                 1: "circle",
                 2: "square",
                 3: "triangle",
                 4: "triangle"
-            }, True),
-            "g00": ({
+            },
+            "g00": {
                 1: "white",
                 2: "white",
                 3: "black",
                 4: "black"
-            }, True)
+            }
         }
 
-        instances = self.hierarchy.find_matching(
+        instances = self.hierarchy.find_matching2(
             "g1",
             pattern,
             lhs_typing
@@ -321,8 +316,7 @@ class TestHierarchy(object):
             {"black_circle": "black_circle",
              "black_square": "black_square",
              "white_triangle": "white_triangle"},
-            total=False,
-            ignore_attrs=True
+            total=False
         )
         return
 
@@ -397,8 +391,8 @@ class TestHierarchy(object):
             (2, 3)
         ])
         lhs_typing = {
-            "g0": ({1: "circle", 2: "square", 3: "triangle"}, True),
-            "g00": ({1: 'white', 2: 'white', 3: 'black'}, True)
+            "g0": {1: "circle", 2: "square", 3: "triangle"},
+            "g00": {1: 'white', 2: 'white', 3: 'black'}
         }
 
         p = nx.DiGraph()
@@ -427,21 +421,21 @@ class TestHierarchy(object):
 
         rule = Rule(p, pattern, rhs, p_lhs, p_rhs)
         rhs_typing = {
-            "g0": ({
+            "g0": {
                 1: "circle",
                 11: "circle",
                 2: "square",
                 3: "triangle"
-            }, True),
-            "g00": ({
+            },
+            "g00": {
                 1: "white",
                 11: "white",
                 2: "white",
                 3: "black"
-            }, True)
+            }
         }
 
-        instances = self.hierarchy.find_matching(
+        instances = self.hierarchy.find_matching2(
             "g1",
             pattern,
             lhs_typing
@@ -531,8 +525,8 @@ class TestHierarchy(object):
             (2, 1)
         ])
         lhs_typing = {
-            "g0": ({1: "circle", 2: "circle"}, True),
-            "g00": ({1: "black", 2: "white"}, True)
+            "g0": {1: "circle", 2: "circle"},
+            "g00": {1: "black", 2: "white"}
         }
 
         p = nx.DiGraph()
@@ -556,15 +550,15 @@ class TestHierarchy(object):
                 1: "circle",
                 2: "circle",
                 21: "circle",
-            }, True),
+            }),
             "g00": ({
                 1: "black",
                 2: "white",
                 21: "white"
-            }, True)
+            })
         }
 
-        instances = self.hierarchy.find_matching(
+        instances = self.hierarchy.find_matching2(
             "g1",
             pattern,
             lhs_typing
@@ -828,7 +822,7 @@ class TestHierarchy(object):
         rule.remove_node(1)
         rule.clone_node(2)
 
-        instances = h.find_matching("g1", pattern)
+        instances = h.find_matching2("g1", pattern)
         new_h, _ = h.rewrite("g1", rule, instances[0], inplace=False)
         print(new_h)
         print_graph(new_h.node["g2"].graph)

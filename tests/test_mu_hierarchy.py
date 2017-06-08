@@ -31,8 +31,7 @@ class TestMuHierarchy(object):
             "g2", "g1",
             {"a1": "agent",
              "r1": "region",
-             "r2": "region"},
-            ignore_attrs=True
+             "r2": "region"}
         )
 
     def test1(self):
