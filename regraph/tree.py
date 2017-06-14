@@ -872,9 +872,7 @@ def merge_graphs(hie, g_id, name1, name2, mapping, new_name):
         tmp_typ = Typing(g2_new_graph, total=hie.edge[child][id2].all_total())
         hie.edge[child][new_id2] = tmp_typ*hie.edge[child][id2]
     
-    print("new_id",new_id, "new_id1", new_id1)
     _merge_hierarchy(hie, hie, new_id, new_id1)
-    print("new_id",new_id, "new_id2", new_id2)
     _merge_hierarchy(hie, hie, new_id, new_id2)
     hie.remove_node(new_id1)
     hie.remove_node(new_id2)
@@ -954,7 +952,6 @@ def _update_name(hie, g_id):
     hie.node[g_id].attrs["name"] =\
         get_valid_name(hie, g_id, old)
     new = hie.node[g_id].attrs["name"]
-    print(f"updated name from {old} to {new}")
 
 
 # TODO rules
@@ -962,8 +959,6 @@ def _add_new_graphs(hie1, hie2, rel, visited2):
     new_graphs = {}
 
     # duplicate nodes from hie1 if they have multiple equivalents in hie2
-    print(rel)
-    print(visited2)
     for node1 in rel:
         for (i, node2) in enumerate(rel[node1]):
             visited2.remove(node2)
@@ -1126,3 +1121,89 @@ def get_metadata(hie, graph_id, path):
                          "{}/{}".format(path, hie.node[child].attrs["name"]))
              for child in all_children(hie, graph_id)]
     return json_data
+
+
+def add_positions(mouse_x, mouse_y, positions_old, positions_new, old_to_new):
+    old_positions = {}
+    for node in old_to_new:
+        if node in positions_old:
+            old_positions[node] = positions_old[node]
+    nodes_number = len(old_positions)
+    if nodes_number != 0:
+        barycenter_x =\
+            sum(pos["x"] for pos in old_positions.values())/nodes_number
+        barycenter_y =\
+            sum(pos["y"] for pos in old_positions.values())/nodes_number
+        for node in old_positions:
+            positions_new[old_to_new[node]] = {
+                "x": mouse_x - barycenter_x + positions_old[node]["x"],
+                "y": mouse_y - barycenter_y + positions_old[node]["y"]}
+
+
+def paste_nodes(hie, top, graph_id, parent_path, nodes, mouse_x, mouse_y):
+    path_list = [s for s in parent_path.split("/") if s and not s.isspace()]
+    other_id = child_from_path(hie, top, path_list)
+    gr = hie.node[graph_id].graph
+    other_gr = hie.node[other_id].graph
+    old_to_new = {}
+    # if other_id == graph_id:
+    #     copied_gr = gr.subgraph(nodes)
+    #     for node in nodes:
+    #         old_to_new[node] = prim.copy_node(gr, node)
+    #         for typing in hie.successors(graph_id):
+    #             mapping = hie.edge[graph_id][typing].mapping
+    #             if node in mapping:
+    #                 mapping[old_to_new[node]] = mapping[node]
+    #     for (source, target) in copied_gr.edges():
+    #         prim.add_edge(gr, old_to_new[source], old_to_new[target],
+    #                       gr.edge[source][target])
+    #     if "positions" in hie.node[graph_id].attrs:
+    #         positions_dict = hie.node[graph_id].attrs["positions"]
+    #         add_positions(mouse_x, mouse_y, positions_dict, old_to_new)
+
+    if hie.has_edge(graph_id, other_id):
+        mapping = hie.edge[graph_id][other_id].mapping
+        for node in nodes:
+            n_id = prim.unique_node_id(gr, node)
+            prim.add_node(gr, n_id, other_gr.node[node])
+            old_to_new[node] = n_id
+            mapping[n_id] = node
+        for (source, target) in other_gr.subgraph(nodes).edges():
+            prim.add_edge(gr, old_to_new[source], old_to_new[target],
+                          other_gr.edge[source][target])
+    else:
+        # check that all necessary typings are there
+        necessary_typings = [typing for typing in hie.successors(graph_id)]
+                            #  if hie.edge[graph_id][typing].total]
+                            # until UI can handle partial typings
+        typings = [typing for typing in hie.successors(graph_id)
+                   if typing in hie.successors(other_id)]
+        for typing in necessary_typings:
+            if typing not in typings:
+                raise ValueError("copied nodes not typed by {}".format(typing))
+            for node in nodes:
+                if node not in hie.edge[other_id][typing].mapping:
+                    raise ValueError("copied node {} is not typed by {}"
+                                     .format(node, typing))
+        print("after test")
+        for node in nodes:
+            node_id = prim.unique_node_id(gr, node)
+            old_to_new[node] = node_id
+            prim.add_node(gr, node_id, other_gr.node[node])
+            for typing in typings:
+                other_mapping = hie.edge[other_id][typing].mapping
+                if node in other_mapping:
+                    hie.edge[graph_id][typing].mapping[old_to_new[node]] =\
+                       other_mapping[node]
+        for (source, target) in other_gr.subgraph(nodes).edges():
+            prim.add_edge(gr, old_to_new[source], old_to_new[target],
+                          other_gr.edge[source][target])
+
+    if "positions" in hie.node[other_id].attrs:
+        if "positions" not in hie.node[graph_id].attrs:
+            hie.node[graph_id].attrs["positions"] = {}
+        positions_old = hie.node[other_id].attrs["positions"]
+        positions_new = hie.node[graph_id].attrs["positions"]
+        add_positions(mouse_x, mouse_y, positions_old, positions_new,
+                      old_to_new)
+

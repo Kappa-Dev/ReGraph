@@ -9,15 +9,15 @@ from copy import deepcopy
 from networkx.algorithms import isomorphism
 
 from regraph.utils import (merge_attributes,
-                                   normalize_attrs,
-                                   valid_attributes,
-                                   to_set,
-                                   keys_by_value,
-                                   is_subdict,
-                                   dict_sub)
+                           normalize_attrs,
+                           valid_attributes,
+                           to_set,
+                           keys_by_value,
+                           is_subdict,
+                           dict_sub)
 from regraph.exceptions import (ReGraphError,
-                                        GraphError,
-                                        GraphAttrsWarning)
+                                GraphError,
+                                GraphAttrsWarning)
 
 
 def unique_node_id(graph, prefix):
@@ -30,6 +30,12 @@ def unique_node_id(graph, prefix):
         idx += 1
         new_id = "{}_{}".format(prefix, idx)
     return new_id
+
+
+def copy_node(graph, node_id):
+    new_name = unique_node_id(graph, node_id)
+    add_node(graph, new_name, graph.node[node_id])
+    return new_name
 
 
 def add_node(graph, node_id, attrs=None):
