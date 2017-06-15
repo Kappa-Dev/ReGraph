@@ -1146,20 +1146,11 @@ def paste_nodes(hie, top, graph_id, parent_path, nodes, mouse_x, mouse_y):
     gr = hie.node[graph_id].graph
     other_gr = hie.node[other_id].graph
     old_to_new = {}
-    # if other_id == graph_id:
-    #     copied_gr = gr.subgraph(nodes)
-    #     for node in nodes:
-    #         old_to_new[node] = prim.copy_node(gr, node)
-    #         for typing in hie.successors(graph_id):
-    #             mapping = hie.edge[graph_id][typing].mapping
-    #             if node in mapping:
-    #                 mapping[old_to_new[node]] = mapping[node]
-    #     for (source, target) in copied_gr.edges():
-    #         prim.add_edge(gr, old_to_new[source], old_to_new[target],
-    #                       gr.edge[source][target])
-    #     if "positions" in hie.node[graph_id].attrs:
-    #         positions_dict = hie.node[graph_id].attrs["positions"]
-    #         add_positions(mouse_x, mouse_y, positions_dict, old_to_new)
+
+    # check that all copied nodes exist in the graph
+    for node in nodes:
+        if node not in gr:
+            raise ValueError("copied node {} does not exist anymore".format(node))
 
     if hie.has_edge(graph_id, other_id):
         mapping = hie.edge[graph_id][other_id].mapping
@@ -1185,7 +1176,6 @@ def paste_nodes(hie, top, graph_id, parent_path, nodes, mouse_x, mouse_y):
                 if node not in hie.edge[other_id][typing].mapping:
                     raise ValueError("copied node {} is not typed by {}"
                                      .format(node, typing))
-        print("after test")
         for node in nodes:
             node_id = prim.unique_node_id(gr, node)
             old_to_new[node] = node_id
