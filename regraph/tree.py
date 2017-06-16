@@ -1149,7 +1149,7 @@ def paste_nodes(hie, top, graph_id, parent_path, nodes, mouse_x, mouse_y):
 
     # check that all copied nodes exist in the graph
     for node in nodes:
-        if node not in gr:
+        if node not in other_gr:
             raise ValueError("copied node {} does not exist anymore".format(node))
 
     if hie.has_edge(graph_id, other_id):
