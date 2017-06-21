@@ -373,13 +373,16 @@ def new_rule(hie, parent, name, pattern_name=None):
 
 
 # TODO : rules, undirected
-def add_node(hie, g_id, parent, node_id, node_type):
+def add_node(hie, g_id, parent, node_id, node_type, new_name=False):
     """add a node to a graph in the hierarchy"""
     # if parent is not None and node_type is None:
     #     raise ValueError("node {} must have a type".format(node_id))
     if isinstance(hie.node[g_id], GraphNode):
         if node_id in hie.node[g_id].graph.nodes():
-            raise ValueError("node {} already exists in graph".format(node_id))
+            if new_name:
+                node_id = prim.unique_node_id(hie.node[g_id].graph, node_id)
+            else:
+                raise ValueError("node {} already exists in graph".format(node_id))
         lhs = nx.DiGraph()
         ppp = nx.DiGraph()
         rhs = nx.DiGraph()
@@ -391,7 +394,8 @@ def add_node(hie, g_id, parent, node_id, node_type):
         else:
             lhs_typing = None
             rhs_typing = None
-        _rewrite(hie,g_id, rule, {}, lhs_typing, rhs_typing)
+        _rewrite(hie, g_id, rule, {}, lhs_typing, rhs_typing)
+        return node_id
     elif isinstance(hie.node[g_id], RuleNode):
         tmp_rule = copy.deepcopy(hie.node[g_id].rule)
         tmp_rule.add_node(node_id)
@@ -409,6 +413,7 @@ def add_node(hie, g_id, parent, node_id, node_type):
         hie.node[g_id].rule = tmp_rule
         if parent is not None:
             hie.edge[g_id][parent] = parent_typing
+        return node_id    
     else:
         raise ValueError("node is neither a rule nor a graph")
 
@@ -876,27 +881,6 @@ def merge_graphs(hie, g_id, name1, name2, mapping, new_name):
     _merge_hierarchy(hie, hie, new_id, new_id2)
     hie.remove_node(new_id1)
     hie.remove_node(new_id2)
-
-    # for nug in graph_children(hie, id1):
-    #     new_nug_id = hie.unique_graph_id(nug)
-    #     nug_typing = hie.edge[nug][id1].mapping
-    #     # use name instead  of id
-    #     new_nug_name = get_valid_name(hie, new_id, nug)
-    #     hie.add_graph(new_nug_id, copy.deepcopy(hie.node[nug].graph),
-    #                   {"name": new_nug_name})
-    #     hie.add_typing(new_nug_id, new_id,
-    #                    compose_homomorphisms(g1_new_graph, nug_typing))
-
-    # for nug in graph_children(hie, id2):
-    #     new_nug_id = hie.unique_graph_id(nug)
-    #     nug_typing = hie.edge[nug][id2].mapping
-    #     # use name instead  of id
-    #     new_nug_name = get_valid_name(hie, new_id, nug)
-    #     hie.add_graph(new_nug_id, copy.deepcopy(hie.node[nug].graph),
-    #                   {"name": new_nug_name})
-    #     hie.add_typing(new_nug_id, new_id,
-    #                    compose_homomorphisms(g2_new_graph, nug_typing))
-
 
 def _put_path_in_attr(hie, top, tmp_key):
     def _put_path_aux(g_id, path):

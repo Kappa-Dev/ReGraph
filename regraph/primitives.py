@@ -52,6 +52,13 @@ def add_node(graph, node_id, attrs=None):
         raise GraphError("Node '%s' already exists!" % node_id)
 
 
+def add_node_new_id(graph, node_id, attrs=None):
+    """create a new node id if node_id already exists"""
+    new_id = unique_node_id(graph, node_id)
+    add_node(graph, new_id, attrs)
+    return new_id
+
+
 def remove_node(graph, node):
     """Remove node from the self."""
     if node in graph.nodes():
