@@ -8,21 +8,28 @@ from matplotlib import pyplot as plt
 import networkx as nx
 
 from regraph.parser import parser
+from regraph.atset import to_atset, AtSet
 from regraph.exceptions import ReGraphError, ParsingError
+
+from sympy.sets.sets import Set, EmptySet, FiniteSet
 
 
 def valid_attributes(source, target):
-    # if target is None:
-    #     return True
-    # if source is None:
-    #     return False
-    return is_subdict(source, target)
+    """ test that the attributes """
+    # print("source: ", source)
+    # print("target: ", target)
+    for key, value in source.items():
+        if key not in target:
+            return False
+        if not value.issubset(target[key]):
+            return False
+    return True
 
 
 def is_subdict(small_dict, big_dict):
     """Check if the dictionary is a subset of other."""
-    normalize_attrs(small_dict)
-    normalize_attrs(big_dict)
+    # normalize_attrs(small_dict)
+    # normalize_attrs(big_dict)
     if small_dict is None:
         return True
     if len(small_dict) == 0:
@@ -51,20 +58,36 @@ def is_subdict(small_dict, big_dict):
 
 
 def attrs_intersection(attrs1, attrs2):
-    # consider None as the set of everything
-    # if attrs1 is None:
-    #     return attrs2
-    # if attrs2 is None:
-    #     normalize_attrs(attrs1)
-    #     return attrs1
-    normalize_attrs(attrs1)
-    normalize_attrs(attrs2)
+    if attrs1 is None or attrs2 is None:
+        return {}
     res = dict()
-    common_keys = set(attrs1.keys()).intersection(attrs2.keys())
-    for k in common_keys:
-        common_value = attrs1[k].intersection(attrs2[k])
-        if len(common_value) > 0:
-            res[k] = copy.deepcopy(common_value)
+    for key in attrs1:
+        if key in attrs2:
+            new_set = attrs1[key].intersect(attrs2[key])
+            if new_set:
+                res[key] = new_set
+    return res
+
+
+def attrs_union(attrs1, attrs2):
+    if attrs1 is None:
+        if attrs2 is not None:
+            return attrs2
+        else:
+            return {}
+
+    if attrs2 is None:
+        return attrs1
+
+    res = dict()
+    for key in attrs1:
+        if key in attrs2:
+            res[key] = attrs1[key].union(attrs2[key])
+        else:
+            res[key] = attrs1[key]
+    for key in attrs2:
+        if key not in attrs1:
+            res[key] = attrs2[key]
     return res
 
 
@@ -94,95 +117,124 @@ def to_set(value):
         return set([value])
 
 
+def to_list(value):
+    if (type(value) == set) | (type(value) == list):
+        return list(value)
+    else:
+        return [value]
+
+
 def normalize_attrs(attrs_):
     if attrs_ is not None:
-        for k, v in attrs_.items():
-            attrs_[k] = to_set(v)
-    else:
-        attrs_ = dict()
+        for k, v in list(attrs_.items()):
+            if not isinstance(v, AtSet):
+                if isinstance(v, set) or isinstance(v, list):
+                    attrs_[k] = to_atset(v)
+                else:
+                    attrs_[k] = to_atset([v])
+
+                if not attrs_[k]:
+                    del attrs_[k]
 
 
 def merge_attributes(attr1, attr2, method="union"):
-    """Merge two dictionaries of attributes.
-    None seen as the dictionary that contains everything """
-    result = {}
+    """Merge two dictionaries of attributes"""
     if method == "union":
-        # if attr1 is None or attr2 is None:
-        #     return None
-        if attr1 is None:
-            attr1 = dict()
-        if attr2 is None:
-            attr2 = dict()
-        for key1 in attr1.keys():
-            if key1 in attr2.keys():
-                if attr1[key1] == attr2[key1]:
-                    result.update(
-                        {key1: attr1[key1]})
-                else:
-                    attr_set = set()
-                    attr_set.update(attr1[key1])
-                    attr_set.update(attr2[key1])
-                    result.update(
-                        {key1: attr_set})
-            else:
-                result.update({key1: attr1[key1]})
-
-        for key2 in attr2.keys():
-            if key2 not in result:
-                result.update({key2: attr2[key2]})
+        return attrs_union(attr1, attr2)
     elif method == "intersection":
-        if attr1 is None:
-            attr1 = dict()
-        if attr2 is None:
-            attr2 = dict()
-        # if attr1 is None:
-        #     return attr2
-        # if attr2 is None:
-        #     return attr1
-        for key1 in attr1.keys():
-            if key1 in attr2.keys():
-                if attr1[key1] == attr2[key1]:
-                    result.update(
-                        {key1: attr1[key1]})
-                else:
-                    attr_set1 = set()
-                    attr_set2 = set()
-                    attr_set1.update(attr1[key1])
-                    attr_set2.update(attr2[key1])
-                    intersect = set.intersection(attr_set1, attr_set2)
-                    if len(intersect) == 1:
-                        result.update({key1: {list(intersect)[0]}})
-                    elif len(intersect) > 1:
-                        result.update({key1: intersect})
+        return attrs_intersection(attr1, attr2)
     else:
         raise ReGraphError("Merging method %s is not defined!" % method)
-    return result
+
+# def merge_attributes(attr1, attr2, method="union"):
+#     """Merge two dictionaries of attributes.
+#     None seen as the dictionary that contains everything """
+#     result = {}
+#     if method == "union":
+#         # if attr1 is None or attr2 is None:
+#         #     return None
+#         if attr1 is None:
+#             attr1 = dict()
+#         if attr2 is None:
+#             attr2 = dict()
+#         for key1 in attr1.keys():
+#             if key1 in attr2.keys():
+#                 if attr1[key1] == attr2[key1]:
+#                     result.update(
+#                         {key1: attr1[key1]})
+#                 else:
+#                     attr_set = set()
+#                     attr_set.update(attr1[key1])
+#                     attr_set.update(attr2[key1])
+#                     result.update(
+#                         {key1: attr_set})
+#             else:
+#                 result.update({key1: attr1[key1]})
+
+#         for key2 in attr2.keys():
+#             if key2 not in result:
+#                 result.update({key2: attr2[key2]})
+#     elif method == "intersection":
+#         if attr1 is None:
+#             attr1 = dict()
+#         if attr2 is None:
+#             attr2 = dict()
+#         # if attr1 is None:
+#         #     return attr2
+#         # if attr2 is None:
+#         #     return attr1
+#         for key1 in attr1.keys():
+#             if key1 in attr2.keys():
+#                 if attr1[key1] == attr2[key1]:
+#                     result.update(
+#                         {key1: attr1[key1]})
+#                 else:
+#                     attr_set1 = set()
+#                     attr_set2 = set()
+#                     attr_set1.update(attr1[key1])
+#                     attr_set2.update(attr2[key1])
+#                     intersect = set.intersection(attr_set1, attr_set2)
+#                     if len(intersect) == 1:
+#                         result.update({key1: {list(intersect)[0]}})
+#                     elif len(intersect) > 1:
+#                         result.update({key1: intersect})
+#     else:
+#         raise ReGraphError("Merging method %s is not defined!" % method)
+#     return result
 
 
-def dict_sub(a, b):
-    res = copy.deepcopy(a)
-    normalize_attrs(res)
-    if b is None:
-        return res
-    if a is None:
-        return None
-    for key, value in b.items():
-        if key not in a.keys():
-            pass
+def dict_sub(attrs1, attrs2):
+    """ remove attributes attrs2 from attrs1 """
+    new_dict = {}
+    for key in attrs1:
+        if key in attrs2:
+            new_set = attrs2[key].complement(attrs1[key])
+            if new_set:
+                new_dict[key] = new_set
         else:
-            elements_to_remove = []
-            for el in to_set(value):
-                if el in a[key]:
-                    elements_to_remove.append(el)
-                else:
-                    pass
-            for el in elements_to_remove:
-                res[key].remove(el)
-    return res
+            new_dict[key] = attrs1[key]
+    return new_dict
 
-
-def listOr(*l):
-    return(lambda x: any([f(x) for f in l]))
+# def dict_sub(a, b):
+#     res = copy.deepcopy(a)
+#     normalize_attrs(res)
+#     if b is None:
+#         return res
+#     if a is None:
+#         return None
+#     for key, value in b.items():
+#         if key not in a.keys():
+#             pass
+#         else:
+#             elements_to_remove = []
+#             for el in to_set(value):
+#                 if el in a[key]:
+#                     elements_to_remove.append(el)
+#                 else:
+#                     pass
+#             for el in elements_to_remove:
+#                 res[key].remove(el)
+#     return res
 
 
 def simplify_commands(commands, di=False):

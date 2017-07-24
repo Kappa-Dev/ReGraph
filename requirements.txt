@@ -16,3 +16,4 @@ flask==0.11.1
 flask-cors==3.0.2
 flex==6.0.0
 lrparsing==1.0.13
+sympy==1.0

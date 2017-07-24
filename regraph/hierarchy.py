@@ -1677,7 +1677,7 @@ class Hierarchy(nx.DiGraph):
                 )
 
             current_level = next_level
-        print("Updated homomorphisms: ", updated_homomorphisms)
+        # print("Updated homomorphisms: ", updated_homomorphisms)
         return (
             updated_graphs,
             updated_homomorphisms,

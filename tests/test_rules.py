@@ -3,8 +3,9 @@ import networkx as nx
 from nose.tools import raises
 
 from regraph.rules import Rule
-from regraph.utils import assert_graph_eq
+from regraph.utils import assert_graph_eq, normalize_attrs
 from regraph.exceptions import RuleError
+import regraph.primitives as prim
 
 
 class TestRule(object):
@@ -32,42 +33,46 @@ class TestRule(object):
         self.pattern.add_node(1)
         self.pattern.add_node(2)
         self.pattern.add_node(3)
-        self.pattern.add_node(4, {'a': 1})
+        prim.add_node(self.pattern, 4, {'a': 1})
 
         self.pattern.add_edges_from([
             (1, 2),
             (3, 2),
-            (2, 3, {'a': {1}}),
+            # (2, 3, {'a': {1}}),
             (4, 1)
         ])
+        prim.add_edge(self.pattern, 2, 3, {'a': {1}})
 
         # Define preserved part of the rule
         self.p = nx.DiGraph()
         self.p.add_node('a')
         self.p.add_node('b')
         self.p.add_node('c')
-        self.p.add_node('d', {'a': 1})
+        prim.add_node(self.p, 'd', {'a': 1})
 
         self.p.add_edges_from([
             ('a', 'b'),
-            ('b', 'c', {'a': {1}}),
+            # ('b', 'c', {'a': {1}}),
             ('d', 'a')
         ])
+        prim.add_edge(self.p, 'b', 'c', {'a': {1}})
 
         # Define the right hand side of the rule
         self.rhs = nx.DiGraph()
         self.rhs.add_node('x')
         self.rhs.add_node('y')
         self.rhs.add_node('z')
-        self.rhs.add_node('s', {'a': 1})
+        # self.rhs.add_node('s', {'a': 1})
+        prim.add_node(self.rhs, 's', {'a': 1})
         self.rhs.add_node('t')
 
         self.rhs.add_edges_from([
             ('x', 'y'),
-            ('y', 'z', {'a': {1}}),
+            # ('y', 'z', {'a': {1}}),
             ('s', 'x'),
             ('t', 'y')
         ])
+        prim.add_edge(self.rhs, 'y', 'z', {'a': {1}})
 
         # Define mappings
         self.p_lhs = {'a': 1, 'b': 2, 'c': 3, 'd': 4}
@@ -81,7 +86,9 @@ class TestRule(object):
         assert_graph_eq(rule.p, self.p)
         assert_graph_eq(rule.lhs, self.pattern)
         assert('g' in rule.rhs)
-        assert(rule.rhs.node['g'] == {'a': set([1])})
+        t = {'a': set([1])}
+        normalize_attrs(t)
+        assert(rule.rhs.node['g'] == t)
         return
 
     def test_remove_node(self):
@@ -151,13 +158,19 @@ class TestRule(object):
         rule = Rule(self.p, self.pattern, self.rhs,
                     self.p_lhs, self.p_rhs)
         rule.add_node_attrs(1, {'a': 1})
-        assert(rule.rhs.node['x'] == {'a': {1}})
+        t1 = {'a': {1}}
+        t2 = {'a': {1, 2}}
+        t3 = {'a': {1, 2}, 'b': {1}}
+        normalize_attrs(t1)
+        normalize_attrs(t2)
+        normalize_attrs(t3)
+        assert(rule.rhs.node['x'] == t1)
         rule.add_node_attrs(4, {'a': 1})
-        assert(rule.rhs.node['s'] == {'a': {1}})
+        assert(rule.rhs.node['s'] == t1)
         rule.add_node_attrs(4, {'a': 2})
-        assert(rule.rhs.node['s'] == {'a': {1, 2}})
+        assert(rule.rhs.node['s'] == t2)
         rule.add_node_attrs(4, {'b': 1})
-        assert(rule.rhs.node['s'] == {'a': {1, 2}, 'b': {1}})
+        assert(rule.rhs.node['s'] == t3)
         return
 
     def test_remove_node_attrs(self):
@@ -165,8 +178,12 @@ class TestRule(object):
                     self.p_lhs, self.p_rhs)
         rule.add_node_attrs(4, {'a': 2})
         rule.remove_node_attrs(4, {'a': 1})
-        assert(rule.p.node['d'] == {'a': set()})
-        assert(rule.rhs.node['s'] == {'a': set([2])})
+        t1 = {'a': set()}
+        t2 = {'a': set([2])}
+        normalize_attrs(t1)
+        normalize_attrs(t2)
+        assert(rule.p.node['d'] == t1)
+        assert(rule.rhs.node['s'] == t2)
         return
 
     def test_update_node_attrs(self):
@@ -174,26 +191,38 @@ class TestRule(object):
                     self.p_lhs, self.p_rhs)
         rule.update_node_attrs(4, {'b': 2})
         assert(rule.p.node['d'] is None)
-        assert(rule.rhs.node['s'] == {'b': {2}})
+        test_dict = {'b': {2}}
+        normalize_attrs(test_dict)
+        assert(rule.rhs.node['s'] == test_dict)
         return
 
     def test_add_edge_attrs(self):
         rule = Rule(self.p, self.pattern, self.rhs,
                     self.p_lhs, self.p_rhs)
+        print("before", rule)
         rule.add_edge_attrs(4, 1, {'amazing': True})
+        print("after", rule)
         assert_graph_eq(rule.p, self.p)
-        assert(rule.rhs.edge['s']['x'] == {'amazing': {True}})
+        t = {'amazing': {True}}
+        normalize_attrs(t)
+        print(t)
+        print(rule.rhs.edge['s']['x'])
+        assert(rule.rhs.edge['s']['x'] == t)
         return
 
     def test_remove_edge_attrs(self):
         rule = Rule(self.p, self.pattern, self.rhs,
                     self.p_lhs, self.p_rhs)
         rule.remove_edge_attrs(2, 3, {'a': set()})
-        assert(rule.p.edge['b']['c'] == {'a': {1}})
-        assert(rule.rhs.edge['y']['z'] == {'a': {1}})
+        t1 = {'a': {1}}
+        normalize_attrs(t1)
+        assert(rule.p.edge['b']['c'] == t1)
+        assert(rule.rhs.edge['y']['z'] == t1)
         rule.remove_edge_attrs(2, 3, {'a': {1}})
-        assert(rule.p.edge['b']['c'] == {'a': set()})
-        assert(rule.rhs.edge['y']['z'] == {'a': set()})
+        t2 = {'a': set()}
+        normalize_attrs(t2)
+        assert(rule.p.edge['b']['c'] == t2)
+        assert(rule.rhs.edge['y']['z'] == t2)
         return
 
     def test_update_edge_attrs(self):
@@ -201,7 +230,9 @@ class TestRule(object):
                     self.p_lhs, self.p_rhs)
         rule.update_edge_attrs(2, 3, {'b': 1})
         assert(rule.p.edge['b']['c'] is None)
-        assert(rule.rhs.edge['y']['z'] == {'b': {1}})
+        test_dict = {'b': {1}}
+        normalize_attrs(test_dict)
+        assert(rule.rhs.edge['y']['z'] == test_dict)
         return
 
     def merge_node_list(self):

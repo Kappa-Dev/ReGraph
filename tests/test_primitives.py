@@ -2,9 +2,12 @@ import networkx as nx
 
 from regraph.rules import Rule
 from regraph.utils import (dict_sub,
+                           valid_attributes,
+                           normalize_attrs,
                            is_subdict)
 from regraph.category_op import identity
 from regraph.primitives import *
+import regraph.primitives as prim
 
 
 class TestPrimitives(object):
@@ -50,6 +53,7 @@ class TestPrimitives(object):
         attrs = {"a": {1}}
         add_node(self.graph, "a", attrs)
         assert("a" in self.graph.nodes())
+        normalize_attrs(attrs)
         assert(self.graph.node["a"] == attrs)
         assert(id(attrs) != id(self.graph.node["a"]))
 
@@ -89,6 +93,7 @@ class TestPrimitives(object):
         t = '5'
         attrs = {"a": {1}}
         add_edge(self.graph, s, t, attrs)
+        normalize_attrs(attrs)
         assert((s, t) in self.graph.edges())
         assert(self.graph.edge[s][t] == attrs)
         assert(id(self.graph.edge[s][t]) != id(attrs))
@@ -105,6 +110,7 @@ class TestPrimitives(object):
         t = '5'
         attrs = {"a": {1}}
         add_edge(g, s, t, attrs)
+        normalize_attrs(attrs)
         assert((s, t) in g.edges())
         assert(g.edge[s][t] == attrs)
         assert(g.edge[t][s] == attrs)
@@ -131,15 +137,16 @@ class TestPrimitives(object):
         g = self.graph.to_undirected()
         new_attrs = {"b": {1}}
         add_edge_attrs(g, '1', '2', new_attrs)
-        assert(is_subdict(new_attrs, g.edge['1']['2']))
-        assert(is_subdict(new_attrs, g.edge['2']['1']))
+        normalize_attrs(new_attrs)
+        assert(valid_attributes(new_attrs, g.edge['1']['2']))
+        assert(valid_attributes(new_attrs, g.edge['2']['1']))
 
     def test_remove_edge_attrs(self):
         g = self.graph.to_undirected()
         attrs = {"s": {"p"}}
         remove_edge_attrs(g, '1', '2', attrs)
-        assert(not is_subdict(attrs, g.edge['1']['2']))
-        assert(not is_subdict(attrs, g.edge['2']['1']))
+        assert(not valid_attributes(attrs, g.edge['1']['2']))
+        assert(not valid_attributes(attrs, g.edge['2']['1']))
 
     def test_update_edge_attrs(self):
         g = self.graph.to_undirected()
@@ -203,11 +210,11 @@ class TestPrimitives(object):
         assert(new_name in self.graph.nodes())
         assert("8" not in self.graph.nodes())
         assert("9" not in self.graph.nodes())
-        assert(is_subdict(old_attrs1, self.graph.node[new_name]))
-        assert(is_subdict(old_attrs2, self.graph.node[new_name]))
+        assert(valid_attributes(old_attrs1, self.graph.node[new_name]))
+        assert(valid_attributes(old_attrs2, self.graph.node[new_name]))
         assert((new_name, new_name) in self.graph.edges())
-        assert(is_subdict(old_edge_attrs1, self.graph.edge['10'][new_name]))
-        assert(is_subdict(old_edge_attrs2, self.graph.edge['10'][new_name]))
+        assert(valid_attributes(old_edge_attrs1, self.graph.edge['10'][new_name]))
+        assert(valid_attributes(old_edge_attrs2, self.graph.edge['10'][new_name]))
 
         # test undirected case
         old_attrs1 = g.node['8']
@@ -218,13 +225,13 @@ class TestPrimitives(object):
         assert(new_name in g.nodes())
         assert("8" not in g.nodes())
         assert("9" not in g.nodes())
-        assert(is_subdict(old_attrs1, g.node[new_name]))
-        assert(is_subdict(old_attrs2, g.node[new_name]))
+        assert(valid_attributes(old_attrs1, g.node[new_name]))
+        assert(valid_attributes(old_attrs2, g.node[new_name]))
         assert((new_name, new_name) in g.edges())
-        assert(is_subdict(old_edge_attrs1, g.edge['10'][new_name]))
-        assert(is_subdict(old_edge_attrs1, g.edge[new_name]['10']))
-        assert(is_subdict(old_edge_attrs2, g.edge['10'][new_name]))
-        assert(is_subdict(old_edge_attrs2, g.edge[new_name]['10']))
+        assert(valid_attributes(old_edge_attrs1, g.edge['10'][new_name]))
+        assert(valid_attributes(old_edge_attrs1, g.edge[new_name]['10']))
+        assert(valid_attributes(old_edge_attrs2, g.edge['10'][new_name]))
+        assert(valid_attributes(old_edge_attrs2, g.edge[new_name]['10']))
         assert(g.edge['10'][new_name] == g.edge[new_name]['10'])
         assert(id(g.edge['10'][new_name]) == id(g.edge[new_name]['10']))
 
@@ -272,36 +279,36 @@ class TestPrimitives(object):
 
     def test_find_matching(self):
         pattern = nx.DiGraph()
-        pattern.add_nodes_from(
+        prim.add_nodes_from(pattern,
             [(1, {'state': 'p'}),
              (2, {'name': 'BND'}),
              (3),
              (4)]
         )
-        pattern.add_edges_from(
+        prim.add_edges_from(pattern,
             [(1, 2, {'s': 'p'}),
              (3, 2, {'s': 'u'}),
              (3, 4)]
         )
-        find_matching(self.graph, pattern, ignore_attrs=False)
+        find_matching(self.graph, pattern)
         # assert smth here
 
     def test_rewrite(self):
         pattern = nx.DiGraph()
-        pattern.add_nodes_from(
+        add_nodes_from(pattern,
             [(1, {'state': 'p'}),
              (2, {'name': 'BND'}),
              3,
              4]
         )
-        pattern.add_edges_from(
+        add_edges_from(pattern,
             [(1, 2, {'s': 'p'}),
              (3, 2, {'s': 'u'}),
              (3, 4)]
         )
 
         p = nx.DiGraph()
-        p.add_nodes_from([
+        add_nodes_from(p, [
             (1, {'state': 'p'}),
             (2, {'name': 'BND'}),
             3,
@@ -313,14 +320,14 @@ class TestPrimitives(object):
         ])
 
         rhs = nx.DiGraph()
-        rhs.add_nodes_from([
+        add_nodes_from(rhs, [
             (1, {'state': 'p'}),
             (2, {'name': 'BND'}),
             (3, {'merged': 'yes'}),
             (4, {'new': 'yes'})
         ])
 
-        rhs.add_edges_from([
+        add_edges_from(rhs, [
             (1, 2, {'s': 'u'}),
             (2, 4),
             (3, 3),
@@ -331,6 +338,6 @@ class TestPrimitives(object):
         p_rhs = {1: 1, 2: 2, 3: 3, 4: 3}
 
         rule = Rule(p, pattern, rhs, p_lhs, p_rhs)
-        instances = find_matching(self.graph, rule.lhs, ignore_attrs=False)
+        instances = find_match(self.graph, rule.lhs, {}, {}, {})
         rewrite(self.graph, instances[0], rule)
         # print_graph(self.graph)

@@ -4,6 +4,7 @@ import warnings
 
 from regraph.parser import parser
 from regraph.utils import (keys_by_value,
+                           normalize_attrs,
                            make_canonical_commands)
 from regraph.category_op import (identity,
                                  check_homomorphism,
@@ -445,7 +446,7 @@ class Rule(object):
             raise RuleError(
                 "Node '%s' does not exist in the left hand side of the rule" % n2
             )
-
+        normalize_attrs(attrs) 
         if self.lhs.is_directed():
             if (n1, n2) not in self.lhs.edges():
                 raise RuleError(
@@ -515,6 +516,7 @@ class Rule(object):
             raise RuleError(
                 "Node '%s' does not exist in the left hand side of the rule" % n2
             )
+        normalize_attrs(attrs) 
         if self.lhs.is_directed():
             if (n1, n2) not in self.lhs.edges():
                 raise RuleError(
@@ -591,6 +593,7 @@ class Rule(object):
             raise RuleError(
                 "Node '%s' does not exist in the left hand side of the rule" % n2
             )
+        normalize_attrs(attrs) 
         if self.lhs.is_directed():
             if (n1, n2) not in self.lhs.edges():
                 raise RuleError(

@@ -5,7 +5,7 @@ from regraph.rules import Rule
 from regraph.hierarchy import Hierarchy
 from regraph.primitives import print_graph
 from regraph.exceptions import (HierarchyError)
-
+import regraph.primitives as prim
 
 class TestRelations(object):
 
@@ -13,11 +13,11 @@ class TestRelations(object):
         hierarchy = Hierarchy()
 
         base = nx.DiGraph()
-        base.add_nodes_from([
+        prim.add_nodes_from(base, [
             ("circle", {"a": {1, 2, 3}}),
             ("square", {"b": {1, 2, 3}})
         ])
-        base.add_edges_from([
+        prim.add_edges_from(base, [
             ("circle", "circle"),
             ("square", "square"),
             ("circle", "square", {"c": {5, 6, 7}}),
@@ -27,14 +27,14 @@ class TestRelations(object):
         hierarchy.add_graph("base", base)
 
         a1 = nx.DiGraph()
-        a1.add_nodes_from([
+        prim.add_nodes_from(a1, [
             ("black_circle", {"a": {1}}),
             ("white_circle", {"a": {2}}),
             ("black_square", {"b": {1}}),
             ("white_square", {"b": {1}})
         ])
 
-        a1.add_edges_from([
+        prim.add_edges_from(a1, [
             ("white_circle", "white_circle"),
             ("white_circle", "white_square", {"c": {5}}),
             ("black_circle", "black_square"),
@@ -54,13 +54,13 @@ class TestRelations(object):
         )
 
         a2 = nx.DiGraph()
-        a2.add_nodes_from([
+        prim.add_nodes_from(a2, [
             ("right_circle", {"a": {1, 2}}),
             ("middle_square", {"b": {1}}),
             ("left_circle", {"a": 1})
         ])
 
-        a2.add_edges_from([
+        prim.add_edges_from(a2, [
             ("right_circle", "middle_square", {"c": {5, 6, 7}}),
             ("left_circle", "middle_square", {"c": {6, 7}})
         ])

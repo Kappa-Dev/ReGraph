@@ -66,8 +66,11 @@ def check_homomorphism(source, target, dictionary, total=True):
     if not set(dictionary.values()).issubset(target.nodes()):
         raise InvalidHomomorphism(
             "Some of the image nodes in mapping %s do not"
-            "exist in target graph (target graph nodes %s)" %
-            (dictionary.values(), target.nodes())
+            "exist in target graph (target graph nodes %s) "
+            "namely %s" %
+            (dictionary.values(),
+             target.nodes(),
+             set(dictionary.values())-target.nodes())
         )
 
     # check connectivity
@@ -95,7 +98,7 @@ def check_homomorphism(source, target, dictionary, total=True):
             # check sets of attributes of nodes (here homomorphism = set inclusion)
         if not valid_attributes(source.node[s], target.node[t]):
             raise InvalidHomomorphism(
-                "Attributes of nodes source:'%s' (%s) and target:'%s' (%s) do not match!" %
+                "Attributes of nodes source:'%s' %s and target:'%s' %s do not match!" %
                 (s, source.node[s], t, target.node[t])
             )
 

@@ -8,6 +8,7 @@ from regraph.rules import Rule
 from regraph.hierarchy import Hierarchy
 from regraph.primitives import print_graph
 from regraph.exceptions import (HierarchyError)
+import regraph.primitives as prim
 
 
 class TestHierarchy(object):
@@ -16,10 +17,10 @@ class TestHierarchy(object):
         self.hierarchy = Hierarchy(directed=True)
 
         g0 = nx.DiGraph()
-        g0.add_node("circle", {"a": {1, 2, 3}})
-        g0.add_node("square", {"a": {1, 2, 3, 5}})
-        g0.add_node("triangle", {"new_attrs":{1}})
-        g0.add_edges_from([
+        prim.add_node(g0, "circle", {"a": {1, 2, 3}})
+        prim.add_node(g0, "square", {"a": {1, 2, 3, 5}})
+        prim.add_node(g0,"triangle", {"new_attrs":{1}})
+        prim.add_edges_from(g0,[
             ("circle", "circle"),  # , {"b": {1, 2, 3, 4}}),
             ("circle", "square"),
             ("square", "circle", {"new_attrs": {2}}),
@@ -28,9 +29,9 @@ class TestHierarchy(object):
         self.hierarchy.add_graph("g0", g0, {"name": "Shapes"})
 
         g00 = nx.DiGraph()
-        g00.add_node('black', {"a": {1, 2, 3}, "new_attrs": {1}})
-        g00.add_node('white', {"a": {1, 2, 3, 5}})
-        g00.add_edges_from([
+        prim.add_node(g00,'black', {"a": {1, 2, 3}, "new_attrs": {1}})
+        prim.add_node(g00,'white', {"a": {1, 2, 3, 5}})
+        prim.add_edges_from(g00,[
             ('white', 'white', {"new_attrs": 2}),
             ('white', 'black', {"new_attrs": {4, 3}}),
             ('black', 'black'),
@@ -39,7 +40,7 @@ class TestHierarchy(object):
         self.hierarchy.add_graph("g00", g00, {"name": "Colors"})
 
         g1 = nx.DiGraph()
-        g1.add_nodes_from([
+        prim.add_nodes_from(g1,[
             ("black_circle", {"a": {1, 2, 3}}),
             "white_circle",
             "black_square",
@@ -48,7 +49,7 @@ class TestHierarchy(object):
             "white_triangle"
         ])
 
-        g1.add_edges_from([
+        prim.add_edges_from(g1,[
             ("black_circle", "black_circle"),# {"b": {1, 2, 3, 4}}),
             ("black_circle", "white_circle"),
             ("black_circle", "black_square"),
@@ -88,7 +89,7 @@ class TestHierarchy(object):
         )
 
         g2 = nx.DiGraph()
-        g2.add_nodes_from([
+        prim.add_nodes_from(g2, [
             (1, {"a": {1, 2}}),
             2,
             3,
@@ -98,7 +99,7 @@ class TestHierarchy(object):
             7,
         ])
 
-        g2.add_edges_from([
+        prim.add_edges_from(g2,[
             (1, 2),# {"b": {1, 2, 3}}),
             (2, 3),
             (3, 6),
@@ -121,7 +122,7 @@ class TestHierarchy(object):
         )
 
         g3 = nx.DiGraph()
-        g3.add_nodes_from([
+        prim.add_nodes_from(g3,[
             (1),# {"a": {1, 2}}),
             2,
             3,
@@ -131,7 +132,7 @@ class TestHierarchy(object):
             7,
         ])
 
-        g3.add_edges_from([
+        prim.add_edges_from(g3,[
             (1, 1),#, {"b": {1, 2, 3}}),
             (1, 2),
             (1, 3),
@@ -157,8 +158,8 @@ class TestHierarchy(object):
         )
 
         g4 = nx.DiGraph()
-        g4.add_nodes_from([1, 2, 3])
-        g4.add_edges_from([
+        prim.add_nodes_from(g4,[1, 2, 3])
+        prim.add_edges_from(g4,[
             (1, 2),
             (2, 3)
         ])
@@ -168,13 +169,13 @@ class TestHierarchy(object):
         self.hierarchy.add_typing("g4", "g3", {1: 1, 2: 5, 3: 6}, total=True)
 
         g5 = nx.DiGraph()
-        g5.add_nodes_from([
+        prim.add_nodes_from(g5,[
             ("black_circle"),# {"a": {255}}),
             ("black_square"),# {"a": {256}}),
             ("white_triangle"),# {"a": {257}}),
             ("star")#, {"a": {258}})
         ])
-        g5.add_edges_from([
+        prim.add_edges_from(g5,[
             ("black_circle", "black_square"),
             ("black_square", "white_triangle"),#, {"b": {11}}),
             ("star", "black_square"),
@@ -204,12 +205,12 @@ class TestHierarchy(object):
 
     def test_find_matching(self):
         pattern = nx.DiGraph()
-        pattern.add_nodes_from([
+        prim.add_nodes_from(pattern,[
             1,
             (2, {"a": 1}),
             3
         ])
-        pattern.add_edges_from([
+        prim.add_edges_from(pattern,[
             (1, 2),
             (2, 3)
         ])
@@ -227,12 +228,12 @@ class TestHierarchy(object):
 
     def test_rewrite(self):
         pattern = nx.DiGraph()
-        pattern.add_nodes_from([
+        prim.add_nodes_from(pattern,[
             1,
             (2, {"a": {1, 2}}),
             3
         ])
-        pattern.add_edges_from([
+        prim.add_edges_from(pattern,[
             (1, 2),
             (2, 3)
         ])
@@ -252,13 +253,13 @@ class TestHierarchy(object):
         ])
 
         rhs = nx.DiGraph()
-        rhs.add_nodes_from([
+        prim.add_nodes_from(rhs,[
             1,
             (2, {"a": {3, 5}}),
             (3, {"new_attrs": {1}}),
             4
         ])
-        rhs.add_edges_from([
+        prim.add_edges_from(rhs,[
             (2, 1, {"new_attrs": {2}}),
             (2, 4, {"new_attrs": {3}}),
             (2, 3, {"new_attrs": {4}})
@@ -381,12 +382,12 @@ class TestHierarchy(object):
         self.hierarchy.add_rule_typing("r1", "g1", lhs_typing, rhs_typing)
 
         pattern = nx.DiGraph()
-        pattern.add_nodes_from([
+        prim.add_nodes_from(pattern,[
             1,
             (2, {"a": {1, 2}}),
             3
         ])
-        pattern.add_edges_from([
+        prim.add_edges_from(pattern,[
             (1, 2),
             (2, 3)
         ])
@@ -407,13 +408,13 @@ class TestHierarchy(object):
         ])
 
         rhs = nx.DiGraph()
-        rhs.add_nodes_from([
+        prim.add_nodes_from(rhs,[
             1,
             11,
             (2, {"a": {3, 5}}),
             (3, {"new_attrs": {1}}),
         ])
-        rhs.add_edges_from([
+        prim.add_edges_from(rhs,[
             (2, 3, {"new_attrs": {4}})
         ])
         p_lhs = {1: 1, 11: 1, 2: 2, 3: 3}
