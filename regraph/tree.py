@@ -883,13 +883,18 @@ def _same_graphs(hie1, hie2, rel):
             new_rel = copy.deepcopy(rel)
             for ch2 in all_children(hie2, id2):
                 for ch1 in all_children(hie1, id1):
+                    print(hie1.node[ch1].attrs["name"])
+                    print(hie2.node[ch2].attrs["name"])
+                    print(hie1.node[ch1] == hie2.node[ch2])
                     if hie1.node[ch1].attrs["name"] == hie2.node[ch2].attrs["name"]\
-                    and hie1.node[ch1] == hie2.node[ch2]:
+                        and hie1.node[ch1] == hie2.node[ch2]:
                         if ch1 in new_rel:
                             new_rel[ch1].add(ch2)
                         else:
                             new_rel[ch1] = {ch2}
-    if is_subdict(new_rel, rel):
+    # if is_subdict(new_rel, rel):
+        # return rel
+    if valid_attributes(new_rel, rel):
         return rel
     else:
         return _same_graphs(hie1, hie2, new_rel)
@@ -999,6 +1004,7 @@ def merge_json_into_hierarchy(hie, json_data, top):
 
 def _merge_hierarchy(hie1, hie2, top1, top2):
     rel = _same_graphs(hie1, hie2, {top1: {top2}})
+    print(rel)
     visited2 = hie2.descendents(top2)
     _add_new_graphs(hie1, hie2, rel, visited2)
 

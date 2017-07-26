@@ -122,7 +122,7 @@ class GraphNode(AttributeContainter):
         return
 
     def __eq__(self, other):
-        return isinstance(other, GraphNode) and self.graph == other.graph
+        return isinstance(other, GraphNode) and equal(self.graph, other.graph)
 
     def __ne__(self, other):
         return not (self == other)

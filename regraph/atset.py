@@ -52,7 +52,6 @@ class AtSet():
 
     def issubset(self, other):
         """test if self is a subset of other"""
-        print("test", self)
         return self.num_set.issubset(other.num_set) and\
             self.str_set.issubset(other.str_set)
 
@@ -63,6 +62,17 @@ class AtSet():
 
     def __eq__(self, other):
         return self.issubset(other) and other.issubset(self)
+
+    def __ge__(self, other):
+        return other.issubset(self)
+
+    def __gt__(self, other):
+        return other.issubset(self) and not self.issubset(other)
+
+    def __lt__(self, other):
+        return self.issubset(other) and not other.issubset(self)
+
+    __le__ = issubset
 
     @staticmethod
     def from_json(json_data):

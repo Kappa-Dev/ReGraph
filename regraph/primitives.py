@@ -1117,13 +1117,13 @@ def equal(graph1, graph2):
     if set(graph1.edges()) != set(graph2.edges()):
         return False
     for node in graph1.nodes():
-        normalize_attrs(graph1.node[node])
-        normalize_attrs(graph2.node[node])
+        # normalize_attrs(graph1.node[node])
+        # normalize_attrs(graph2.node[node])
         if graph1.node[node] != graph2.node[node]:
             return False
     for s, t in graph1.edges():
-        normalize_attrs(get_edge(graph1, s, t))
-        normalize_attrs(get_edge(graph2, s, t))
+        # normalize_attrs(get_edge(graph1, s, t))
+        # normalize_attrs(get_edge(graph2, s, t))
         if get_edge(graph1, s, t) != get_edge(graph2, s, t):
             return False
     return True
