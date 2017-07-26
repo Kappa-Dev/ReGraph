@@ -191,6 +191,7 @@ class Rule(object):
         for p_node in p_keys:
             primitives.remove_node(self.p, p_node)
             del self.p_rhs[p_node]
+            del self.p_lhs[p_node]
         primitives.remove_node(self.rhs, n)
 
     def remove_node(self, n):

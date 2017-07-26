@@ -1391,8 +1391,11 @@ class Hierarchy(nx.DiGraph):
             # forbidden case of * <- * -> A
             # works only if A <- A -> A
             for p_node in p_l.keys():
+                print(p_node)
                 l_node = p_l[p_node]
+                print(l_node)
                 r_node = p_r[p_node]
+                print(r_node)
                 if r_node in rhs_typing[typing_graph].keys() and\
                    l_node not in lhs_typing[typing_graph].keys():
                     if matching[l_node] not in typing.keys():
