@@ -384,7 +384,7 @@ def new_rule(hie, parent, name, pattern_name=None):
         raise ValueError("Invalid new name")
 
 
-# TODO : undirected
+# TODO : undirected ?
 def add_node(hie, g_id, parent, node_id, node_type, new_name=False):
     """add a node to a graph in the hierarchy"""
     # if parent is not None and node_type is None:
@@ -395,18 +395,6 @@ def add_node(hie, g_id, parent, node_id, node_type, new_name=False):
                 node_id = prim.unique_node_id(hie.node[g_id].graph, node_id)
             else:
                 raise ValueError("node {} already exists in graph".format(node_id))
-        # lhs = nx.DiGraph()
-        # ppp = nx.DiGraph()
-        # rhs = nx.DiGraph()
-        # rhs.add_node(node_id)
-        # rule = Rule(ppp, lhs, rhs)
-        # if node_type is not None:
-        #     rhs_typing = {parent: {node_id: node_type}}
-        #     lhs_typing = {parent: {}}
-        # else:
-        #     lhs_typing = None
-        #     rhs_typing = None
-        # _rewrite(hie, g_id, rule, {}, lhs_typing, rhs_typing)
 
         # check that we have sufficient typings
         for typing in hie.successors(g_id):
@@ -456,19 +444,6 @@ def _valid_edge(hie, g_id, node1, node2):
 def add_edge(hie, g_id, parent, node1, node2):
     """add an edge to a node of the hierarchy"""
     if isinstance(hie.node[g_id], GraphNode):
-        # lhs = nx.DiGraph()
-        # lhs.add_node(node1)
-        # lhs.add_node(node2)
-        # ppp = nx.DiGraph()
-        # ppp.add_node(node1)
-        # ppp.add_node(node2)
-        # rhs = nx.DiGraph()
-        # rhs.add_node(node1)
-        # rhs.add_node(node2)
-        # rhs.add_edge(node1, node2)
-        # rule = Rule(ppp, lhs, rhs)
-        # _rewrite(hie,g_id, rule, {node1: node1, node2: node2})
-
         _valid_edge(hie, g_id, node1, node2)
         prim.add_edge(hie.node[g_id].graph, node1, node2)
     elif isinstance(hie.node[g_id], RuleNode):
@@ -509,7 +484,6 @@ def rm_node(hie, g_id, parent, node_id, force=False):
         raise ValueError("node is neither a rule nor a graph")
 
 
-# TODO: merge if different types and remove types (strong rules for now)
 def merge_nodes(hie, g_id, parent, node1, node2, new_name):
     """merge node1 and node2 in graph or rule"""
     if isinstance(hie.node[g_id], GraphNode):
@@ -553,6 +527,7 @@ def merge_nodes(hie, g_id, parent, node1, node2, new_name):
 
 
 def clone_node(hie, g_id, parent, node, new_name, propagate=False):
+    """Create a clone of a node. If propagate is True, also clone all the nodes typed by it"""
     if isinstance(hie.node[g_id], GraphNode):
         if new_name in hie.node[g_id].graph.nodes():
             raise ValueError("node {} already in graph".format(new_name))
@@ -578,13 +553,14 @@ def clone_node(hie, g_id, parent, node, new_name, propagate=False):
         hie.node[g_id].rule.clone_rhs_node(node, new_name)
         for _, typing in hie.out_edges(g_id):
             mapping = hie.edge[g_id][typing].rhs_mapping
-            if node in mapping.keys():
+            if node in mapping:
                 mapping[new_name] = mapping[node]
     else:
         raise ValueError("node is neither a rule nor a graph")
 
 
 def rm_edge(hie, g_id, parent, node1, node2):
+    """remove an edge from a graph, and all the edges typed by it"""
     if isinstance(hie.node[g_id], GraphNode):
         lhs = nx.DiGraph()
         lhs.add_node(node1)
@@ -606,6 +582,7 @@ def rm_edge(hie, g_id, parent, node1, node2):
 
 
 def add_attributes(hie, g_id, parent, node, json_attrs):
+    """add the attributes from the json_attrs dict to a node"""
     attrs = prim.json_dict_to_attrs(json_attrs)
     if isinstance(hie.node[g_id], GraphNode):
         for typing in hie.successors(g_id):
@@ -617,15 +594,6 @@ def add_attributes(hie, g_id, parent, node, json_attrs):
                                      .format(mapping[node], typing))
         prim.add_node_attrs(hie.node[g_id].graph, node, attrs)
 
-        # lhs = nx.DiGraph()
-        # lhs.add_node(node)
-        # ppp = nx.DiGraph()
-        # ppp.add_node(node)
-        # rhs = nx.DiGraph()
-        # rhs.add_node(node)
-        # add_node_attrs(rhs, node, attrs)
-        # rule = Rule(ppp, lhs, rhs)
-        # _rewrite(hie, g_id, rule, {node: node})
     elif isinstance(hie.node[g_id], RuleNode):
         hie.node[g_id].rule.add_node_attrs_rhs(node, attrs)
     else:
@@ -633,6 +601,7 @@ def add_attributes(hie, g_id, parent, node, json_attrs):
 
 
 def remove_attributes(hie, g_id, parent, node, json_attrs):
+    """remove the attributes from json_attrs from the node"""
     attrs = prim.json_dict_to_attrs(json_attrs)
     if isinstance(hie.node[g_id], GraphNode):
         lhs = nx.DiGraph()
@@ -643,13 +612,6 @@ def remove_attributes(hie, g_id, parent, node, json_attrs):
         rhs = nx.DiGraph()
         rhs.add_node(node)
         rule = Rule(ppp, lhs, rhs)
-        # if parent is not None:
-        #     typing = hie.edge[g_id][parent].mapping
-        #     lhs_typing = {parent: {node: typing[node]}}
-        #     rhs_typing = lhs_typing
-        # else:
-        #     lhs_typing = None
-        #     rhs_typing = None
         _rewrite(hie, g_id, rule, {node: node})
     elif isinstance(hie.node[g_id], RuleNode):
         hie.node[g_id].rule.remove_node_attrs_rhs(node, attrs)
@@ -670,7 +632,7 @@ def get_children_id_by_node(hie, g_id, node_id):
             if node_id in hie.edge[child][g_id].mapping.values()]
 
 
-# only works on a tree
+# only works if the hierarchy is a tree
 def ancestor(hie, g_id, degree):
     """get the id of ancestor of degree"""
     if degree == 0:
@@ -686,7 +648,8 @@ def _mapping_to_json(mapping):
     return [{"left": n, "right": t} for (n, t) in mapping.items()]
 
 
-# only works on a tree
+# only works if the hierarchy is a tree
+# use ancestors_graph_mapping instead
 def ancestors_mapping(hie, g_id, degree):
     """get the typing of g_id according to degree"""
     if degree <= 0:
@@ -715,16 +678,17 @@ def ancestors_rule_mapping(hie, top, g_id, ancestor_path):
 
 
 def new_graph_from_nodes(hie, nodes, g_id, new_name):
-    """create a child graph from a set of nodes"""
+    """create a child graph of g_id induced by a set of its nodes"""
     if valid_child_name(hie, g_id, new_name):
         ch_id = hie.unique_graph_id(new_name)
         hie.new_graph_from_nodes(nodes, g_id, ch_id, {"name": new_name})
     else:
         raise ValueError("Invalid new name")
 
- 
+
 def child_rule_from_nodes(hie, nodes, g_id, new_name):
-    """create a rule typed by g_id"""
+    """create a rule typed by g_id (the identity rule where the
+     pattern is induced by the selected nodes)"""
     if valid_child_name(hie, g_id, new_name):
         ch_id = hie.unique_graph_id(new_name)
         hie.child_rule_from_nodes(nodes, g_id, ch_id, {"name": new_name})
@@ -733,7 +697,10 @@ def child_rule_from_nodes(hie, nodes, g_id, new_name):
 
 
 def rewrite_parent(hie, g_id, parent, suffix):
-    """rewrite the parent of rule g_id, using typing as a matching"""
+    """rewrite the parent of rule g_id,
+    using the typing of the left hand side as the matching.
+    The right hand side must be the same as the preserved part
+    (no adding or merging of nodes)"""
     if not isinstance(hie.node[g_id], RuleNode):
         raise ValueError("{} is not a rule".format(g_id))
     rule = hie.node[g_id].rule
@@ -743,10 +710,6 @@ def rewrite_parent(hie, g_id, parent, suffix):
     if not is_monic(mapping.lhs_mapping):
         raise ValueError("matching must be monic")
     new_names = hie.duplicate_subgraph(hie.descendents(parent), suffix)
-    # for new_id in new_names.values():
-    #     old_name = hie.node[new_id].attrs["name"]
-    #     hie.node[new_id].attrs["name"] = \
-    #         get_valid_name(hie, new_id, old_name+"_"+suffix)
     old_name = hie.node[new_names[parent]].attrs["name"]
     hie.node[new_names[parent]].attrs["name"] =\
         get_valid_name(hie, new_names[parent], old_name+"_"+suffix)
@@ -756,7 +719,6 @@ def rewrite_parent(hie, g_id, parent, suffix):
         if old_id != parent and isinstance(hie.node[old_id], GraphNode):
             valid_nuggets = hie.create_valid_nuggets(old_id, new_id,
                                                      updated_graphs)
-
             base_name = hie.node[new_id].attrs["name"]
             hie.remove_graph(new_id)
             for nug_id in valid_nuggets:
@@ -767,33 +729,35 @@ def rewrite_parent(hie, g_id, parent, suffix):
     return new_names
 
 
-def unfold_nuggets(hie, ag_id, metamodel_id, nug_list=None):
-    """creates nuggets with exactly one value per node
-    ag_id: id of the action graph
-    warning: do not modify returned typings as they point to the old typings
-    """
-    if nug_list is None:
-        nug_list = graph_children(hie, ag_id)
-    new_nug_list = []
-    for nug_id in nug_list:
-        meta_typing = hie.get_typing(nug_id, metamodel_id)
-        nug = hie.node[nug_id].graph
-        states = {n: nug.node[n]["value"] for n in nug.nodes()
-                  if (meta_typing[n] == "state" and
-                      "value" in nug.node[n].keys())}
-        for values in itertools.product(states.values()):
-            new_nug = copy.deepcopy(hie.node[nug_id])
-            for (i, node) in enumerate(states.keys()):
-                new_nug.graph.node[node]["value"] = values[i]
-            new_nug_list.append((new_nug, hie.edge[nug_id][ag_id]))
-    return new_nug_list
+# def unfold_nuggets(hie, ag_id, metamodel_id, nug_list=None):
+#     """creates nuggets with exactly one value per node
+#     ag_id: id of the action graph
+#     warning: do not modify returned typings as they point to the old typings
+#     """
+#     if nug_list is None:
+#         nug_list = graph_children(hie, ag_id)
+#     new_nug_list = []
+#     for nug_id in nug_list:
+#         meta_typing = hie.get_typing(nug_id, metamodel_id)
+#         nug = hie.node[nug_id].graph
+#         states = {n: nug.node[n]["value"] for n in nug.nodes()
+#                   if (meta_typing[n] == "state" and
+#                       "value" in nug.node[n].keys())}
+#         for values in itertools.product(states.values()):
+#             new_nug = copy.deepcopy(hie.node[nug_id])
+#             for (i, node) in enumerate(states.keys()):
+#                 new_nug.graph.node[node]["value"] = values[i]
+#             new_nug_list.append((new_nug, hie.edge[nug_id][ag_id]))
+#     return new_nug_list
 
 
 def _copy_graph(hie, g_id):
+    """ Create a copy of a graph and returns the new id"""
     new_node = copy.deepcopy(hie.node[g_id])
     new_id = hie.unique_graph_id(g_id)
     hie.add_graph(new_id, new_node.graph, new_node.attrs)
     return new_id
+
 
 # create a new dict of graph attributes by merging the attributes of id1 and id2
 def _new_merged_graph_attrs(hie, id1, id2, new_name):
@@ -804,8 +768,6 @@ def _new_merged_graph_attrs(hie, id1, id2, new_name):
     return new_attrs
 
 
-# for total typings
-# TODO: typing types
 def merge_graphs(hie, g_id, name1, name2, mapping, new_name):
     """ merge two graph based  on an identity relation
         between their nodes.
@@ -816,8 +778,8 @@ def merge_graphs(hie, g_id, name1, name2, mapping, new_name):
     id2 = child_from_name(hie, g_id, name2)
     g1 = hie.node[id1].graph
     g2 = hie.node[id2].graph
-    # g1_typ = hie.get_typing(id1, g_id)
-    # g2_typ = hie.get_typing(id2, g_id)
+
+    # build the span from the relation
     if hie.directed:
         g0 = nx.DiGraph()
     else:
@@ -829,11 +791,15 @@ def merge_graphs(hie, g_id, name1, name2, mapping, new_name):
         prim.add_node(g0, new_node)
         left_mapping[new_node] = n1
         right_mapping[new_node] = n2
+
+    # compute the pushout
     (new_graph, g1_new_graph, g2_new_graph) = \
         pushout(g0, g1, g2, left_mapping, right_mapping)
     new_id = hie.unique_graph_id(new_name)
     new_attrs = _new_merged_graph_attrs(hie, id1, id2, new_name)
     hie.add_graph(new_id, new_graph, new_attrs)
+
+    # recover the typings of the new pushout graph
     g1_typings = {t: hie.edge[id1][t] for t in hie.successors(id1)}
     g2_typings = {t: hie.edge[id2][t] for t in hie.successors(id2)}
     new_typings = typings_of_pushout(g1, g2, new_graph, g1_new_graph,
@@ -842,7 +808,7 @@ def merge_graphs(hie, g_id, name1, name2, mapping, new_name):
     for (typ_id, (typ_mapping, typ_total)) in new_typings.items():
         hie.add_typing(new_id, typ_id, typ_mapping, total=typ_total)
 
-    # create temporary copies of new_id and add morphisms from children
+    # recover the typings of children by the new pushout graph
     new_id1 = _copy_graph(hie, new_id)
     for child in all_children(hie, id1):
         hie.add_edge(child, new_id1)
@@ -854,46 +820,28 @@ def merge_graphs(hie, g_id, name1, name2, mapping, new_name):
         hie.add_edge(child, new_id2)
         tmp_typ = Typing(g2_new_graph, total=hie.edge[child][id2].all_total())
         hie.edge[child][new_id2] = tmp_typ*hie.edge[child][id2]
-    
+
     _merge_hierarchy(hie, hie, new_id, new_id1)
     _merge_hierarchy(hie, hie, new_id, new_id2)
     hie.remove_node(new_id1)
     hie.remove_node(new_id2)
 
-# def _put_path_in_attr(hie, top, tmp_key):
-#     def _put_path_aux(g_id, path):
-#         new_path = path + [hie.node[g_id].attrs["name"]]
-#         hie.node[g_id].attrs[tmp_key] = new_path
-#         for child in all_children(hie, g_id):
-#             _put_path_aux(child, new_path)
 
-#     _put_path_aux(top, [])
-
-
-# def _remove_path_from_attr(hie, top, tmp_key):
-#     def _remove_path(g_id):
-#         del hie.node[g_id].attrs[tmp_key]
-#     fmap(hie, top, _remove_path)
-
-
-# TODO relations
+# builds a relation between identical graphs of two hierarchies
+# used when merging two hierarchies together
+# graphs and paths must be the same for the graphs to be identified
 def _same_graphs(hie1, hie2, rel):
     for id1, id2s in rel.items():
         for id2 in id2s:
             new_rel = copy.deepcopy(rel)
             for ch2 in all_children(hie2, id2):
                 for ch1 in all_children(hie1, id1):
-                    print(hie1.node[ch1].attrs["name"])
-                    print(hie2.node[ch2].attrs["name"])
-                    print(hie1.node[ch1] == hie2.node[ch2])
                     if hie1.node[ch1].attrs["name"] == hie2.node[ch2].attrs["name"]\
                         and hie1.node[ch1] == hie2.node[ch2]:
                         if ch1 in new_rel:
                             new_rel[ch1].add(ch2)
                         else:
                             new_rel[ch1] = {ch2}
-    # if is_subdict(new_rel, rel):
-        # return rel
     if valid_attributes(new_rel, rel):
         return rel
     else:
@@ -921,7 +869,7 @@ def _update_name(hie, g_id):
     new = hie.node[g_id].attrs["name"]
 
 
-# TODO rules
+# TODO: add  support for rules
 def _add_new_graphs(hie1, hie2, rel, visited2):
     new_graphs = {}
 
@@ -1004,7 +952,6 @@ def merge_json_into_hierarchy(hie, json_data, top):
 
 def _merge_hierarchy(hie1, hie2, top1, top2):
     rel = _same_graphs(hie1, hie2, {top1: {top2}})
-    print(rel)
     visited2 = hie2.descendents(top2)
     _add_new_graphs(hie1, hie2, rel, visited2)
 
@@ -1094,6 +1041,7 @@ def get_metadata(hie, graph_id, path):
 
 
 def add_positions(mouse_x, mouse_y, positions_old, positions_new, old_to_new):
+    """add positions of copy/pasted nodes to the graph attributes"""
     old_positions = {}
     for node in old_to_new:
         if node in positions_old:
@@ -1111,6 +1059,7 @@ def add_positions(mouse_x, mouse_y, positions_old, positions_new, old_to_new):
 
 
 def paste_nodes(hie, top, graph_id, parent_path, nodes, mouse_x, mouse_y):
+    """paste the selected nodes from graph at parent_path to graph_id"""
     path_list = [s for s in parent_path.split("/") if s and not s.isspace()]
     other_id = child_from_path(hie, top, path_list)
     gr = hie.node[graph_id].graph
