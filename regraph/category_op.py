@@ -70,7 +70,7 @@ def check_homomorphism(source, target, dictionary, total=True):
             "namely %s" %
             (dictionary.values(),
              target.nodes(),
-             set(dictionary.values())-target.nodes())
+             set(dictionary.values()) - target.nodes())
         )
 
     # check connectivity

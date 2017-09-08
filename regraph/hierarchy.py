@@ -11,6 +11,7 @@ import networkx as nx
 
 from networkx.algorithms import isomorphism
 
+from regraph.atset import to_atset
 from regraph.category_op import (compose_homomorphisms,
                                  check_homomorphism,
                                  is_total_homomorphism,
@@ -67,10 +68,10 @@ class AttributeContainter(object):
         else:
             for key, value in new_attrs.items():
                 if key not in self.attrs.keys():
-                    self.attrs.update({key: to_set(value)})
+                    self.attrs.update({key: to_atset(value)})
                 else:
                     self.attrs[key] =\
-                        self.attrs[key].union(to_set(value))
+                        self.attrs[key].union(to_atset(value))
         return
 
     def remove_attrs(self, attrs):
@@ -1209,7 +1210,7 @@ class Hierarchy(nx.DiGraph):
                             raise HierarchyError("Invalid pattern typing!")
 
                 # Check pattern typing is a valid homomorphism
-                for typing_graph, mapping in new_pattern_typing.items():
+                for typing_graph, (mapping, _) in new_pattern_typing.items():
                     check_homomorphism(
                         pattern,
                         self.node[typing_graph].graph,
@@ -1335,7 +1336,7 @@ class Hierarchy(nx.DiGraph):
             rhs_typing[suc] =\
                 self.edge[rule_id][suc].rhs_mapping
 
-        instances = self.find_matching2(
+        instances = self.find_matching(
             graph_id,
             rule.lhs,
             lhs_typing

@@ -137,7 +137,6 @@ class TestPrimitives(object):
     def test_add_edge_attrs(self):
         g = self.graph.to_undirected()
         new_attrs = {"b": {1}}
-        print(g.edges())
         add_edge_attrs(g, '1', '2', new_attrs)
         normalize_attrs(new_attrs)
         assert(valid_attributes(new_attrs, g.edge['1']['2']))
