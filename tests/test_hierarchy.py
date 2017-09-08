@@ -299,12 +299,12 @@ class TestHierarchy(object):
         # add nice assertions here
 
     def test_node_type(self):
-        print(self.hierarchy.node_type("g1", "white_circle"))
+        # print(self.hierarchy.node_type("g1", "white_circle"))
         assert(
             self.hierarchy.node_type("g1", "white_circle") ==
             {"g00": "white", "g0": "circle"}
         )
-        print(self.hierarchy.node_type("g1", "black_square"))
+        # print(self.hierarchy.node_type("g1", "black_square"))
         assert(
             self.hierarchy.node_type("g1", "black_square") ==
             {"g00": "black", "g0": "square"}
@@ -825,7 +825,7 @@ class TestHierarchy(object):
 
         instances = h.find_matching2("g1", pattern)
         new_h, _ = h.rewrite("g1", rule, instances[0], inplace=False)
-        print(new_h)
-        print_graph(new_h.node["g2"].graph)
-        print_graph(new_h.node["g3"].graph)
-        print(new_h.edge["g2"]["g3"].mapping)
+        # print(new_h)
+        # print_graph(new_h.node["g2"].graph)
+        # print_graph(new_h.node["g3"].graph)
+        # print(new_h.edge["g2"]["g3"].mapping)

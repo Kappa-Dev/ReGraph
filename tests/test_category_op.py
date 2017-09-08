@@ -143,12 +143,12 @@ class TestCategoryOp:
             A, C, B, homAC, homAB
         )
 
-        print("\n\n\n\n\n\n\n")
-        print_graph(D)
-        print_graph(D_inv)
-        print(homBD, homBD_inv)
-        print(homCD, homCD_inv)
-        print("\n\n\n\n\n\n\n")
+        # print("\n\n\n\n\n\n\n")
+        # print_graph(D)
+        # print_graph(D_inv)
+        # print(homBD, homBD_inv)
+        # print(homCD, homCD_inv)
+        # print("\n\n\n\n\n\n\n")
 
     def test_multi_pullback(self):
         B = nx.DiGraph()
@@ -239,5 +239,5 @@ class TestCategoryOp:
                 'd2': (C2, D2, b_d2, c_d2)
             }
         )
-        print(a_b)
-        print(a_cs)
+        # print(a_b)
+        # print(a_cs)

@@ -199,7 +199,7 @@ class TestPartialTyping(object):
             lhs_total=True, rhs_total=True
         )
 
-        print(self.hierarchy)
+        # print(self.hierarchy)
 
     def test_add_node_with_partial_types(self):
         new_graph = nx.DiGraph()
@@ -223,8 +223,8 @@ class TestPartialTyping(object):
             "new_g", "g3", new_graph_g3_typing, total=False
         )
 
-        for node in self.hierarchy.node["new_g"].graph.nodes():
-            print(node, self.hierarchy.node_type("new_g", node))
+        # for node in self.hierarchy.node["new_g"].graph.nodes():
+        #     print(node, self.hierarchy.node_type("new_g", node))
 
         lhs = nx.DiGraph()
         lhs.add_nodes_from(["a", "b"])
@@ -250,31 +250,31 @@ class TestPartialTyping(object):
             "shapes", rule, instances[0]
         )
 
-        print("Shapes: ")
-        print_graph(self.hierarchy.node["shapes"].graph)
-        print()
+        # print("Shapes: ")
+        # print_graph(self.hierarchy.node["shapes"].graph)
+        # print()
 
-        print("G1: ")
-        print_graph(self.hierarchy.node["g1"].graph)
-        print()
+        # print("G1: ")
+        # print_graph(self.hierarchy.node["g1"].graph)
+        # print()
 
-        print("G2: ")
-        print_graph(self.hierarchy.node["g2"].graph)
-        print()
+        # print("G2: ")
+        # print_graph(self.hierarchy.node["g2"].graph)
+        # print()
 
-        print("G3: ")
-        print_graph(self.hierarchy.node["g3"].graph)
-        print()
+        # print("G3: ")
+        # print_graph(self.hierarchy.node["g3"].graph)
+        # print()
 
-        print("RULE: ")
-        print(self.hierarchy.node["r1"].rule)
-        print_graph(self.hierarchy.node["r1"].rule.lhs)
-        print_graph(self.hierarchy.node["r1"].rule.p)
-        print_graph(self.hierarchy.node["r1"].rule.rhs)
-        print()
+        # print("RULE: ")
+        # print(self.hierarchy.node["r1"].rule)
+        # print_graph(self.hierarchy.node["r1"].rule.lhs)
+        # print_graph(self.hierarchy.node["r1"].rule.p)
+        # print_graph(self.hierarchy.node["r1"].rule.rhs)
+        # print()
 
-        print("New graph: ")
-        print_graph(self.hierarchy.node["new_g"].graph)
+        # print("New graph: ")
+        # print_graph(self.hierarchy.node["new_g"].graph)
 
     # def test_partially_typed_rule(self):
     #     lhs = nx.DiGraph()
@@ -426,7 +426,7 @@ class TestPartialTyping(object):
             }
         )
 
-        print(hierarchy)
+        # print(hierarchy)
         hierarchy.add_node_type(
             6,
             "circle",
@@ -435,9 +435,9 @@ class TestPartialTyping(object):
                 4: "black_circle_1",
             }
         )
-        print(hierarchy.node_type(6, "circle"))
+        # print(hierarchy.node_type(6, "circle"))
         hierarchy.remove_node_type(6, 2, "circle")
-        print(hierarchy.node_type(6, "circle"))
+        # print(hierarchy.node_type(6, "circle"))
 
     def test_inplace(self):
         pass

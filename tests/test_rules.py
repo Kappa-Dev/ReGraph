@@ -199,14 +199,14 @@ class TestRule(object):
     def test_add_edge_attrs(self):
         rule = Rule(self.p, self.pattern, self.rhs,
                     self.p_lhs, self.p_rhs)
-        print("before", rule)
+        # print("before", rule)
         rule.add_edge_attrs(4, 1, {'amazing': True})
-        print("after", rule)
+        # print("after", rule)
         assert_graph_eq(rule.p, self.p)
         t = {'amazing': {True}}
         normalize_attrs(t)
-        print(t)
-        print(rule.rhs.edge['s']['x'])
+        # print(t)
+        # print(rule.rhs.edge['s']['x'])
         assert(rule.rhs.edge['s']['x'] == t)
         return
 
@@ -215,12 +215,12 @@ class TestRule(object):
                     self.p_lhs, self.p_rhs)
         rule.remove_edge_attrs(2, 3, {'a': set()})
         t1 = {'a': {1}}
-        normalize_attrs(t1)
+        # normalize_attrs(t1)
         assert(rule.p.edge['b']['c'] == t1)
         assert(rule.rhs.edge['y']['z'] == t1)
         rule.remove_edge_attrs(2, 3, {'a': {1}})
         t2 = {'a': set()}
-        normalize_attrs(t2)
+        # normalize_attrs(t2)
         assert(rule.p.edge['b']['c'] == t2)
         assert(rule.rhs.edge['y']['z'] == t2)
         return
@@ -231,7 +231,7 @@ class TestRule(object):
         rule.update_edge_attrs(2, 3, {'b': 1})
         assert(rule.p.edge['b']['c'] is None)
         test_dict = {'b': {1}}
-        normalize_attrs(test_dict)
+        # normalize_attrs(test_dict)
         assert(rule.rhs.edge['y']['z'] == test_dict)
         return
 

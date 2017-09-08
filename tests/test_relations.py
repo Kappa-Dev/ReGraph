@@ -88,15 +88,15 @@ class TestRelations(object):
             ],
             {"name": "Some relation"}
         )
-        print(self.hierarchy.relations())
-        print(self.hierarchy.relation)
+        # print(self.hierarchy.relations())
+        # print(self.hierarchy.relation)
         g, l, r = self.hierarchy.relation_to_span(
             "a1", "a2", edges=True, attrs=True
         )
-        print_graph(g)
-        print(l)
-        print(r)
-        print(self.hierarchy)
+        # print_graph(g)
+        # print(l)
+        # print(r)
+        # print(self.hierarchy)
         # self.hierarchy.remove_graph("a1")
         # print(self.hierarchy.relation)
 
@@ -120,6 +120,6 @@ class TestRelations(object):
         g, l, r = new_hierarchy.relation_to_span(
             "a1", "a2"
         )
-        print_graph(g)
-        print(l)
-        print(r)
+        # print_graph(g)
+        # print(l)
+        # print(r)

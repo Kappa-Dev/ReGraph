@@ -45,4 +45,3 @@ class TestMuHierarchy(object):
     #     self.hie2.add_edge("r2", "a1")
     #     assert_equals(self.hie2.check(),
     #                   {'g1': {'or(not cnt(Region),<1<=Adj>cnt(Agent))': "[]"}})
-

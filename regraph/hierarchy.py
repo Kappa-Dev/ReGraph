@@ -1391,11 +1391,11 @@ class Hierarchy(nx.DiGraph):
             # forbidden case of * <- * -> A
             # works only if A <- A -> A
             for p_node in p_l.keys():
-                print(p_node)
+                # print(p_node)
                 l_node = p_l[p_node]
-                print(l_node)
+                # print(l_node)
                 r_node = p_r[p_node]
-                print(r_node)
+                # print(r_node)
                 if r_node in rhs_typing[typing_graph].keys() and\
                    l_node not in lhs_typing[typing_graph].keys():
                     if matching[l_node] not in typing.keys():
@@ -2639,7 +2639,7 @@ class Hierarchy(nx.DiGraph):
                 new_name = str(original_node) + "_" + str(node)
                 new_names[original_node] = new_name
                 self.rename_graph(original_node, new_name)
-                print("attrs", hierarchy.node[node].attrs)
+                # print("attrs", hierarchy.node[node].attrs)
                 self.node[new_name].add_attrs(
                     hierarchy.node[node].attrs
                 )
@@ -2823,7 +2823,7 @@ class Hierarchy(nx.DiGraph):
                 # print("new_typing", instance_typing)
                 # print("stating nodes",self.node[old_nugget].graph.nodes())
                 # print("ending nodes", self.node[typing].graph.nodes())
-                print("typing_new_nugget",typing, new_typing.mapping)
+                # print("typing_new_nugget",typing, new_typing.mapping)
                 # print("new_nugget_nodes", self.node[new_nugget].graph.nodes())
                 self.add_typing(instance_id, typing, instance_typing,
                                 total=new_typing.total,
