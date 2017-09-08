@@ -1,4 +1,4 @@
-"""Possibly Set """
+"""Possibly Set."""
 
 from regraph.exceptions import ReGraphError
 from sympy.sets.sets import (Set, FiniteSet, UniversalSet, EmptySet,
@@ -9,11 +9,12 @@ import math
 
 
 class AtSetError(ReGraphError):
-    """Type error in Attribute sets"""
+    """Type error in Attribute sets."""
 
 
 class AtSet():
-    """ Possibly infinite Sets used for node attributes"""
+    """Possibly infinite Sets used for node attributes."""
+
     def __init__(self, num_set, str_set):
         self.num_set = num_set
         self.str_set = str_set
@@ -33,7 +34,7 @@ class AtSet():
             yield elm
 
     def __len__(self):
-        return len(self.num_set)+len(self.str_set)
+        return len(self.num_set) + len(self.str_set)
 
     def union(self, other):
         """union with other (returns new set)"""
@@ -61,6 +62,9 @@ class AtSet():
                 "strSet": self.str_set.to_json()}
 
     def __eq__(self, other):
+        print("\nSELF:", self)
+        print("OTHER: ", other)
+        print()
         return self.issubset(other) and other.issubset(self)
 
     def __ge__(self, other):
@@ -637,5 +641,5 @@ def to_atset(value):
     elif isinstance(value, AtSet):
         return value
     else:
-        raise ReGraphError("value {} should be a list, set, string or dict\
-                            representation of AtSet".format(value))
+        raise ReGraphError("value {} should be a list, set, string or dict "
+                           "representation of AtSet".format(value))
