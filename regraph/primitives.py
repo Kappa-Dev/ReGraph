@@ -308,7 +308,7 @@ def add_edge_attrs(graph, node_1, node_2, attrs_dict):
 
 def update_edge_attrs(graph, node_1, node_2, attrs):
     """Update attributes of an edge in a graph."""
-    if (node_1, node_2) not in graph.edges():
+    if not graph.has_edge(node_1, node_2):
         raise GraphError("Edge '%s->%s' does not exist!" % (str(node_1), str(node_2)))
     elif attrs is None:
         warnings.warn(
@@ -386,7 +386,7 @@ def remove_edge_attrs(graph, node_1, node_2, attrs_dict):
                     new_attrs[key] = new_set
                 else:
                     del new_attrs[key]
-        set_edge(graph, node_1, node_2, new_attrs)            
+        set_edge(graph, node_1, node_2, new_attrs)
 
 
 def get_edge(graph, u, v):
@@ -417,7 +417,7 @@ def exists_edge(graph, source, target):
 def set_edge(graph, source, target, attrs):
     """Set edge attrs."""
     new_attrs = deepcopy(attrs)
-    if not (source, target) in graph.edges():
+    if not graph.has_edge(source, target):
         raise GraphError(
             "Edge %s->%s does not exist" % (str(source), str(target)))
 

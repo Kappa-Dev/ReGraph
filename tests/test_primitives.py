@@ -1,5 +1,6 @@
 import networkx as nx
 
+from regraph.atset import to_atset
 from regraph.rules import Rule
 from regraph.utils import (dict_sub,
                            valid_attributes,
@@ -108,10 +109,10 @@ class TestPrimitives(object):
 
         s = '1'
         t = '5'
-        attrs = {"a": {1}}
+        attrs = {'a': {1}}
         add_edge(g, s, t, attrs)
-        normalize_attrs(attrs)
-        assert((s, t) in g.edges())
+        assert((s, t) in g.edges() or (t, s) in g.edges())
+        attrs = {'a': to_atset({1})}
         assert(g.edge[s][t] == attrs)
         assert(g.edge[t][s] == attrs)
         assert(id(g.edge[s][t]) != id(attrs) and id(g.edge[t][s]) != id(attrs))
@@ -136,6 +137,7 @@ class TestPrimitives(object):
     def test_add_edge_attrs(self):
         g = self.graph.to_undirected()
         new_attrs = {"b": {1}}
+        print(g.edges())
         add_edge_attrs(g, '1', '2', new_attrs)
         normalize_attrs(new_attrs)
         assert(valid_attributes(new_attrs, g.edge['1']['2']))

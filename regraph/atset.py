@@ -62,9 +62,6 @@ class AtSet():
                 "strSet": self.str_set.to_json()}
 
     def __eq__(self, other):
-        print("\nSELF:", self)
-        print("OTHER: ", other)
-        print()
         return self.issubset(other) and other.issubset(self)
 
     def __ge__(self, other):
