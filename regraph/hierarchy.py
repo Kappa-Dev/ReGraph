@@ -389,8 +389,8 @@ class Hierarchy(nx.DiGraph):
             return False
 
         for node in self.nodes():
-            normalize_attrs(self.node[node].attrs)
-            normalize_attrs(hierarchy.node[node].attrs)
+            # normalize_attrs(self.node[node].attrs)
+            # normalize_attrs(hierarchy.node[node].attrs)
             if self.node[node].attrs != hierarchy.node[node].attrs:
                 return False
             if isinstance(self.node[node], GraphNode) and\
@@ -408,8 +408,8 @@ class Hierarchy(nx.DiGraph):
                 return False
 
         for s, t in self.edges():
-            normalize_attrs(self.edge[s][t].attrs)
-            normalize_attrs(hierarchy.edge[s][t].attrs)
+            # normalize_attrs(self.edge[s][t].attrs)
+            # normalize_attrs(hierarchy.edge[s][t].attrs)
             if self.edge[s][t].attrs != hierarchy.edge[s][t].attrs:
                 return False
             if isinstance(self.edge[s][t], self.graph_typing_cls) and\
@@ -430,8 +430,8 @@ class Hierarchy(nx.DiGraph):
                 if self.edge[s][t].rhs_total != hierarchy.edge[s][t].rhs_total:
                     return False
         for n1, n2 in self.relations():
-            normalize_attrs(self.relations[n1][n2].attrs)
-            normalize_attrs(hierarchy.relations[n1][n2].attrs)
+            # normalize_attrs(self.relations[n1][n2].attrs)
+            # normalize_attrs(hierarchy.relations[n1][n2].attrs)
             if set(self.relation[s][t].rel) != set(hierarchy.relation[s][t].rel):
                     return False
         return True
