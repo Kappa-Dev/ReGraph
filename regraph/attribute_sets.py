@@ -23,6 +23,7 @@ import copy
 import re
 import numpy as np
 import math
+import sys
 
 from greenery.lego import parse
 
@@ -46,7 +47,7 @@ class AttributeSet(object):
 
     def __bool__(self):
         """Bool representation of attribute set."""
-        return self.is_empty()
+        return not self.is_empty()
 
     def __repr__(self):
         """Representation of attribute set."""
@@ -92,18 +93,29 @@ class AttributeSet(object):
         """Less or equal."""
         return self.issubset(other)
 
+    @classmethod
+    def from_json(cls, json_data):
+        """Create attribute set object from json-like dictionary."""
+        init_args = None
+        if "data" in json_data.keys():
+            init_args = json_data["data"]
+        return getattr(sys.modules[__name__], json_data["type"])(init_args)
+
 
 class FiniteSet(AttributeSet):
     """Wrapper for finite sets as attribute sets."""
 
-    def __init__(self, fset):
+    def __init__(self, fset=None):
         """Initialize finite set object."""
-        if type(fset) == set:
-            self.fset = copy.deepcopy(fset)
-        elif type(fset) == list:
-            self.fset = set(fset)
+        if fset is None:
+            self.fset = set()
         else:
-            self.fset = {fset}
+            if type(fset) == set:
+                self.fset = copy.deepcopy(fset)
+            elif type(fset) == list:
+                self.fset = set(fset)
+            else:
+                self.fset = {fset}
 
     def __str__(self):
         """String represenation of FiniteSet."""
@@ -178,7 +190,28 @@ class FiniteSet(AttributeSet):
             raise ValueError("Invalid type of attribute set!")
 
     def difference(self, other):
-        """Difference of self with other regex."""
+        """Difference of self with other finite set."""
+        if type(other) == set:
+            return FiniteSet(self.fset.difference(other))
+        elif isinstance(other, FiniteSet):
+            return FiniteSet(self.fset.difference(other.fset))
+        elif isinstance(other, RegexSet):
+            elements_to_keep = []
+            for element in self.fset:
+                if not other.match(str(element)):
+                    elements_to_keep.append(element)
+            return FiniteSet(elements_to_keep)
+        elif isinstance(other, IntegerSet):
+            for element in self.fset:
+                if type(element) != int:
+                    raise ValueError("Element of finite set is not integer")
+            return IntegerSet(self.fset).difference(other)
+        elif isinstance(other, EmptySet):
+            return copy.deepcopy(self)
+        elif isinstance(other, UniversalSet):
+            return FiniteSet()
+        else:
+            raise ValueError("Invalid type of attribute set!")
 
     def is_empty(self):
         """Test if finite set is empty."""
@@ -187,6 +220,13 @@ class FiniteSet(AttributeSet):
     def is_universal(self):
         """Test if finite set is universal."""
         return False
+
+    def to_json(self):
+        """JSON represenation of finite set."""
+        json_data = {}
+        json_data["type"] = "FiniteSet"
+        json_data["data"] = list(self.fset)
+        return json_data
 
 
 class RegexSet(AttributeSet):
@@ -386,6 +426,13 @@ class RegexSet(AttributeSet):
         else:
             return False
 
+    def to_json(self):
+        """JSON represenation of RegexSet."""
+        json_data = {}
+        json_data["type"] = "RegexSet"
+        json_data["data"] = self.pattern.pattern
+        return json_data
+
 
 class IntegerSet(AttributeSet):
     """Set of integers (possible infinite) defined by a set of intervals."""
@@ -573,6 +620,13 @@ class IntegerSet(AttributeSet):
                 break
         return found
 
+    def to_json(self):
+        """JSON represenation of IntegerSet."""
+        json_data = {}
+        json_data["type"] = "IntegerSet"
+        json_data["data"] = self.intervals
+        return json_data
+
 
 class EmptySet(AttributeSet):
     """Empty attribute set."""
@@ -604,6 +658,12 @@ class EmptySet(AttributeSet):
     def is_empty(self):
         """Test if empty."""
         return True
+
+    def to_json(self):
+        """JSON represenation of EmptySet."""
+        json_data = {}
+        json_data["type"] = "EmptySet"
+        return json_data
 
 
 class UniversalSet(AttributeSet):
@@ -639,3 +699,9 @@ class UniversalSet(AttributeSet):
     def difference(self, other):
         """Difference with another set."""
         return other.__class__.universal().difference(other)
+
+    def to_json(self):
+        """JSON represenation of UniversalSet."""
+        json_data = {}
+        json_data["type"] = "UniversalSet"
+        return json_data

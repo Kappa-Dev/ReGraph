@@ -1,6 +1,10 @@
 """Collection of tests for ReGraph attribute sets."""
 import math
-from attribute_sets import *
+from regraph.attribute_sets import (RegexSet,
+                                    IntegerSet,
+                                    FiniteSet,
+                                    UniversalSet,
+                                    EmptySet)
 
 
 class TestAttributeSets:
@@ -135,3 +139,5 @@ class TestAttributeSets:
         strs4 = FiniteSet(["P29358", "12222"])
         assert("P29358" in strs4.intersection(meta_string_set).fset)
         assert(ints4.intersection(strs4).is_empty())
+        assert(ints4.issubset(UniversalSet()))
+        assert(ints4.issubset(EmptySet()) is False)

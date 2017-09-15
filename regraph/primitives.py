@@ -18,14 +18,12 @@ from regraph.utils import (merge_attributes,
 from regraph.exceptions import (ReGraphError,
                                 GraphError,
                                 GraphAttrsWarning)
-from sympy.sets.sets import EmptySet, Set, FiniteSet, UniversalSet
-from sympy import sympify
-
-from regraph.atset import to_atset
+from regraph.attribute_sets import (FiniteSet,
+                                    AttributeSet)
 
 
 def unique_node_id(graph, prefix):
-    """get a unique id starting by prefix"""
+    """Get a unique id starting by prefix."""
     if prefix not in graph.nodes():
         return prefix
     idx = 0
@@ -37,6 +35,7 @@ def unique_node_id(graph, prefix):
 
 
 def copy_node(graph, node_id):
+    """Copy node."""
     new_name = unique_node_id(graph, node_id)
     add_node(graph, new_name, graph.node[node_id])
     return new_name
@@ -51,13 +50,12 @@ def add_node(graph, node_id, attrs=None):
         graph.add_node(node_id)
         normalize_attrs(new_attrs)
         graph.node[node_id] = new_attrs
-        # self.unckecked_nodes.add(node_id)
     else:
         raise GraphError("Node '%s' already exists!" % node_id)
 
 
 def add_node_new_id(graph, node_id, attrs=None):
-    """create a new node id if node_id already exists"""
+    """Create a new node id if node_id already exists."""
     new_id = unique_node_id(graph, node_id)
     add_node(graph, new_id, attrs)
     return new_id
@@ -160,54 +158,14 @@ def remove_node_attrs(graph, node, attrs_dict):
         )
     else:
         normalize_attrs(attrs_dict)
-        node_attrs = graph.node[node]
+        old_attrs = graph.node[node]
         for key, value in attrs_dict.items():
-            if key in node_attrs:
-                # new_set = hyb_complement(value, node_attrs[key])
-                # new_set = value.complement(node_attrs[key])
-                new_set = value.complement(node_attrs[key])
+            if key in old_attrs:
+                new_set = old_attrs[key].difference(value)
                 if not new_set:
-                    del node_attrs[key]
+                    del old_attrs[key]
                 else:
-                    node_attrs[key] = new_set
-
-
-# def remove_node_attrs(graph, node, attrs_dict):
-#     """Remove attrs of a node specified by attrs_dict."""
-#     if node not in graph.nodes():
-#         raise GraphError("Node '%s' does not exist!" % str(node))
-#     elif attrs_dict is None:
-#         pass
-#         warnings.warn(
-#             "You want to remove attrs from '%s' with an empty attrs_dict!" % node, 
-#             GraphAttrsWarning
-#         )
-#     elif graph.node[node] is None:
-#         warnings.warn(
-#             "Node '%s' does not have any attribute!" % node, GraphAttrsWarning
-#         )
-#     else:
-#         normalize_attrs(graph.node[node])
-#         for key, value in attrs_dict.items():
-#             if key not in graph.node[node].keys():
-#                 warnings.warn(
-#                     "Node '%s' does not have attribute '%s'!" %
-#                     (node, key), GraphAttrsWarning
-#                 )
-#             else:
-#                 elements_to_remove = []
-#                 for el in to_set(value):
-#                     if el in graph.node[node][key]:
-#                         elements_to_remove.append(el)
-#                     else:
-#                         warnings.warn(
-#                             "Node '%s' does not have attribute '%s' with value '%s'!" %
-#                             (node, key, el),
-#                             GraphAttrsWarning
-#                         )
-#                 for el in elements_to_remove:
-#                     graph.node[node][key].remove(el)
-#     return
+                    old_attrs[key] = new_set
 
 
 def add_edge(graph, s, t, attrs=None, **attr):
@@ -323,54 +281,6 @@ def update_edge_attrs(graph, node_1, node_2, attrs):
             graph.edge[node_2][node_1] = new_attrs
 
 
-# def remove_edge_attrs(graph, node_1, node_2, attrs_dict):
-#     """Remove attributes of an edge in a graph."""
-#     if (node_1, node_2) not in graph.edges():
-#         raise GraphError("Edge %s-%s does not exist" % (str(node_1), str(node_2)))
-#     elif attrs_dict is None:
-#         warnings.warn(
-#             "You want to remove attrs from %s-%s attrs with an empty attrs_dict" %\
-#             (str(node_1), str(node_2)), GraphAttrsWarning
-#         )
-#     else:
-
-#         new_attrs = get_edge(graph, node_1, node_2)
-#         normalize_attrs(attrs_dict)
-
-#         for key, value in attrs_dict.items():
-#             if key not in new_attrs.keys():
-#                 warnings.warn(
-#                     "Edge %s-%s does not have attribute '%s'" %
-#                     (str(node_1), str(node_2), str(key)), GraphAttrsWarning)
-#             else:
-#                 elements_to_remove = []
-#                 # for el in to_set(value):
-#                 for el in value:
-#                     if el in new_attrs[key]:
-#                         elements_to_remove.append(el)
-#                     else:
-#                         warnings.warn(
-#                             "Edge %s-%s does not have attribute '%s' with value '%s'" %
-#                             (str(node_1), str(node_2), str(key), str(el)), GraphAttrsWarning)
-#                 for el in elements_to_remove:
-#                     new_attrs[key].remove(el)
-
-#                 if not graph.is_directed():
-#                     elements_to_remove = []
-#                     # for el in to_set(value):
-#                     for el in value:
-#                         if el in new_attrs[key]:
-#                             elements_to_remove.append(el)
-#                         else:
-#                             warnings.warn(
-#                                 "Edge %s-%s does not have attribute '%s' with value '%s'" %
-#                                 (str(node_1), str(node_2), str(key), str(el)), GraphAttrsWarning)
-#                     for el in elements_to_remove:
-#                         new_attrs[key].remove(el)
-#         set_edge(graph, node_1, node_2, new_attrs)
-#     return
-
-
 def remove_edge_attrs(graph, node_1, node_2, attrs_dict):
     """Remove attributes of an edge in a graph."""
     if not graph.has_edge(node_1, node_2):
@@ -378,15 +288,15 @@ def remove_edge_attrs(graph, node_1, node_2, attrs_dict):
                          % (str(node_1), str(node_2)))
     else:
         normalize_attrs(attrs_dict)
-        new_attrs = get_edge(graph, node_1, node_2)
+        old_attrs = get_edge(graph, node_1, node_2)
         for key, value in attrs_dict.items():
-            if key in attrs_dict:
-                new_set = value.complement(new_attrs[key])
+            if key in old_attrs:
+                new_set = old_attrs[key].difference(value)
                 if new_set:
-                    new_attrs[key] = new_set
+                    old_attrs[key] = new_set
                 else:
-                    del new_attrs[key]
-        set_edge(graph, node_1, node_2, new_attrs)
+                    del old_attrs[key]
+        set_edge(graph, node_1, node_2, old_attrs)
 
 
 def get_edge(graph, u, v):
@@ -836,27 +746,13 @@ def graph_to_json(graph):
     for node in graph.nodes():
         node_data = {}
         node_data["id"] = node
-        # node_data["input_constraints"] =\
-        #     [viewable_cond for (_, (_, viewable_cond)) in self.input_constraints.get(node,[])]
-        # node_data["output_constraints"] =\
-        #     [viewable_cond for (_, (_, viewable_cond)) in self.output_constraints.get(node,[])]
         if graph.node[node] is not None:
             attrs = {}
             for key, value in graph.node[node].items():
                 attrs[key] = value.to_json()
-                # if isinstance(value, set):
-                #     # attrs[key] = list(value)
-                #     attrs[key] = [str(v) for v in list(value)]
-                # elif isinstance(value, FiniteSet):
-                #     attrs[key] = [str(v) for v in list(value)]
-                # elif isinstance(value, EmptySet):
-                #     attrs[key] = []
-                # elif isinstance(value, Set):
-                #     attrs[key] = str(value)
-                # else:
-                #     attrs[key] = value
             node_data["attrs"] = attrs
         j_data["nodes"].append(node_data)
+
     # dump edges
     for s, t in graph.edges():
         edge_data = {}
@@ -1166,7 +1062,7 @@ def find_match(graph, pattern, graph_typings, pattern_typings, typing_graphs,
                 itertools.product(gr.nodes(), typings.items()):
             if node in typ_map.keys():
                 add_node_attrs(
-                    gr, node, {typing_key: to_atset([(typ_id, typ_map[node])])})
+                    gr, node, {typing_key: FiniteSet([(typ_id, typ_map[node])])})
 
     _put_typings_in_attrs(pattern, pattern_typings)
     _put_typings_in_attrs(graph, graph_typings)
@@ -1230,17 +1126,8 @@ def _check_input(input_set):
 
 
 def json_dict_to_attrs(d):
+    """Convert json dictionary to attributes."""
     attrs = {}
     for k, v in d.items():
-        # if isinstance(v, list):
-        #     # attrs[k] = FiniteSet(*v)
-        #     attrs[k] = set(FiniteSet(*v))
-        # elif isinstance(v, str):
-        #     _check_input(v)
-        #     # attrs[k] = sympify(v)
-        #     attrs[k] = eval(v)
-        # else:
-        #     raise ReGraphError("JSON attribute should be a list or a string")
-        attrs[k] = to_atset(v)
+        attrs[k] = AttributeSet.from_json(v)
     return attrs
-

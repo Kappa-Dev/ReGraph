@@ -109,10 +109,10 @@ class TestPrimitives(object):
 
         s = '1'
         t = '5'
-        attrs = {'a': {1}}
+        attrs = {'a': FiniteSet(1)}
         add_edge(g, s, t, attrs)
         assert((s, t) in g.edges() or (t, s) in g.edges())
-        attrs = {'a': to_atset({1})}
+        attrs = {'a': FiniteSet({1})}
         assert(g.edge[s][t] == attrs)
         assert(g.edge[t][s] == attrs)
         assert(id(g.edge[s][t]) != id(attrs) and id(g.edge[t][s]) != id(attrs))
@@ -136,7 +136,7 @@ class TestPrimitives(object):
 
     def test_add_edge_attrs(self):
         g = self.graph.to_undirected()
-        new_attrs = {"b": {1}}
+        new_attrs = {"b": FiniteSet({1})}
         add_edge_attrs(g, '1', '2', new_attrs)
         normalize_attrs(new_attrs)
         assert(valid_attributes(new_attrs, g.edge['1']['2']))
@@ -144,14 +144,14 @@ class TestPrimitives(object):
 
     def test_remove_edge_attrs(self):
         g = self.graph.to_undirected()
-        attrs = {"s": {"p"}}
+        attrs = {"s": FiniteSet({"p"})}
         remove_edge_attrs(g, '1', '2', attrs)
         assert(not valid_attributes(attrs, g.edge['1']['2']))
         assert(not valid_attributes(attrs, g.edge['2']['1']))
 
     def test_update_edge_attrs(self):
         g = self.graph.to_undirected()
-        attrs = {"b": {1}}
+        attrs = {"b": FiniteSet({1})}
         update_edge_attrs(g, '1', '2', attrs)
         assert(id(g.edge['1']['2']) != id(attrs))
         assert(id(g.edge['2']['1']) == id(g.edge['1']['2']))

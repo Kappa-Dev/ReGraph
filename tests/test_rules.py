@@ -2,7 +2,7 @@ import networkx as nx
 
 from nose.tools import raises
 
-from regraph.atset import to_atset
+from regraph.attribute_sets import FiniteSet
 from regraph.rules import Rule
 from regraph.utils import assert_graph_eq, normalize_attrs
 from regraph.exceptions import RuleError
@@ -10,25 +10,10 @@ import regraph.primitives as prim
 
 
 class TestRule(object):
+    """Class for testing `regraph.rules` module."""
 
     def __init__(self):
-        # Define meta-model for rules
-        # self.meta_model = TypedDiGraph()
-
-        # self.meta_model.add_node('black_square', 'square')
-        # self.meta_model.add_node('white_square', 'square')
-        # self.meta_model.add_node('black_circle', 'circle')
-        # self.meta_model.add_node('white_circle', 'circle')
-
-        # self.meta_model.add_edges_from([
-        #         ('black_square', 'black_square'),
-        #         ('black_square', 'white_square'),
-        #         ('black_square', 'white_circle'),
-        #         ('white_square', 'black_circle'),
-        #         ('black_circle', 'white_circle'),
-        #         ('white_circle', 'black_square')
-        #     ])
-
+        """Initialize test."""
         # Define the left hand side of the rule
         self.pattern = nx.DiGraph()
         self.pattern.add_node(1)
@@ -39,7 +24,6 @@ class TestRule(object):
         self.pattern.add_edges_from([
             (1, 2),
             (3, 2),
-            # (2, 3, {'a': {1}}),
             (4, 1)
         ])
         prim.add_edge(self.pattern, 2, 3, {'a': {1}})
@@ -53,7 +37,6 @@ class TestRule(object):
 
         self.p.add_edges_from([
             ('a', 'b'),
-            # ('b', 'c', {'a': {1}}),
             ('d', 'a')
         ])
         prim.add_edge(self.p, 'b', 'c', {'a': {1}})
@@ -202,7 +185,7 @@ class TestRule(object):
                     self.p_lhs, self.p_rhs)
         rule.add_edge_attrs(4, 1, {'amazing': True})
         assert_graph_eq(rule.p, self.p)
-        t = {'amazing': to_atset({True})}
+        t = {'amazing': {True}}
         normalize_attrs(t)
         assert(rule.rhs.edge['s']['x'] == t)
         return
@@ -218,6 +201,8 @@ class TestRule(object):
         rule.remove_edge_attrs(2, 3, {'a': {1}})
         t2 = {'a': set()}
         normalize_attrs(t2)
+        print(t2)
+        print(rule.p.edge['b']['c'])
         assert(rule.p.edge['b']['c'] == t2)
         assert(rule.rhs.edge['y']['z'] == t2)
         return
@@ -227,7 +212,7 @@ class TestRule(object):
                     self.p_lhs, self.p_rhs)
         rule.update_edge_attrs(2, 3, {'b': 1})
         assert(rule.p.edge['b']['c'] is None)
-        test_dict = {'b': to_atset({1})}
+        test_dict = {'b': FiniteSet({1})}
         # normalize_attrs(test_dict)
         assert(rule.rhs.edge['y']['z'] == test_dict)
         return
@@ -247,7 +232,6 @@ class TestRule(object):
                     self.p_lhs, self.p_rhs)
         rule.clone_node(2)
         rule.remove_node(1)
-        # print(rule)
 
     def test_from_script(self):
         commands = "clone 2 as 21.\nadd_node 'a' {'a': 1}.\ndelete_node 3."

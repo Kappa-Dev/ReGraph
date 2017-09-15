@@ -8,10 +8,8 @@ from matplotlib import pyplot as plt
 import networkx as nx
 
 from regraph.parser import parser
-from regraph.atset import to_atset, AtSet
 from regraph.exceptions import ReGraphError, ParsingError
-
-from sympy.sets.sets import Set, EmptySet, FiniteSet
+from regraph.attribute_sets import AttributeSet, FiniteSet
 
 
 def valid_attributes(source, target):
@@ -125,20 +123,18 @@ def to_list(value):
 
 
 def normalize_attrs(attrs_):
+    """Normalize node attributes."""
     if attrs_ is not None:
         for k, v in list(attrs_.items()):
-            if not isinstance(v, AtSet):
-                if isinstance(v, set) or isinstance(v, list):
-                    attrs_[k] = to_atset(v)
-                else:
-                    attrs_[k] = to_atset([v])
-
-                if not attrs_[k]:
+            if not isinstance(v, AttributeSet):
+                attrs_[k] = FiniteSet(v)
+                if attrs_[k].is_empty():
                     del attrs_[k]
+    return
 
 
 def merge_attributes(attr1, attr2, method="union"):
-    """Merge two dictionaries of attributes"""
+    """Merge two dictionaries of attributes."""
     if method == "union":
         return attrs_union(attr1, attr2)
     elif method == "intersection":
@@ -208,7 +204,7 @@ def dict_sub(attrs1, attrs2):
     new_dict = {}
     for key in attrs1:
         if key in attrs2:
-            new_set = attrs2[key].complement(attrs1[key])
+            new_set = attrs1[key].difference(attrs2[key])
             if new_set:
                 new_dict[key] = new_set
         else:
