@@ -92,3 +92,46 @@ class TestAttributeSets:
                 IntegerSet.empty()
             ) == IntegerSet.universal()
         )
+
+    def test_finite_set(self):
+        """Test FiniteSet data structure."""
+        uniprot =\
+            "[OPQ][0-9][A-Z0-9]{3}[0-9]|[A-NR-Z][0-9]([A-Z][A-Z0-9]{2}[0-9]){1,2}"
+
+        meta_integer_set = IntegerSet([(0, 10000)])
+        meta_string_set = RegexSet(uniprot)
+
+        ints_set = {1, 2}
+        ints_list = [1, 2]
+        ints_singleton = 3
+
+        string_set = {"P29358", "P23346"}
+        string_list = ["P29358", "P23346"]
+        string_singleton = "P29358"
+
+        ints1 = FiniteSet(ints_set)
+        ints2 = FiniteSet(ints_list)
+        ints3 = FiniteSet(ints_singleton)
+
+        strs1 = FiniteSet(string_set)
+        strs2 = FiniteSet(string_list)
+        strs3 = FiniteSet(string_singleton)
+
+        assert(ints1.issubset(meta_integer_set))
+        assert(ints2.issubset(meta_integer_set))
+        assert(ints3.issubset(meta_integer_set))
+
+        assert(strs1.issubset(meta_string_set))
+        assert(strs2.issubset(meta_string_set))
+        assert(strs3.issubset(meta_string_set))
+
+        assert(ints1.union(meta_integer_set) == meta_integer_set)
+        assert(isinstance(ints1.union(meta_integer_set), IntegerSet))
+        assert(isinstance(strs1.union(meta_string_set), RegexSet))
+
+        ints4 = FiniteSet([-2, 3])
+        assert((3, 3) in ints4.intersection(meta_integer_set).intervals)
+
+        strs4 = FiniteSet(["P29358", "12222"])
+        assert("P29358" in strs4.intersection(meta_string_set).fset)
+        assert(ints4.intersection(strs4).is_empty())

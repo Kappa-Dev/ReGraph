@@ -92,6 +92,103 @@ class AttributeSet(object):
         """Less or equal."""
         return self.issubset(other)
 
+
+class FiniteSet(AttributeSet):
+    """Wrapper for finite sets as attribute sets."""
+
+    def __init__(self, fset):
+        """Initialize finite set object."""
+        if type(fset) == set:
+            self.fset = copy.deepcopy(fset)
+        elif type(fset) == list:
+            self.fset = set(fset)
+        else:
+            self.fset = {fset}
+
+    def __str__(self):
+        """String represenation of FiniteSet."""
+        return str(self.fset)
+
+    def issubset(self, other):
+        """Test if subset of another set."""
+        if type(other) == set:
+            return self.fset.issubset(other)
+        elif isinstance(other, FiniteSet):
+            return self.fset.issubset(other.fset)
+        elif isinstance(other, RegexSet):
+            for element in self.fset:
+                if not other.match(str(element)):
+                    return False
+        elif isinstance(other, IntegerSet):
+            for element in self.fset:
+                if type(element) != int:
+                    raise ValueError("Element of finite set is not integer")
+                if not other.in_range(element):
+                    return False
+        elif isinstance(other, EmptySet):
+            return False
+        elif isinstance(other, UniversalSet):
+            return True
+        else:
+            return False
+        return True
+
+    def union(self, other):
+        """Union of a finite set with another set."""
+        if type(other) == set:
+            return FiniteSet(self.fset.union(other))
+        elif isinstance(other, FiniteSet):
+            return FiniteSet(self.fset.union(other.fset))
+        elif isinstance(other, RegexSet):
+            return RegexSet(self.fset).union(other)
+        elif isinstance(other, IntegerSet):
+            for element in self.fset:
+                if type(element) != int:
+                    raise ValueError("Element of finite set is not integer")
+            return IntegerSet(self.fset).union(other)
+        elif isinstance(other, EmptySet):
+            return copy.deepcopy(self)
+        elif isinstance(other, UniversalSet):
+            return UniversalSet()
+        else:
+            raise ValueError("Invalid type of attribute set!")
+
+    def intersection(self, other):
+        """Intesection of a finite set with another set."""
+        if type(other) == set:
+            return FiniteSet(self.fset.intersection(other))
+        elif isinstance(other, FiniteSet):
+            return FiniteSet(self.fset.intersection(other.fset))
+        elif isinstance(other, RegexSet):
+            intersection = []
+            for element in self.fset:
+                if other.match(str(element)):
+                    intersection.append(element)
+            return FiniteSet(intersection)
+        elif isinstance(other, IntegerSet):
+            for element in self.fset:
+                if type(element) != int:
+                    raise ValueError("Element of finite set is not integer")
+            return IntegerSet(self.fset).intersection(other)
+        elif isinstance(other, EmptySet):
+            return EmptySet()
+        elif isinstance(other, UniversalSet):
+            return copy.deepcopy(self)
+        else:
+            raise ValueError("Invalid type of attribute set!")
+
+    def difference(self, other):
+        """Difference of self with other regex."""
+
+    def is_empty(self):
+        """Test if finite set is empty."""
+        return self.fset is None or len(self.fset) == 0
+
+    def is_universal(self):
+        """Test if finite set is universal."""
+        return False
+
+
 class RegexSet(AttributeSet):
     """A set of strings defined by regular expression."""
 
