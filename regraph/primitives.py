@@ -79,7 +79,7 @@ def add_nodes_from(graph, node_list):
         try:
             node_id, node_attrs = n
             add_node(graph, node_id, node_attrs)
-        except (TypeError, ValueError):
+        except (TypeError, ValueError) as e:
             add_node(graph, n)
 
 

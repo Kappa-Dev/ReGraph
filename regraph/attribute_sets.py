@@ -35,7 +35,7 @@ def _regex_to_string(a):
         return a.pattern
     elif isinstance(a, RegexSet):
         if a.pattern is not None:
-            return a.pattern.pattern
+            return a.pattern
         else:
             return None
     else:
@@ -120,6 +120,15 @@ class FiniteSet(AttributeSet):
     def __str__(self):
         """String represenation of FiniteSet."""
         return str(self.fset)
+
+    def __iter__(self):
+        """Iterator over FiniteSet."""
+        for element in self.fset:
+            yield element
+
+    def __len__(self):
+        """Length of finite set."""
+        return len(self.fset)
 
     def issubset(self, other):
         """Test if subset of another set."""
@@ -228,6 +237,14 @@ class FiniteSet(AttributeSet):
         json_data["data"] = list(self.fset)
         return json_data
 
+    def update(self, element):
+        """Update finite set."""
+        self.fset.update(element)
+
+    def add(self, element):
+        """Add an element."""
+        self.fset.add(element)
+
 
 class RegexSet(AttributeSet):
     """A set of strings defined by regular expression."""
@@ -240,16 +257,16 @@ class RegexSet(AttributeSet):
                 for element in regexp:
                     strings.append(str(element))
                 concat = "|".join(strings)
-                self.pattern = re.compile(concat)
+                self.pattern = concat
             else:
-                self.pattern = re.compile(regexp)
+                self.pattern = regexp
         else:
             self.pattern = None
 
     def __str__(self):
         """String representation of RegexSet obj."""
         if self.pattern:
-            return self.pattern.pattern
+            return self.pattern
         else:
             return "<EmptyRegexSet>"
 
@@ -258,7 +275,7 @@ class RegexSet(AttributeSet):
         if self.pattern is None:
             return True
         else:
-            self_exp = parse(self.pattern.pattern)
+            self_exp = parse(self.pattern)
 
             def included(a):
                 if isinstance(a, str):
@@ -267,7 +284,7 @@ class RegexSet(AttributeSet):
                     other_exp = parse(a.pattern)
                 elif isinstance(a, RegexSet):
                     if a.pattern:
-                        other_exp = parse(a.pattern.pattern)
+                        other_exp = parse(a.pattern)
                     else:
                         return False
                 else:
@@ -311,7 +328,7 @@ class RegexSet(AttributeSet):
             else:
                 patterns.append(other_str)
 
-        new_pattern = self.pattern.pattern + "|" + "|".join(patterns)
+        new_pattern = self.pattern + "|" + "|".join(patterns)
         result = RegexSet(new_pattern)
         return result
 
@@ -346,7 +363,7 @@ class RegexSet(AttributeSet):
                 else:
                     return other_obj
 
-        self_exp = parse(self.pattern.pattern)
+        self_exp = parse(self.pattern)
 
         other_exp = []
         if isinstance(other, set):
@@ -385,7 +402,7 @@ class RegexSet(AttributeSet):
                 other_exp.append(parse(other_str))
             else:
                 return self.copy()
-        complement_exp = parse(self.pattern.pattern)
+        complement_exp = parse(self.pattern)
         for exp in other_exp:
             complement_exp = complement_exp.difference(exp)
 
@@ -411,7 +428,7 @@ class RegexSet(AttributeSet):
 
     def is_universal(self):
         """Test if an object is a universal RegexSet."""
-        if self.pattern and self.pattern.pattern == "(.|\n)*":
+        if self.pattern and self.pattern == "(.|\n)*":
             return True
         return False
 
@@ -422,7 +439,7 @@ class RegexSet(AttributeSet):
     def match(self, string):
         """Check if a string is in RegexSet."""
         if self.pattern is not None:
-            return self.pattern.fullmatch(string) is not None
+            return re.compile(self.pattern).fullmatch(string) is not None
         else:
             return False
 
@@ -430,7 +447,7 @@ class RegexSet(AttributeSet):
         """JSON represenation of RegexSet."""
         json_data = {}
         json_data["type"] = "RegexSet"
-        json_data["data"] = self.pattern.pattern
+        json_data["data"] = self.pattern
         return json_data
 
 
