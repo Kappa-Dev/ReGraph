@@ -475,3 +475,70 @@ class IntegerSet(AttributeSet):
                 found = True
                 break
         return found
+
+
+class EmptySet(AttributeSet):
+    """Empty attribute set."""
+
+    def __len__(self):
+        """Return length."""
+        return 0
+
+    def issubset(self, other):
+        """Test if subset of another set."""
+        return True
+
+    def intersect(self, other):
+        """Intersect with another set."""
+        return EmptySet()
+
+    def union(self, other):
+        """Find union with another set."""
+        return copy.deepcopy(other)
+
+    def difference(self, other):
+        """Find difference with another."""
+        return EmptySet()
+
+    def is_universal(self):
+        """Test if universal."""
+        return False
+
+    def is_empty(self):
+        """Test if empty."""
+        return True
+
+
+class UniversalSet(AttributeSet):
+    """Universal attribute set."""
+
+    def __len__(self):
+        """Return length."""
+        return math.inf
+
+    def issubset(self, other):
+        """Test if subset of other set."""
+        if isinstance(other, AttributeSet):
+            return other.is_universal()
+        else:
+            return False
+
+    def is_universal(self):
+        """Test if universal."""
+        return True
+
+    def is_empty(self):
+        """Test if empty."""
+        return False
+
+    def intersect(self, other):
+        """Intersect with another set."""
+        return copy.deepcopy(other)
+
+    def union(self, other):
+        """Find union with another set."""
+        return UniversalSet()
+
+    def difference(self, other):
+        """Difference with another set."""
+        return other.__class__.universal().difference(other)
