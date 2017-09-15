@@ -288,3 +288,190 @@ class RegexSet(AttributeSet):
             return self.pattern.fullmatch(string) is not None
         else:
             return False
+
+
+class IntegerSet(AttributeSet):
+    """Set of integers (possible infinite) defined by a set of intervals."""
+
+    def __init__(self, interval_list):
+        """Initialize IntegerSet object.
+
+        Takes a collection of tuples or ints
+        normalizes the intervals and singletons
+        and creates a set of intervals and singletons.
+        """
+        starts = list()
+        ends = list()
+        for interval in interval_list:
+            try:
+                start, end = interval
+                if start > end:
+                    raise ValueError("Invalid interval")
+                else:
+                    starts.append(start)
+                    ends.append(end)
+            except TypeError:
+                starts.append(interval)
+                ends.append(interval)
+
+        new_intervals = list()
+        sorted_starts_ind = np.argsort(starts)
+        visited = set()
+        for i, index in enumerate(sorted_starts_ind):
+            if index not in visited:
+                visited.add(index)
+                current_end = ends[index]
+                for j in range(i + 1, len(sorted_starts_ind)):
+                    if starts[sorted_starts_ind[j]] - 1 > ends[index]:
+                        break
+                    else:
+                        visited.add(sorted_starts_ind[j])
+                        current_end = max(
+                            current_end, ends[sorted_starts_ind[j]]
+                        )
+                # in case new interval overlaps
+                # with newly constructed interval
+                if len(new_intervals) > 0 and\
+                   starts[index] <= new_intervals[-1][1] + 1:
+                    new_intervals[-1] = (
+                        new_intervals[-1][0],
+                        max(current_end, new_intervals[-1][1])
+                    )
+                else:
+                    new_intervals.append((starts[index], current_end))
+        self.intervals = new_intervals
+        return
+
+    def __str__(self):
+        """String representation of IntegerSet obj."""
+        interval_strs = []
+        for start, end in self.intervals:
+            if start > -math.inf:
+                start_str = "%d" % start
+            else:
+                start_str = "-inf"
+            if end < math.inf:
+                end_str = "%d" % end
+            else:
+                end_str = "inf"
+            if start_str != end_str:
+                interval_strs.append("[" + start_str + ", " + end_str + "]")
+            else:
+                interval_strs.append("{" + start_str + "}")
+        return ", ".join(interval_strs)
+
+    def issubset(self, other):
+        """Test set inclusion for intervals of ints."""
+        for start, end in self.intervals:
+            found = False
+            for other_start, other_end in other.intervals:
+                if start >= other_start and end <= other_end:
+                    found = True
+                    break
+            if not found:
+                return False
+        return True
+
+    def union(self, other):
+        """Union of two integer sets."""
+        return IntegerSet(self.intervals + other.intervals)
+
+    def intersection(self, other):
+        """Intersection of two integer sets."""
+        def interval_intersect(interval1, interval2):
+            start1, end1 = interval1
+            start2, end2 = interval2
+            common_start = max(start1, start2)
+            common_end = min(end1, end2)
+            if common_start <= common_end:
+                return (common_start, common_end)
+            return None
+
+        new_intervals = []
+        for interval1 in self.intervals:
+            for interval2 in other.intervals:
+                common = interval_intersect(interval1, interval2)
+                if common:
+                    new_intervals.append(common)
+        return IntegerSet(new_intervals)
+
+    def difference(self, other):
+        """Difference of self with the other."""
+        def is_subinterval(a, b):
+            start_a, end_a = a
+            start_b, end_b = b
+            if start_a >= start_b and end_a <= end_b:
+                return True
+            return False
+
+        def create_cuts(small, large):
+            small_start, small_end = small
+            large_start, large_end = large
+            cuts = []
+            if small_start > large_start:
+                cuts.append((large_start, small_start - 1))
+            if small_end < large_end:
+                cuts.append((small_end + 1, large_end))
+            return cuts
+
+        new_intervals = []
+        intersect = self.intersection(other)
+        for interval1 in self.intervals:
+            cuts = [interval1]
+            for interval2 in intersect.intervals:
+                for i, cut in enumerate(cuts):
+                    if is_subinterval(interval2, cut):
+                        new_cuts = create_cuts(interval2, cut)
+                        cuts[i] = new_cuts
+                new_cuts = []
+                for subcuts in cuts:
+                    if isinstance(subcuts, list):
+                        for cut in subcuts:
+                            new_cuts.append(cut)
+                    else:
+                        new_cuts.append(subcuts)
+                cuts = new_cuts
+            if len(cuts) == 0:
+                new_intervals.append(interval1)
+            else:
+                new_intervals += cuts
+        return IntegerSet(new_intervals)
+
+    @classmethod
+    def universal(cls):
+        """Universal integer set."""
+        return cls([(-math.inf, math.inf)])
+
+    @classmethod
+    def empty(cls):
+        """Empty integer set."""
+        return cls([])
+
+    def is_universal(self):
+        """Test universality."""
+        return self == IntegerSet.universal()
+
+    def is_empty(self):
+        """Test if empty."""
+        return self == IntegerSet.empty()
+
+    @classmethod
+    def from_finite_set(cls, s):
+        """Create Integer set object from a finite set."""
+        intervals = []
+        for el in s:
+            if type(el) != int:
+                val = int(el)
+            else:
+                val = el
+            intervals.append(val)
+        return cls(intervals)
+
+    def in_range(self, num):
+        """Test if probided integer is in integer set."""
+        found = False
+        for start, end in self.intervals:
+            if num >= start and num <= end:
+                found = True
+                break
+        return found
