@@ -22,8 +22,6 @@ class AtSet():
     def __bool__(self):
         return bool(self.num_set) or bool(self.str_set)
 
-    # def __str__(self):
-    #     return str(self.to_json())
     def __repr__(self):
         return str(self.to_json())
 
@@ -315,7 +313,7 @@ class AtSymSet():
 
 
 class AtPosStringSet():
-    """ Positive set of string """
+    """Positive set of string."""
 
     def __init__(self, at_set):
         self.at_set = at_set
@@ -469,7 +467,6 @@ class AtNegStringSet():
     def to_json(self):
         return {"neg_list": list(self.at_set)}
 
-
     @staticmethod
     def from_json(json_data):
         if not isinstance(json_data["neg_list"], list):
@@ -481,7 +478,8 @@ class AtNegStringSet():
 
 
 class AtEmptySet():
-    """The empty set"""
+    """The empty set."""
+
     def __init__(self):
         pass
 
@@ -514,13 +512,14 @@ class AtEmptySet():
 
 
 class AtUnivSet():
-    """The Universal set"""
+    """The Universal set."""
+
     def __init__(self):
         pass
 
     def __bool__(self):
         return True
-    
+
     def __len__(self):
         return math.inf
 
@@ -617,11 +616,11 @@ def safe_sympify(value):
 
 
 def to_atset(value):
+    """Convert an attribute value to AtSet object."""
     if isinstance(value, str):
         symset = safe_sympify(value)
-        # check that no symbols
+        # check that there are no symbols
         return AtSet(convert(AtSymSet(symset)), AtEmptySet())
-
     elif isinstance(value, list) or isinstance(value, set):
         str_vals = []
         num_vals = []

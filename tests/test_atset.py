@@ -5,9 +5,9 @@ from regraph.atset import to_atset
 class TestAtSet:
     """Main class for AtSet testing."""
 
-    def test_simple_attr(self):
+    def test_string(self):
         """Test the behaviour of to_atset."""
-        a = {"a": {1}}
+        a = {"a": "hello"}
         print()
         print(a)
         print(to_atset(a["a"]))
