@@ -99,6 +99,14 @@ class AttributeSet(object):
         init_args = None
         if "data" in json_data.keys():
             init_args = json_data["data"]
+
+        # JSON cannot dump tuples, so finite set of tuples is usually
+        # represented as a list of lists, if we read from json list of
+        # lists, we interpret them as a set of tuples
+        if json_data["type"] == "FiniteSet":
+            for i, element in enumerate(init_args):
+                if type(element) == list:
+                    init_args[i] = tuple(element)
         return getattr(sys.modules[__name__], json_data["type"])(init_args)
 
 

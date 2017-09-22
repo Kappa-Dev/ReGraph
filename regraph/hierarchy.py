@@ -352,7 +352,7 @@ class Hierarchy(nx.DiGraph):
         res += "Typing homomorphisms: \n"
         for n1, n2 in self.edges():
             if isinstance(self.edge[n1][n2], self.graph_typing_cls):
-                res += "%s -> %s: total == %s" %\
+                res += "%s -> %s: total == %s\n" %\
                     (
                         n1, n2, self.edge[n1][n2].total
                     )
