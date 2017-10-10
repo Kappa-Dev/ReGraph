@@ -2203,48 +2203,60 @@ class Hierarchy(nx.DiGraph):
         for graph_data in json_data["graphs"]:
             graph = graph_from_json(graph_data["graph"], directed)
             if "attrs" not in graph_data.keys():
-                graph_data["attrs"]={}
-            hierarchy.add_graph(
-                graph_data["id"],
-                graph,
-                graph_data["attrs"]
-            )
+                graph_data["attrs"] = {}
+            try:
+                hierarchy.add_graph(
+                    graph_data["id"],
+                    graph,
+                    graph_data["attrs"]
+                )
+            except:
+                pass
 
         # add rules
         if "rules" in json_data.keys():
             for rule_data in json_data["rules"]:
                 rule = Rule.from_json(rule_data["rule"])
-                hierarchy.add_rule(
-                    rule_data["id"],
-                    rule,
-                    rule_data["attrs"]
-                )
+                try:
+                    hierarchy.add_rule(
+                        rule_data["id"],
+                        rule,
+                        rule_data["attrs"]
+                    )
+                except:
+                    pass
 
         # add typing
         if "typing" in json_data.keys():
             for typing_data in json_data["typing"]:
                 if "attrs" not in typing_data.keys():
                     typing_data["attrs"] = {}
-                hierarchy.add_typing(
-                    typing_data["from"],
-                    typing_data["to"],
-                    typing_data["mapping"],
-                    typing_data["total"],
-                    typing_data["attrs"]
-                )
+                try:
+                    hierarchy.add_typing(
+                        typing_data["from"],
+                        typing_data["to"],
+                        typing_data["mapping"],
+                        typing_data["total"],
+                        typing_data["attrs"]
+                    )
+                except:
+                    pass
 
         # add rule typing
         if "rule_typing" in json_data.keys():
             for rule_typing_data in json_data["rule_typing"]:
-                hierarchy.add_rule_typing(
-                    rule_typing_data["from"],
-                    rule_typing_data["to"],
-                    rule_typing_data["lhs_mapping"],
-                    rule_typing_data["rhs_mapping"],
-                    rule_typing_data["lhs_total"],
-                    rule_typing_data["rhs_total"],
-                    rule_typing_data["attrs"]
-                )
+                try:
+                    hierarchy.add_rule_typing(
+                        rule_typing_data["from"],
+                        rule_typing_data["to"],
+                        rule_typing_data["lhs_mapping"],
+                        rule_typing_data["rhs_mapping"],
+                        rule_typing_data["lhs_total"],
+                        rule_typing_data["rhs_total"],
+                        rule_typing_data["attrs"]
+                    )
+                except:
+                    pass
         return hierarchy
 
     @classmethod
