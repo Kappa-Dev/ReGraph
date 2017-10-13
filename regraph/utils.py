@@ -335,12 +335,13 @@ def simplify_commands(commands, di=False):
                 # line of the transformation we are looking at and the line
                 # of the last cloning operation that happened
                 rem_el = []
-                ind = max([clone_index[i] for i in range(len(cloned)) if cloned[i] == action["node"]])
+                ind = max([clone_index[i] for i in range(
+                    len(cloned)) if cloned[i] == action["node"]])
                 for j in range(len(added)):
                     el = added[j]
-                    if (type(el) == tuple and (el[0] == action["node"] or\
+                    if (type(el) == tuple and (el[0] == action["node"] or
                                                el[1] == action["node"])) or\
-                        el == action["node"]:
+                            el == action["node"]:
                         rem_ind = []
                         for k in ad_index[j]:
                             if k > ind:
@@ -360,9 +361,9 @@ def simplify_commands(commands, di=False):
                 rem_el = []
                 for j in range(len(deleted)):
                     el = deleted[j]
-                    if (type(el) == tuple and (el[0] == action["node"] or\
+                    if (type(el) == tuple and (el[0] == action["node"] or
                                                el[1] == action["node"])) or\
-                        el == action["node"]:
+                            el == action["node"]:
                         rem_ind = []
                         for k in del_index[j]:
                             if k > ind:
@@ -446,9 +447,11 @@ def simplify_commands(commands, di=False):
                 # cloning operation on node 0 and node 1
                 ind = 0
                 if e[0] in cloned:
-                    ind = max([clone_index[i] for i in range(len(cloned)) if cloned[i] == e[0]])
+                    ind = max([clone_index[i]
+                               for i in range(len(cloned)) if cloned[i] == e[0]])
                 if e[1] in cloned:
-                    ind = max([ind] + [clone_index[i] for i in range(len(cloned)) if cloned[i] == e[1]])
+                    ind = max([ind] + [clone_index[i]
+                                       for i in range(len(cloned)) if cloned[i] == e[1]])
 
                 ind = clone_index.index(ind)
 
@@ -713,7 +716,7 @@ def make_canonical_commands(g, commands, di=False):
             elif action["keyword"] == "delete_edge":
                 e = (action["node_1"], action["node_2"])
                 if (e in env_edges or
-                   (not di and (e[1], e[0]) in env_edges)) and\
+                    (not di and (e[1], e[0]) in env_edges)) and\
                    e[0] not in del_wait and\
                    e[1] not in del_wait:
                     is_cloned = False
@@ -742,7 +745,7 @@ def make_canonical_commands(g, commands, di=False):
             elif action["keyword"] == "add_edge_attrs":
                 e = (action["node_1"], action["node_2"])
                 if (e in env_edges or
-                   (not di and (e[1], e[0]) in env_edges)) and\
+                    (not di and (e[1], e[0]) in env_edges)) and\
                    e[0] not in ad_wait and\
                    e[1] not in ad_wait:
                     add_step += command_strings[i] + "\n"
@@ -760,7 +763,7 @@ def make_canonical_commands(g, commands, di=False):
             elif action["keyword"] == "delete_edge_attrs":
                 e = (action["node_1"], action["node_2"])
                 if (e in env_edges or
-                   (not di and (e[1], e[0]) in env_edges)) and\
+                    (not di and (e[1], e[0]) in env_edges)) and\
                    e[0] not in del_wait and\
                    e[1] not in del_wait:
                     is_cloned = False
@@ -803,9 +806,9 @@ def make_canonical_commands(g, commands, di=False):
                    node not in clone_wait and\
                    new_node not in protected_names and\
                    fold_left(lambda e, acc: (e != node or
-                             (type(e) == tuple and
-                              e[1] != node and
-                              e[0] != node)) and
+                                             (type(e) == tuple and
+                                              e[1] != node and
+                                                 e[0] != node)) and
                              acc,
                              True,
                              added):
@@ -847,10 +850,10 @@ def make_canonical_commands(g, commands, di=False):
                     node_name = "_".join(actions[i]["nodes"])
                 if fold_left(lambda n, acc: (n in env_nodes and
                                              n not in merge_wait) and
-                                             acc,
+                             acc,
                              True,
                              action["nodes"]) and\
-                    node_name not in protected_names:
+                        node_name not in protected_names:
                     add_step += command_strings[i] + "\n"
 
                     added.append(node_name)
@@ -860,8 +863,8 @@ def make_canonical_commands(g, commands, di=False):
                     for e in env_edges:
                         if e[0] in action["nodes"] and\
                            e[1] in action["nodes"]:
-                           if not e in rem_el:
-                               rem_el.append(e)
+                            if not e in rem_el:
+                                rem_el.append(e)
                         if e[0] in action["nodes"]:
                             if not e in rem_el:
                                 rem_el.append(e)
@@ -882,13 +885,13 @@ def make_canonical_commands(g, commands, di=False):
                         if type(e) == tuple:
                             if e[0] in action["nodes"] and\
                                e[1] in action["nodes"]:
-                               if not e in rem_el:
-                                   rem_el.append(e)
+                                if not e in rem_el:
+                                    rem_el.append(e)
                             if e[0] in action["nodes"]:
-                               if not e in rem_el:
-                                   rem_el.append(e)
-                               if e[1] not in action["nodes"]:
-                                   added.append((node_name, e[1]))
+                                if not e in rem_el:
+                                    rem_el.append(e)
+                                if e[1] not in action["nodes"]:
+                                    added.append((node_name, e[1]))
                             elif e[1] in action["nodes"]:
                                 if not e in rem_el:
                                     rem_el.append(e)

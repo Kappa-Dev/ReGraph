@@ -83,7 +83,6 @@ def add_nodes_from(graph, node_list):
             add_node(graph, n)
 
 
-
 # def add_node_attrs(graph, node, attrs_dict):
 #     """Add new attributes to the node."""
 #     new_attrs = deepcopy(attrs_dict)
@@ -149,7 +148,7 @@ def remove_node_attrs(graph, node, attrs_dict):
     elif attrs_dict is None:
         pass
         warnings.warn(
-            "You want to remove attrs from '%s' with an empty attrs_dict!" % node, 
+            "You want to remove attrs from '%s' with an empty attrs_dict!" % node,
             GraphAttrsWarning
         )
     elif graph.node[node] is None:
@@ -267,7 +266,8 @@ def add_edge_attrs(graph, node_1, node_2, attrs_dict):
 def update_edge_attrs(graph, node_1, node_2, attrs):
     """Update attributes of an edge in a graph."""
     if not graph.has_edge(node_1, node_2):
-        raise GraphError("Edge '%s->%s' does not exist!" % (str(node_1), str(node_2)))
+        raise GraphError("Edge '%s->%s' does not exist!" %
+                         (str(node_1), str(node_2)))
     elif attrs is None:
         warnings.warn(
             "You want to update '%s->%s' attrs with an empty attrs_dict" %
@@ -319,7 +319,7 @@ def exists_edge(graph, source, target):
     def filter_edges_by_attributes(self, attr_key, attr_cond):
         for (n1, n2) in self.edges():
             if (attr_key not in self.edge[n1][n2].keys() or
-               not attr_cond(self.edge[n1][n2][attr_key])):
+                    not attr_cond(self.edge[n1][n2][attr_key])):
                 self.remove_edge(n1, n2)
         return self
 
@@ -360,7 +360,8 @@ def clone_node(graph, node, name=None):
     graph.add_node(new_node, deepcopy(graph.node[node]))
     # graph.unckecked_nodes |= {new_node}
     # if node in graph.input_constraints.keys():
-    #     graph.input_constraints[new_node] = graph.input_constraints[node].deepcopy()
+    # graph.input_constraints[new_node] =
+    # graph.input_constraints[node].deepcopy()
 
     # Connect all the edges
     if graph.is_directed():
@@ -404,7 +405,8 @@ def relabel_nodes(graph, mapping):
     """
     unique_names = set(mapping.values())
     if len(unique_names) != len(graph.nodes()):
-        raise ReGraphError("Attempt to relabel nodes failed: the IDs are not unique!") 
+        raise ReGraphError(
+            "Attempt to relabel nodes failed: the IDs are not unique!")
 
     temp_names = {}
     # Relabeling of the nodes: if at some point new ID conflicts
@@ -798,14 +800,16 @@ def find_matching(graph, pattern):
                 edge_induced_graph = nx.DiGraph(list(edgeset))
                 edge_induced_graph.add_nodes_from(
                     [n for n in subg.nodes() if n not in edge_induced_graph.nodes()])
-                matching_obj = isomorphism.DiGraphMatcher(pattern, edge_induced_graph)
+                matching_obj = isomorphism.DiGraphMatcher(
+                    pattern, edge_induced_graph)
                 for isom in matching_obj.isomorphisms_iter():
                     isomorphic_subgraphs.append((subg, isom))
             else:
                 edge_induced_graph = nx.Graph(edgeset)
                 edge_induced_graph.add_nodes_from(
                     [n for n in subg.nodes() if n not in edge_induced_graph.nodes()])
-                matching_obj = isomorphism.GraphMatcher(pattern, edge_induced_graph)
+                matching_obj = isomorphism.GraphMatcher(
+                    pattern, edge_induced_graph)
                 for isom in matching_obj.isomorphisms_iter():
                     isomorphic_subgraphs.append((subg, isom))
 
@@ -820,7 +824,8 @@ def find_matching(graph, pattern):
             # check edge attribute matched
             for edge in pattern.edges():
                 pattern_attrs = get_edge(pattern, edge[0], edge[1])
-                target_attrs = get_edge(subgraph, mapping[edge[0]], mapping[edge[1]])
+                target_attrs = get_edge(
+                    subgraph, mapping[edge[0]], mapping[edge[1]])
                 if not valid_attributes(pattern_attrs, target_attrs):
                     break
             else:
@@ -1042,7 +1047,8 @@ def find_match(graph, pattern, graph_typings, pattern_typings, typing_graphs,
     def _allowed_edge(source, target, typings):
         for (typ_id, typ_map) in typings.items():
             if typ_id not in typing_graphs.keys():
-                raise ValueError("typing graph or pattern not in typing_graphs")
+                raise ValueError(
+                    "typing graph or pattern not in typing_graphs")
             typ_gr = typing_graphs[typ_id]
             if (source in typ_map.keys() and
                     target in typ_map.keys() and
@@ -1055,7 +1061,7 @@ def find_match(graph, pattern, graph_typings, pattern_typings, typing_graphs,
                  if (_allowed_edge(*edge, pattern_typings) and
                      edge not in pattern.edges())]
     may_edges_subsets = itertools.chain.from_iterable(
-        itertools.combinations(may_edges, r) for r in range(len(may_edges)+1))
+        itertools.combinations(may_edges, r) for r in range(len(may_edges) + 1))
 
     def _put_typings_in_attrs(gr, typings):
         for (node, (typ_id, typ_map)) in\
