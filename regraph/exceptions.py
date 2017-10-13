@@ -47,3 +47,7 @@ class TotalityWarning(ReGraphWarning):
 
 class RewritingError(ReGraphException):
     """Exceptions class for errors in rewriting in a hierarchy."""
+
+
+class AttributeSetError(ReGraphException):
+    """Exceptions class for errors in attribute sets."""

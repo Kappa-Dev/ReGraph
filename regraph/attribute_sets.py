@@ -27,6 +27,8 @@ import sys
 
 from greenery.lego import parse
 
+from regraph.exceptions import AttributeSetError
+
 
 def _regex_to_string(a):
     if isinstance(a, str):
@@ -39,7 +41,7 @@ def _regex_to_string(a):
         else:
             return None
     else:
-        raise ValueError("")
+        raise AttributeSetError("Cannot convert regex to string!")
 
 
 class AttributeSet(object):
@@ -98,12 +100,14 @@ class AttributeSet(object):
         """Create attribute set object from json-like dictionary."""
         init_args = None
         if "data" in json_data.keys():
-            init_args = json_data["data"]
+            if not len(json_data["data"]) == 1 and\
+               json_data["data"][0] is None:
+                init_args = json_data["data"]
 
         # JSON cannot dump tuples, so finite set of tuples is usually
         # represented as a list of lists, if we read from json list of
         # lists, we interpret them as a set of tuples
-        if json_data["type"] == "FiniteSet":
+        if json_data["type"] == "FiniteSet" and init_args is not None:
             for i, element in enumerate(init_args):
                 if type(element) == list:
                     init_args[i] = tuple(element)
@@ -115,7 +119,7 @@ class FiniteSet(AttributeSet):
 
     def __init__(self, fset=None):
         """Initialize finite set object."""
-        if fset is None:
+        if fset is None or fset == {None}:
             self.fset = set()
         else:
             if type(fset) == set:
@@ -146,18 +150,23 @@ class FiniteSet(AttributeSet):
             return self.fset.issubset(other.fset)
         elif isinstance(other, RegexSet):
             for element in self.fset:
-                if not other.match(str(element)):
-                    return False
+                if element is not None:
+                    if not other.match(str(element)):
+                        return False
         elif isinstance(other, IntegerSet):
             for element in self.fset:
-                if type(element) != int:
-                    raise ValueError(
-                        "Element %s of a finite set is not an "
-                        "integer (%s)" %
-                        (str(element), str(type(element)))
-                    )
-                if not other.in_range(element):
-                    return False
+                if element is not None:
+                    if type(element) != int:
+                        try:
+                            element = int(element)
+                        except:
+                            raise AttributeSetError(
+                                "Element '%s' of a finite set is not an "
+                                "integer (%s)" %
+                                (str(element), str(type(element)))
+                            )
+                    if not other.in_range(element):
+                        return False
         elif isinstance(other, EmptySet):
             return False
         elif isinstance(other, UniversalSet):
@@ -177,14 +186,21 @@ class FiniteSet(AttributeSet):
         elif isinstance(other, IntegerSet):
             for element in self.fset:
                 if type(element) != int:
-                    raise ValueError("Element of finite set is not integer")
+                    try:
+                        element = int(element)
+                    except:
+                        raise AttributeSetError(
+                            "Element '%s' of a finite set is not an "
+                            "integer (%s)" %
+                            (str(element), str(type(element)))
+                        )
             return IntegerSet(self.fset).union(other)
         elif isinstance(other, EmptySet):
             return copy.deepcopy(self)
         elif isinstance(other, UniversalSet):
             return UniversalSet()
         else:
-            raise ValueError("Invalid type of attribute set!")
+            raise AttributeSetError("Invalid type of attribute set!")
 
     def intersection(self, other):
         """Intesection of a finite set with another set."""
@@ -201,14 +217,21 @@ class FiniteSet(AttributeSet):
         elif isinstance(other, IntegerSet):
             for element in self.fset:
                 if type(element) != int:
-                    raise ValueError("Element of finite set is not integer")
+                    try:
+                        element = int(element)
+                    except:
+                        raise AttributeSetError(
+                            "Element '%s' of a finite set is not an "
+                            "integer (%s)" %
+                            (str(element), str(type(element)))
+                        )
             return IntegerSet(self.fset).intersection(other)
         elif isinstance(other, EmptySet):
             return EmptySet()
         elif isinstance(other, UniversalSet):
             return copy.deepcopy(self)
         else:
-            raise ValueError("Invalid type of attribute set!")
+            raise AttributeSetError("Invalid type of attribute set!")
 
     def difference(self, other):
         """Difference of self with other finite set."""
@@ -225,14 +248,21 @@ class FiniteSet(AttributeSet):
         elif isinstance(other, IntegerSet):
             for element in self.fset:
                 if type(element) != int:
-                    raise ValueError("Element of finite set is not integer")
+                    try:
+                        element = int(element)
+                    except:
+                        raise AttributeSetError(
+                            "Element '%s' of a finite set is not an "
+                            "integer (%s)" %
+                            (str(element), str(type(element)))
+                        )
             return IntegerSet(self.fset).difference(other)
         elif isinstance(other, EmptySet):
             return copy.deepcopy(self)
         elif isinstance(other, UniversalSet):
             return FiniteSet()
         else:
-            raise ValueError("Invalid type of attribute set!")
+            raise AttributeSetError("Invalid type of attribute set!")
 
     def is_empty(self):
         """Test if finite set is empty."""
@@ -300,7 +330,7 @@ class RegexSet(AttributeSet):
                     else:
                         return False
                 else:
-                    raise ValueError(
+                    raise AttributeSetError(
                         "Regexp object should be `str` or `re._pattern_type`!"
                     )
                 return (self_exp & other_exp.everythingbut()).empty()
@@ -309,7 +339,7 @@ class RegexSet(AttributeSet):
                 res = True
 
                 for element in other:
-                    if not included(element):
+                    if element is not None and not included(element):
                         res = False
                         break
             else:
@@ -479,7 +509,10 @@ class IntegerSet(AttributeSet):
             try:
                 start, end = interval
                 if start > end:
-                    raise ValueError("Invalid interval")
+                    raise AttributeSetError(
+                        "Invalid integer interval: [%s, %s]" %
+                        (str(start), str(end))
+                    )
                 else:
                     starts.append(start)
                     ends.append(end)
@@ -701,6 +734,10 @@ class UniversalSet(AttributeSet):
     def __len__(self):
         """Return length."""
         return math.inf
+
+    def __str__(self):
+        """."""
+        return "UniversalSet"
 
     def issubset(self, other):
         """Test if subset of other set."""
