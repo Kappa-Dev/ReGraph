@@ -11,7 +11,7 @@ import networkx as nx
 
 from networkx.algorithms import isomorphism
 
-from regraph.atset import to_atset
+from regraph.attribute_sets import AttributeSet, FiniteSet
 from regraph.category_op import (compose_homomorphisms,
                                  check_homomorphism,
                                  is_total_homomorphism,
@@ -56,6 +56,21 @@ from regraph.exceptions import (HierarchyError,
 class AttributeContainter(object):
     """Abstract class for a container with attributes."""
 
+    def attrs_to_json(self):
+        """Convert attributes to json."""
+        json_data = dict()
+        for key, value in self.attrs.items():
+            json_data[key] = value.to_json()
+        return json_data
+
+    @staticmethod
+    def attrs_from_json(json_data):
+        """Retreive attrs from json-like dict."""
+        attrs = dict()
+        for key, value in json_data.items():
+            attrs[key] = AttributeSet.from_json(value)
+        return attrs
+
     def add_attrs(self, attrs):
         """Add attrs to the graph node."""
         if attrs:
@@ -68,10 +83,9 @@ class AttributeContainter(object):
         else:
             for key, value in new_attrs.items():
                 if key not in self.attrs.keys():
-                    self.attrs.update({key: to_atset(value)})
+                    self.attrs[key] = FiniteSet(value)
                 else:
-                    self.attrs[key] =\
-                        self.attrs[key].union(to_atset(value))
+                    self.attrs[key] = self.attrs[key].union(value)
         return
 
     def remove_attrs(self, attrs):
@@ -365,7 +379,8 @@ class Hierarchy(nx.DiGraph):
                         self.edge[n1][n2].rhs_total
                     )
                 # res += "lhs mapping: %s\n" % str(self.edge[n1][n2].lhs_mapping)
-                # res += "rhs mapping: %s\n" % str(self.edge[n1][n2].rhs_mapping)
+                # res += "rhs mapping: %s\n" %
+                # str(self.edge[n1][n2].rhs_mapping)
             else:
                 raise HierarchyError(
                     "Hierarchy error: unknown type '%s' of the edge '%s->%s'!" %
@@ -452,7 +467,8 @@ class Hierarchy(nx.DiGraph):
                 graph_id
             )
         self.add_node(graph_id)
-
+        if graph_attrs is not None:
+            normalize_attrs(graph_attrs)
         self.node[graph_id] = self.graph_node_cls(graph, graph_attrs)
         return
 
@@ -987,8 +1003,8 @@ class Hierarchy(nx.DiGraph):
                         new_homomorphism = self.compose_path_typing(
                             paths_to_source[s])
                     else:
-                        new_homomorphism =\
-                            dict([(key, key) for key, _ in mapping.items()])
+                        new_homomorphism = dict([(key, key)
+                                                 for key, _ in mapping.items()])
                     new_homomorphism = compose_homomorphisms(
                         mapping, new_homomorphism)
                     if t != target:
@@ -1345,10 +1361,8 @@ class Hierarchy(nx.DiGraph):
         rule_successors = self.successors(rule_id)
 
         for suc in rule_successors:
-            lhs_typing[suc] =\
-                self.edge[rule_id][suc].lhs_mapping
-            rhs_typing[suc] =\
-                self.edge[rule_id][suc].rhs_mapping
+            lhs_typing[suc] = self.edge[rule_id][suc].lhs_mapping
+            rhs_typing[suc] = self.edge[rule_id][suc].rhs_mapping
 
         instances = self.find_matching(
             graph_id,
@@ -1406,11 +1420,8 @@ class Hierarchy(nx.DiGraph):
             # forbidden case of * <- * -> A
             # works only if A <- A -> A
             for p_node in p_l.keys():
-                # print(p_node)
                 l_node = p_l[p_node]
-                # print(l_node)
                 r_node = p_r[p_node]
-                # print(r_node)
                 if r_node in rhs_typing[typing_graph].keys() and\
                    l_node not in lhs_typing[typing_graph].keys():
                     if matching[l_node] not in typing.keys():
@@ -1447,10 +1458,10 @@ class Hierarchy(nx.DiGraph):
                 for p_node, r_node in p_r.items():
                     l_node = p_l[p_node]
                     if typing_graph in rhs_typing.keys() and\
-                       r_node in rhs_typing[typing_graph].keys():
+                            r_node in rhs_typing[typing_graph].keys():
                         p_type = rhs_typing[typing_graph][r_node]
                         if typing_graph in lhs_typing.keys() and\
-                           l_node in lhs_typing[typing_graph].keys():
+                                l_node in lhs_typing[typing_graph].keys():
                             l_type = lhs_typing[typing_graph][l_node]
                             if p_type != l_type:
                                 raise RewritingError(
@@ -1477,7 +1488,7 @@ class Hierarchy(nx.DiGraph):
             for n2 in node_list:
                 if n1 != n2:
                     if (n1, n2) not in common_sucs.keys() and\
-                       (n2, n1) not in common_sucs.keys():
+                            (n2, n1) not in common_sucs.keys():
                         suc1 = set(self.successors(n1))
                         suc2 = set(self.successors(n2))
                         common_sucs[(n1, n2)] =\
@@ -1700,7 +1711,6 @@ class Hierarchy(nx.DiGraph):
                 )
 
             current_level = next_level
-        # print("Updated homomorphisms: ", updated_homomorphisms)
         return (
             updated_graphs,
             updated_homomorphisms,
@@ -1812,7 +1822,8 @@ class Hierarchy(nx.DiGraph):
                     total = True
             # old_edge_attrs = copy.deepcopy(self.edge[s][t].attrs)
             # self.remove_edge(s, t)
-            # self.add_typing(s, t, mapping, total, ignore_attrs, old_edge_attrs)
+            # self.add_typing(s, t, mapping, total, ignore_attrs,
+            # old_edge_attrs)
 
             self.edge[s][t] = self.graph_typing_cls(
                 mapping, total, self.edge[s][t].attrs
@@ -2175,21 +2186,23 @@ class Hierarchy(nx.DiGraph):
             "rules": [],
             "graphs": [],
             "typing": [],
-            "rule_typing": []
+            "rule_typing": [],
+            "relations": []
         }
         for node in self.nodes():
             if isinstance(self.node[node], RuleNode):
                 json_data["rules"].append({
                     "id": node,
                     "rule": self.node[node].rule.to_json(),
-                    "attrs": self.node[node].attrs
+                    "attrs": self.node[node].attrs_to_json()
                 })
             elif isinstance(self.node[node], GraphNode):
                 json_data["graphs"].append({
                     "id": node,
                     "graph": graph_to_json(self.node[node].graph),
-                    "attrs": self.node[node].attrs
+                    "attrs": self.node[node].attrs_to_json()
                 })
+
             else:
                 raise HierarchyError("Unknown type of the node '%s'!" % node)
         for s, t in self.edges():
@@ -2199,7 +2212,7 @@ class Hierarchy(nx.DiGraph):
                     "to": t,
                     "mapping": self.edge[s][t].mapping,
                     "total": self.edge[s][t].total,
-                    "attrs": self.edge[s][t].attrs
+                    "attrs": self.edge[s][t].attrs_to_json()
                 })
             elif isinstance(self.edge[s][t], self.rule_typing_cls):
                 json_data["rule_typing"].append({
@@ -2209,12 +2222,19 @@ class Hierarchy(nx.DiGraph):
                     "rhs_mapping": self.edge[s][t].rhs_mapping,
                     "lhs_total": self.edge[s][t].lhs_total,
                     "rhs_total": self.edge[s][t].rhs_total,
-                    "attrs": self.edge[s][t].attrs
+                    "attrs": self.edge[s][t].attrs_to_json()
                 })
             else:
                 raise HierarchyError(
                     "Unknown type of the edge '%s->%s'!" % (s, t)
                 )
+        for u, v in self.relations():
+            json_data["relations"].append({
+                "from": u,
+                "to": v,
+                "rel": [[a, b] for a, b in self.relation[u][v].rel],
+                "attrs": self.relation[u][v].attrs_to_json()
+            })
         return json_data
 
     @classmethod
@@ -2226,60 +2246,75 @@ class Hierarchy(nx.DiGraph):
         for graph_data in json_data["graphs"]:
             graph = graph_from_json(graph_data["graph"], directed)
             if "attrs" not in graph_data.keys():
-                graph_data["attrs"] = {}
-            try:
-                hierarchy.add_graph(
-                    graph_data["id"],
-                    graph,
-                    graph_data["attrs"]
-                )
-            except:
-                pass
+                attrs = dict()
+            else:
+                attrs = AttributeContainter.attrs_from_json(
+                    graph_data["attrs"])
+
+            hierarchy.add_graph(
+                graph_data["id"],
+                graph,
+                attrs
+            )
 
         # add rules
-        if "rules" in json_data.keys():
-            for rule_data in json_data["rules"]:
-                rule = Rule.from_json(rule_data["rule"])
-                try:
-                    hierarchy.add_rule(
-                        rule_data["id"],
-                        rule,
-                        rule_data["attrs"]
-                    )
-                except:
-                    pass
+        for rule_data in json_data["rules"]:
+            rule = Rule.from_json(rule_data["rule"])
+            if "attrs" not in rule_data.keys():
+                attrs = dict()
+            else:
+                attrs = AttributeContainter.attrs_from_json(rule_data["attrs"])
+            hierarchy.add_rule(
+                rule_data["id"],
+                rule,
+                attrs
+            )
 
         # add typing
-        if "typing" in json_data.keys():
-            for typing_data in json_data["typing"]:
-                if "attrs" not in typing_data.keys():
-                    typing_data["attrs"] = {}
-                try:
-                    hierarchy.add_typing(
-                        typing_data["from"],
-                        typing_data["to"],
-                        typing_data["mapping"],
-                        typing_data["total"],
-                        typing_data["attrs"]
-                    )
-                except:
-                    pass
+        for typing_data in json_data["typing"]:
+            if "attrs" not in typing_data.keys():
+                attrs = dict()
+            else:
+                attrs = AttributeContainter.attrs_from_json(
+                    typing_data["attrs"])
+            hierarchy.add_typing(
+                typing_data["from"],
+                typing_data["to"],
+                typing_data["mapping"],
+                typing_data["total"],
+                attrs
+            )
 
         # add rule typing
-        if "rule_typing" in json_data.keys():
-            for rule_typing_data in json_data["rule_typing"]:
-                try:
-                    hierarchy.add_rule_typing(
-                        rule_typing_data["from"],
-                        rule_typing_data["to"],
-                        rule_typing_data["lhs_mapping"],
-                        rule_typing_data["rhs_mapping"],
-                        rule_typing_data["lhs_total"],
-                        rule_typing_data["rhs_total"],
-                        rule_typing_data["attrs"]
-                    )
-                except:
-                    pass
+        for rule_typing_data in json_data["rule_typing"]:
+            if "attrs" not in rule_typing_data.keys():
+                attrs = dict()
+            else:
+                attrs = AttributeContainter.attrs_from_json(
+                    rule_typing_data["attrs"])
+            hierarchy.add_rule_typing(
+                rule_typing_data["from"],
+                rule_typing_data["to"],
+                rule_typing_data["lhs_mapping"],
+                rule_typing_data["rhs_mapping"],
+                rule_typing_data["lhs_total"],
+                rule_typing_data["rhs_total"],
+                attrs
+            )
+
+        # add relations
+        for relation_data in json_data["relations"]:
+            if "attrs" not in relation_data.keys():
+                attrs = dict()
+            else:
+                attrs = AttributeContainter.attrs_from_json(
+                    relation_data["attrs"])
+            hierarchy.add_relation(
+                relation_data["from"],
+                relation_data["to"],
+                [(a, b) for a, b in relation_data["rel"]],
+                attrs
+            )
         return hierarchy
 
     @classmethod
@@ -2288,7 +2323,7 @@ class Hierarchy(nx.DiGraph):
         if os.path.isfile(filename):
             with open(filename, "r+") as f:
                 json_data = json.loads(f.read())
-                hierarchy = Hierarchy.from_json(json_data, directed)
+                hierarchy = cls.from_json(json_data, directed)
             return hierarchy
         else:
             raise HierarchyError("File '%s' does not exist!" % filename)
@@ -2679,11 +2714,11 @@ class Hierarchy(nx.DiGraph):
                 new_name = str(original_node) + "_" + str(node)
                 new_names[original_node] = new_name
                 self.rename_graph(original_node, new_name)
-                # print("attrs", hierarchy.node[node].attrs)
                 self.node[new_name].add_attrs(
                     hierarchy.node[node].attrs
                 )
-                # recursive_merge(self.node[new_name].attrs, hierarchy.node[node].attrs)
+                # recursive_merge(self.node[new_name].attrs,
+                # hierarchy.node[node].attrs)
                 visited.append(node)
 
                 successors = hierarchy.successors(node)
@@ -2759,7 +2794,7 @@ class Hierarchy(nx.DiGraph):
                             # new_suc_name = new_names[original_node]
                             original_suc = keys_by_value(to_merge, suc)[0]
                             new_suc_name = new_names[suc]
-                            #new_suc_name = new_names[original_suc]
+                            # new_suc_name = new_names[original_suc]
                         elif suc in to_rename.keys():
                             new_suc_name = to_rename[suc]
                         else:
@@ -2817,16 +2852,16 @@ class Hierarchy(nx.DiGraph):
             if source in nodes:
                 if target in nodes:
                     self.add_edge(new[source], new[target])
-                    self.edge[new[source]][new[target]] =\
-                        copy.deepcopy(self.edge[source][target])
+                    self.edge[new[source]][new[target]] = copy.deepcopy(
+                        self.edge[source][target])
                 else:
                     self.add_edge(new[source], target)
-                    self.edge[new[source]][target] =\
-                        copy.deepcopy(self.edge[source][target])
+                    self.edge[new[source]][target] = copy.deepcopy(
+                        self.edge[source][target])
             elif target in nodes:
                 self.add_edge(source, new[target])
-                self.edge[source][new[target]] =\
-                    copy.deepcopy(self.edge[source][target])
+                self.edge[source][new[target]] = copy.deepcopy(
+                    self.edge[source][target])
         return new
 
     # build new nuggets after rewriting of old one following rewriting of the
@@ -2849,8 +2884,8 @@ class Hierarchy(nx.DiGraph):
             for node in instance.nodes():
                 attrs = merge_attributes(instance.node[node],
                                          self.node[new_nugget].graph.node[
-                                             matching[node]],
-                                         "intersection")
+                    matching[node]],
+                    "intersection")
                 # attrs = instance.node[node]
                 # if attrs is None:
                 #     continue
@@ -2864,14 +2899,14 @@ class Hierarchy(nx.DiGraph):
                 self.node[old_nugget].attrs))
             for (_, typing) in self.out_edges(new_nugget):
                 new_typing = self.edge[new_nugget][typing]
-                instance_typing =\
-                    compose_homomorphisms(new_typing.mapping,
-                                          matching)
+                instance_typing = compose_homomorphisms(new_typing.mapping,
+                                                        matching)
                 # print("new_typing", instance_typing)
                 # print("stating nodes",self.node[old_nugget].graph.nodes())
                 # print("ending nodes", self.node[typing].graph.nodes())
                 # print("typing_new_nugget",typing, new_typing.mapping)
-                # print("new_nugget_nodes", self.node[new_nugget].graph.nodes())
+                # print("new_nugget_nodes",
+                # self.node[new_nugget].graph.nodes())
                 self.add_typing(instance_id, typing, instance_typing,
                                 total=new_typing.total,
                                 attrs=new_typing.attrs)
