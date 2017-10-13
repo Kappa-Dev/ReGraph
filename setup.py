@@ -18,5 +18,6 @@ setup(
         "pyparsing",
         "lrparsing",
         "sympy",
+        "greenery",
     ]
 )
