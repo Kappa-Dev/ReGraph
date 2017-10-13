@@ -151,7 +151,11 @@ class FiniteSet(AttributeSet):
         elif isinstance(other, IntegerSet):
             for element in self.fset:
                 if type(element) != int:
-                    raise ValueError("Element of finite set is not integer")
+                    raise ValueError(
+                        "Element %s of a finite set is not an "
+                        "integer (%s)" %
+                        (str(element), str(type(element)))
+                    )
                 if not other.in_range(element):
                     return False
         elif isinstance(other, EmptySet):
@@ -649,7 +653,7 @@ class IntegerSet(AttributeSet):
         """JSON represenation of IntegerSet."""
         json_data = {}
         json_data["type"] = "IntegerSet"
-        json_data["data"] = self.intervals
+        json_data["data"] = [[start, end] for start, end in self.intervals]
         return json_data
 
 
