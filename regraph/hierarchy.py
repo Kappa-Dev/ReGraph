@@ -2963,3 +2963,17 @@ class MuHierarchy(Hierarchy):
             if rep is not None:
                 response[ancestor] = rep
         return response
+
+
+class NewMuHierarchy(Hierarchy):
+    """."""
+
+    def add_graph(self, graph_id, graph_obj, attrs=None, formulae=None):
+        """Add a new graph to the hierarchy."""
+        pass
+
+    def add_constraints(self, graph_id, formula):
+        """Add constraints to a graph node."""
+        pass
+
+    # def check_predecessor(self)
