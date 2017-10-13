@@ -95,13 +95,18 @@ def check_homomorphism(source, target, dictionary, total=True):
             pass
 
     for s, t in dictionary.items():
-            # check sets of attributes of nodes (here homomorphism = set inclusion)
+            # check sets of attributes of nodes (here homomorphism = set
+            # inclusion)
+        try:
+            valid_attributes(source.node[s], target.node[t])
+        except:
+            print(source.nodes())
+            print(s, t)
         if not valid_attributes(source.node[s], target.node[t]):
             raise InvalidHomomorphism(
                 "Attributes of nodes source:'%s' %s and target:'%s' %s do not match!" %
                 (s, source.node[s], t, target.node[t])
             )
-
 
     # check sets of attributes of edges (homomorphism = set inclusion)
     for s1, s2 in source.edges():
@@ -248,8 +253,10 @@ def partial_pullback(b, c, d, b_d, c_d):
         bd_b = {n: n for n in bd_dom.nodes()}
         cd_c = {n: n for n in cd_dom.nodes()}
         (tmp, tmp_bddom, tmp_cddom) = total_pullback(bd_dom, cd_dom, d, b_d, c_d)
-        (b2, tmp_b2, b2_b) = pullback_complement(tmp, bd_dom, b, tmp_bddom, bd_b)
-        (c2, tmp_c2, c2_c) = pullback_complement(tmp, cd_dom, c, tmp_cddom, cd_c)
+        (b2, tmp_b2, b2_b) = pullback_complement(
+            tmp, bd_dom, b, tmp_bddom, bd_b)
+        (c2, tmp_c2, c2_c) = pullback_complement(
+            tmp, cd_dom, c, tmp_cddom, cd_c)
         (new, b2_new, c2_new) = pushout(tmp, b2, c2, tmp_b2, tmp_c2)
         hom1 = {v: b2_b[k] for (k, v) in b2_new.items()}
         hom2 = {v: c2_c[k] for (k, v) in c2_new.items()}
@@ -456,12 +463,13 @@ def total_pushout(a, b, c, a_b, a_c):
                 for a_key_2 in a_keys_2:
                     if (f[a_key_1], f[a_key_2]) in b.edges():
                         if (hom2[n1], hom2[n2]) not in d.edges():
-                            add_edge(d, hom2[n1], hom2[n2], get_edge(b, f[a_key_1], f[a_key_2]))
+                            add_edge(d, hom2[n1], hom2[n2], get_edge(
+                                b, f[a_key_1], f[a_key_2]))
                             if (a_key_1, a_key_2) in a.edges():
                                 add_edge_attrs(d, hom2[n1],
                                                hom2[n2],
                                                dict_sub(get_edge(c, n1, n2),
-                                               get_edge(a, a_key_1, a_key_2)))
+                                                        get_edge(a, a_key_1, a_key_2)))
 
                             else:
                                 add_edge_attrs(d, hom2[n1],
@@ -554,7 +562,8 @@ def pullback_complement(a, b, d, a_b, b_d):
 
     # Add edges from preserved part
     for (n1, n2) in a.edges():
-        attrs = dict_sub(get_edge(d, g[f[n1]], g[f[n2]]), get_edge(b, f[n1], f[n2]))
+        attrs = dict_sub(
+            get_edge(d, g[f[n1]], g[f[n2]]), get_edge(b, f[n1], f[n2]))
         add_edge(c, hom1[n1], hom1[n2], attrs)
         add_edge_attrs(c, hom1[n1], hom1[n2], get_edge(a, n1, n2))
 
@@ -669,4 +678,3 @@ def pushout_from_partial_mapping(b, c, b_c, b_typings, c_typings):
     (d, b_d, c_d) = pushout(a, b, c, a_b, a_c)
     d_typings = typing_of_pushout(b, c, d, b_d, c_d, b_typings, c_typings)
     return (d, d_typings)
-
