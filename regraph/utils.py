@@ -1,11 +1,5 @@
-"""."""
+"""A collection of utils for ReGraph library."""
 import copy
-import itertools
-import warnings
-
-from matplotlib import pyplot as plt
-
-import networkx as nx
 
 from regraph.parser import parser
 from regraph.exceptions import ReGraphError, ParsingError
@@ -13,9 +7,7 @@ from regraph.attribute_sets import AttributeSet, FiniteSet
 
 
 def valid_attributes(source, target):
-    """ test that the attributes """
-    # print("source: ", source)
-    # print("target: ", target)
+    """Test the validity of attributes."""
     for key, value in source.items():
         if key not in target:
             return False
@@ -56,6 +48,7 @@ def is_subdict(small_dict, big_dict):
 
 
 def attrs_intersection(attrs1, attrs2):
+    """Intersect two dictionaries with attrbutes."""
     if attrs1 is None or attrs2 is None:
         return {}
     res = dict()
@@ -68,6 +61,7 @@ def attrs_intersection(attrs1, attrs2):
 
 
 def attrs_union(attrs1, attrs2):
+    """Find a union of two dictionaries with attrs."""
     if attrs1 is None:
         if attrs2 is not None:
             return attrs2
@@ -90,6 +84,7 @@ def attrs_union(attrs1, attrs2):
 
 
 def keys_by_value(dictionary, val):
+    """Get keys of a dictionary by a value."""
     res = []
     for key, value in dictionary.items():
         if value == val:
@@ -109,14 +104,16 @@ def fold_left(f, init, l):
 
 
 def to_set(value):
-    if (type(value) == set) | (type(value) == list):
+    """Convert a value to set."""
+    if type(value) == set or type(value) == list:
         return set(value)
     else:
         return set([value])
 
 
 def to_list(value):
-    if (type(value) == set) | (type(value) == list):
+    """Convert a value to list."""
+    if type(value) == set | type(value == list):
         return list(value)
     else:
         return [value]
@@ -142,65 +139,9 @@ def merge_attributes(attr1, attr2, method="union"):
     else:
         raise ReGraphError("Merging method %s is not defined!" % method)
 
-# def merge_attributes(attr1, attr2, method="union"):
-#     """Merge two dictionaries of attributes.
-#     None seen as the dictionary that contains everything """
-#     result = {}
-#     if method == "union":
-#         # if attr1 is None or attr2 is None:
-#         #     return None
-#         if attr1 is None:
-#             attr1 = dict()
-#         if attr2 is None:
-#             attr2 = dict()
-#         for key1 in attr1.keys():
-#             if key1 in attr2.keys():
-#                 if attr1[key1] == attr2[key1]:
-#                     result.update(
-#                         {key1: attr1[key1]})
-#                 else:
-#                     attr_set = set()
-#                     attr_set.update(attr1[key1])
-#                     attr_set.update(attr2[key1])
-#                     result.update(
-#                         {key1: attr_set})
-#             else:
-#                 result.update({key1: attr1[key1]})
-
-#         for key2 in attr2.keys():
-#             if key2 not in result:
-#                 result.update({key2: attr2[key2]})
-#     elif method == "intersection":
-#         if attr1 is None:
-#             attr1 = dict()
-#         if attr2 is None:
-#             attr2 = dict()
-#         # if attr1 is None:
-#         #     return attr2
-#         # if attr2 is None:
-#         #     return attr1
-#         for key1 in attr1.keys():
-#             if key1 in attr2.keys():
-#                 if attr1[key1] == attr2[key1]:
-#                     result.update(
-#                         {key1: attr1[key1]})
-#                 else:
-#                     attr_set1 = set()
-#                     attr_set2 = set()
-#                     attr_set1.update(attr1[key1])
-#                     attr_set2.update(attr2[key1])
-#                     intersect = set.intersection(attr_set1, attr_set2)
-#                     if len(intersect) == 1:
-#                         result.update({key1: {list(intersect)[0]}})
-#                     elif len(intersect) > 1:
-#                         result.update({key1: intersect})
-#     else:
-#         raise ReGraphError("Merging method %s is not defined!" % method)
-#     return result
-
 
 def dict_sub(attrs1, attrs2):
-    """ remove attributes attrs2 from attrs1 """
+    """Remove attributes `attrs2` from `attrs1`."""
     new_dict = {}
     for key in attrs1:
         if key in attrs2:
@@ -211,31 +152,9 @@ def dict_sub(attrs1, attrs2):
             new_dict[key] = attrs1[key]
     return new_dict
 
-# def dict_sub(a, b):
-#     res = copy.deepcopy(a)
-#     normalize_attrs(res)
-#     if b is None:
-#         return res
-#     if a is None:
-#         return None
-#     for key, value in b.items():
-#         if key not in a.keys():
-#             pass
-#         else:
-#             elements_to_remove = []
-#             for el in to_set(value):
-#                 if el in a[key]:
-#                     elements_to_remove.append(el)
-#                 else:
-#                     pass
-#             for el in elements_to_remove:
-#                 res[key].remove(el)
-#     return res
-
 
 def simplify_commands(commands, di=False):
-    """ Returns a simplified list of transformations that have the same
-        behaviour as commands """
+    """Simplify a list of graph transformation commands."""
     command_strings = [c for c in commands.splitlines() if len(c) > 0]
     actions = []
     for command in command_strings:
@@ -885,15 +804,15 @@ def make_canonical_commands(g, commands, di=False):
                         if type(e) == tuple:
                             if e[0] in action["nodes"] and\
                                e[1] in action["nodes"]:
-                                if not e in rem_el:
+                                if e not in rem_el:
                                     rem_el.append(e)
                             if e[0] in action["nodes"]:
-                                if not e in rem_el:
+                                if e not in rem_el:
                                     rem_el.append(e)
                                 if e[1] not in action["nodes"]:
                                     added.append((node_name, e[1]))
                             elif e[1] in action["nodes"]:
-                                if not e in rem_el:
+                                if e not in rem_el:
                                     rem_el.append(e)
                                 if e[0] not in action["nodes"]:
                                     added.append((e[0], node_name))
@@ -924,6 +843,7 @@ def make_canonical_commands(g, commands, di=False):
 
 
 def assert_graph_eq(g1, g2):
+    """Assertion function for graph equality."""
     assert(set(g1.nodes()) == set(g2.nodes()))
     if g1.is_directed() and g2.is_directed():
         assert(set(g1.edges()) == set(g2.edges()))

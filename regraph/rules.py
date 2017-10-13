@@ -27,10 +27,12 @@ class Rule(object):
     """
 
     def __init__(self, p, lhs, rhs, p_lhs=None, p_rhs=None):
-        """Initialize a rule by p, lhs and rhs and two homomorphisms:
+        """Initialize a rule by p, lhs and rhs and two homomorphisms.
+
         p -> lhs & p -> rhs. By default the homomorphisms are None, and
         they are created as Homomorphism.identity(p, lhs) etc with the
-        correspondance according to the node names."""
+        correspondance according to the node names.
+        """
         if not p_lhs:
             self.p_lhs = identity(p, lhs)
         else:
@@ -76,7 +78,7 @@ class Rule(object):
             # 2. apply the commands
 
             command_strings = [
-                c for block in commands if len(block) > 0 for c in block.splitlines()
+                c for b in commands if len(b) > 0 for c in b.splitlines()
             ]
 
             actions = []
@@ -97,9 +99,9 @@ class Rule(object):
                     node_name = None
                     if "node_name" in action.keys():
                         node_name = action["node_name"]
-                    merged_node = rule.merge_nodes(
-                        action["nodes"],
-                        node_name)
+                    # merged_node = rule.merge_nodes(
+                    #     action["nodes"],
+                    #     node_name)
                 elif action["keyword"] == "add_node":
                     name = None
                     attrs = {}
@@ -141,10 +143,12 @@ class Rule(object):
                         action["node_2"],
                         action["attributes"])
                 else:
-                    raise ParsingError("Unknown command %s" % action["keyword"])
+                    raise ParsingError("Unknown command %s" %
+                                       action["keyword"])
         return rule
 
     def __eq__(self, rule):
+        """Rule equality operator."""
         return (
             primitives.equal(self.p, rule.p) and
             primitives.equal(self.lhs, rule.lhs) and
@@ -154,17 +158,19 @@ class Rule(object):
         )
 
     def __str__(self):
+        """String repr of a rule."""
         return "Preserved part\n%s\n%s\n" % (self.p.node, self.p.edges()) +\
-               "Left hand side\n%s\n%s\n" % (self.lhs.node, self.lhs.edges()) +\
-               "P->L Homomorphism : %s\n" % self.p_lhs +\
-               "Right hand side\n%s\n%s\n" % (self.rhs.node, self.rhs.edges()) +\
-               "P->R Homomorphism : %s\n" % self.p_rhs
+            "Left hand side\n%s\n%s\n" % (self.lhs.node, self.lhs.edges()) +\
+            "P->L Homomorphism : %s\n" % self.p_lhs +\
+            "Right hand side\n%s\n%s\n" % (self.rhs.node, self.rhs.edges()) +\
+            "P->R Homomorphism : %s\n" % self.p_rhs
 
     def __doc__(self):
+        """Doc for a Rule class."""
         return(
-            "An instance of rule is an instance of `p` (preserved part), " +\
-            "`lhs` (lef-hand side of the rule) and `rhs` (right-hand side) graphs " +\
-            "together with two mappings p -> lhs & p -> rhs."
+            "An instance of rule is an instance of `p` (preserved part), "
+            "`lhs` (lef-hand side of the rule) and `rhs` (right-hand side) "
+            " graphs together with two mappings p -> lhs & p -> rhs."
         )
 
     def add_node(self, node_id, attrs=None):
@@ -176,17 +182,20 @@ class Rule(object):
                 lhs_key = self.p_lhs[k]
                 if lhs_key == node_id:
                     raise RuleError(
-                        "Node with the id '%s' already exists in the left hand side of the rule" %
+                        "Node with the id '%s' already exists in the "
+                        "left hand side of the rule" %
                         node_id
                     )
             primitives.add_node(self.rhs, node_id, attrs)
         else:
             raise RuleError(
-                "Node with the id '%s' already exists in the right hand side of the rule" %
+                "Node with the id '%s' already exists in the "
+                "right hand side of the rule" %
                 node_id
             )
 
     def remove_node_rhs(self, n):
+        """Remove a node from a rhs."""
         p_keys = keys_by_value(self.p_rhs, n)
         for p_node in p_keys:
             primitives.remove_node(self.p, p_node)
@@ -210,6 +219,7 @@ class Rule(object):
         return
 
     def add_edge_rhs(self, n1, n2, attrs=None):
+        """Add an edge in the rhs."""
         primitives.add_edge(self.rhs, n1, n2, attrs)
 
     def add_edge(self, n1, n2, attrs=None):
@@ -221,19 +231,22 @@ class Rule(object):
         for k1 in p_keys_1:
             if k1 not in self.p.nodes():
                 raise RuleError(
-                    "Node with the id '%s' does not exist in the preserved part of the rule" % k2
+                    "Node with the id '%s' does not exist in the "
+                    "preserved part of the rule" % k2
                 )
             for k2 in p_keys_2:
                 if k2 not in self.p.nodes():
                     raise RuleError(
-                        "Node with the id '%s' does not exist in the preserved part of the rule" % k2
+                        "Node with the id '%s' does not exist in the "
+                        "preserved part of the rule" % k2
                     )
                 rhs_key_1 = self.p_rhs[k1]
                 rhs_key_2 = self.p_rhs[k2]
                 if self.rhs.is_directed():
                     if (rhs_key_1, rhs_key_2) in self.rhs.edges():
                         raise RuleError(
-                            "Edge '%s->%s' already exists in the right hand side of the rule" % 
+                            "Edge '%s->%s' already exists in the right "
+                            "hand side of the rule" %
                             (rhs_key_1, rhs_key_2)
                         )
                     primitives.add_edge(self.rhs, rhs_key_1, rhs_key_2, attrs)
@@ -241,14 +254,15 @@ class Rule(object):
                     if (rhs_key_1, rhs_key_2) in self.rhs.edges() or\
                        (rhs_key_2, rhs_key_1) in self.rhs.edges():
                         raise RuleError(
-                            "Edge '%s->%s' already exists in the right hand side of the rule" % 
+                            "Edge '%s->%s' already exists in the right "
+                            "hand side of the rule" %
                             (rhs_key_1, rhs_key_2)
                         )
                     primitives.add_edge(self.rhs, rhs_key_1, rhs_key_2, attrs)
         return
 
     def remove_edge_rhs(self, node1, node2):
-        """Remove edge from the rhs of the graph"""
+        """Remove edge from the rhs of the graph."""
         primitives.remove_edge(self.rhs, node1, node2)
         for pn1 in keys_by_value(self.p_rhs, node1):
             for pn2 in keys_by_value(self.p_rhs, node2):
@@ -267,45 +281,48 @@ class Rule(object):
         for k1 in p_keys_1:
             if k1 not in self.p.nodes():
                 raise RuleError(
-                    "Node with the id '%s' does not exist in the preserved part" % k1
+                    "Node with the id '%s' does not exist in "
+                    "the preserved part" % k1
                 )
             for k2 in p_keys_2:
                 if k2 not in self.p.nodes():
                     raise RuleError(
-                        "Node with the id '%s' does not exist in the preserved part" % k2
+                        "Node with the id '%s' does not exist in "
+                        "the preserved part" % k2
                     )
                 rhs_key_1 = self.p_rhs[k1]
                 rhs_key_2 = self.p_rhs[k2]
                 if self.p.is_directed():
                     if (k1, k2) not in self.p.edges():
                         raise RuleError(
-                            "Edge '%s->%s' does not exist in the preserved part of the rule " %
-                            (k1, k2)
+                            "Edge '%s->%s' does not exist in the preserved "
+                            "part of the rule " % (k1, k2)
                         )
                     if (rhs_key_1, rhs_key_2) not in self.rhs.edges():
                         raise RuleError(
-                            "Edge '%s->%s' does not exist in the right hand side of the rule " %
-                            (rhs_key_1, rhs_key_2)
+                            "Edge '%s->%s' does not exist in the right hand "
+                            "side of the rule " % (rhs_key_1, rhs_key_2)
                         )
                     primitives.remove_edge(self.p, k1, k2)
                     primitives.remove_edge(self.rhs, rhs_key_1, rhs_key_2)
                 else:
-                    if (k1, k2) not in self.p.edges() and (k2, k1) not in self.p.edges():
+                    if (k1, k2) not in self.p.edges() and\
+                       (k2, k1) not in self.p.edges():
                         raise RuleError(
-                            "Edge '%s->%s' does not exist in the preserved part of the rule " %
-                            (k1, k2)
+                            "Edge '%s->%s' does not exist in the "
+                            "preserved part of the rule " % (k1, k2)
                         )
                     if (rhs_key_1, rhs_key_2) not in self.rhs.edges() and\
                        (rhs_key_2, rhs_key_1) not in self.rhs.edges():
                         raise RuleError(
-                            "Edge '%s->%s' does not exist in the right hand side of the rule " %
-                            (rhs_key_1, rhs_key_2)
+                            "Edge '%s->%s' does not exist in the right "
+                            "hand side of the rule " % (rhs_key_1, rhs_key_2)
                         )
                     primitives.remove_edge(self.p, k1, k2)
         return
 
     def clone_rhs_node(self, node, new_name=None):
-        """clone a rhs node"""
+        """Clone an rhs node."""
         if node not in self.rhs.nodes():
             raise RuleError(
                 "Node '%s' is not a node of right hand side" %
@@ -339,6 +356,7 @@ class Rule(object):
         return (p_new_nodes, rhs_new_nodes)
 
     def merge_nodes_rhs(self, n1, n2, new_name):
+        """Merge3 nodes in rhs."""
         if n1 not in self.rhs.nodes():
             raise RuleError("Node '%s' is not a node of the rhs" % n1)
         if n2 not in self.rhs.nodes():
@@ -359,12 +377,14 @@ class Rule(object):
         for k1 in p_keys_1:
             if k1 not in self.p.nodes():
                 raise RuleError(
-                    "Node with the id '%s' does not exist in the preserved part of the rule" % k1
+                    "Node with the id '%s' does not exist in the "
+                    "preserved part of the rule" % k1
                 )
             for k2 in p_keys_2:
                 if k2 not in self.p.nodes():
                     raise RuleError(
-                        "Node with the id '%s' does not exist in the preserved part of the rule" % k2
+                        "Node with the id '%s' does not exist in "
+                        "the preserved part of the rule" % k2
                     )
                 nodes_to_merge.add(self.p_rhs[k1])
                 nodes_to_merge.add(self.p_rhs[k2])
@@ -381,24 +401,34 @@ class Rule(object):
         return new_name
 
     def add_node_attrs_rhs(self, n, attrs):
+        """Add attrs to a node in the rhs."""
         if n not in self.rhs.nodes():
-            raise RuleError("Node %s does not exist in the right hand side of the rule" % n)
+            raise RuleError(
+                "Node %s does not exist in the right "
+                "hand side of the rule" % n)
         primitives.add_node_attrs(self.rhs, n, attrs)
 
     def add_node_attrs(self, n, attrs):
         """Add node attributes to a node in the graph."""
         if n not in self.lhs.nodes():
-            raise RuleError("Node '%s' does not exist in the left hand side of the rule" % n)
+            raise RuleError(
+                "Node '%s' does not exist in the left "
+                "hand side of the rule" % n)
         p_keys = keys_by_value(self.p_lhs, n)
         if len(p_keys) == 0:
-            raise RuleError("Node '%s' is being removed by the rule, cannot add attributes" % n)
+            raise RuleError(
+                "Node '%s' is being removed by the rule, "
+                "cannot add attributes" % n)
         for k in p_keys:
             primitives.add_node_attrs(self.rhs, self.p_rhs[k], attrs)
         return
 
     def remove_node_attrs_rhs(self, n, attrs):
+        """Remove attrs to a node in the rhs."""
         if n not in self.rhs.nodes():
-            raise RuleError("Node '%s' does not exist in the right hand side of the rule" % n)
+            raise RuleError(
+                "Node '%s' does not exist in the right hand "
+                "side of the rule" % n)
 
         p_keys = keys_by_value(self.p_rhs, n)
         for p_node in p_keys:
@@ -409,12 +439,14 @@ class Rule(object):
         """Remove nodes attributes from a node in the graph."""
         if n not in self.lhs.nodes():
             raise RuleError(
-                "Node '%s' does not exist in the left hand side of the rule" % n)
+                "Node '%s' does not exist in the left "
+                "hand side of the rule" % n)
 
         p_keys = keys_by_value(self.p_lhs, n)
         if len(p_keys) == 0:
             raise RuleError(
-                "Node '%s' is being removed by the rule, cannot remove attributes" % n)
+                "Node '%s' is being removed by the rule, "
+                "cannot remove attributes" % n)
 
         for k in p_keys:
             primitives.remove_node_attrs(self.p, k, attrs)
@@ -425,12 +457,14 @@ class Rule(object):
         """Update attributes of a node."""
         if n not in self.lhs.nodes():
             raise RuleError(
-                "Node '%s' does not exist in the left hand side of the rule" % n)
+                "Node '%s' does not exist in the left hand "
+                "side of the rule" % n)
 
         p_keys = keys_by_value(self.p_lhs, n)
         if len(p_keys) == 0:
             raise RuleError(
-                "Node '%s' is being removed by the rule, cannot update attributes" % n)
+                "Node '%s' is being removed by the rule, "
+                "cannot update attributes" % n)
         for k in p_keys:
             self.p.node[k] = None
             primitives.update_node_attrs(self.rhs, self.p_rhs[k], attrs)
@@ -440,18 +474,21 @@ class Rule(object):
         """Add attributes to an edge."""
         if n1 not in self.lhs.nodes():
             raise RuleError(
-                "Node '%s' does not exist in the left hand side of the rule" % n1
+                "Node '%s' does not exist in the left hand "
+                "side of the rule" % n1
             )
 
         if n2 not in self.lhs.nodes():
             raise RuleError(
-                "Node '%s' does not exist in the left hand side of the rule" % n2
+                "Node '%s' does not exist in the left hand "
+                "side of the rule" % n2
             )
-        normalize_attrs(attrs) 
+        normalize_attrs(attrs)
         if self.lhs.is_directed():
             if (n1, n2) not in self.lhs.edges():
                 raise RuleError(
-                    "Edge '%s->%s' does not exist in the left hand side of the rule" %
+                    "Edge '%s->%s' does not exist in the left "
+                    "hand side of the rule" %
                     (n1, n2)
                 )
             p_keys_1 = keys_by_value(self.p_lhs, n1)
@@ -477,9 +514,11 @@ class Rule(object):
                         attrs
                     )
         else:
-            if (n1, n2) not in self.lhs.edges() and (n2, n1) not in self.lhs.edges():
+            if (n1, n2) not in self.lhs.edges() and\
+               (n2, n1) not in self.lhs.edges():
                 raise RuleError(
-                    "Edge '%s->%s' does not exist in the left hand side of the rule" %
+                    "Edge '%s->%s' does not exist in the left "
+                    "hand side of the rule" %
                     (n1, n2)
                 )
 
@@ -511,17 +550,20 @@ class Rule(object):
         """Remove edge attributes from an edge in the graph."""
         if n1 not in self.lhs.nodes():
             raise RuleError(
-                "Node '%s' does not exist in the left hand side of the rule" % n1
+                "Node '%s' does not exist in the left "
+                "hand side of the rule" % n1
             )
         if n2 not in self.lhs.nodes():
             raise RuleError(
-                "Node '%s' does not exist in the left hand side of the rule" % n2
+                "Node '%s' does not exist in the left "
+                "hand side of the rule" % n2
             )
-        normalize_attrs(attrs) 
+        normalize_attrs(attrs)
         if self.lhs.is_directed():
             if (n1, n2) not in self.lhs.edges():
                 raise RuleError(
-                    "Edge '%s->%s' does not exist in the left hand side of the rule" %
+                    "Edge '%s->%s' does not exist in the left "
+                    "hand side of the rule" %
                     (n1, n2)
                 )
 
@@ -549,10 +591,11 @@ class Rule(object):
                         attrs
                     )
         else:
-            if (n1, n2) not in self.lhs.edges() and (n2, n1) not in self.lhs.edges():
+            if (n1, n2) not in self.lhs.edges() and\
+               (n2, n1) not in self.lhs.edges():
                 raise RuleError(
-                    "Edge '%s->%s' does not exist in the left hand side of the rule" %
-                    (n1, n2)
+                    "Edge '%s->%s' does not exist in the left hand "
+                    "side of the rule" % (n1, n2)
                 )
             p_keys_1 = keys_by_value(self.p_lhs, n1)
             p_keys_2 = keys_by_value(self.p_lhs, n2)
@@ -588,18 +631,20 @@ class Rule(object):
         """Update the attributes of an edge with a new set `attrs`."""
         if n1 not in self.lhs.nodes():
             raise RuleError(
-                "Node '%s' does not exist in the left hand side of the rule" % n1
+                "Node '%s' does not exist in the left hand side of the rule" %
+                n1
             )
         if n2 not in self.lhs.nodes():
             raise RuleError(
-                "Node '%s' does not exist in the left hand side of the rule" % n2
+                "Node '%s' does not exist in the left hand side of the rule" %
+                n2
             )
-        normalize_attrs(attrs) 
+        normalize_attrs(attrs)
         if self.lhs.is_directed():
             if (n1, n2) not in self.lhs.edges():
                 raise RuleError(
-                    "Edge '%s->%s' does not exist in the left hand side of the rule" %
-                    (n1, n2)
+                    "Edge '%s->%s' does not exist in the left hand "
+                    "side of the rule" % (n1, n2)
                 )
 
             p_keys_1 = keys_by_value(self.p_lhs, n1)
@@ -627,9 +672,11 @@ class Rule(object):
                         attrs
                     )
         else:
-            if (n1, n2) not in self.lhs.edges() and (n2, n1) not in self.lhs.edges():
+            if (n1, n2) not in self.lhs.edges() and\
+               (n2, n1) not in self.lhs.edges():
                 raise RuleError(
-                    "Edge '%s->%s' does not exist in the left hand side of the rule" %
+                    "Edge '%s->%s' does not exist in the "
+                    "left hand side of the rule" %
                     (n1, n2)
                 )
 
@@ -666,7 +713,8 @@ class Rule(object):
                 node_list[1],
                 node_name)
             for i in range(2, len(node_list)):
-                node_name = self.merge_nodes(node_list[i], node_name, node_name)
+                node_name = self.merge_nodes(
+                    node_list[i], node_name, node_name)
         else:
             warnings.warn(
                 "Cannot merge less than two nodes!", ReGraphWarning
