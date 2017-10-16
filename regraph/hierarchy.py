@@ -2238,92 +2238,119 @@ class Hierarchy(nx.DiGraph):
         return json_data
 
     @classmethod
-    def from_json(cls, json_data, directed=True):
+    def from_json(cls, json_data, ignore=None, directed=True):
         """Create hierarchy obj from json repr."""
         hierarchy = cls()
 
         # add graphs
         for graph_data in json_data["graphs"]:
-            graph = graph_from_json(graph_data["graph"], directed)
-            if "attrs" not in graph_data.keys():
-                attrs = dict()
+            if ignore is not None and\
+               "graphs" in ignore.keys() and\
+               graph_data["id"] in ignore["graphs"]:
+                pass
             else:
-                attrs = AttributeContainter.attrs_from_json(
-                    graph_data["attrs"])
+                graph = graph_from_json(graph_data["graph"], directed)
+                if "attrs" not in graph_data.keys():
+                    attrs = dict()
+                else:
+                    attrs = AttributeContainter.attrs_from_json(
+                        graph_data["attrs"])
 
-            hierarchy.add_graph(
-                graph_data["id"],
-                graph,
-                attrs
-            )
+                hierarchy.add_graph(
+                    graph_data["id"],
+                    graph,
+                    attrs
+                )
 
         # add rules
         for rule_data in json_data["rules"]:
-            rule = Rule.from_json(rule_data["rule"])
-            if "attrs" not in rule_data.keys():
-                attrs = dict()
+            if ignore is not None and\
+               "rules" in ignore.keys() and\
+               rule_data["id"] in ignore["rules"]:
+                pass
             else:
-                attrs = AttributeContainter.attrs_from_json(rule_data["attrs"])
-            hierarchy.add_rule(
-                rule_data["id"],
-                rule,
-                attrs
-            )
+                rule = Rule.from_json(rule_data["rule"])
+                if "attrs" not in rule_data.keys():
+                    attrs = dict()
+                else:
+                    attrs = AttributeContainter.attrs_from_json(
+                        rule_data["attrs"])
+                hierarchy.add_rule(
+                    rule_data["id"],
+                    rule,
+                    attrs
+                )
 
         # add typing
         for typing_data in json_data["typing"]:
-            if "attrs" not in typing_data.keys():
-                attrs = dict()
+            if ignore is not None and\
+               "typing" in ignore.keys() and\
+               (typing_data["from"], typing_data["to"]) in ignore["typing"]:
+                pass
             else:
-                attrs = AttributeContainter.attrs_from_json(
-                    typing_data["attrs"])
-            hierarchy.add_typing(
-                typing_data["from"],
-                typing_data["to"],
-                typing_data["mapping"],
-                typing_data["total"],
-                attrs
-            )
+                if "attrs" not in typing_data.keys():
+                    attrs = dict()
+                else:
+                    attrs = AttributeContainter.attrs_from_json(
+                        typing_data["attrs"])
+                hierarchy.add_typing(
+                    typing_data["from"],
+                    typing_data["to"],
+                    typing_data["mapping"],
+                    typing_data["total"],
+                    attrs
+                )
 
         # add rule typing
         for rule_typing_data in json_data["rule_typing"]:
-            if "attrs" not in rule_typing_data.keys():
-                attrs = dict()
+            if ignore is not None and\
+               "rule_typing" in ignore.keys() and\
+               (rule_typing_data["from"], rule_typing_data["to"]) in ignore["rule_typing"]:
+                pass
             else:
-                attrs = AttributeContainter.attrs_from_json(
-                    rule_typing_data["attrs"])
-            hierarchy.add_rule_typing(
-                rule_typing_data["from"],
-                rule_typing_data["to"],
-                rule_typing_data["lhs_mapping"],
-                rule_typing_data["rhs_mapping"],
-                rule_typing_data["lhs_total"],
-                rule_typing_data["rhs_total"],
-                attrs
-            )
+                if "attrs" not in rule_typing_data.keys():
+                    attrs = dict()
+                else:
+                    attrs = AttributeContainter.attrs_from_json(
+                        rule_typing_data["attrs"])
+                hierarchy.add_rule_typing(
+                    rule_typing_data["from"],
+                    rule_typing_data["to"],
+                    rule_typing_data["lhs_mapping"],
+                    rule_typing_data["rhs_mapping"],
+                    rule_typing_data["lhs_total"],
+                    rule_typing_data["rhs_total"],
+                    attrs
+                )
 
         # add relations
         for relation_data in json_data["relations"]:
-            if "attrs" not in relation_data.keys():
-                attrs = dict()
+            if ignore is not None and\
+               "relations" in ignore.keys() and\
+               ((relation_data["from"], relation_data["to"]) in ignore["relations"] or
+                    (relation_data["to"], relation_data["from"]) in ignore["relations"]):
+                pass
             else:
-                attrs = AttributeContainter.attrs_from_json(
-                    relation_data["attrs"])
-            hierarchy.add_relation(
-                relation_data["from"],
-                relation_data["to"],
-                [(a, b) for a, b in relation_data["rel"]],
-                attrs
-            )
+                if "attrs" not in relation_data.keys():
+                    attrs = dict()
+                else:
+                    attrs = AttributeContainter.attrs_from_json(
+                        relation_data["attrs"])
+                hierarchy.add_relation(
+                    relation_data["from"],
+                    relation_data["to"],
+                    [(a, b) for a, b in relation_data["rel"]],
+                    attrs
+                )
         return hierarchy
 
     @classmethod
-    def load(cls, filename, directed=True):
+    def load(cls, filename, ignore=None, directed=True):
         """Load the hierarchy from a file."""
         if os.path.isfile(filename):
             with open(filename, "r+") as f:
                 json_data = json.loads(f.read())
-                hierarchy = cls.from_json(json_data, directed)
+                hierarchy = cls.from_json(json_data, ignore, directed)
             return hierarchy
         else:
             raise HierarchyError("File '%s' does not exist!" % filename)
@@ -2965,15 +2992,51 @@ class MuHierarchy(Hierarchy):
         return response
 
 
-class NewMuHierarchy(Hierarchy):
+class MuContainer(AttributeContainter):
     """."""
+    pass
+
+
+class MuGraphNode(MuContainer):
+    """Constraints containing graph node."""
+
+    def __init__(self, graph, attrs=None, formulae=None):
+        """Init constraints containing graph node."""
+        self.graph = graph
+        if attrs:
+            self.attrs = attrs
+        else:
+            self.attrs = dict()
+        if formulae:
+            self.formulae = formulae
+        else:
+            self.formulae = list()
+        return
+
+    # def __eq__(self, other):
+    #     """Equality operator between two MuGraphNodes."""
+    #     return isinstance(other, MuGraphNode) and\
+    #         equal(self.graph, other.graph)
+
+    # def __ne__(self, other):
+    #     return not (self == other)
+
+
+class NewMuHierarchy(Hierarchy):
+    """Hierarchy with mu-calculus verification methods.
+
+    Extends the hierarchy class with mu-calculus functionality.
+    """
 
     def add_graph(self, graph_id, graph_obj, attrs=None, formulae=None):
         """Add a new graph to the hierarchy."""
-        pass
 
     def add_constraints(self, graph_id, formula):
         """Add constraints to a graph node."""
         pass
 
-    # def check_predecessor(self)
+    def check(self, graph_id, parent_id, typing):
+        """Check every formulae on given ancestor."""
+
+    def check_all_ancestors(self, graph_id):
+        """Check every formulae on every ancestors."""
