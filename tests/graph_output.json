@@ -1,1 +1,0 @@
-{"nodes": [{"attrs": {"k": {"type": "FiniteSet", "data": [33]}, "u": {"type": "FiniteSet", "data": [1]}}, "id": 1}, {"attrs": {}, "id": 2}, {"attrs": {"x": {"type": "FiniteSet", "data": [33, 66, 55]}}, "id": 3}], "edges": [{"from": 1, "to": 2, "attrs": {"r": {"type": "FiniteSet", "data": ["smth", 23]}}}, {"from": 2, "to": 3, "attrs": {}}, {"from": 3, "to": 1, "attrs": {}}]}
