@@ -1135,5 +1135,15 @@ def json_dict_to_attrs(d):
     """Convert json dictionary to attributes."""
     attrs = {}
     for k, v in d.items():
+        if "strSet" in v.keys() or "numSet" in v.keys():
+            new_v = {
+                "type": "FiniteSet",
+                "data": []
+            }
+            if "pos_list" in v["strSet"].keys():
+                new_v["data"].append(v["strSet"]["pos_list"])
+            if "pos_list" in v["numSet"].keys():
+                new_v["data"].append(v["numSet"]["pos_list"])
+            v = new_v
         attrs[k] = AttributeSet.from_json(v)
     return attrs

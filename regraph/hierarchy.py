@@ -2972,14 +2972,14 @@ class MuHierarchy(Hierarchy):
         """Check every formulae on given ancestor."""
         if "formulae" in self.node[parent_id].attrs.keys():
             current_rep = {}
-            for phi_str in self.node[parent_id].attrs["formulae"]:
+            for formula_id, formula in self.node[parent_id].attrs["formulae"]:
                 try:
-                    failed_nodes = _verify(phi_str["formula"],
+                    failed_nodes = _verify(formula,
                                            typing,
                                            self.node[graph_id].graph)
-                    current_rep[phi_str["id"]] = str(failed_nodes)
+                    current_rep[formula_id] = str(failed_nodes)
                 except (ValueError, ParseError) as err:
-                    current_rep[phi_str["id"]] = str(err)
+                    current_rep[formula_id] = str(err)
             return current_rep
 
     def check_all_ancestors(self, graph_id):

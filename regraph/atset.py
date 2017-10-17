@@ -101,6 +101,7 @@ class AtSet():
 
 class AtFinSet():
     """Finite Set numerical values"""
+
     def __init__(self, at_set):
         # test that elements are numerical values
         # super(AtFinSet, self).__init__(*elements)
@@ -160,7 +161,8 @@ class AtFinSet():
         elif isinstance(other, AtUnivSet):
             return AtUnivSet()
         elif isinstance(other, AtSymSet):
-            # return convert(AtSymSet(FiniteSet(*list(self.at_set)).union(other.at_set)))
+            # return
+            # convert(AtSymSet(FiniteSet(*list(self.at_set)).union(other.at_set)))
             return convert(AtSymSet(reduce_union(Union(FiniteSet(*list(self.at_set)),
                                                        other.at_set,
                                                        evaluate=True))))
@@ -187,7 +189,7 @@ class AtFinSet():
             return convert(AtSymSet(Complement(
                                     other.at_set,
                                     FiniteSet(*list(self.at_set)),
-                                    evaluate=True))) 
+                                    evaluate=True)))
         elif isinstance(other, AtFinSet):
             return convert(AtFinSet(other.at_set - self.at_set))
         # elif isinstance(other, AtPosStringSet):
@@ -213,6 +215,7 @@ class AtFinSet():
 
 class AtSymSet():
     """Symbolic numerical sets"""
+
     def __init__(self, at_set):
         self.at_set = at_set
 
@@ -403,6 +406,7 @@ class AtPosStringSet():
 
 
 class AtNegStringSet():
+
     def __init__(self, at_set):
         self.at_set = at_set
 

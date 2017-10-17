@@ -19,7 +19,7 @@ from regraph.category_op import (pushout, compose_homomorphisms,
                                  typings_of_pushout,
                                  is_monic,
                                  check_homomorphism)
-
+from regraph.attribute_sets import UniversalSet, FiniteSet
 from regraph.utils import is_subdict, recursive_merge, valid_attributes
 
 # def _complete_rewrite(hie, g_id, rule, match, lhs_typing=None,
@@ -197,7 +197,7 @@ def tmp_add_attributes(hie, top):
     for gr in [kami_base_gr, kami_gr]:
         for node in gr:
             attrs = gr.node[node]
-            attrs["val"] = univ_set()
+            attrs["val"] = UniversalSet()
 
 
 def to_json_tree(hie, g_id, parent, include_rules=True,
@@ -216,7 +216,7 @@ def to_json_tree(hie, g_id, parent, include_rules=True,
                                  include_graphs, None)
                     for c in graph_children(hie, g_id)]
     json_data = {"id": g_id,
-                 "name": hie.node[g_id].attrs["name"],
+                 "name": hie.node[g_id].attrs["name"].to_json(),
                  "children": children}
 
     if include_graphs:
@@ -228,7 +228,7 @@ def to_json_tree(hie, g_id, parent, include_rules=True,
             json_data["rules"] = [typed_rule_to_json(hie, r, g_id)
                                   for r in rule_children(hie, g_id)]
     elif include_rules:
-        json_data["rules"] = [hie.node[r].attrs["name"]
+        json_data["rules"] = [hie.node[r].attrs["name"].to_json()
                               for r in rule_children(hie, g_id)]
 
     return json_data
@@ -255,7 +255,13 @@ def typed_graph_to_json(hie, g_id, parent):
     if hie.node[g_id].graph is None:
         return None
     json_data = graph_to_json(hie.node[g_id].graph)
-    json_data["attributes"] = hie.node[g_id].attrs
+    generated_list = []
+    for k, v in hie.node[g_id].attrs.items():
+        try:
+            generated_list.append((k, v.to_json()))
+        except:
+            generated_list.append((k, v))
+    json_data["attributes"] = (generated_list)
     if parent is not None:
         typing = hie.edge[g_id][parent].mapping
         _type_json_nodes(json_data["nodes"], typing)
@@ -265,7 +271,7 @@ def typed_graph_to_json(hie, g_id, parent):
 def typed_rule_to_json(hie, g_id, parent):
     rule = hie.node[g_id].rule
     json_data = {}
-    json_data["name"] = hie.node[g_id].attrs["name"]
+    json_data["name"] = hie.node[g_id].attrs["name"].to_json()
     json_data["L"] = graph_to_json(rule.lhs)
     json_data["P"] = graph_to_json(rule.p)
     json_data["R"] = graph_to_json(rule.rhs)
@@ -309,15 +315,18 @@ def get_valid_child_name(hie, g_id, new_name):
 def rename_child(hie, g_id, parent, new_name):
     """rename a graph """
     if valid_child_name(hie, parent, new_name):
-        hie.node[g_id].attrs["name"] = new_name
+        hie.node[g_id].attrs["name"] = FiniteSet([new_name])
     else:
         raise ValueError("name {} is not valid".format(new_name))
 
 
 def child_from_name(hie, g_id, name):
     """return the id of the child of g_id named name"""
+    print(name, type(name))
+    for c in all_children(hie, g_id):
+        print(hie.node[c].attrs["name"], type(hie.node[c].attrs["name"]))
     children = [c for c in all_children(hie, g_id)
-                if hie.node[c].attrs["name"] == name]
+                if name in hie.node[c].attrs["name"]]
     if len(children) == 0:
         raise ValueError("no child of {} named {}".format(g_id, name))
     if len(children) > 1:
@@ -394,7 +403,8 @@ def add_node(hie, g_id, parent, node_id, node_type, new_name=False):
             if new_name:
                 node_id = prim.unique_node_id(hie.node[g_id].graph, node_id)
             else:
-                raise ValueError("node {} already exists in graph".format(node_id))
+                raise ValueError(
+                    "node {} already exists in graph".format(node_id))
 
         # check that we have sufficient typings
         for typing in hie.successors(g_id):
@@ -641,7 +651,7 @@ def ancestor(hie, g_id, degree):
         parents = [target for _, target in hie.out_edges(g_id)]
         if len(parents) != 1:
             raise ValueError("ancestor can only be used on a tree")
-        return ancestor(hie, parents[0], degree-1)
+        return ancestor(hie, parents[0], degree - 1)
 
 
 def _mapping_to_json(mapping):
@@ -712,7 +722,7 @@ def rewrite_parent(hie, g_id, parent, suffix):
     new_names = hie.duplicate_subgraph(hie.descendents(parent), suffix)
     old_name = hie.node[new_names[parent]].attrs["name"]
     hie.node[new_names[parent]].attrs["name"] =\
-        get_valid_name(hie, new_names[parent], old_name+"_"+suffix)
+        get_valid_name(hie, new_names[parent], old_name + "_" + suffix)
     (_, updated_graphs) = _rewrite(hie, new_names[parent], rule,
                                    mapping.lhs_mapping)
     for (old_id, new_id) in new_names.items():
@@ -759,7 +769,8 @@ def _copy_graph(hie, g_id):
     return new_id
 
 
-# create a new dict of graph attributes by merging the attributes of id1 and id2
+# create a new dict of graph attributes by merging the attributes of id1
+# and id2
 def _new_merged_graph_attrs(hie, id1, id2, new_name):
     new_attrs = copy.deepcopy(hie.node[id1].attrs)
     attrs2 = hie.node[id2].attrs
@@ -813,13 +824,13 @@ def merge_graphs(hie, g_id, name1, name2, mapping, new_name):
     for child in all_children(hie, id1):
         hie.add_edge(child, new_id1)
         tmp_typ = Typing(g1_new_graph, total=hie.edge[child][id1].all_total())
-        hie.edge[child][new_id1] = tmp_typ*hie.edge[child][id1]
+        hie.edge[child][new_id1] = tmp_typ * hie.edge[child][id1]
 
     new_id2 = _copy_graph(hie, new_id)
     for child in all_children(hie, id2):
         hie.add_edge(child, new_id2)
         tmp_typ = Typing(g2_new_graph, total=hie.edge[child][id2].all_total())
-        hie.edge[child][new_id2] = tmp_typ*hie.edge[child][id2]
+        hie.edge[child][new_id2] = tmp_typ * hie.edge[child][id2]
 
     _merge_hierarchy(hie, hie, new_id, new_id1)
     _merge_hierarchy(hie, hie, new_id, new_id2)
@@ -837,7 +848,7 @@ def _same_graphs(hie1, hie2, rel):
             for ch2 in all_children(hie2, id2):
                 for ch1 in all_children(hie1, id1):
                     if hie1.node[ch1].attrs["name"] == hie2.node[ch2].attrs["name"]\
-                        and hie1.node[ch1] == hie2.node[ch2]:
+                            and hie1.node[ch1] == hie2.node[ch2]:
                         if ch1 in new_rel:
                             new_rel[ch1].add(ch2)
                         else:
@@ -872,6 +883,18 @@ def _update_name(hie, g_id):
 # TODO: add  support for rules
 def _add_new_graphs(hie1, hie2, rel, visited2):
     new_graphs = {}
+
+    def _fix_attrs(attrs_input):
+        new_attrs = dict()
+        for key, value in attrs_input.items():
+            if type(value) is dict:
+                if "strSet" in value.keys() and "numSet" in value.keys():
+                    if "neg_list" in value["strSet"].keys() and\
+                       len(value["strSet"]["neg_list"]) == 0:
+                        new_attrs[key] = UniversalSet()
+            else:
+                new_attrs[key] = value
+        return new_attrs
 
     # duplicate nodes from hie1 if they have multiple equivalents in hie2
     for node1 in rel:
@@ -944,6 +967,8 @@ def _add_new_graphs(hie1, hie2, rel, visited2):
 def merge_json_into_hierarchy(hie, json_data, top):
     """incorporate json hierarchy into existing one"""
     new_hie = Hierarchy(hie.directed, graph_node_cls=GraphNode)
+    # here we preprocess json_data a bit
+    # _preprocess(json_data)
     new_top = from_json_tree(new_hie, json_data, None)
     add_types(new_hie, top)
     tmp_add_attributes(new_hie, top)
@@ -1007,7 +1032,7 @@ def get_metadata(hie, graph_id, path):
         node = hie.node[graph_id]
         tmp_data = {}
         tmp_data["id"] = graph_id
-        tmp_data["name"] = node.attrs["name"]
+        tmp_data["name"] = node.attrs["name"].to_json()
         tmp_data["path"] = path
         if "children_types" in node.attrs:
             tmp_data["children_types"] = node.attrs["children_types"]
@@ -1030,12 +1055,13 @@ def get_metadata(hie, graph_id, path):
     if path == "/":
         json_data["children"] =\
             [_graph_data(child,
-                         "/{}".format(hie.node[child].attrs["name"]))
+                         "/{}".format(list(hie.node[child].attrs["name"].fset)[0]))
              for child in all_children(hie, graph_id)]
     else:
         json_data["children"] =\
             [_graph_data(child,
-                         "{}/{}".format(path, hie.node[child].attrs["name"]))
+                         "{}/{}".format(
+                             path, list(hie.node[child].attrs["name"].fset)[0]))
              for child in all_children(hie, graph_id)]
     return json_data
 
@@ -1049,9 +1075,9 @@ def add_positions(mouse_x, mouse_y, positions_old, positions_new, old_to_new):
     nodes_number = len(old_positions)
     if nodes_number != 0:
         barycenter_x =\
-            sum(pos["x"] for pos in old_positions.values())/nodes_number
+            sum(pos["x"] for pos in old_positions.values()) / nodes_number
         barycenter_y =\
-            sum(pos["y"] for pos in old_positions.values())/nodes_number
+            sum(pos["y"] for pos in old_positions.values()) / nodes_number
         for node in old_positions:
             positions_new[old_to_new[node]] = {
                 "x": mouse_x - barycenter_x + positions_old[node]["x"],
@@ -1069,7 +1095,8 @@ def paste_nodes(hie, top, graph_id, parent_path, nodes, mouse_x, mouse_y):
     # check that all copied nodes exist in the graph
     for node in nodes:
         if node not in other_gr:
-            raise ValueError("copied node {} does not exist anymore".format(node))
+            raise ValueError(
+                "copied node {} does not exist anymore".format(node))
 
     if hie.has_edge(graph_id, other_id):
         mapping = hie.edge[graph_id][other_id].mapping
@@ -1084,8 +1111,8 @@ def paste_nodes(hie, top, graph_id, parent_path, nodes, mouse_x, mouse_y):
     else:
         # check that all necessary typings are there
         necessary_typings = [typing for typing in hie.successors(graph_id)]
-                            #  if hie.edge[graph_id][typing].total]
-                            # until UI can handle partial typings
+        #  if hie.edge[graph_id][typing].total]
+        # until UI can handle partial typings
         typings = [typing for typing in hie.successors(graph_id)
                    if typing in hie.successors(other_id)]
         for typing in necessary_typings:
@@ -1103,7 +1130,7 @@ def paste_nodes(hie, top, graph_id, parent_path, nodes, mouse_x, mouse_y):
                 other_mapping = hie.edge[other_id][typing].mapping
                 if node in other_mapping:
                     hie.edge[graph_id][typing].mapping[old_to_new[node]] =\
-                       other_mapping[node]
+                        other_mapping[node]
         for (source, target) in other_gr.subgraph(nodes).edges():
             prim.add_edge(gr, old_to_new[source], old_to_new[target],
                           other_gr.edge[source][target])
@@ -1115,4 +1142,3 @@ def paste_nodes(hie, top, graph_id, parent_path, nodes, mouse_x, mouse_y):
         positions_new = hie.node[graph_id].attrs["positions"]
         add_positions(mouse_x, mouse_y, positions_old, positions_new,
                       old_to_new)
-

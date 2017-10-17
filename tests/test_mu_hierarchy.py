@@ -7,6 +7,7 @@ import networkx as nx
 
 class TestMuHierarchy(object):
     """verification of formulae from parent graphs"""
+
     def __init__(self):
 
         self.hierarchy = MuHierarchy()
@@ -15,10 +16,12 @@ class TestMuHierarchy(object):
         g1.add_node("region")
         g1.add_edge("region", "agent")
 
-        self.hierarchy.add_graph("g1", g1,
-                                 {"formulae":
-                                  [{"id":"f1",
-                                   "formula":"or(not cnt(Region),<1<=Adj>cnt(Agent))"}]})
+        self.hierarchy.add_graph(
+            "g1", g1,
+            {"formulae":
+             [("f1", "or(not cnt(Region),<1<=Adj>cnt(Agent))")]
+             }
+        )
 
         g2 = nx.DiGraph()
         g2.add_node("a1")
@@ -35,7 +38,7 @@ class TestMuHierarchy(object):
         )
 
     def test1(self):
-        """r2 does not verify the formula"""
+        """r2 does not verify the formula."""
         assert_equals(self.hierarchy.check_all_ancestors("g2"),
                       {'g1':
                        {'f1': "['r2']"}})

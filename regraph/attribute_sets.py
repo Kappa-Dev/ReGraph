@@ -30,6 +30,17 @@ from greenery.lego import parse
 from regraph.exceptions import AttributeSetError
 
 
+def _hashify(d):
+    """."""
+    result = []
+    for key, value in d.items():
+        if type(value) is dict:
+            result.append((key, _hashify(value)))
+        else:
+            result.append((key, value))
+    return tuple(result)
+
+
 def _regex_to_string(a):
     if isinstance(a, str):
         return a
@@ -98,20 +109,28 @@ class AttributeSet(object):
     @classmethod
     def from_json(cls, json_data):
         """Create attribute set object from json-like dictionary."""
-        init_args = None
-        if "data" in json_data.keys():
-            if not len(json_data["data"]) == 1 and\
-               json_data["data"][0] is None:
-                init_args = json_data["data"]
+        if "type" in json_data.keys():
+            init_args = None
+            if "data" in json_data.keys():
+                if not (len(json_data["data"]) == 1 and
+                        json_data["data"][0] is None):
+                    init_args = json_data["data"]
 
-        # JSON cannot dump tuples, so finite set of tuples is usually
-        # represented as a list of lists, if we read from json list of
-        # lists, we interpret them as a set of tuples
-        if json_data["type"] == "FiniteSet" and init_args is not None:
-            for i, element in enumerate(init_args):
-                if type(element) == list:
-                    init_args[i] = tuple(element)
-        return getattr(sys.modules[__name__], json_data["type"])(init_args)
+            # JSON cannot dump tuples, so finite set of tuples is usually
+            # represented as a list of lists, if we read from json list of
+            # lists, we interpret them as a set of tuples
+            if json_data["type"] == "FiniteSet" and init_args is not None:
+                for i, element in enumerate(init_args):
+                    if type(element) == list:
+                        init_args[i] = tuple(element)
+            return getattr(sys.modules[__name__], json_data["type"])(init_args)
+        else:
+            if "strSet" in json_data.keys() and "numSet" in json_data.keys():
+                if "neg_list" in json_data["strSet"].keys() and\
+                   len(json_data["strSet"]["neg_list"]) == 0:
+                    return UniversalSet()
+
+            return FiniteSet(json_data)
 
 
 class FiniteSet(AttributeSet):
@@ -126,6 +145,8 @@ class FiniteSet(AttributeSet):
                 self.fset = copy.deepcopy(fset)
             elif type(fset) == list:
                 self.fset = set(fset)
+            elif type(fset) == dict:
+                self.fset = set(_hashify(fset))
             else:
                 self.fset = {fset}
 
