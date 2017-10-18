@@ -10,5 +10,14 @@ setup(
     license='MIT License',
     packages=['regraph'],
     package_dir={"regraph": "regraph"},
-    zip_safe=False
+    zip_safe=False,
+    install_requires=[
+        "matplotlib",
+        "networkx==1.11",
+        "numpy",
+        "pyparsing",
+        "lrparsing",
+        "sympy",
+        "greenery",
+    ]
 )
