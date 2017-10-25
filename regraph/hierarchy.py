@@ -297,7 +297,7 @@ class Hierarchy(nx.DiGraph):
                  data=None):
         """Initialize an hierarchy of graphs."""
         nx.DiGraph.__init__(self, data)
-        self.hierarchy_attrs = dict()
+        self.attrs = dict()
         self.directed = directed
         self.graph_node_cls = graph_node_cls
         self.rule_node_cls = rule_node_cls
@@ -306,6 +306,19 @@ class Hierarchy(nx.DiGraph):
         self.relation_cls = relation_cls
         self.relation = dict()
         return
+
+    def add_attrs(self, attrs_dict):
+        """Add attrs_dict to hierarchy attrs."""
+        normalize_attrs(attrs_dict)
+        old_attrs = self.attrs
+        if old_attrs is None:
+            self.attrs = copy.deepcopy(attrs_dict)
+        else:
+            for key in attrs_dict:
+                if key in old_attrs:
+                    old_attrs[key] = old_attrs[key].union(attrs_dict[key])
+                else:
+                    old_attrs[key] = attrs_dict[key]
 
     def add_node(self, n, attr_dict=None, **attr):
         """Overloading NetworkX method `add_node`."""
@@ -392,7 +405,7 @@ class Hierarchy(nx.DiGraph):
 
         res += "\n"
         res += "attributes : \n"
-        res += str(self.hierarchy_attrs)
+        res += str(self.attrs)
         res += "\n"
 
         return res
