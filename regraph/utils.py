@@ -957,8 +957,9 @@ def normalize_typing(typing):
 
 
 def replace_source(n1, n2, mapping):
-    mapping[n2] = mapping[n1]
-    del mapping[n1]
+    if n1 in mapping:
+        mapping[n2] = mapping[n1]
+        del mapping[n1]
 
 
 def replace_target(n1, n2, mapping):

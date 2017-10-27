@@ -487,8 +487,6 @@ def rm_node(hie, g_id, parent, node_id, force=False):
 def merge_nodes(hie, g_id, parent, node1, node2, new_name):
     """merge node1 and node2 in graph or rule"""
     if isinstance(hie.node[g_id], GraphNode):
-        if new_name in hie.node[g_id].graph.nodes():
-            raise ValueError("node {} already exists".format(new_name))
         lhs = nx.DiGraph()
         lhs.add_node(node1)
         lhs.add_node(node2)
@@ -498,7 +496,14 @@ def merge_nodes(hie, g_id, parent, node1, node2, new_name):
         rhs = nx.DiGraph()
         rhs.add_node(new_name)
         rule = Rule(ppp, lhs, rhs, None, {node1: new_name, node2: new_name})
-        _rewrite(hie, g_id, rule, {node1: node1, node2: node2})
+        (_,updates) = _rewrite(hie, g_id, rule, {node1: node1, node2: node2})
+        new_name_of_node1 = updates[g_id][3][node1]
+        if new_name in hie.node[g_id].graph:
+            return new_name_of_node1
+        else:
+            hie.rename_node(g_id, new_name_of_node1, new_name) 
+            return new_name
+            
     elif isinstance(hie.node[g_id], RuleNode):
         tmp_rule = copy.deepcopy(hie.node[g_id].rule)
         tmp_rule.merge_nodes_rhs(node1, node2, new_name)
@@ -522,6 +527,7 @@ def merge_nodes(hie, g_id, parent, node1, node2, new_name):
         for _, typing in hie.out_edges(g_id):
             hie.edge[g_id][typing] = typings[typing]
         hie.node[g_id].rule = tmp_rule
+        return new_name
     else:
         raise ValueError("node is neither a rule nor a graph")
 
