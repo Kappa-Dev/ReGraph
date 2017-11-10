@@ -124,11 +124,11 @@ class AttributeSet(object):
                     if type(element) == list:
                         init_args[i] = tuple(element)
             return getattr(sys.modules[__name__], json_data["type"])(init_args)
-        else:
-            if "strSet" in json_data.keys() and "numSet" in json_data.keys():
-                if "neg_list" in json_data["strSet"].keys() and\
-                   len(json_data["strSet"]["neg_list"]) == 0:
-                    return UniversalSet()
+        # else:
+        #     if "strSet" in json_data.keys() and "numSet" in json_data.keys():
+        #         if "neg_list" in json_data["strSet"].keys() and\
+        #            len(json_data["strSet"]["neg_list"]) == 0:
+        #             return UniversalSet()
 
             return FiniteSet(json_data)
 
@@ -751,6 +751,10 @@ class EmptySet(AttributeSet):
 
 class UniversalSet(AttributeSet):
     """Universal attribute set."""
+
+    def __init__(self, *arg):
+        super().__init__()
+        return
 
     def __len__(self):
         """Return length."""
