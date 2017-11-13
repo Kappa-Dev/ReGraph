@@ -39,7 +39,7 @@ from regraph.utils import (is_subdict,
                            normalize_attrs,
                            to_set,
                            id_of,
-                           normalize_typing,
+                           format_typing,
                            replace_source,
                            replace_target,
                            attrs_intersection)
@@ -1169,22 +1169,6 @@ class Hierarchy(nx.DiGraph):
         for t in types_to_remove:
             del self.edge[graph_id][t].mapping[node_id]
         return
-    # def remove_node_type(self, graph_id, typing_graph, node_id):
-    #     """Remove a type a node in a graph `graph_id`."""
-    #     if (graph_id, typing_graph) not in self.edges():
-    #         raise ValueError(
-    #             "Typing `%s->%s` does not exist!" %
-    #             (graph_id, typing_graph)
-    #         )
-    #     if self.edge[graph_id][typing_graph].total:
-    #         warnings.warn(
-    #             "Total typing '%s->%s' became partial!" %
-    #             (graph_id, typing_graph)
-    #         )
-    #     return
-
-    # TODO? ignore artributes
-    # TODO? check that tmp key
 
     def find_matching2(self, graph_id, pattern, pattern_typings=None):
         """find matchings of pattern in graph_id"""
@@ -1218,13 +1202,6 @@ class Hierarchy(nx.DiGraph):
         # specified
 
         if len(self.successors(graph_id)) != 0:
-            # if pattern_typing is None:
-            #     raise ValueError(
-            #         ("Graph '%s' has non-empty set of parents, " +
-            #          "pattern should be typed by one of them!") %
-            #           graph_id
-            #     )
-            # Check 'typing_graph' is in successors of 'graph_id'
             if pattern_typing is not None:
                 for typing_graph, _ in pattern_typing.items():
                     if typing_graph not in self.successors(graph_id):
@@ -1397,24 +1374,26 @@ class Hierarchy(nx.DiGraph):
             if pattern_typing:
                 for typing_graph, lhs_mapping in pattern_typing.items():
                     if node in pattern_typing.keys() and\
-                       instance[node] in self.edge[graph_id][typing_graph].mapping.keys():
-                        if lhs_mapping[node] != self.edge[graph_id][typing_graph].mapping[instance[node]]:
+                       instance[node] in\
+                       self.edge[graph_id][typing_graph].mapping.keys():
+                        if lhs_mapping[node] !=\
+                           self.edge[graph_id][typing_graph].mapping[instance[node]]:
                             raise RewritingError(
                                 "Typing of the instance of LHS does not " +
                                 " coincide with typing of LHS!"
                             )
         return
 
-    def get_complete_typing(self, graph_id, matching, lhs_t, rhs_t, rule):
+    def get_complete_typing(self, graph_id, rule, instance, lhs_typing, rhs_typing):
         """Return complete typings of the rule.
 
         Typing is found according to the matching
         This ensures that you cannot remove node types when applying the
         rule with the complete typings.
         """
-        new_lhs_t = normalize_typing(lhs_t)
-        new_rhs_t = normalize_typing(rhs_t)
-        return self._complete_typing(graph_id, matching, new_lhs_t, new_rhs_t,
+        new_lhs_t = format_typing(lhs_typing)
+        new_rhs_t = format_typing(rhs_typing)
+        return self._complete_typing(graph_id, instance, new_lhs_t, new_rhs_t,
                                      rule.p_lhs, rule.p_rhs)
 
     def _complete_typing(self, graph_id, matching,
@@ -1508,8 +1487,8 @@ class Hierarchy(nx.DiGraph):
                             suc1.intersection(suc2)
         return common_sucs
 
-    def _propagate(self, graph_id, origin_m, origin_m_origin,
-                   origin_prime, origin_m_origin_prime):
+    def _propagate_up(self, graph_id, origin_m, origin_m_origin,
+                      origin_prime, origin_m_origin_prime):
         """Propagation steps: based on reverse BFS on neighbours."""
         updated_graphs = {
             graph_id: (
@@ -1860,17 +1839,22 @@ class Hierarchy(nx.DiGraph):
 
         return
 
+
     # ignore attributes argument used if none is specified in the typing
     def _normalize_typing(self, graph_id, rule, instance,
                           lhs_typing, rhs_typing, strong=False,
                           total=True):
-        new_lhs_typing = normalize_typing(lhs_typing)
-        new_rhs_typing = normalize_typing(rhs_typing)
+        new_lhs_typing = format_typing(lhs_typing)
+        new_rhs_typing = format_typing(rhs_typing)
+
+        print("\n\nInput rhs typing: ", new_rhs_typing)
 
         self._complete_typing(
             graph_id, instance, new_lhs_typing,
             new_rhs_typing, rule.p_lhs, rule.p_rhs,
-            strong=strong)
+            strong=strong
+        )
+        print("\n\nAfter autocomplete: ", new_rhs_typing)
 
         for typing_graph, mapping in new_lhs_typing.items():
             try:
@@ -2015,7 +1999,7 @@ class Hierarchy(nx.DiGraph):
 
         return updated_homomorphisms
 
-    def _check_rhs(self, graph_id, rule, instance, typing_dict):
+    def _check_rhs_sideffects(self, graph_id, rule, instance, typing_dict):
         for typing_graph, mapping in typing_dict.items():
 
             # check edges out of the g-(im(g->lhs)) do not violate typing
@@ -2037,18 +2021,22 @@ class Hierarchy(nx.DiGraph):
                             graph_mapping = self.edge[
                                 graph_id][typing_graph].mapping
                             if s in graph_mapping.keys():
-                                if (mapping[node], graph_mapping[s]) not in self.node[typing_graph].graph.edges():
+                                if (mapping[node], graph_mapping[s]) not in\
+                                   self.node[typing_graph].graph.edges():
                                     raise RewritingError(
-                                        "Merge produces forbidden edge between nodes of types `%s` and `%s`!" %
+                                        "Merge produces a forbidden edge "
+                                        "between nodes of types `%s` and `%s`!" %
                                         (mapping[node], graph_mapping[s])
                                     )
                         for p in preds:
                             graph_mapping = self.edge[
                                 graph_id][typing_graph].mapping
                             if p in graph_mapping.keys():
-                                if (graph_mapping[p], mapping[node]) not in self.node[typing_graph].graph.edges():
+                                if (graph_mapping[p], mapping[node]) not in\
+                                   self.node[typing_graph].graph.edges():
                                     raise RewritingError(
-                                        "Merge produces forbidden edge between nodes of types `%s` and `%s`!" %
+                                        "Merge produces a forbidden edge "
+                                        "between nodes of types `%s` and `%s`!" %
                                         (graph_mapping[p], mapping[node])
                                     )
                     else:
@@ -2062,9 +2050,11 @@ class Hierarchy(nx.DiGraph):
                             graph_mapping = self.edge[
                                 graph_id][typing_graph].mapping
                             if s in graph_mapping.keys():
-                                if (mapping[node], graph_mapping[s]) not in self.node[typing_graph].graph.edges():
+                                if (mapping[node], graph_mapping[s]) not in\
+                                   self.node[typing_graph].graph.edges():
                                     raise RewritingError(
-                                        "Merge produces forbidden edge between nodes of types `%s` and `%s`!" %
+                                        "Merge produces a forbidden edge "
+                                        "between nodes of types `%s` and `%s`!" %
                                         (mapping[node], graph_mapping[s])
                                     )
         return
@@ -2077,9 +2067,9 @@ class Hierarchy(nx.DiGraph):
         if type(self.node[graph_id]) == RuleNode:
             raise ReGraphError("Rewriting of a rule is not implemented!")
 
-        # Check consistency of the input parameters &
-        # validity of homomorphisms
+        # 1. Check consistency of input
 
+        # 1a. Check consistency of the typing & autocomplete as much as possible
         new_lhs_typing, new_rhs_typing = self._normalize_typing(
             graph_id,
             rule,
@@ -2087,24 +2077,25 @@ class Hierarchy(nx.DiGraph):
             lhs_typing,
             rhs_typing,
             strong=True,
-            # strong=strong_typing,
             total=total
         )
 
+        # 1b.
         self._check_instance(
             graph_id, rule.lhs,
             instance, new_lhs_typing
         )
 
-        # check rhs -> T is a valid homomorphism
-        self._check_rhs(
+        # 1c. Check if there are no forbidden side effects produced by
+        # rhs of the rule (this mainly includes edges forbidden by some typing)
+        self._check_rhs_sideffects(
             graph_id,
             rule,
             instance,
             new_rhs_typing
         )
 
-        # 1. Rewrite a graph `graph_id`
+        # 2. Rewrite a graph `graph_id`
         g_m, p_g_m, g_m_g = pullback_complement(
             rule.p,
             rule.lhs,
@@ -2120,7 +2111,7 @@ class Hierarchy(nx.DiGraph):
             rule.p_rhs
         )
 
-        # Update typings of the graph_id after rewriting
+        # 3. Update typings of the graph_id after rewriting
         typing_updates = self._update_typing(
             graph_id, rule, instance,
             new_lhs_typing, new_rhs_typing,
@@ -2131,21 +2122,24 @@ class Hierarchy(nx.DiGraph):
         for related_g in self.adjacent_relations(graph_id):
             base_relations_update.append((graph_id, related_g))
 
-        # Propagate rewriting up the hierarchy
+        # 4. Propagate rewriting up the hierarchy
         (updated_graphs,
          updated_homomorphisms,
          updated_rules,
          updated_rule_h,
-         updated_relations) = self._propagate(graph_id,
-                                              g_m,
-                                              g_m_g,
-                                              g_prime,
-                                              g_m_g_prime)
+         updated_relations) = self._propagate_up(graph_id,
+                                                 g_m,
+                                                 g_m_g,
+                                                 g_prime,
+                                                 g_m_g_prime)
 
         updated_homomorphisms.update(typing_updates)
         updated_relations += base_relations_update
 
-        # Apply all the changes in the hierarchy
+        # 5. Propagate necessary changes down
+        # something = self._propagate_down()
+
+        # 6. Apply all the changes in the hierarchy
         if inplace:
             self._apply_changes(updated_graphs,
                                 updated_homomorphisms,
@@ -2154,7 +2148,7 @@ class Hierarchy(nx.DiGraph):
                                 updated_relations)
             return (None, updated_graphs)
         else:
-            # create new hierarchy
+            # First, create a new hierarchy
             new_graph = copy.deepcopy(self)
             new_graph._apply_changes(updated_graphs,
                                      updated_homomorphisms,

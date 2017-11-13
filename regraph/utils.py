@@ -857,7 +857,7 @@ def assert_graph_eq(g1, g2):
     return
 
 
-def normalize_typing(typing):
+def format_typing(typing):
     if typing is None:
         typing = dict()
     new_typing = dict()

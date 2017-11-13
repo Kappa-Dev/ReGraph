@@ -1,5 +1,6 @@
 """Category operations used by graph rewriting tool."""
 import networkx as nx
+from networkx.exception import NetworkXNoPath
 import copy
 
 from regraph.primitives import (add_node,
@@ -65,12 +66,12 @@ def check_homomorphism(source, target, dictionary, total=True):
         check_totality(source.nodes(), dictionary)
     if not set(dictionary.values()).issubset(target.nodes()):
         raise InvalidHomomorphism(
-            "Some of the image nodes in mapping %s do not"
+            "Some of the image nodes in mapping %s do not "
             "exist in target graph (target graph nodes %s) "
             "namely %s" %
             (dictionary.values(),
              target.nodes(),
-             set(dictionary.values()) - target.nodes())
+             set(dictionary.values()) - set(target.nodes()))
         )
 
     # check connectivity
