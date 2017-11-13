@@ -10,17 +10,16 @@ from lrparsing import ParseError
 import networkx as nx
 
 from networkx.algorithms import isomorphism
+from networkx.exception import NetworkXNoPath
 
 from regraph.attribute_sets import AttributeSet, FiniteSet
 from regraph.category_op import (compose_homomorphisms,
                                  check_homomorphism,
                                  is_total_homomorphism,
-                                 get_unique_map,
                                  pullback,
                                  pullback_complement,
                                  pushout,
                                  get_unique_map_to_pullback)
-
 from regraph.primitives import (add_node_attrs,
                                 add_edge_attrs,
                                 get_relabeled_graph,
@@ -29,13 +28,10 @@ from regraph.primitives import (add_node_attrs,
                                 graph_to_json,
                                 graph_from_json,
                                 find_match,
-                                equal,
-                                print_graph)
+                                equal)
 from regraph.utils import (is_subdict,
-                           valid_attributes,
                            keys_by_value,
                            merge_attributes,
-                           recursive_merge,
                            normalize_attrs,
                            to_set,
                            id_of,
@@ -97,9 +93,6 @@ class AttributeContainter(object):
             for key, value in attrs.items():
                 if key not in self.attrs.keys():
                     pass
-                    # warnings.warn(
-                    #     "Node '%s' does not have attribute '%s'!" %
-                    #     (str(node), str(key)), RuntimeWarning)
                 else:
                     elements_to_remove = []
                     for el in to_set(value):
@@ -107,10 +100,6 @@ class AttributeContainter(object):
                             elements_to_remove.append(el)
                         else:
                             pass
-                            # warnings.warn(
-                            #     "Node '%s' does not have attribute '%s'"
-                            #     " with value '%s'!" %
-                            #     (str(node), str(key), str(el)), RuntimeWarning)
                     for el in elements_to_remove:
                         self.attrs[key].remove(el)
 
@@ -137,10 +126,8 @@ class GraphNode(AttributeContainter):
         return
 
     def __eq__(self, other):
+        """Equality of graph nodes."""
         return isinstance(other, GraphNode) and equal(self.graph, other.graph)
-
-    def __ne__(self, other):
-        return not (self == other)
 
 
 class RuleNode(AttributeContainter):
@@ -156,10 +143,11 @@ class RuleNode(AttributeContainter):
         return
 
     def __eq__(self, other):
+        """Equality of rule nodes."""
         return isinstance(other, RuleNode) and self.rule == other.rule
 
-    def __ne__(self, other):
-        return not (self == other)
+    # def __ne__(self, other):
+    #     return not (self == other)
 
 
 class Typing(AttributeContainter):
@@ -175,13 +163,16 @@ class Typing(AttributeContainter):
             self.attrs = dict()
         return
 
-    def all_total(self):
+    def is_total(self):
+        """Test typing totality attribute."""
         return self.total
 
     def rename_source(self, old_name, new_name):
+        """Rename source of typing."""
         replace_source(old_name, new_name, self.mapping)
 
     def rename_target(self, old_name, new_name):
+        """Rename typing of typing."""
         replace_target(old_name, new_name, self.mapping)
 
     # def __rmul__(self, other):
@@ -1170,24 +1161,25 @@ class Hierarchy(nx.DiGraph):
             del self.edge[graph_id][t].mapping[node_id]
         return
 
-    def find_matching2(self, graph_id, pattern, pattern_typings=None):
-        """find matchings of pattern in graph_id"""
-        graph = self.node[graph_id].graph
-        graph_typings = {}
-        typing_graphs = {}
-        if pattern_typings is None:
-            pattern_typings = {}
-        else:
-            for (typ_id, typ_map) in pattern_typings.items():
-                typing = self.get_typing(graph_id, typ_id)
-                if typing is None:
-                    typing = {}
-                graph_typings[typ_id] = typing
-                typing_graphs[typ_id] = self.node[typ_id].graph
-        return find_match(graph, pattern, graph_typings, pattern_typings, typing_graphs)
+    # def find_matching2(self, graph_id, pattern, pattern_typings=None):
+    #     """find matchings of pattern in graph_id"""
+    #     graph = self.node[graph_id].graph
+    #     graph_typings = {}
+    #     typing_graphs = {}
+    #     if pattern_typings is None:
+    #         pattern_typings = {}
+    #     else:
+    #         for (typ_id, typ_map) in pattern_typings.items():
+    #             typing = self.get_typing(graph_id, typ_id)
+    #             if typing is None:
+    #                 typing = {}
+    #             graph_typings[typ_id] = typing
+    #             typing_graphs[typ_id] = self.node[typ_id].graph
+    #     return find_match(graph, pattern, graph_typings, pattern_typings, typing_graphs)
 
     def find_matching(self, graph_id, pattern, pattern_typing=None):
         """Find an instance of a pattern in a specified graph.
+
         `graph_id` -- id of a graph in the hierarchy to search for matches;
         `pattern` -- nx.(Di)Graph object defining a pattern to match;
         `pattern_typing` -- a dictionary that specifies a typing of a pattern,
@@ -1201,41 +1193,41 @@ class Hierarchy(nx.DiGraph):
         # Check that 'typing_graph' and 'pattern_typing' are correctly
         # specified
 
-        if len(self.successors(graph_id)) != 0:
-            if pattern_typing is not None:
-                for typing_graph, _ in pattern_typing.items():
-                    if typing_graph not in self.successors(graph_id):
+        ancestors = self.get_ancestors(graph_id)
+        if pattern_typing is not None:
+            for typing_graph, _ in pattern_typing.items():
+                if typing_graph not in ancestors.keys():
                         raise HierarchyError(
                             "Pattern typing graph '%s' is not in "
-                            "the typing graphs of '%s'!" %
+                            "the (transitive) typing graphs of '%s'!" %
                             (typing_graph, graph_id)
                         )
-
-                new_pattern_typing = dict()
-                for key, value in pattern_typing.items():
-                    if type(value) == dict:
-                        new_pattern_typing[key] = (value, False)
-                    else:
-                        try:
-                            if len(value) == 2:
-                                new_pattern_typing[key] = value
-                            elif len(value) == 1:
-                                new_pattern_typing[key] = (value[0], False)
-                        except:
-                            raise HierarchyError("Invalid pattern typing!")
-
-                # Check pattern typing is a valid homomorphism
-                for typing_graph, (mapping, _) in new_pattern_typing.items():
-                    check_homomorphism(
-                        pattern,
-                        self.node[typing_graph].graph,
-                        mapping,
-                        total=False
-                    )
-                pattern_typing = new_pattern_typing
+            new_pattern_typing = dict()
+            for key, value in pattern_typing.items():
+                if type(value) == dict:
+                    new_pattern_typing[key] = (value, False)
+                else:
+                    try:
+                        if len(value) == 2:
+                            new_pattern_typing[key] = value
+                        elif len(value) == 1:
+                            new_pattern_typing[key] = (value[0], False)
+                    except:
+                        raise HierarchyError("Invalid pattern typing!")
+            # Check pattern typing is a valid homomorphism
+            for typing_graph, (mapping, _) in new_pattern_typing.items():
+                check_homomorphism(
+                    pattern,
+                    self.node[typing_graph].graph,
+                    mapping,
+                    total=False
+                )
+            pattern_typing = new_pattern_typing
 
         labels_mapping = dict(
-            [(n, i + 1) for i, n in enumerate(self.node[graph_id].graph.nodes())])
+            [(n, i + 1) for i, n in
+             enumerate(self.node[graph_id].graph.nodes())]
+        )
         g = get_relabeled_graph(self.node[graph_id].graph, labels_mapping)
 
         inverse_mapping = dict(
@@ -1243,11 +1235,22 @@ class Hierarchy(nx.DiGraph):
         )
 
         if pattern_typing:
-            g_typing = dict([
-                (typing_graph, dict([
-                    (labels_mapping[k], v) for k, v in self.edge[graph_id][typing_graph].mapping.items()
-                ])) for typing_graph in pattern_typing.keys()
-            ])
+
+            try:
+
+                g_typing = dict([
+                    (typing_graph, dict([
+                        (labels_mapping[k], v) for k, v in
+                        self.compose_path_typing(
+                            nx.shortest_path(self, graph_id, typing_graph)
+                        ).items()
+                    ])) for typing_graph in pattern_typing.keys()
+                ])
+            except NetworkXNoPath:
+                raise ReGraphError(
+                    "One of the specified pattern typing graphs "
+                    "is not in the set of ancestors of '%s'" % graph_id
+                )
 
         matching_nodes = set()
 
@@ -1258,7 +1261,8 @@ class Hierarchy(nx.DiGraph):
                     # check types match
                     match = False
                     for typing_graph, (typing, _) in pattern_typing.items():
-                        if node in g_typing[typing_graph].keys() and pattern_node in typing.keys():
+                        if node in g_typing[typing_graph].keys() and\
+                           pattern_node in typing.keys():
                             if g_typing[typing_graph][node] == typing[pattern_node]:
                                 if is_subdict(pattern.node[pattern_node], g.node[node]):
                                     match = True
@@ -2436,6 +2440,7 @@ class Hierarchy(nx.DiGraph):
     #     return ancestors
 
     def to_nx_graph(self):
+        """Create a simple networkx graph representing the hierarchy."""
         g = nx.DiGraph()
         for node in self.nodes():
             g.add_node(node, self.node[node].attrs)
@@ -2444,6 +2449,7 @@ class Hierarchy(nx.DiGraph):
         return g
 
     def rename_graph(self, graph_id, new_graph_id):
+        """Rename a graph in the hierarchy."""
         graph_obj = copy.deepcopy(self.node[graph_id])
         edges_obj = {}
 
@@ -2463,6 +2469,7 @@ class Hierarchy(nx.DiGraph):
         return
 
     def rename_node(self, graph_id, node, new_name):
+        """Rename a node in a graph of the hierarchy."""
         if new_name in self.node[graph_id].graph.nodes():
             raise GraphError(
                 "Node '%s' already in graph '%s'" %
@@ -2480,6 +2487,7 @@ class Hierarchy(nx.DiGraph):
             self.edge[graph_id][target].rename_source(node, new_name)
 
     def descendents(self, graph_id):
+        """Get descentants (TODO: reverse names)."""
         desc = {graph_id}
         for source, _ in self.in_edges(graph_id):
             desc |= self.descendents(source)
@@ -2492,13 +2500,6 @@ class Hierarchy(nx.DiGraph):
             return None
         ancestors = self.get_ancestors(source, desc)
         return ancestors[target]
-
-    # def get_ignore_mapping(self, source, target):
-    #     desc = self.descendents(target)
-    #     if source not in desc:
-    #         return None
-    #     ancestors = self.get_ignore_values(source, desc)
-    #     return ancestors[target]
 
     def get_rule_typing(self, source, target):
         """Get typing dict of `source` by `target` (`source` is rule)."""
@@ -2898,54 +2899,54 @@ class Hierarchy(nx.DiGraph):
                     self.edge[source][target])
         return new
 
-    # build new nuggets after rewriting of old one following rewriting of the
-    # action graph.
-    def create_valid_nuggets(self, old_nugget, new_nugget, updated_graphs):
-        pattern = copy.deepcopy(self.node[old_nugget].graph)
-        for node in pattern.nodes():
-            pattern.node[node] = dict()
-        pattern_typing = {"typing": {node: node for node in pattern.nodes()}}
-        tmp_hie = Hierarchy(self.directed, GraphNode)
-        # tmp_hie.add_graph("old", pattern)
-        tmp_hie.add_graph("typing", self.node[old_nugget].graph)
-        # tmp_hie.add_typing("old", "typing", pattern_typing)
-        tmp_hie.add_graph("new", self.node[new_nugget].graph)
-        tmp_hie.add_typing("new", "typing", updated_graphs[new_nugget][1])
-        matchings = tmp_hie.find_matching2("new", pattern, pattern_typing)
-        new_nuggets = []
-        for matching in matchings:
-            instance = copy.deepcopy(self.node[old_nugget].graph)
-            for node in instance.nodes():
-                attrs = merge_attributes(instance.node[node],
-                                         self.node[new_nugget].graph.node[
-                    matching[node]],
-                    "intersection")
-                # attrs = instance.node[node]
-                # if attrs is None:
-                #     continue
-                # for (k, v) in attrs.items():
-                #     nw_attrs = self.node[new_nugget].graph.node[matching[node]]
-                #     print("image",matching[node], nw_attrs)
-                #     print("ante",node, attrs)
-                #     attrs[k] = v & nw_attrs[k]
-            instance_id = self.unique_graph_id(old_nugget)
-            self.add_graph(instance_id, instance, copy.deepcopy(
-                self.node[old_nugget].attrs))
-            for (_, typing) in self.out_edges(new_nugget):
-                new_typing = self.edge[new_nugget][typing]
-                instance_typing = compose_homomorphisms(new_typing.mapping,
-                                                        matching)
-                # print("new_typing", instance_typing)
-                # print("stating nodes",self.node[old_nugget].graph.nodes())
-                # print("ending nodes", self.node[typing].graph.nodes())
-                # print("typing_new_nugget",typing, new_typing.mapping)
-                # print("new_nugget_nodes",
-                # self.node[new_nugget].graph.nodes())
-                self.add_typing(instance_id, typing, instance_typing,
-                                total=new_typing.total,
-                                attrs=new_typing.attrs)
-            new_nuggets.append(instance_id)
-        return new_nuggets
+    # # build new nuggets after rewriting of old one following rewriting of the
+    # # action graph.
+    # def create_valid_nuggets(self, old_nugget, new_nugget, updated_graphs):
+    #     pattern = copy.deepcopy(self.node[old_nugget].graph)
+    #     for node in pattern.nodes():
+    #         pattern.node[node] = dict()
+    #     pattern_typing = {"typing": {node: node for node in pattern.nodes()}}
+    #     tmp_hie = Hierarchy(self.directed, GraphNode)
+    #     # tmp_hie.add_graph("old", pattern)
+    #     tmp_hie.add_graph("typing", self.node[old_nugget].graph)
+    #     # tmp_hie.add_typing("old", "typing", pattern_typing)
+    #     tmp_hie.add_graph("new", self.node[new_nugget].graph)
+    #     tmp_hie.add_typing("new", "typing", updated_graphs[new_nugget][1])
+    #     matchings = tmp_hie.find_matching2("new", pattern, pattern_typing)
+    #     new_nuggets = []
+    #     for matching in matchings:
+    #         instance = copy.deepcopy(self.node[old_nugget].graph)
+    #         for node in instance.nodes():
+    #             attrs = merge_attributes(instance.node[node],
+    #                                      self.node[new_nugget].graph.node[
+    #                 matching[node]],
+    #                 "intersection")
+    #             # attrs = instance.node[node]
+    #             # if attrs is None:
+    #             #     continue
+    #             # for (k, v) in attrs.items():
+    #             #     nw_attrs = self.node[new_nugget].graph.node[matching[node]]
+    #             #     print("image",matching[node], nw_attrs)
+    #             #     print("ante",node, attrs)
+    #             #     attrs[k] = v & nw_attrs[k]
+    #         instance_id = self.unique_graph_id(old_nugget)
+    #         self.add_graph(instance_id, instance, copy.deepcopy(
+    #             self.node[old_nugget].attrs))
+    #         for (_, typing) in self.out_edges(new_nugget):
+    #             new_typing = self.edge[new_nugget][typing]
+    #             instance_typing = compose_homomorphisms(new_typing.mapping,
+    #                                                     matching)
+    #             # print("new_typing", instance_typing)
+    #             # print("stating nodes",self.node[old_nugget].graph.nodes())
+    #             # print("ending nodes", self.node[typing].graph.nodes())
+    #             # print("typing_new_nugget",typing, new_typing.mapping)
+    #             # print("new_nugget_nodes",
+    #             # self.node[new_nugget].graph.nodes())
+    #             self.add_typing(instance_id, typing, instance_typing,
+    #                             total=new_typing.total,
+    #                             attrs=new_typing.attrs)
+    #         new_nuggets.append(instance_id)
+    #     return new_nuggets
 
     def delete_all_children(self, graph_id):
         desc = self.descendents(graph_id)

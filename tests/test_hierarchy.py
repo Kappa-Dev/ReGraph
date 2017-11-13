@@ -216,10 +216,10 @@ class TestHierarchy(object):
         ])
         pattern_typing = {1: "circle", 2: "square", 3: "triangle"}
 
-        instances = self.hierarchy.find_matching2(
+        instances = self.hierarchy.find_matching(
             graph_id="g1",
             pattern=pattern,
-            pattern_typings={
+            pattern_typing={
                 "g0": pattern_typing,
                 "g00": {1: "white", 2: "white", 3: "black"}
             }
@@ -283,7 +283,7 @@ class TestHierarchy(object):
             }
         }
 
-        instances = self.hierarchy.find_matching2(
+        instances = self.hierarchy.find_matching(
             "g1",
             pattern,
             lhs_typing
@@ -436,7 +436,7 @@ class TestHierarchy(object):
             }
         }
 
-        instances = self.hierarchy.find_matching2(
+        instances = self.hierarchy.find_matching(
             "g1",
             pattern,
             lhs_typing
@@ -552,7 +552,7 @@ class TestHierarchy(object):
             })
         }
 
-        instances = self.hierarchy.find_matching2(
+        instances = self.hierarchy.find_matching(
             "g1",
             pattern,
             lhs_typing
@@ -804,7 +804,7 @@ class TestHierarchy(object):
         rule.remove_node(1)
         rule.clone_node(2)
 
-        instances = h.find_matching2("g1", pattern)
+        instances = h.find_matching("g1", pattern)
         new_h, _ = h.rewrite("g1", rule, instances[0], inplace=False)
         # print(new_h)
         # print_graph(new_h.node["g2"].graph)

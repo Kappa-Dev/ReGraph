@@ -18,8 +18,8 @@ def valid_attributes(source, target):
 
 def is_subdict(small_dict, big_dict):
     """Check if the dictionary is a subset of other."""
-    # normalize_attrs(small_dict)
-    # normalize_attrs(big_dict)
+    normalize_attrs(small_dict)
+    normalize_attrs(big_dict)
     if small_dict is None:
         return True
     if len(small_dict) == 0:
@@ -34,15 +34,7 @@ def is_subdict(small_dict, big_dict):
         if key not in big_dict.keys():
             return False
         else:
-            if type(value) == set:
-                small_attrs = value
-            else:
-                small_attrs = set([value])
-            if type(big_dict[key]) == set:
-                big_attrs = big_dict[key]
-            else:
-                big_attrs = set([big_dict[key]])
-            if not small_attrs.issubset(big_attrs):
+            if not value.issubset(big_dict[key]):
                 return False
     return True
 
