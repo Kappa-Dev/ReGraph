@@ -59,6 +59,7 @@ class TestPartialTyping(object):
             ("red_circle", "red_circle"),
             ("red_square", "red_circle"),
             ("green_circle", "green_square"),
+            ("green_circle", "green_circle"),
             ("green_square", "green_circle"),
             ("some_circle", "red_circle")
         ])
@@ -133,6 +134,7 @@ class TestPartialTyping(object):
             "bad_red_circle",
             "good_green_square",
             "bad_green_circle",
+            "bad_green_circle_doppelganger",
             "good_red_square",
             "some_strange_node"
         ])
@@ -141,6 +143,7 @@ class TestPartialTyping(object):
             ("bad_red_circle", "good_red_square"),
             ("bad_red_circle", "bad_green_circle"),
             ("bad_green_circle", "good_green_square"),
+            ("bad_green_circle_doppelganger", "bad_green_circle"),
             ("good_red_square", "good_red_circle"),
             ("good_red_circle", "good_red_square")
         ])
@@ -150,7 +153,8 @@ class TestPartialTyping(object):
             "bad_red_circle": "red_circle",
             "good_green_square": "green_square",
             "bad_green_circle": "green_circle",
-            "good_red_square": "red_square"
+            "good_red_square": "red_square",
+            "bad_green_circle_doppelganger": "green_circle"
         }
 
         g3_g2 = {
@@ -159,7 +163,8 @@ class TestPartialTyping(object):
             "good_green_square": "good_square",
             "bad_green_circle": "bad_circle",
             "good_red_square": "good_square",
-            "some_strange_node": "some_node"
+            "some_strange_node": "some_node",
+            "bad_green_circle_doppelganger": "bad_circle"
         }
 
         self.hierarchy.add_graph("g3", g3)
@@ -445,11 +450,11 @@ class TestPartialTyping(object):
 
     def test_advanced_rule_typing(self):
         p = nx.DiGraph()
-        p.add_nodes_from(["1a", "1b", 2])
+        p.add_nodes_from(["1a", "1b", 2, "2_doppelganger"])
         p.add_edges_from([("1a", 2), ("1b", 2)])
 
         lhs = nx.DiGraph()
-        lhs.add_nodes_from([1, 2])
+        lhs.add_nodes_from([1, 2, "2_doppelganger"])
         lhs.add_edges_from([(1, 2)])
 
         rhs = nx.DiGraph()
@@ -458,14 +463,14 @@ class TestPartialTyping(object):
 
         rule = Rule(
             p, lhs, rhs,
-            {"1a": 1, "1b": 1, 2: 2},
-            {"1a": "1a", "1b": "1b", 2: 2}
+            {"1a": 1, "1b": 1, 2: 2, "2_doppelganger": "2_doppelganger"},
+            {"1a": "1a", "1b": "1b", 2: 2, "2_doppelganger": 2}
         )
 
         lhs_typing = {
-            "colors": {1: "red", 2: "green"},
+            "colors": {1: "red", 2: "green", "2_doppelganger": "green"},
             "g1": {1: "red_circle", 2: "green_circle"},
-            "quality": {1: "bad", 2: "bad"}
+            "quality": {1: "bad", 2: "bad", "2_doppelganger": "bad"}
         }
 
         rhs_typing = {
@@ -488,4 +493,11 @@ class TestPartialTyping(object):
         except RewritingError:
             pass
         rhs_typing["shapes"][3] = "circle"
+        try:
+            self.hierarchy.rewrite("g3", rule, instances[0], lhs_typing, rhs_typing)
+            raise ValueError("Totality error was not detected!")
+        except RewritingError:
+            pass
+        rhs_typing["shapes"][4] = "square"
+        rhs_typing["colors"][4] = "blue"
         self.hierarchy.rewrite("g3", rule, instances[0], lhs_typing, rhs_typing)
