@@ -806,6 +806,7 @@ class TestHierarchy(object):
 
         instances = h.find_matching("g1", pattern)
         new_h, _ = h.rewrite("g1", rule, instances[0], inplace=False)
+
         # print(new_h)
         # print_graph(new_h.node["g2"].graph)
         # print_graph(new_h.node["g3"].graph)

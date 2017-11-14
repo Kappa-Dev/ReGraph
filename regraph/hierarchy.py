@@ -1216,12 +1216,18 @@ class Hierarchy(nx.DiGraph):
                         raise HierarchyError("Invalid pattern typing!")
             # Check pattern typing is a valid homomorphism
             for typing_graph, (mapping, _) in new_pattern_typing.items():
-                check_homomorphism(
-                    pattern,
-                    self.node[typing_graph].graph,
-                    mapping,
-                    total=False
-                )
+                try:
+                    check_homomorphism(
+                        pattern,
+                        self.node[typing_graph].graph,
+                        mapping,
+                        total=False
+                    )
+                except InvalidHomomorphism as e:
+                    raise ReGraphError(
+                        "Specified pattern is not valid in the "
+                        "hierarchy (it produces the following error: %s) " % e 
+                    )
             pattern_typing = new_pattern_typing
 
         labels_mapping = dict(
@@ -1235,9 +1241,7 @@ class Hierarchy(nx.DiGraph):
         )
 
         if pattern_typing:
-
             try:
-
                 g_typing = dict([
                     (typing_graph, dict([
                         (labels_mapping[k], v) for k, v in
@@ -1373,19 +1377,27 @@ class Hierarchy(nx.DiGraph):
             total=True
         )
 
-        # check instance typing and lhs typing coincide
+        # check that instance typing and lhs typing coincide
         for node in pattern.nodes():
             if pattern_typing:
-                for typing_graph, lhs_mapping in pattern_typing.items():
-                    if node in pattern_typing.keys() and\
-                       instance[node] in\
-                       self.edge[graph_id][typing_graph].mapping.keys():
-                        if lhs_mapping[node] !=\
-                           self.edge[graph_id][typing_graph].mapping[instance[node]]:
-                            raise RewritingError(
-                                "Typing of the instance of LHS does not " +
-                                " coincide with typing of LHS!"
-                            )
+                for typing_graph, typing in pattern_typing.items():
+                    try:
+                        instance_typing = self.compose_path_typing(
+                            nx.shortest_path(self, graph_id, typing_graph)
+                        )
+                        if node in pattern_typing.keys() and\
+                           instance[node] in instance_typing.keys():
+                            if typing[node] != instance_typing[instance[node]]:
+                                raise RewritingError(
+                                    "Typing of the instance of LHS does not " +
+                                    " coincide with typing of LHS!"
+                                )
+                    except NetworkXNoPath:
+                        raise ReGraphError(
+                            "Graph '%s' is not typed by '%s' specified "
+                            "as a typing graph of the lhs of the rule." %
+                            (graph_id, typing_graph)
+                        )
         return
 
     def get_complete_typing(self, graph_id, rule, instance, lhs_typing, rhs_typing):
@@ -1400,10 +1412,10 @@ class Hierarchy(nx.DiGraph):
         return self._complete_typing(graph_id, instance, new_lhs_t, new_rhs_t,
                                      rule.p_lhs, rule.p_rhs)
 
-    def _complete_typing(self, graph_id, matching,
-                         lhs_typing, rhs_typing, p_l, p_r,
+    def _complete_typing(self, graph_id, instance,
+                         lhs_typing, rhs_typing, p_lhs, p_rhs,
                          strong=False):
-
+        # 1. Resolve typing by immediate successors
         for typing_graph in self.successors(graph_id):
             typing = self.edge[graph_id][typing_graph].mapping
 
@@ -1413,46 +1425,49 @@ class Hierarchy(nx.DiGraph):
                 rhs_typing[typing_graph] = dict()
 
             # Check that no types are redefined
+            # by immediate successors typing
             # forbidden case of * <- * -> A
             # works only if A <- A -> A
-            for p_node in p_l.keys():
-                l_node = p_l[p_node]
-                r_node = p_r[p_node]
+            for p_node in p_lhs.keys():
+                l_node = p_lhs[p_node]
+                r_node = p_rhs[p_node]
                 if r_node in rhs_typing[typing_graph].keys() and\
                    l_node not in lhs_typing[typing_graph].keys():
-                    if matching[l_node] not in typing.keys():
+                    if instance[l_node] not in typing.keys():
                         raise RewritingError(
                             "Typing of the rule is not valid: "
-                            "type of node `%s` in lhs is being redefined in the rhs!" %
+                            "type of node `%s` in lhs is being "
+                            "redefined in the rhs!" %
                             l_node
                         )
 
             if strong:
 
-                # Inherit lhs typing from the matching
-                for (src, tgt) in matching.items():
-                    if (src not in lhs_typing[typing_graph].keys() and
-                            tgt in typing.keys()):
-                        lhs_typing[typing_graph][src] = typing[tgt]
+                # Inherit lhs typing from the instance
+                for (source, target) in instance.items():
+                    if (source not in lhs_typing[typing_graph].keys() and
+                            target in typing.keys()):
+                        lhs_typing[typing_graph][source] = typing[target]
 
-                for (p_node, l_node) in p_l.items():
+                for (p_node, l_node) in p_lhs.items():
                     if l_node in lhs_typing[typing_graph].keys():
-                        if p_r[p_node] in rhs_typing[typing_graph].keys():
-                            if (rhs_typing[typing_graph][p_r[p_node]] !=
+                        if p_rhs[p_node] in rhs_typing[typing_graph].keys():
+                            if (rhs_typing[typing_graph][p_rhs[p_node]] !=
                                     lhs_typing[typing_graph][l_node]):
                                 raise RewritingError(
                                     "Typing of the rule is not valid: "
                                     "lhs node that maps to a node of type "
-                                    "`%s` in the matching, is being mapped to `%s` in rhs!" %
+                                    "`%s` in the instance, is being mapped to "
+                                    "`%s` in rhs!" %
                                     (lhs_typing[typing_graph][l_node],
-                                     rhs_typing[typing_graph][p_r[p_node]])
+                                     rhs_typing[typing_graph][p_rhs[p_node]])
                                 )
                         else:
-                            rhs_typing[typing_graph][p_r[p_node]] =\
+                            rhs_typing[typing_graph][p_rhs[p_node]] =\
                                 lhs_typing[typing_graph][l_node]
             else:
-                for p_node, r_node in p_r.items():
-                    l_node = p_l[p_node]
+                for p_node, r_node in p_rhs.items():
+                    l_node = p_lhs[p_node]
                     if typing_graph in rhs_typing.keys() and\
                             r_node in rhs_typing[typing_graph].keys():
                         p_type = rhs_typing[typing_graph][r_node]
@@ -1463,19 +1478,21 @@ class Hierarchy(nx.DiGraph):
                                 raise RewritingError(
                                     "Typing of the rule is not valid: "
                                     "lhs node that maps to a node of type "
-                                    "`%s` in the matching, is being mapped to `%s` in rhs!" %
+                                    "`%s` in the instance, is being mapped to `%s` in rhs!" %
                                     (lhs_typing[typing_graph][l_node],
-                                     rhs_typing[typing_graph][p_r[p_node]])
+                                     rhs_typing[typing_graph][p_rhs[p_node]])
                                 )
                         else:
-                            if matching[l_node] in typing.keys():
-                                l_type = typing[matching[l_node]]
+                            if instance[l_node] in typing.keys():
+                                l_type = typing[instance[l_node]]
                                 if p_type != l_type:
                                     raise RewritingError(
                                         "Typing of the rule is not valid: "
                                         "type of node `%s` in lhs is being redefined in the rhs!" %
                                         l_node
                                     )
+
+        # 2. Rosolve typing by not immediate successors
         return
 
     def _get_common_successors(self, node_list):
@@ -1843,22 +1860,17 @@ class Hierarchy(nx.DiGraph):
 
         return
 
-
-    # ignore attributes argument used if none is specified in the typing
     def _normalize_typing(self, graph_id, rule, instance,
                           lhs_typing, rhs_typing, strong=False,
                           total=True):
         new_lhs_typing = format_typing(lhs_typing)
         new_rhs_typing = format_typing(rhs_typing)
 
-        print("\n\nInput rhs typing: ", new_rhs_typing)
-
         self._complete_typing(
             graph_id, instance, new_lhs_typing,
             new_rhs_typing, rule.p_lhs, rule.p_rhs,
             strong=strong
         )
-        print("\n\nAfter autocomplete: ", new_rhs_typing)
 
         for typing_graph, mapping in new_lhs_typing.items():
             try:
@@ -2063,6 +2075,75 @@ class Hierarchy(nx.DiGraph):
                                     )
         return
 
+    def _autocomplete_typing(self, graph_id, instance,
+                             lhs_typing, rhs_typing, p_lhs, p_rhs):
+
+        if len(self.successors(graph_id)) > 0:
+            if lhs_typing is None:
+                new_lhs_typing = dict()
+            else:
+                new_lhs_typing = format_typing(lhs_typing)
+            if rhs_typing is None:
+                new_rhs_typing = dict()
+            else:
+                new_rhs_typing = format_typing(rhs_typing)
+
+            for typing_graph in self.successors(graph_id):
+                typing = self.edge[graph_id][typing_graph].mapping
+                # Autocomplete lhs and rhs typings
+                # by immediate successors induced by an instance
+                for (source, target) in instance.items():
+                    if typing_graph not in new_lhs_typing.keys():
+                        new_lhs_typing[typing_graph] = dict()
+                    if source not in new_lhs_typing[typing_graph].keys() and\
+                       target in typing.keys():
+                        new_lhs_typing[typing_graph][source] = typing[target]
+
+                for (p_node, l_node) in p_lhs.items():
+                    if l_node in new_lhs_typing[typing_graph].keys():
+                        if typing_graph not in new_rhs_typing.keys():
+                            new_rhs_typing[typing_graph] = dict()
+                        if p_rhs[p_node] not in new_rhs_typing[typing_graph].keys():
+                            new_rhs_typing[typing_graph][p_rhs[p_node]] =\
+                                new_lhs_typing[typing_graph][l_node]
+            return (new_lhs_typing, new_rhs_typing)
+        else:
+            return (None, None)
+
+    def _check_self_consistency(self, typing):
+        for typing_graph, mapping in typing.items():
+            ancestors = self.get_ancestors(typing_graph)
+            for anc, anc_typing in ancestors.items():
+                if anc in typing.keys():
+                    for key, value in mapping.items():
+                        if key in typing[anc].keys() and\
+                           anc_typing[value] != typing[anc][key]:
+                            raise ReGraphError("typing is self inconsistent!")
+
+    def _check_lhs_rhs_consistency(self, graph_id, rule, instance,
+                                   lhs_typing, rhs_typing):
+        for typing_graph, typing in lhs_typing.items():
+            typing_graph_ancestors = self.get_ancestors(typing_graph)
+            for ancestor, ancestor_typing in typing_graph_ancestors.items():
+                if ancestor in rhs_typing.keys():
+                    for p_node in rule.p.nodes():
+                        if rule.p_rhs[p_node] in rhs_typing[ancestor] and\
+                           rhs_typing[ancestor][rule.p_rhs[p_node]] !=\
+                           ancestor_typing[typing[rule.p_lhs[p_node]]]:
+                            raise RewritingError(
+                                "Inconsistent typing of the rule: "
+                                "node '%s' from the preserved part is typed "
+                                "by a graph '%s' as "
+                                "'%s' from the lhs and as a '%s' from the rhs." %
+                                (p_node, ancestor,
+                                 rhs_typing[ancestor][rule.p_rhs[p_node]],
+                                 ancestor_typing[typing[rule.p_lhs[p_node]]])
+                            )
+
+    def _check_totality(self, graph_id, rule, instance,
+                        lhs_typing, rhs_typing):
+        pass
+
     def rewrite(self, graph_id, rule, instance,
                 lhs_typing=None, rhs_typing=None,
                 # strong_typing=True,
@@ -2071,33 +2152,64 @@ class Hierarchy(nx.DiGraph):
         if type(self.node[graph_id]) == RuleNode:
             raise ReGraphError("Rewriting of a rule is not implemented!")
 
-        # 1. Check consistency of input
-
-        # 1a. Check consistency of the typing & autocomplete as much as possible
-        new_lhs_typing, new_rhs_typing = self._normalize_typing(
-            graph_id,
-            rule,
-            instance,
-            lhs_typing,
-            rhs_typing,
-            strong=True,
-            total=total
+        # 1. Check consistency of the input
+        # 1a. Autocomplete typing
+        new_lhs_typing, new_rhs_typing = self._autocomplete_typing(
+            graph_id, instance,
+            lhs_typing, rhs_typing,
+            rule.p_lhs, rule.p_rhs
         )
 
-        # 1b.
+        # 1b. Check that instance is consistent with lhs & rhs typing
         self._check_instance(
             graph_id, rule.lhs,
             instance, new_lhs_typing
         )
 
-        # 1c. Check if there are no forbidden side effects produced by
-        # rhs of the rule (this mainly includes edges forbidden by some typing)
-        self._check_rhs_sideffects(
-            graph_id,
-            rule,
-            instance,
-            new_rhs_typing
-        )
+        # 1c. Check consistency of the (autocompleted) rhs & lhs typings
+        if lhs_typing is not None and rhs_typing is not None:
+            try:
+                self._check_self_consistency(
+                    new_lhs_typing
+                )
+            except ReGraphError:
+                raise RewritingError(
+                    "Typing of the lhs is self inconsistent"
+                )
+            try:
+                self._check_self_consistency(
+                    new_rhs_typing
+                )
+            except ReGraphError:
+                raise RewritingError(
+                    "Typing of the rhs is self inconsistent"
+                )
+
+            self._check_lhs_rhs_consistency(
+                graph_id,
+                rule,
+                instance,
+                new_lhs_typing,
+                new_rhs_typing
+            )
+
+            # 1d. Check totality
+            if total:
+                self._check_totality(
+                    graph_id,
+                    rule,
+                    instance,
+                    lhs_typing,
+                    rhs_typing
+                )
+            # 1e. Check if there are no forbidden side effects produced by
+            # rhs of the rule (this mainly includes edges forbidden by some typing)
+            self._check_rhs_sideffects(
+                graph_id,
+                rule,
+                instance,
+                new_rhs_typing
+            )
 
         # 2. Rewrite a graph `graph_id`
         g_m, p_g_m, g_m_g = pullback_complement(
