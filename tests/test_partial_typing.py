@@ -453,7 +453,7 @@ class TestPartialTyping(object):
         lhs.add_edges_from([(1, 2)])
 
         rhs = nx.DiGraph()
-        rhs.add_nodes_from(["1a", "1b", 2, 3])
+        rhs.add_nodes_from(["1a", "1b", 2, 3, 4])
         rhs.add_edges_from([("1a", 2), ("1b", 2), (3, 2)])
 
         rule = Rule(
@@ -471,7 +471,7 @@ class TestPartialTyping(object):
         rhs_typing = {
             "shapes": {"1a": "square", 3: "square"},
             "colors": {3: "blue"},
-            "quality": {3: "bad"},
+            "quality": {3: "bad", 4: "good"},
             "g2": {3: "bad_circle"}
         }
 
@@ -487,4 +487,5 @@ class TestPartialTyping(object):
             raise ValueError("Inconsistency was not detected!")
         except RewritingError:
             pass
-
+        rhs_typing["shapes"][3] = "circle"
+        self.hierarchy.rewrite("g3", rule, instances[0], lhs_typing, rhs_typing)

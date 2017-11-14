@@ -2142,7 +2142,124 @@ class Hierarchy(nx.DiGraph):
 
     def _check_totality(self, graph_id, rule, instance,
                         lhs_typing, rhs_typing):
-        pass
+        """"Check that everything is typed at the end of the rewriting."""
+        for node in rule.rhs.nodes():
+            p_nodes = keys_by_value(rule.p_rhs, node)
+            for typing_graph in self.successors(graph_id):
+                typing = self.edge[graph_id][typing_graph].mapping
+                # Totality can be broken in two cases
+                if len(p_nodes) > 1:
+                    # node will be merged
+                    all_untyped = True
+                    for p_node in p_nodes:
+                        if instance[rule.p_lhs[p_node]] in typing.keys():
+                            all_untyped = False
+                            break
+                    if all_untyped:
+                        continue
+
+                if typing_graph in rhs_typing.keys() and\
+                   node in rhs_typing[typing_graph].keys():
+                    continue
+                else:
+                    visited_successors = set()
+                    resolved_successors = set()
+                    successors_to_visit = set(
+                        self.successors(typing_graph)
+                    )
+                    while len(successors_to_visit) > 0:
+                        for suc in successors_to_visit:
+                            visited_successors.add(suc)
+                            if suc in rhs_typing.keys() and\
+                               node in rhs_typing[suc].keys():
+                                resolved_successors.add(suc)
+
+                        new_successors_to_visit = set()
+                        for suc in successors_to_visit:
+                            new_successors_to_visit.update(
+                                [s for s in self.successors(suc)
+                                 if s not in visited_successors]
+                            )
+                        successors_to_visit = new_successors_to_visit
+
+                    if len(visited_successors - resolved_successors) > 0:
+                        raise RewritingError(
+                            "Rewriting parameter `total` is set to True, "
+                            "typing of the node `%s` "
+                            "in rhs is required (typing by the following "
+                            "graphs stays unresolved: %s)!" %
+                            (node,
+                             ", ".join(visited_successors - resolved_successors))
+                        )
+
+        # for typing_graph in self.successors(graph_id):
+        #     # check that for every successor of 'graph_id'
+        #     # a typing of the nodes of the result:
+        #     # - either immediately follows from from the rhs_typing
+        #     # - or is guaranteed by the propagation downwards
+        #     typing = self.edge[graph_id][typing_graph].mapping
+        #     for node in rule.rhs.nodes():
+        #         p_nodes = keys_by_value(rule.p_rhs, node)
+        #         if len(p_nodes) == 1:
+        #             # node stays preserved
+        #             if instance[rule.p_lhs[p_nodes[0]]] not in typing.keys():
+        #                 continue
+        #             elif node not in rhs_typing[typing_graph].keys():
+        #                 raise RewritingError(
+        #                     "Rewriting parameter `total` is set to True, "
+        #                     "typing of the node `%s` "
+        #                     "in rhs is required!" %
+        #                     node
+        #                 )
+        #         elif len(p_nodes) > 1:
+        #             # node will be merged
+        #             all_untyped = True
+        #             for p_node in p_nodes:
+        #                 if instance[rule.p_lhs[p_node]] in typing.keys():
+        #                     all_untyped = False
+        #                     break
+        #             if all_untyped:
+        #                 continue
+        #             else:
+        #                 if node in rhs_typing[typing_graph].keys():
+        #                     continue
+        #                 else:
+        #                     visited_successors = set()
+        #                     resolved_successors = set()
+        #                     successors_to_visit = set(
+        #                         self.successors(typing_graph)
+        #                     )
+        #                     while len(successors_to_visit) > 0:
+        #                         for suc in successors_to_visit:
+        #                             visited_successors.add(suc)
+        #                             if suc in rhs_typing.keys() and\
+        #                                node in rhs_typing[suc].keys():
+        #                                 resolved_successors.add(suc)
+
+        #                         new_successors_to_visit = set()
+        #                         for suc in successors_to_visit:
+        #                             new_successors_to_visit.update(
+        #                                 [s for s in self.successors(suc)
+        #                                  if s not in visited_successors]
+        #                             )
+        #                         successors_to_visit = new_successors_to_visit
+
+        #                     if len(visited_successors - resolved_successors) > 0:
+        #                         raise RewritingError(
+        #                             "Rewriting parameter `total` is set to True, "
+        #                             "typing of the node `%s` "
+        #                             "in rhs is required!" %
+        #                             node
+        #                         )
+        #         else:
+        #             # node will be added added
+        #             if node not in rhs_typing[typing_graph].keys():
+        #                 raise RewritingError(
+        #                     "Rewriting parameter `total` is set to True, "
+        #                     "typing of the node `%s` "
+        #                     "in rhs is required!" %
+        #                     node
+        #                 )
 
     def rewrite(self, graph_id, rule, instance,
                 lhs_typing=None, rhs_typing=None,
@@ -2199,8 +2316,8 @@ class Hierarchy(nx.DiGraph):
                     graph_id,
                     rule,
                     instance,
-                    lhs_typing,
-                    rhs_typing
+                    new_lhs_typing,
+                    new_rhs_typing
                 )
             # 1e. Check if there are no forbidden side effects produced by
             # rhs of the rule (this mainly includes edges forbidden by some typing)
