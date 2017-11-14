@@ -2196,7 +2196,7 @@ class Hierarchy(nx.DiGraph):
                 lhs_typing=None, rhs_typing=None,
                 # strong_typing=True,
                 total=True, inplace=True):
-        """Rewrite and propagate the changes up."""
+        """Rewrite and propagate the changes up&down."""
         if type(self.node[graph_id]) == RuleNode:
             raise ReGraphError("Rewriting of a rule is not implemented!")
 
@@ -2288,6 +2288,7 @@ class Hierarchy(nx.DiGraph):
             base_relations_update.append((graph_id, related_g))
 
         # 4. Propagate rewriting up the hierarchy
+        # TODO: rename upsteam_graphs ..
         (updated_graphs,
          updated_homomorphisms,
          updated_rules,
@@ -2302,7 +2303,20 @@ class Hierarchy(nx.DiGraph):
         updated_relations += base_relations_update
 
         # 5. Propagate necessary changes down
-        # something = self._propagate_down()
+        (downstream_graphs,
+         downstream_homomorphism,
+         downstream_rule_h,
+         downstream_relations) = self._propagate_down(
+            graph_id,
+            rule,
+            instance,
+            rhs_typing
+        )
+
+        updated_graphs.update(downstream_graphs)
+        updated_homomorphisms.update(downstream_homomorphism)
+        updated_rule_h.update(downstream_rule_h)
+        updated_relations.update(downstream_relations)
 
         # 6. Apply all the changes in the hierarchy
         if inplace:
