@@ -455,7 +455,7 @@ class TestPartialTyping(object):
 
         lhs = nx.DiGraph()
         lhs.add_nodes_from([1, 2, "2_doppelganger"])
-        lhs.add_edges_from([(1, 2)])
+        lhs.add_edges_from([(1, 2), ("2_doppelganger", 2)])
 
         rhs = nx.DiGraph()
         rhs.add_nodes_from(["1a", "1b", 2, 3, 4])
@@ -482,22 +482,27 @@ class TestPartialTyping(object):
 
         instances = self.hierarchy.find_matching("g3", rule.lhs, lhs_typing)
         try:
-            self.hierarchy.rewrite("g3", rule, instances[0], lhs_typing, rhs_typing)
+            self.hierarchy.rewrite("g3", rule, instances[
+                                   0], lhs_typing, rhs_typing)
             raise ValueError("Inconsistency was not detected!")
         except RewritingError:
             pass
         rhs_typing["shapes"]["1a"] = "circle"
         try:
-            self.hierarchy.rewrite("g3", rule, instances[0], lhs_typing, rhs_typing)
+            self.hierarchy.rewrite("g3", rule, instances[
+                                   0], lhs_typing, rhs_typing)
             raise ValueError("Inconsistency was not detected!")
         except RewritingError:
             pass
         rhs_typing["shapes"][3] = "circle"
         try:
-            self.hierarchy.rewrite("g3", rule, instances[0], lhs_typing, rhs_typing)
+            self.hierarchy.rewrite("g3", rule, instances[
+                                   0], lhs_typing, rhs_typing)
             raise ValueError("Totality error was not detected!")
         except RewritingError:
             pass
         rhs_typing["shapes"][4] = "square"
         rhs_typing["colors"][4] = "blue"
-        self.hierarchy.rewrite("g3", rule, instances[0], lhs_typing, rhs_typing)
+        self.hierarchy.rewrite("g3", rule, instances[
+                               0], lhs_typing, rhs_typing)
+        assert(rule.is_restrictive() and rule.is_relaxing())

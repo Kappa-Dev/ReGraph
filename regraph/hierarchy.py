@@ -1175,7 +1175,8 @@ class Hierarchy(nx.DiGraph):
     #                 typing = {}
     #             graph_typings[typ_id] = typing
     #             typing_graphs[typ_id] = self.node[typ_id].graph
-    #     return find_match(graph, pattern, graph_typings, pattern_typings, typing_graphs)
+    # return find_match(graph, pattern, graph_typings, pattern_typings,
+    # typing_graphs)
 
     def find_matching(self, graph_id, pattern, pattern_typing=None):
         """Find an instance of a pattern in a specified graph.
@@ -1197,11 +1198,11 @@ class Hierarchy(nx.DiGraph):
         if pattern_typing is not None:
             for typing_graph, _ in pattern_typing.items():
                 if typing_graph not in ancestors.keys():
-                        raise HierarchyError(
-                            "Pattern typing graph '%s' is not in "
-                            "the (transitive) typing graphs of '%s'!" %
-                            (typing_graph, graph_id)
-                        )
+                    raise HierarchyError(
+                        "Pattern typing graph '%s' is not in "
+                        "the (transitive) typing graphs of '%s'!" %
+                        (typing_graph, graph_id)
+                    )
             new_pattern_typing = dict()
             for key, value in pattern_typing.items():
                 if type(value) == dict:
@@ -1226,7 +1227,7 @@ class Hierarchy(nx.DiGraph):
                 except InvalidHomomorphism as e:
                     raise ReGraphError(
                         "Specified pattern is not valid in the "
-                        "hierarchy (it produces the following error: %s) " % e 
+                        "hierarchy (it produces the following error: %s) " % e
                     )
             pattern_typing = new_pattern_typing
 
@@ -1732,6 +1733,19 @@ class Hierarchy(nx.DiGraph):
             updated_relations
         )
 
+    def _propagate_down(self, graph_id, rule, instance, rhs_typing):
+        """Propagate changes down the hierarchy."""
+        visited = set()
+        successors_to_visit = set([
+            s for s in self.successors(graph_id) if s not in rhs_typing.keys()
+        ])
+        while len(successors_to_visit) > 0:
+            for successor in successors_to_visit:
+                if successor not in rhs_typing.keys() and\
+                   successor not in visited:
+                    # propagate the changes
+                    visited.add(successor)
+
     def _apply_changes(self, updated_graphs, updated_homomorphisms,
                        updated_rules, updated_rule_h, updated_relations):
         """Apply changes to the hierarchy."""
@@ -2034,7 +2048,8 @@ class Hierarchy(nx.DiGraph):
                                 self.node[graph_id].graph.predecessors(g_node)
                             )
                         for s in succs:
-                            path = nx.shortest_path(self, graph_id, typing_graph)
+                            path = nx.shortest_path(
+                                self, graph_id, typing_graph)
                             graph_mapping = self.compose_path_typing(path)
                             if s in graph_mapping.keys() and node in mapping:
                                 if (mapping[node], graph_mapping[s]) not in\
@@ -2045,7 +2060,8 @@ class Hierarchy(nx.DiGraph):
                                         (mapping[node], graph_mapping[s])
                                     )
                         for p in preds:
-                            path = nx.shortest_path(self, graph_id, typing_graph)
+                            path = nx.shortest_path(
+                                self, graph_id, typing_graph)
                             graph_mapping = self.compose_path_typing(path)
                             if p in graph_mapping.keys() and node in mapping:
                                 if (graph_mapping[p], mapping[node]) not in\
@@ -2251,7 +2267,8 @@ class Hierarchy(nx.DiGraph):
                     new_rhs_typing
                 )
             # 1e. Check if there are no forbidden side effects produced by
-            # rhs of the rule (this mainly includes edges forbidden by some typing)
+            # rhs of the rule (this mainly includes edges forbidden by some
+            # typing)
 
             self._check_rhs_sideffects(
                 graph_id,
@@ -2287,36 +2304,40 @@ class Hierarchy(nx.DiGraph):
         for related_g in self.adjacent_relations(graph_id):
             base_relations_update.append((graph_id, related_g))
 
-        # 4. Propagate rewriting up the hierarchy
-        # TODO: rename upsteam_graphs ..
-        (updated_graphs,
-         updated_homomorphisms,
-         updated_rules,
-         updated_rule_h,
-         updated_relations) = self._propagate_up(graph_id,
-                                                 g_m,
-                                                 g_m_g,
-                                                 g_prime,
-                                                 g_m_g_prime)
+        if rule.is_restrictive():
+            # 4. Propagate rewriting up the hierarchy
+            # TODO: rename upsteam_graphs ..
+            (updated_graphs,
+             updated_homomorphisms,
+             updated_rules,
+             updated_rule_h,
+             updated_relations) = self._propagate_up(graph_id,
+                                                     g_m,
+                                                     g_m_g,
+                                                     g_prime,
+                                                     g_m_g_prime)
 
         updated_homomorphisms.update(typing_updates)
         updated_relations += base_relations_update
 
-        # 5. Propagate necessary changes down
-        (downstream_graphs,
-         downstream_homomorphism,
-         downstream_rule_h,
-         downstream_relations) = self._propagate_down(
-            graph_id,
-            rule,
-            instance,
-            rhs_typing
-        )
+        if rule.is_relaxing():
+            pass
 
-        updated_graphs.update(downstream_graphs)
-        updated_homomorphisms.update(downstream_homomorphism)
-        updated_rule_h.update(downstream_rule_h)
-        updated_relations.update(downstream_relations)
+        # # 5. Propagate necessary changes down
+        # (downstream_graphs,
+        #  downstream_homomorphism,
+        #  downstream_rule_h,
+        #  downstream_relations) = self._propagate_down(
+        #     graph_id,
+        #     rule,
+        #     instance,
+        #     rhs_typing
+        # )
+
+        # updated_graphs.update(downstream_graphs)
+        # updated_homomorphisms.update(downstream_homomorphism)
+        # updated_rule_h.update(downstream_rule_h)
+        # updated_relations.update(downstream_relations)
 
         # 6. Apply all the changes in the hierarchy
         if inplace:
