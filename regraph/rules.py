@@ -2,10 +2,13 @@
 import copy
 import warnings
 
+from regraph.attribute_sets import EmptySet
 from regraph.parser import parser
 from regraph.utils import (keys_by_value,
                            normalize_attrs,
-                           make_canonical_commands)
+                           make_canonical_commands,
+                           dict_sub,
+                           attrs_union)
 from regraph.category_op import (identity,
                                  check_homomorphism,
                                  pullback_complement,
@@ -232,7 +235,7 @@ class Rule(object):
             if k1 not in self.p.nodes():
                 raise RuleError(
                     "Node with the id '%s' does not exist in the "
-                    "preserved part of the rule" % k2
+                    "preserved part of the rule" % k1
                 )
             for k2 in p_keys_2:
                 if k2 not in self.p.nodes():
@@ -750,3 +753,156 @@ class Rule(object):
             self.p, g_m, self.rhs, p_g_m, self.p_rhs, total=True
         )
         return g_prime
+
+    def added_nodes(self):
+        """A set of nodes from rhs which are added by a rule."""
+        nodes = set()
+        for r_node in self.rhs.nodes():
+            p_nodes = keys_by_value(self.p_rhs, r_node)
+            if len(p_nodes) == 0:
+                nodes.add(r_node)
+        return nodes
+
+    def added_edges(self):
+        edges = set()
+        for s, t in self.rhs.edges():
+            s_p_nodes = keys_by_value(self.p_rhs, s)
+            t_p_nodes = keys_by_value(self.p_rhs, t)
+            print(s_p_nodes)
+            print(t_p_nodes)
+            if len(s_p_nodes) == 0 or len(t_p_nodes) == 0:
+                print(s, t)
+                edges.add((s, t))
+            else:
+                found_edge = False
+                for s_p_node in s_p_nodes:
+                    for t_p_node in t_p_nodes:
+                        if (s_p_node, t_p_node) in self.p.edges():
+                            found_edge = True
+                if not found_edge:
+                    edges.add((s, t))
+        return edges
+
+    def added_node_attrs(self):
+        attrs = dict()
+        for node in self.rhs.nodes():
+            p_nodes = keys_by_value(self.p_rhs, node)
+            # if len(p_nodes) == 0:
+            #     attrs[node] = self.rhs.node[node]
+            new_attrs = {}
+            for p_node in p_nodes:
+                new_attrs = attrs_union(new_attrs, dict_sub(
+                    self.rhs.node[node], self.p.node[p_node]))
+            if len(new_attrs) > 0:
+                attrs[node] = new_attrs
+        return attrs
+
+    def added_edge_attrs(self):
+        attrs = dict()
+        for s, t in self.rhs.edges():
+            s_p_nodes = keys_by_value(self.p_rhs, s)
+            t_p_nodes = keys_by_value(self.p_rhs, t)
+            new_attrs = {}
+            for s_p_node in s_p_nodes:
+                for t_p_node in t_p_nodes:
+                    if (s_p_node, t_p_node) in self.p.edges():
+                        new_attrs = attrs_union(
+                            new_attrs,
+                            dict_sub(
+                                self.rhs.edge[s][t],
+                                self.p.edge[s_p_node][t_p_node]
+                            )
+                        )
+        return attrs
+
+    def merged_nodes(self):
+        nodes = dict()
+        for node in self.rhs.nodes():
+            p_nodes = keys_by_value(self.p_rhs, node)
+            if len(p_nodes) > 1:
+                nodes[node] = set(p_nodes)
+        return nodes
+
+    def removed_nodes(self):
+        nodes = set()
+        for node in self.lhs.nodes():
+            p_nodes = keys_by_value(self.p_lhs, node)
+            if len(p_nodes) == 0:
+                nodes.add(node)
+        return nodes
+
+    def removed_edges(self):
+        edges = set()
+        for s, t in self.lhs.edges():
+            s_p_nodes = keys_by_value(self.p_lhs, s)
+            t_p_nodes = keys_by_value(self.p_lhs, t)
+            if len(s_p_nodes) != 0 and len(t_p_nodes) != 0:
+                for s_p_node in s_p_nodes:
+                    for t_p_node in t_p_nodes:
+                        if (s_p_node, t_p_node) not in self.p.edges():
+                            edges.add((s, t))
+        return edges
+
+    def removed_node_attrs(self):
+        attrs = dict()
+        for node in self.lhs.nodes():
+            p_nodes = keys_by_value(self.p_lhs, node)
+            new_attrs = {}
+            for p_node in p_nodes:
+                new_attrs = attrs_union(new_attrs, dict_sub(
+                    self.lhs.node[node], self.p.node[p_node]))
+            if len(new_attrs) > 0:
+                attrs[node] = new_attrs
+        return attrs
+
+    def removed_edge_attrs(self):
+        attrs = dict()
+        for s, t in self.lhs.edges():
+            s_p_nodes = keys_by_value(self.p_lhs, s)
+            t_p_nodes = keys_by_value(self.p_lhs, t)
+            new_attrs = {}
+            for s_p_node in s_p_nodes:
+                for t_p_node in t_p_nodes:
+                    if (s_p_node, t_p_node) in self.p.edges():
+                        new_attrs = attrs_union(
+                            new_attrs,
+                            dict_sub(
+                                self.lhs.edge[s][t],
+                                self.p.edge[s_p_node][t_p_node]
+                            )
+                        )
+            if len(new_attrs) > 0:
+                attrs[(s, t)] = new_attrs
+        return attrs
+
+    def cloned_nodes(self):
+        nodes = dict()
+        for node in self.lhs.nodes():
+            p_nodes = keys_by_value(self.p_lhs, node)
+            if len(p_nodes) > 1:
+                nodes[node] = set(p_nodes)
+        return nodes
+
+    def is_restrictive(self):
+        """Return True if the rule is restrictive.
+
+        Rule is restictive if it removes
+        nodes/edges/attributes or clones nodes.
+        """
+        return len(self.removed_nodes()) > 0 or\
+            len(self.cloned_nodes()) > 0 or\
+            len(self.removed_node_attrs()) > 0 or\
+            len(self.removed_edges()) > 0 or\
+            len(self.removed_edge_attrs()) > 0
+
+    def is_relaxing(self):
+        """Return True if the rule is relaxing.
+
+        Rule is relaxing if it adds
+        nodes/edges/attributes or merges nodes.
+        """
+        return len(self.added_nodes()) > 0 or\
+            len(self.merged_nodes()) > 0 or\
+            len(self.added_node_attrs()) > 0 or\
+            len(self.added_edges()) > 0 or\
+            len(self.added_edge_attrs()) > 0

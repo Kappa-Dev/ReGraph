@@ -239,3 +239,45 @@ class TestRule(object):
         assert('a' in rule.rhs.nodes())
         assert('21' in rule.rhs.nodes())
         assert(3 not in rule.rhs.nodes())
+
+    def test_component_getters(self):
+        pattern = nx.DiGraph()
+        prim.add_nodes_from(
+            pattern,
+            [(1, {"a1": {1}}), (2, {"a2": {2}}), (3, {"a3": {3}})]
+        )
+        prim.add_edges_from(
+            pattern,
+            [
+                (1, 2, {"a12": {12}}),
+                (2, 3),
+                (3, 2, {"a32": {32}})
+            ]
+        )
+
+        rule = Rule.from_transform(pattern)
+        rule.remove_node(1)
+        rule.remove_edge(2, 3)
+        rule.clone_node(2)
+        rule.remove_node_attrs(3, {"a3": {3}})
+        rule.remove_edge_attrs(3, 2, {"a32": {32}})
+        rule.add_node_attrs(3, {"a3": {100}})
+        rule.add_node(4)
+        rule.add_edge_rhs(4, "21")
+
+        assert(rule.removed_nodes() == {1})
+        assert(rule.removed_edges() == {(2, 3)})
+        assert(len(rule.cloned_nodes()) == 1 and
+               2 in rule.cloned_nodes().keys())
+        assert(len(rule.removed_node_attrs()) == 1 and
+               3 in rule.removed_node_attrs()[3]["a3"])
+        assert(len(rule.removed_edge_attrs()) == 1 and
+               32 in rule.removed_edge_attrs()[(3, 2)]["a32"])
+
+        assert(rule.added_nodes() == {4})
+        assert(rule.added_edges() == {(4, "21")})
+        # rule.merged_nodes()
+        # rule.added_edge_attrs()
+        assert(len(rule.added_node_attrs()) == 1 and
+               100 in rule.added_node_attrs()[3]["a3"])
+        assert(rule.is_restrictive() and rule.is_relaxing())
