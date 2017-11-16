@@ -136,23 +136,47 @@ def compose_chain_homomorphisms(chain):
     return homomorphism
 
 
-def get_unique_map_to_pullback(a, b, p, z, p_a, p_b, z_a, z_b):
+def get_unique_map_to_pullback(p, p_a, p_b, z_a, z_b):
     # imagine its total
     z_p = dict()
-    for node in p.nodes():
-        a_node = p_a[node]
-        z_keys_from_a = set(keys_by_value(z_a, a_node))
+    for value in p:
+        z_keys_from_a = set()
+        if value in p_a.keys():
+            a_value = p_a[value]
+            z_keys_from_a = set(keys_by_value(z_a, a_value))
 
         z_keys_from_b = set()
-        if node in p_b.keys():
-            b_node = p_b[node]
-            z_keys_from_b.update(keys_by_value(z_b, b_node))
+        if value in p_b.keys():
+            b_value = p_b[value]
+            z_keys_from_b.update(keys_by_value(z_b, b_value))
 
         z_keys = z_keys_from_a.intersection(z_keys_from_b)
         for z_key in z_keys:
-            z_p[z_key] = node
+            z_p[z_key] = value
 
     return z_p
+
+
+def get_unique_map_from_pushout(p, a_p, b_p, a_z, b_z):
+    p_z = dict()
+    for value in p:
+        z_values = set()
+
+        a_values = set(keys_by_value(a_p, value))
+        for a_value in a_values:
+            if a_values in a_z.keys():
+                z_values.add(a_z[a_value])
+
+        b_values = set(keys_by_value(b_p, value))
+        for b_value in b_values:
+            if b_value in b_z.keys():
+                z_values.add(b_z[b_value])
+
+        if len(z_values) > 0:
+            if len(z_values) > 1:
+                raise ReGraphError("Cannot construct a unique map!")
+            p_z[value] = z_values.pop()
+    return p_z
 
 
 def get_unique_map(a, b, c, d, a_b, b_d, c_d):
