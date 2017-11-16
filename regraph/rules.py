@@ -768,10 +768,7 @@ class Rule(object):
         for s, t in self.rhs.edges():
             s_p_nodes = keys_by_value(self.p_rhs, s)
             t_p_nodes = keys_by_value(self.p_rhs, t)
-            print(s_p_nodes)
-            print(t_p_nodes)
             if len(s_p_nodes) == 0 or len(t_p_nodes) == 0:
-                print(s, t)
                 edges.add((s, t))
             else:
                 found_edge = False
