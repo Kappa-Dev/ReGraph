@@ -4,7 +4,7 @@ from setuptools import setup
 
 setup(
     name='ReGraph',
-    version='0.3',
+    version='1.0',
     description='Graph rewriting tool',
     author='Eugenia Oshurko',
     license='MIT License',

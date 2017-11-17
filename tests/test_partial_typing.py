@@ -503,6 +503,8 @@ class TestPartialTyping(object):
             pass
         rhs_typing["shapes"][4] = "square"
         rhs_typing["colors"][4] = "blue"
-        self.hierarchy.rewrite("g3", rule, instances[
-                               0], lhs_typing, rhs_typing)
         assert(rule.is_restrictive() and rule.is_relaxing())
+        new_hierarchy = self.hierarchy.rewrite(
+            "g3", rule, instances[0], lhs_typing, rhs_typing, inplace=False)
+        print_graph(new_hierarchy[0].node["g2"].graph)
+        print_graph(self.hierarchy.node["g2"].graph)

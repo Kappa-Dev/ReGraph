@@ -20,7 +20,8 @@ from regraph.category_op import (compose_homomorphisms,
                                  pullback_complement,
                                  pushout,
                                  get_unique_map_to_pullback,
-                                 get_unique_map_from_pushout)
+                                 get_unique_map_from_pushout,
+                                 compose_chain_homomorphisms)
 from regraph.primitives import (add_node_attrs,
                                 add_edge_attrs,
                                 get_relabeled_graph,
@@ -1402,101 +1403,6 @@ class Hierarchy(nx.DiGraph):
                         )
         return
 
-    def get_complete_typing(self, graph_id, rule, instance, lhs_typing, rhs_typing):
-        """Return complete typings of the rule.
-
-        Typing is found according to the matching
-        This ensures that you cannot remove node types when applying the
-        rule with the complete typings.
-        """
-        new_lhs_t = format_typing(lhs_typing)
-        new_rhs_t = format_typing(rhs_typing)
-        return self._complete_typing(graph_id, instance, new_lhs_t, new_rhs_t,
-                                     rule.p_lhs, rule.p_rhs)
-
-    def _complete_typing(self, graph_id, instance,
-                         lhs_typing, rhs_typing, p_lhs, p_rhs,
-                         strong=False):
-        # 1. Resolve typing by immediate successors
-        for typing_graph in self.successors(graph_id):
-            typing = self.edge[graph_id][typing_graph].mapping
-
-            if typing_graph not in lhs_typing.keys():
-                lhs_typing[typing_graph] = dict()
-            if typing_graph not in rhs_typing.keys():
-                rhs_typing[typing_graph] = dict()
-
-            # Check that no types are redefined
-            # by immediate successors typing
-            # forbidden case of * <- * -> A
-            # works only if A <- A -> A
-            for p_node in p_lhs.keys():
-                l_node = p_lhs[p_node]
-                r_node = p_rhs[p_node]
-                if r_node in rhs_typing[typing_graph].keys() and\
-                   l_node not in lhs_typing[typing_graph].keys():
-                    if instance[l_node] not in typing.keys():
-                        raise RewritingError(
-                            "Typing of the rule is not valid: "
-                            "type of node `%s` in lhs is being "
-                            "redefined in the rhs!" %
-                            l_node
-                        )
-
-            if strong:
-
-                # Inherit lhs typing from the instance
-                for (source, target) in instance.items():
-                    if (source not in lhs_typing[typing_graph].keys() and
-                            target in typing.keys()):
-                        lhs_typing[typing_graph][source] = typing[target]
-
-                for (p_node, l_node) in p_lhs.items():
-                    if l_node in lhs_typing[typing_graph].keys():
-                        if p_rhs[p_node] in rhs_typing[typing_graph].keys():
-                            if (rhs_typing[typing_graph][p_rhs[p_node]] !=
-                                    lhs_typing[typing_graph][l_node]):
-                                raise RewritingError(
-                                    "Typing of the rule is not valid: "
-                                    "lhs node that maps to a node of type "
-                                    "`%s` in the instance, is being mapped to "
-                                    "`%s` in rhs!" %
-                                    (lhs_typing[typing_graph][l_node],
-                                     rhs_typing[typing_graph][p_rhs[p_node]])
-                                )
-                        else:
-                            rhs_typing[typing_graph][p_rhs[p_node]] =\
-                                lhs_typing[typing_graph][l_node]
-            else:
-                for p_node, r_node in p_rhs.items():
-                    l_node = p_lhs[p_node]
-                    if typing_graph in rhs_typing.keys() and\
-                            r_node in rhs_typing[typing_graph].keys():
-                        p_type = rhs_typing[typing_graph][r_node]
-                        if typing_graph in lhs_typing.keys() and\
-                                l_node in lhs_typing[typing_graph].keys():
-                            l_type = lhs_typing[typing_graph][l_node]
-                            if p_type != l_type:
-                                raise RewritingError(
-                                    "Typing of the rule is not valid: "
-                                    "lhs node that maps to a node of type "
-                                    "`%s` in the instance, is being mapped to `%s` in rhs!" %
-                                    (lhs_typing[typing_graph][l_node],
-                                     rhs_typing[typing_graph][p_rhs[p_node]])
-                                )
-                        else:
-                            if instance[l_node] in typing.keys():
-                                l_type = typing[instance[l_node]]
-                                if p_type != l_type:
-                                    raise RewritingError(
-                                        "Typing of the rule is not valid: "
-                                        "type of node `%s` in lhs is being redefined in the rhs!" %
-                                        l_node
-                                    )
-
-        # 2. Rosolve typing by not immediate successors
-        return
-
     def _get_common_successors(self, node_list):
         common_sucs = {}
         for n1 in node_list:
@@ -1546,24 +1452,16 @@ class Hierarchy(nx.DiGraph):
                 if isinstance(self.node[graph], self.graph_node_cls):
 
                     origin_typing = self.get_typing(graph, graph_id)
-
-                    g_m, g_m_g, g_m_origin_m[graph] = pullback(
-                        self.node[graph].graph,
-                        updated_graphs[graph_id][0],
-                        self.node[graph_id].graph,
-                        origin_typing,
-                        updated_graphs[graph_id][1],
-                        total=False
-                    )
-                    updated_graphs[graph] = (
-                        g_m, g_m_g, g_m, id_of(g_m)
-                    )
+                    g_m, g_m_g, g_m_origin_m[graph] =\
+                        pullback(self.node[graph].graph, updated_graphs[graph_id][0],
+                                 self.node[graph_id].graph, origin_typing,
+                                 updated_graphs[graph_id][1], total=False)
+                    updated_graphs[graph] = (g_m, g_m_g, g_m, id_of(g_m))
                     for suc in self.successors(graph):
                         if suc == graph_id:
                             updated_homomorphisms[(graph, suc)] =\
-                                compose_homomorphisms(updated_graphs[suc][3],
+                                compose_homomorphisms(origin_m_origin_prime,
                                                       g_m_origin_m[graph])
-                            # (g_m_origin_m[graph],
                         else:
                             if suc in visited:
                                 graph_m_suc_m = get_unique_map_to_pullback(
@@ -1708,46 +1606,54 @@ class Hierarchy(nx.DiGraph):
                 )
 
             current_level = next_level
+
+        del updated_graphs[graph_id]
         return {
             "graphs": updated_graphs,
             "homomorphisms": updated_homomorphisms,
-            "rule": updated_rules,
+            "rules": updated_rules,
             "rule_homomorphisms": updated_rule_h,
             "relations": updated_relations
         }
 
-    def _propagate_down(self, graph_id, rule, instance, rhs_typing):
+    def _propagate_down(self, origin_id, origin_construct,
+                        rule, instance, rhs_typing):
         """Propagate changes down the hierarchy."""
-
         paths_to_total_typing = dict()
-        for typing_graph, typing in rhs_typing.keys():
+        for typing_graph, typing in rhs_typing.items():
             if is_total_homomorphism(rule.rhs.nodes(), typing):
                 paths_to_total_typing[typing_graph] =\
-                    nx.all_simple_path(graph_id, typing_graph)
+                    nx.all_simple_paths(self, origin_id, typing_graph)
 
         updated_graphs = dict()
         updated_homomorphisms = dict()
         updated_relations = []
 
+        (origin_m,
+         origin_m_origin,
+         origin_prime,
+         origin_m_origin_prime,
+         rhs_origin_prime) = origin_construct
+
         for total_typing_graph, paths in paths_to_total_typing.items():
             for path in paths:
-                updates_sequence = reversed(path[1:-1])
+                updates_sequence = [e for e in reversed(path[1:-1])]
                 for i, graph in enumerate(updates_sequence):
                     if graph not in updated_graphs.keys():
+                        print("Propagating to graph: ", graph)
+
                         origin_g = self.compose_path_typing(
                             path[:len(path) - i - 1]
                         )
-                        p_g = compose_homomorphisms(
-                            compose_homomorphisms(rule.p_lhs, instance),
-                            origin_g
+                        p_g = compose_chain_homomorphisms(
+                            [rule.p_lhs, instance, origin_g]
                         )
                         (g_prime, g_g_prime, rhs_g_prime) =\
-                            pushout(rule.p, self.node[graph],
+                            pushout(rule.p, self.node[graph].graph,
                                     rule.rhs, p_g, rule.p_rhs)
                         updated_graphs[graph] = (g_prime, g_g_prime, rhs_g_prime)
 
                         for suc in self.successors(graph):
-
                             if suc == total_typing_graph:
                                 updated_homomorphisms[(graph, suc)] =\
                                     get_unique_map_from_pushout(
@@ -1763,101 +1669,118 @@ class Hierarchy(nx.DiGraph):
                                         g_prime.nodes(),
                                         g_g_prime,
                                         rhs_g_prime,
-                                        compose_homomorphisms(
-                                            self.edge[graph][suc].mapping,
-                                            updated_graphs[1],
-                                            updated_graphs[2]))
+                                        compose_chain_homomorphisms(
+                                            [self.edge[graph][suc].mapping,
+                                             updated_graphs[suc][1]]),
+                                        updated_graphs[suc][2])
 
                         for pred in self.predecessors(graph):
+                            if pred == origin_id:
+                                updated_homomorphisms[(pred, graph)] =\
+                                    get_unique_map_from_pushout(
+                                        origin_prime.nodes(),
+                                        origin_m_origin_prime,
+                                        rhs_origin_prime,
+                                        compose_chain_homomorphisms([
+                                            origin_m_origin,
+                                            self.edge[origin_id][graph].mapping,
+                                            g_g_prime]),
+                                        rhs_g_prime)
                             if pred in updated_graphs.keys():
                                 updated_homomorphisms[(pred, graph)] =\
                                     get_unique_map_from_pushout(
                                         updated_graphs[pred][0].nodes(),
                                         updated_graphs[pred][1],
                                         updated_graphs[pred][2],
-                                        compose_homomorphisms(
-                                            self.edge[pred][graph],
-                                            g_g_prime),
+                                        compose_chain_homomorphisms(
+                                            [self.edge[pred][graph],
+                                             g_g_prime]),
                                         rhs_g_prime)
 
                         # propagate changes to adjacent relations
                         for related_g in self.adjacent_relations(graph):
                             updated_relations.append((graph, related_g))
+        print(updated_homomorphisms)
         return {
             "graphs": updated_graphs,
-            "homomorphism": updated_homomorphisms,
+            "homomorphisms": updated_homomorphisms,
             "relations": updated_relations
         }
 
-    def _apply_changes(self, updated_graphs, updated_homomorphisms,
-                       updated_rules, updated_rule_h, updated_relations):
+    def _apply_changes(self, upstream_changes, downstream_changes):
         """Apply changes to the hierarchy."""
         # update relations
         visited = set()
         rels = dict()
-        for g1, g2 in updated_relations:
+        for g1, g2 in upstream_changes["relations"]:
             if (g1, g2) not in visited:
-                if (g2, g1) in updated_relations:
-                    # updates in both related graphs
-                    common_g, left_h, right_h = self.relation_to_span(g1, g2)
-
-                    left_g, left_g_common_g, left_g_g_m =\
-                        pullback(
-                            common_g,
-                            updated_graphs[g1][0],
-                            self.node[g1].graph,
-                            left_h,
-                            updated_graphs[g1][1])
-
+                common_g, left_h, right_h = self.relation_to_span(g1, g2)
+                left_g, left_g_common_g, left_g_g_m =\
+                    pullback(common_g, upstream_changes["graphs"][g1][0],
+                             self.node[g1].graph, left_h,
+                             upstream_changes["graphs"][g1][1])
+                # upstream changes in both related graphs
+                if (g2, g1) in upstream_changes["relations"]:
                     right_g, right_g_common_g, right_g_g_m =\
-                        pullback(
-                            common_g,
-                            updated_graphs[g2][0],
-                            self.node[g2].graph,
-                            right_h,
-                            updated_graphs[g2][1])
+                        pullback(common_g, upstream_changes["graphs"][g2][0],
+                                 self.node[g2].graph, right_h,
+                                 upstream_changes["graphs"][g2][1])
 
                     new_common_g, new_left_g, new_right_g =\
-                        pullback(
-                            left_g,
-                            right_g,
-                            common_g,
-                            left_g_common_g,
-                            right_g_common_g)
+                        pullback(left_g, right_g, common_g,
+                                 left_g_common_g, right_g_common_g)
 
                     new_left_g_m = compose_homomorphisms(left_g_g_m, new_left_g)
                     new_right_g_m = compose_homomorphisms(right_g_g_m, new_right_g)
-                    new_rel = list()
-                    for node in new_common_g.nodes():
-                        new_rel.append((new_left_g_m[node], new_right_g_m[node]))
-                    # visited.add((g2, g1))
+                # downstream changes in one of the related graphs
+                elif downstream_changes is not None and (g2, g1) in downstream_changes["relations"]:
+                    new_left_g_m = left_g_g_m
+                    new_right_g_m = compose_homomorphisms(
+                        left_g_common_g, compose_homomorphisms(
+                            right_h, downstream_changes["graphs"][g2][1]))
                 # updates in a single graph involved in the relation
                 else:
-                    common_g, left_h, right_h = self.relation_to_span(g1, g2)
-                    left_g, left_g_common_g, left_g_g_m =\
-                        pullback(
-                            common_g,
-                            self.node[g1].graph,
-                            updated_graphs[g1][0],
-                            left_h,
-                            updated_graphs[g1][1])
-
+                    new_left_g_m = left_g_g_m
                     new_right_g_m = compose_homomorphisms(right_h, left_g_common_g)
-                    new_rel = list()
-                    for node in new_common_g.nodes():
-                        new_rel.append(
-                            (left_g_g_m[node], new_right_g_m[node])
-                        )
+
+                new_rel = list()
+                for node in new_common_g.nodes():
+                    new_rel.append((new_left_g_m[node], new_right_g_m[node]))
+
                 visited.add((g1, g2))
                 rels.update({(g1, g2): new_rel})
 
-        # update graphs
-        for graph, (graph_m, _, graph_prime, _) in updated_graphs.items():
+        if downstream_changes is not None:
+            for g1, g2 in downstream_changes["relations"]:
+                if (g1, g2) not in visited:
+                    common_g, left_h, right_h = self.relation_to_span(g1, g2)
+                    # downstream changes in both related graphs
+                    if (g2, g1) in downstream_changes["relations"]:
+                        new_left_g_m = compose_homomorphisms(
+                            left_h, downstream_changes["graphs"][g1])
+                        new_right_g_m = compose_homomorphisms(
+                            right_h, downstream_changes["graphs"][g2])
+                    else:
+                        new_left_g_m = compose_homomorphisms(
+                            left_h, downstream_changes["graphs"][g1])
+                        new_right_g_m = right_h
 
+                    new_rel = list()
+                    for node in new_common_g.nodes():
+                        new_rel.append((new_left_g_m[node], new_right_g_m[node]))
+
+                    visited.add((g1, g2))
+                    rels.update({(g1, g2): new_rel})
+
+        # update graphs
+        for graph, (graph_m, _, graph_prime, _) in upstream_changes["graphs"].items():
             if graph_prime is not None:
                 self.node[graph].graph = graph_prime
             else:
                 self.node[graph].graph = graph_m
+        if downstream_changes is not None:
+            for graph, (graph_prime, _, _) in downstream_changes["graphs"].items():
+                self.node[graph].graph = graph_prime
 
         for (g1, g2), rel in rels.items():
             old_attrs = copy.deepcopy(self.relation[g1][g2])
@@ -1865,6 +1788,10 @@ class Hierarchy(nx.DiGraph):
             self.add_relation(g1, g2, rel, old_attrs)
 
         # update homomorphisms
+        updated_homomorphisms = dict()
+        updated_homomorphisms.update(upstream_changes["homomorphisms"])
+        if downstream_changes is not None:
+            updated_homomorphisms.update(downstream_changes["homomorphisms"])
         for (s, t), mapping in updated_homomorphisms.items():
             total = False
 
@@ -1877,111 +1804,21 @@ class Hierarchy(nx.DiGraph):
                     )
                 else:
                     total = True
-
             self.edge[s][t] = self.graph_typing_cls(
                 mapping, total, self.edge[s][t].attrs
             )
-        for rule, new_rule in updated_rules.items():
+
+        # update rules & rule homomorphisms
+        for rule, new_rule in upstream_changes["rules"].items():
             self.node[rule] = RuleNode(
                 new_rule, self.node[rule].attrs
             )
-        for (s, t), (lhs_h, rhs_h) in updated_rule_h.items():
+        for (s, t), (lhs_h, rhs_h) in upstream_changes["rule_homomorphisms"].items():
             self.edge[s][t] = self.rule_typing_cls(
                 lhs_h, rhs_h,
                 self.edge[s][t].attrs
             )
-
         return
-
-    def _normalize_typing(self, graph_id, rule, instance,
-                          lhs_typing, rhs_typing, strong=False,
-                          total=True):
-        new_lhs_typing = format_typing(lhs_typing)
-        new_rhs_typing = format_typing(rhs_typing)
-
-        self._complete_typing(
-            graph_id, instance, new_lhs_typing,
-            new_rhs_typing, rule.p_lhs, rule.p_rhs,
-            strong=strong
-        )
-
-        for typing_graph, mapping in new_lhs_typing.items():
-            try:
-                check_homomorphism(
-                    rule.lhs,
-                    self.node[typing_graph].graph,
-                    mapping,
-                    total=False
-                )
-            except InvalidHomomorphism as e:
-                raise RewritingError(
-                    "Invalid lhs of the rule, namely, "
-                    "invalid homomorphism with a typing graph '%s', "
-                    "error message: %s" % (typing_graph, str(e)))
-
-        for typing_graph, mapping in new_rhs_typing.items():
-            try:
-                check_homomorphism(
-                    rule.rhs,
-                    self.node[typing_graph].graph,
-                    mapping,
-                    total=False
-                )
-            except InvalidHomomorphism as e:
-                raise RewritingError(
-                    "Invalid rhs of the rule, namely, "
-                    "invalid homomorphism with a typing graph '%s', "
-                    "error message: %s" % (typing_graph, str(e)))
-
-        if total:
-            # check that everything is typed
-            for typing_graph in self.successors(graph_id):
-                typing = self.edge[graph_id][typing_graph].mapping
-                if typing_graph in new_rhs_typing.keys():
-                    for node in rule.rhs.nodes():
-                        p_nodes = keys_by_value(rule.p_rhs, node)
-                        if len(p_nodes) == 1:
-                            if instance[rule.p_lhs[p_nodes[0]]] not in typing.keys():
-                                continue
-                            elif node not in new_rhs_typing[typing_graph].keys():
-                                raise RewritingError(
-                                    "Rewriting parameter `total` is set to True, "
-                                    "typing of the node `%s` "
-                                    "in rhs is required!" %
-                                    node
-                                )
-                        elif len(p_nodes) > 1:
-                            all_untyped = True
-                            for p_node in p_nodes:
-                                if instance[rule.p_lhs[p_node]] in typing.keys():
-                                    all_untyped = False
-                                    break
-                            if all_untyped:
-                                continue
-                            elif node not in new_rhs_typing[typing_graph].keys():
-                                raise RewritingError(
-                                    "Rewriting parameter `total` is set to True, "
-                                    "typing of the node `%s` "
-                                    "in rhs is required!" %
-                                    node
-                                )
-                        else:
-                            if node not in new_rhs_typing[typing_graph].keys():
-                                raise RewritingError(
-                                    "Rewriting parameter `total` is set to True, "
-                                    "typing of the node `%s` "
-                                    "in rhs is required!" %
-                                    node
-                                )
-                else:
-                    raise RewritingError(
-                        "Rewriting parameter `total` is set to True, "
-                        "typing of the node `%s` "
-                        "in rhs is required!" %
-                        node
-                    )
-
-        return new_lhs_typing, new_rhs_typing
 
     def _update_typing(self, graph_id, rule, instance,
                        new_lhs_typing, new_rhs_typing,
@@ -2048,67 +1885,70 @@ class Hierarchy(nx.DiGraph):
 
         return updated_homomorphisms
 
-    def _check_rhs_sideffects(self, graph_id, rule, instance, typing_dict):
-        for typing_graph, mapping in typing_dict.items():
+    # def _check_rhs_sideffects(self, graph_id, rule, instance, typing_dict):
+    #     for typing_graph, mapping in typing_dict.items():
 
-            # check edges out of the g-(im(g->lhs)) do not violate typing
-            for node in rule.rhs.nodes():
-                p_keys = keys_by_value(rule.p_rhs, node)
-                if len(p_keys) > 1:
-                    if self.directed:
-                        succs = set()
-                        preds = set()
-                        for p in p_keys:
-                            g_node = instance[rule.p_lhs[p]]
-                            succs.update(
-                                self.node[graph_id].graph.successors(g_node)
-                            )
-                            preds.update(
-                                self.node[graph_id].graph.predecessors(g_node)
-                            )
-                        for s in succs:
-                            path = nx.shortest_path(
-                                self, graph_id, typing_graph)
-                            graph_mapping = self.compose_path_typing(path)
-                            if s in graph_mapping.keys() and node in mapping:
-                                if (mapping[node], graph_mapping[s]) not in\
-                                   self.node[typing_graph].graph.edges():
-                                    raise RewritingError(
-                                        "Merge produces a forbidden edge "
-                                        "between nodes of types `%s` and `%s`!" %
-                                        (mapping[node], graph_mapping[s])
-                                    )
-                        for p in preds:
-                            path = nx.shortest_path(
-                                self, graph_id, typing_graph)
-                            graph_mapping = self.compose_path_typing(path)
-                            if p in graph_mapping.keys() and node in mapping:
-                                if (graph_mapping[p], mapping[node]) not in\
-                                   self.node[typing_graph].graph.edges():
-                                    raise RewritingError(
-                                        "Merge produces a forbidden edge "
-                                        "between nodes of types `%s` and `%s`!" %
-                                        (graph_mapping[p], mapping[node])
-                                    )
-                    else:
-                        neighbours = set()
-                        for p in p_keys:
-                            g_node = instance[rule.p_lhs[p]]
-                            neighbours.update(
-                                self.node[graph_id].graph.neighbors(g_node)
-                            )
-                        for n in neighbours:
-                            graph_mapping = self.edge[
-                                graph_id][typing_graph].mapping
-                            if s in graph_mapping.keys():
-                                if (mapping[node], graph_mapping[s]) not in\
-                                   self.node[typing_graph].graph.edges():
-                                    raise RewritingError(
-                                        "Merge produces a forbidden edge "
-                                        "between nodes of types `%s` and `%s`!" %
-                                        (mapping[node], graph_mapping[s])
-                                    )
-        return
+    #         # check edges out of the g-(im(g->lhs)) do not violate typing
+    #         print(rule.rhs.nodes())
+    #         for node in rule.rhs.nodes():
+    #             print("rhs node: ", node)
+    #             p_keys = keys_by_value(rule.p_rhs, node)
+    #             print("p keys: ", p_keys)
+    #             if len(p_keys) > 1:
+    #                 if self.directed:
+    #                     succs = set()
+    #                     preds = set()
+    #                     for p in p_keys:
+    #                         g_node = instance[rule.p_lhs[p]]
+    #                         succs.update(
+    #                             self.node[graph_id].graph.successors(g_node))
+    #                         preds.update(
+    #                             self.node[graph_id].graph.predecessors(g_node))
+    #                     print(succs)
+    #                     print(preds)
+    #                     for s in succs:
+    #                         path = nx.shortest_path(
+    #                             self, graph_id, typing_graph)
+    #                         graph_mapping = self.compose_path_typing(path)
+    #                         if s in graph_mapping.keys() and node in mapping:
+    #                             if (mapping[node], graph_mapping[s]) not in\
+    #                                self.node[typing_graph].graph.edges():
+    #                                 raise RewritingError(
+    #                                     "Merge produces a forbidden edge "
+    #                                     "between nodes of types `%s` and `%s`!" %
+    #                                     (mapping[node], graph_mapping[s])
+    #                                 )
+    #                     for p in preds:
+    #                         path = nx.shortest_path(
+    #                             self, graph_id, typing_graph)
+    #                         graph_mapping = self.compose_path_typing(path)
+    #                         if p in graph_mapping.keys() and node in mapping:
+    #                             if (graph_mapping[p], mapping[node]) not in\
+    #                                self.node[typing_graph].graph.edges():
+    #                                 raise RewritingError(
+    #                                     "Merge produces a forbidden edge "
+    #                                     "between nodes of types `%s` and `%s`!" %
+    #                                     (graph_mapping[p], mapping[node])
+    #                                 )
+    #                 else:
+    #                     neighbours = set()
+    #                     for p in p_keys:
+    #                         g_node = instance[rule.p_lhs[p]]
+    #                         neighbours.update(
+    #                             self.node[graph_id].graph.neighbors(g_node)
+    #                         )
+    #                     for n in neighbours:
+    #                         graph_mapping = self.edge[
+    #                             graph_id][typing_graph].mapping
+    #                         if s in graph_mapping.keys():
+    #                             if (mapping[node], graph_mapping[s]) not in\
+    #                                self.node[typing_graph].graph.edges():
+    #                                 raise RewritingError(
+    #                                     "Merge produces a forbidden edge "
+    #                                     "between nodes of types `%s` and `%s`!" %
+    #                                     (mapping[node], graph_mapping[s])
+    #                                 )
+    #     return
 
     def _autocomplete_typing(self, graph_id, instance,
                              lhs_typing, rhs_typing, p_lhs, p_rhs):
@@ -2130,10 +1970,9 @@ class Hierarchy(nx.DiGraph):
                 for (source, target) in instance.items():
                     if typing_graph not in new_lhs_typing.keys():
                         new_lhs_typing[typing_graph] = dict()
-                    if source not in new_lhs_typing[typing_graph].keys() and\
-                       target in typing.keys():
-                        new_lhs_typing[typing_graph][source] = typing[target]
-
+                    if source not in new_lhs_typing[typing_graph].keys():
+                        if target in typing.keys():
+                            new_lhs_typing[typing_graph][source] = typing[target]
                 for (p_node, l_node) in p_lhs.items():
                     if l_node in new_lhs_typing[typing_graph].keys():
                         if typing_graph not in new_rhs_typing.keys():
@@ -2147,7 +1986,8 @@ class Hierarchy(nx.DiGraph):
                 ancestors = self.get_ancestors(typing_graph)
                 for ancestor, ancestor_typing in ancestors.items():
                     if ancestor in new_rhs_typing.keys():
-                        dif = set(typing.keys()) - set(ancestor_typing.keys())
+                        dif = set(typing.keys()) -\
+                            set(new_rhs_typing[ancestor].keys())
                         for node in dif:
                             new_rhs_typing[ancestor][node] =\
                                 ancestor_typing[new_rhs_typing[typing_graph][node]]
@@ -2249,14 +2089,10 @@ class Hierarchy(nx.DiGraph):
         # 1. Check consistency of the input
         # 1a. Autocomplete typing
 
-        print("\n\nInput typing ", rhs_typing)
-
         new_lhs_typing, new_rhs_typing =\
             self._autocomplete_typing(graph_id, instance, lhs_typing,
                                       rhs_typing, rule.p_lhs, rule.p_rhs)
-
-        print("\n\nAutocompleted typing ", new_rhs_typing)
-
+        print(new_lhs_typing)
         # 1b. Check that instance is consistent with lhs & rhs typing
         self._check_instance(graph_id, rule.lhs, instance, new_lhs_typing)
 
@@ -2282,7 +2118,7 @@ class Hierarchy(nx.DiGraph):
             # rhs of the rule (this mainly includes edges forbidden by some
             # typing)
 
-            self._check_rhs_sideffects(graph_id, rule, instance, new_rhs_typing)
+            # self._check_rhs_sideffects(graph_id, rule, instance, new_rhs_typing)
 
         # 2. Rewrite a graph `graph_id`
         g_m, p_g_m, g_m_g =\
@@ -2301,29 +2137,44 @@ class Hierarchy(nx.DiGraph):
         for related_g in self.adjacent_relations(graph_id):
             base_relations_update.append((graph_id, related_g))
 
-        base_changes = {
-            "homomorphism": typing_updates,
+        upstream_changes = {
+            "graphs": {graph_id: (g_m, g_m_g, g_prime, g_m_g_prime)},
+            "homomorphisms": typing_updates,
+            "rule_homomorphisms": dict(),
+            "rules": dict(),
             "relations": base_relations_update
         }
 
         if rule.is_restrictive():
             # 4. Propagate rewriting up the hierarchy
             # TODO: rename upsteam_graphs ..
-            upstream_changes =\
+            new_upstream_changes =\
                 self._propagate_up(graph_id, g_m, g_m_g, g_prime, g_m_g_prime)
+            upstream_changes["graphs"].update(new_upstream_changes["graphs"])
+            upstream_changes["homomorphisms"].update(
+                new_upstream_changes["homomorphisms"])
+            upstream_changes["rules"].update(new_upstream_changes["rules"])
+            upstream_changes["rule_homomorphisms"].update(
+                new_upstream_changes["rule_homomorphisms"])
+            upstream_changes["relations"] += new_upstream_changes["relations"]
 
+        downstream_changes = None
         if rule.is_relaxing():
+            graph_construct = (g_m, g_m_g, g_prime, g_m_g_prime, r_g_prime)
             downstream_changes =\
-                self._propagate_down(graph_id, rule, instance, new_rhs_typing)
+                self._propagate_down(
+                    graph_id, graph_construct, rule, instance, new_rhs_typing)
 
         # 6. Apply all the changes in the hierarchy
         if inplace:
-            self._apply_changes(base_changes, upstream_changes, downstream_changes)
+            self._apply_changes(upstream_changes, downstream_changes)
+            updated_graphs = None
             return (None, updated_graphs)
         else:
             # First, create a new hierarchy
             new_graph = copy.deepcopy(self)
-            new_graph._apply_changes(base_changes, upstream_changes, downstream_changes)
+            new_graph._apply_changes(upstream_changes, downstream_changes)
+            updated_graphs = None
             return (new_graph, updated_graphs)
 
     def apply_rule(self, graph_id, rule_id, instance,

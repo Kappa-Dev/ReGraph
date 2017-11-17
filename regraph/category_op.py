@@ -50,8 +50,8 @@ def check_totality(elements, dictionary):
     if set(elements) != set(dictionary.keys()):
         raise InvalidHomomorphism(
             "Invalid homomorphism: Mapping is not "
-            "covering all the nodes of source graph!"
-            "domain:{}, domain of definition:{}"
+            "covering all the nodes of source graph! "
+            "domain: {}, domain of definition: {}"
             .format(set(elements), set(dictionary.keys())))
 
 
@@ -164,7 +164,7 @@ def get_unique_map_from_pushout(p, a_p, b_p, a_z, b_z):
 
         a_values = set(keys_by_value(a_p, value))
         for a_value in a_values:
-            if a_values in a_z.keys():
+            if a_value in a_z.keys():
                 z_values.add(a_z[a_value])
 
         b_values = set(keys_by_value(b_p, value))
