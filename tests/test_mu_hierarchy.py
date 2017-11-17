@@ -1,7 +1,7 @@
 """nose tests for the mu_graph_hierarchy"""
 
 from nose.tools import assert_equals
-from regraph.hierarchy import MuHierarchy
+from regraph.mu_hierarchy import MuHierarchy
 import networkx as nx
 
 

@@ -1,6 +1,5 @@
 """Category operations used by graph rewriting tool."""
 import networkx as nx
-from networkx.exception import NetworkXNoPath
 import copy
 
 from regraph.primitives import (add_node,
@@ -32,7 +31,7 @@ def subgraph(gr, nodes):
     return subg
 
 
-def compose_homomorphisms(d2, d1):
+def compose(d1, d2):
     res = dict()
     for key, value in d1.items():
         if value in d2.keys():
@@ -98,11 +97,6 @@ def check_homomorphism(source, target, dictionary, total=True):
     for s, t in dictionary.items():
             # check sets of attributes of nodes (here homomorphism = set
             # inclusion)
-        try:
-            valid_attributes(source.node[s], target.node[t])
-        except:
-            print(source.nodes())
-            print(s, t)
         if not valid_attributes(source.node[s], target.node[t]):
             raise InvalidHomomorphism(
                 "Attributes of nodes source:'%s' %s and target:'%s' %s do not match!" %
@@ -126,12 +120,12 @@ def check_homomorphism(source, target, dictionary, total=True):
     return True
 
 
-def compose_chain_homomorphisms(chain):
+def compose_chain(chain):
     homomorphism = chain[0]
     for i in range(1, len(chain)):
-        homomorphism = compose_homomorphisms(
-            chain[i],
-            homomorphism
+        homomorphism = compose(
+            homomorphism,
+            chain[i]
         )
     return homomorphism
 
@@ -239,11 +233,11 @@ def nary_pullback(b, cds):
                 a1, a2, b, a_b1, a_b2,
                 total=False
             )
-            a_b1 = compose_homomorphisms(a_b1, a1_old_a1)
+            a_b1 = compose(a1_old_a1, a_b1)
             # update a_c
             for c_name, old_a_c in a_c.items():
-                a_c[c_name] = compose_homomorphisms(old_a_c, a1_old_a1)
-            a_c[c_name2] = compose_homomorphisms(a_c2, a1_a2)
+                a_c[c_name] = compose(a1_old_a1, old_a_c)
+            a_c[c_name2] = compose(a1_a2, a_c2)
 
         # at the end of pullback iterations assign right a and a_b
         a_b = a_b1
@@ -386,8 +380,8 @@ def partial_pushout(a, b, c, a_b, a_c):
         (b2, a_b2, b_b2) = total_pushout(ab_dom, a, b, ab_a, a_b)
 
         (d, b2_d, c2_d) = total_pushout(a, b2, c2, a_b2, a_c2)
-        b_d = compose_homomorphisms(b2_d, b_b2)
-        c_d = compose_homomorphisms(c2_d, c_c2)
+        b_d = compose(b_b2, b2_d)
+        c_d = compose(c_c2, c2_d)
 
         return(d, b_d, c_d)
 
@@ -550,7 +544,7 @@ def pullback_complement(a, b, d, a_b, b_d):
     hom1 = {}
     hom2 = {}
 
-    # a_d = compose_homomorphisms(g, f)
+    # a_d = compose(g, f)
     d_m_b = subtract(d, b, g)
 
     for n in a.nodes():
