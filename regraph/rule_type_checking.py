@@ -7,23 +7,23 @@ from regraph.exceptions import RewritingError, ReGraphError
 from regraph.utils import keys_by_value, format_typing
 
 
-def _new_check_rhs_sideffects(hierarchy, graph_id, rule, instance, typing_dict):
-    for node in rule.rhs.nodes():
-        p_keys = keys_by_value(rule.p_rhs, node)
-        g_keys = [instance[rule.p_lhs[p]] for p in p_keys]
-        if len(p_keys) > 1:
-            if hierarchy.directed:
-                succs = set()
-                preds = set()
-                for g in g_keys:
-                    succs.update([
-                        s for s in hierarchy.node[graph_id].graph.successors(g)
-                        if s not in g_keys
-                    ])
-                    preds.update([
-                        s for s in hierarchy.node[graph_id].graph.predecessors(g)
-                        if s not in g_keys
-                    ])
+# def _new_check_rhs_sideffects(hierarchy, graph_id, rule, instance, typing_dict):
+#     for node in rule.rhs.nodes():
+#         p_keys = keys_by_value(rule.p_rhs, node)
+#         g_keys = [instance[rule.p_lhs[p]] for p in p_keys]
+#         if len(p_keys) > 1:
+#             if hierarchy.directed:
+#                 succs = set()
+#                 preds = set()
+#                 for g in g_keys:
+#                     succs.update([
+#                         s for s in hierarchy.node[graph_id].graph.successors(g)
+#                         if s not in g_keys
+#                     ])
+#                     preds.update([
+#                         s for s in hierarchy.node[graph_id].graph.predecessors(g)
+#                         if s not in g_keys
+#                     ])
 
 
 def _check_rhs_sideffects(hierarchy, graph_id, rule, instance, typing_dict):
@@ -167,6 +167,7 @@ def _check_self_consistency(hierarchy, typing):
             if anc in typing.keys():
                 for key, value in mapping.items():
                     if key in typing[anc].keys() and\
+                       value in anc_typing.keys() and\
                        anc_typing[value] != typing[anc][key]:
                         raise ReGraphError("typing is self inconsistent!")
 

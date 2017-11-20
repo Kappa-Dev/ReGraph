@@ -1712,9 +1712,9 @@ class Hierarchy(nx.DiGraph):
                 ancestors[typing] = mapping
             for (anc, typ) in typing_ancestors.items():
                 if anc in ancestors.keys():
-                    ancestors[anc].update(compose(typ, mapping))
+                    ancestors[anc].update(compose(mapping, typ))
                 else:
-                    ancestors[anc] = compose(typ, mapping)
+                    ancestors[anc] = compose(mapping, typ)
         return ancestors
 
     # def get_ignore_values(self, graph_id, maybe=None):
