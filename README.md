@@ -4,9 +4,9 @@ A graph rewriting library
 
 ## About project
 
-The **ReGraph** Python library is a generic framework for modelling graph-centric systems. In this context models are viewed as graphs and graph transformations - as a tool to describe both the system evolution and the model evolution [read more about the approach] (http://link.springer.com/chapter/10.1007%2F978-3-540-30203-2_30). 
+The **ReGraph** Python library is a generic framework for modelling graph-centric systems. In this context models are viewed as graphs and graph transformations - as a tool to describe both the system evolution and the model evolution [read more about the approach](http://link.springer.com/chapter/10.1007%2F978-3-540-30203-2_30). 
 
-**ReGraph** includes data structures for representation of typed graphs, both directed (`TypedDiGraph`) and undirected (`TypedGraph`). They are inherited from [NetworkX] (https://networkx.github.io/) graphs, therefore can be operated as any graph in the context of the reach functionality available in NetworkX.
+**ReGraph** includes data structures for representation of typed graphs, both directed (`TypedDiGraph`) and undirected (`TypedGraph`). They are inherited from [NetworkX](https://networkx.github.io/) graphs, therefore can be operated as any graph in the context of the reach functionality available in NetworkX.
 
 Graph rewriting is performed by an object of the class `Rewriter` which is initialised with the target graph for rewriting. Rewriting is performed in-place, so the initial graph is modified in course of rewriting. Two graph rewriting modes are available: declarative (implementing [sesqui-pushout rewriting](http://link.springer.com/chapter/10.1007%2F11841883_4)) and imperative (sequence of primitive operations on the graph).
 
