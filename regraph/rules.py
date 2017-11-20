@@ -102,9 +102,9 @@ class Rule(object):
                     node_name = None
                     if "node_name" in action.keys():
                         node_name = action["node_name"]
-                    # merged_node = rule.merge_nodes(
-                    #     action["nodes"],
-                    #     node_name)
+                    merged_node = rule.merge_node_list(
+                        action["nodes"],
+                        node_name)
                 elif action["keyword"] == "add_node":
                     name = None
                     attrs = {}
@@ -391,7 +391,7 @@ class Rule(object):
                     )
                 nodes_to_merge.add(self.p_rhs[k1])
                 nodes_to_merge.add(self.p_rhs[k2])
-
+        print(nodes_to_merge)
         new_name = primitives.merge_nodes(
             self.rhs,
             list(nodes_to_merge),
@@ -903,3 +903,34 @@ class Rule(object):
             len(self.added_node_attrs()) > 0 or\
             len(self.added_edges()) > 0 or\
             len(self.added_edge_attrs()) > 0
+
+    def to_commands(self):
+        """Convert the rule to a list of commands."""
+        commands = ""
+        for node in self.removed_nodes():
+            commands += "DELETE_NODE %s.\n" % node
+        for u, v in self.removed_edges():
+            commands += "DELETE_EDGE %s %s.\n" % (u, v)
+        for lhs_node, p_nodes in self.cloned_nodes().items():
+            new_name = set()
+            for p_node in p_nodes:
+                if p_node != lhs_node:
+                    new_name.add(p_node)
+            commands += "CLONE %s AS %s.\n" % (lhs_node, new_name.pop())
+        for node, attrs in self.removed_node_attrs().items():
+            commands += "DELETE_NODE_ATTRS %s %s.\n" % (node, attrs)
+        for (u, v), attrs in self.removed_edge_attrs().items():
+            commands += "DELETE_EDGE_ATTRS %s %s %s.\n" % (u, v, attrs)
+
+        for node in self.added_nodes():
+            commands += "ADD_NODE %s %s.\n" % (node, self.rhs.node[node])
+        for (u, v) in self.added_edges():
+            commands += "ADD_EDGE %s %s %s.\n." % (u, v, self.rhs.edge[u][v])
+        for node, p_nodes in self.merged_nodes().items():
+            commands += "MERGE [%s] AS '%s'.\n" %\
+                (", ".join([str(n) for n in p_nodes]), str(node))
+        for node, attrs in self.added_node_attrs().items():
+            commands += "ADD_NODE_ATTRS %s %s.\n" % (node, attrs)
+        for (u, v), attrs in self.added_edge_attrs().items():
+            commands += "ADD_EDGE_ATTRS %s %s %s.\n" % (u, v, attrs)
+        return commands
