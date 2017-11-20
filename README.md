@@ -21,22 +21,16 @@ The required `Python 3` packages are given inside the requirements.txt file
 
 To avoid manual installation and to easily set up development environment you may consider following the instructions below:
 
-### Create virtual environment
+### (Optional ) Setup virtual environment
 
+Create a new virtual environment
 ```
 virtualenv venv -p path/to/your/python3
 ```
 
-### Setup environment
-
-To activate the virtual environment
+To activate the environment
 ```
 source venv/bin/activate
-```
-
-To install required dependencies
-```
-pip install -r requirements.txt
 ```
 
 ## Installation
