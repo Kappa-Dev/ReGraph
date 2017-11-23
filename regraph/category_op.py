@@ -19,7 +19,8 @@ from regraph.utils import (keys_by_value,
                            restrict_mapping,
                            dict_sub,
                            id_of,
-                           valid_attributes)
+                           valid_attributes,
+                           attrs_intersection)
 from regraph.exceptions import (InvalidHomomorphism, ReGraphError)
 
 
@@ -697,3 +698,42 @@ def pushout_from_partial_mapping(b, c, b_c, b_typings, c_typings):
     (d, b_d, c_d) = pushout(a, b, c, a_b, a_c)
     d_typings = typing_of_pushout(b, c, d, b_d, c_d, b_typings, c_typings)
     return (d, d_typings)
+
+
+def relation_to_span(g1, g2, relation, edges=False, attrs=False, directed=True):
+        """Convert a relation to a span."""
+        if directed:
+            new_graph = nx.DiGraph()
+        else:
+            new_graph = nx.Graph()
+        left_h = dict()
+        right_h = dict()
+
+        for a, b in relation:
+            new_node = str(a) + "_" + str(b)
+            new_graph.add_node(new_node)
+            if attrs:
+                common_attrs = attrs_intersection(
+                    g1.node[a],
+                    g2.node[b]
+                )
+                add_node_attrs(new_graph, new_node, common_attrs)
+            left_h[new_node] = a
+            right_h[new_node] = b
+
+        for n1 in new_graph.nodes():
+            for n2 in new_graph.nodes():
+                if (left_h[n1], left_h[n2]) in g1.edges() and\
+                   (right_h[n1], right_h[n2]) in g2.edges():
+                    new_graph.add_edge(n1, n2)
+                    common_attrs = attrs_intersection(
+                        g1.edge[left_h[n1]][left_h[n2]],
+                        g2.edge[right_h[n1]][right_h[n2]],
+                    )
+                    add_edge_attrs(
+                        new_graph,
+                        n1, n2,
+                        common_attrs
+                    )
+
+        return (new_graph, left_h, right_h)

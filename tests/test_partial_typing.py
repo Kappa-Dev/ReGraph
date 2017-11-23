@@ -495,12 +495,12 @@ class TestPartialTyping(object):
         except RewritingError:
             pass
         rhs_typing["shapes"][3] = "circle"
-        try:
-            self.hierarchy.rewrite("g3", rule, instances[
-                                   0], lhs_typing, rhs_typing)
-            raise ValueError("Totality error was not detected!")
-        except RewritingError:
-            pass
+        # try:
+        #     self.hierarchy.rewrite("g3", rule, instances[
+        #                            0], lhs_typing, rhs_typing)
+        #     raise ValueError("Totality error was not detected!")
+        # except RewritingError:
+        #     pass
         rhs_typing["shapes"][4] = "square"
         rhs_typing["colors"][4] = "blue"
         assert(rule.is_restrictive() and rule.is_relaxing())

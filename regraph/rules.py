@@ -925,7 +925,7 @@ class Rule(object):
         for node in self.added_nodes():
             commands += "ADD_NODE %s %s.\n" % (node, self.rhs.node[node])
         for (u, v) in self.added_edges():
-            commands += "ADD_EDGE %s %s %s.\n." % (u, v, self.rhs.edge[u][v])
+            commands += "ADD_EDGE %s %s %s.\n" % (u, v, self.rhs.edge[u][v])
         for node, p_nodes in self.merged_nodes().items():
             commands += "MERGE [%s] AS '%s'.\n" %\
                 (", ".join([str(n) for n in p_nodes]), str(node))

@@ -7,103 +7,108 @@ from regraph.exceptions import RewritingError, ReGraphError
 from regraph.utils import keys_by_value, format_typing
 
 
-# def _new_check_rhs_sideffects(hierarchy, graph_id, rule, instance, typing_dict):
-#     for node in rule.rhs.nodes():
-#         p_keys = keys_by_value(rule.p_rhs, node)
-#         g_keys = [instance[rule.p_lhs[p]] for p in p_keys]
-#         if len(p_keys) > 1:
-#             if hierarchy.directed:
-#                 succs = set()
-#                 preds = set()
-#                 for g in g_keys:
-#                     succs.update([
-#                         s for s in hierarchy.node[graph_id].graph.successors(g)
-#                         if s not in g_keys
-#                     ])
-#                     preds.update([
-#                         s for s in hierarchy.node[graph_id].graph.predecessors(g)
-#                         if s not in g_keys
-#                     ])
+# def _check_rhs_sideffects(hierarchy, graph_id, rule, instance, typing_dict):
+#     for typing_graph, mapping in typing_dict.items():
 
+#         # check edges out of the g-(im(g->lhs)) do not violate typing
+#         for node in rule.rhs.nodes():
+#             p_keys = keys_by_value(rule.p_rhs, node)
+#             g_keys = [instance[rule.p_lhs[p]] for p in p_keys]
+#             if len(p_keys) > 1:
+#                 if hierarchy.directed:
+#                     succs = set()
+#                     preds = set()
+#                     for p in p_keys:
+#                         g = instance[rule.p_lhs[p]]
+#                         succs.update([
+#                             s for s in hierarchy.node[graph_id].graph.successors(g)
+#                             if s not in g_keys
+#                         ])
+#                         preds.update([
+#                             s for s in hierarchy.node[graph_id].graph.predecessors(g)
+#                             if s not in g_keys
+#                         ])
+#                     for s in succs:
+#                         path = nx.shortest_path(
+#                             hierarchy, graph_id, typing_graph)
+#                         graph_mapping = hierarchy.compose_path_typing(path)
+#                         if s in graph_mapping.keys() and node in mapping:
+#                             if (mapping[node], graph_mapping[s]) not in\
+#                                hierarchy.node[typing_graph].graph.edges():
+#                                 raise RewritingError(
+#                                     "Merge produces a forbidden edge "
+#                                     "between nodes of types `%s` and `%s`!" %
+#                                     (mapping[node], graph_mapping[s])
+#                                 )
+#                     for p in preds:
+#                         path = nx.shortest_path(
+#                             hierarchy, graph_id, typing_graph)
+#                         graph_mapping = hierarchy.compose_path_typing(path)
+#                         if p in graph_mapping.keys() and node in mapping:
+#                             if (graph_mapping[p], mapping[node]) not in\
+#                                hierarchy.node[typing_graph].graph.edges():
+#                                 raise RewritingError(
+#                                     "Merge produces a forbidden edge "
+#                                     "between nodes of types `%s` and `%s`!" %
+#                                     (graph_mapping[p], mapping[node])
+#                                 )
 
-def _check_rhs_sideffects(hierarchy, graph_id, rule, instance, typing_dict):
-    for typing_graph, mapping in typing_dict.items():
-
-        # check edges out of the g-(im(g->lhs)) do not violate typing
-        for node in rule.rhs.nodes():
-            p_keys = keys_by_value(rule.p_rhs, node)
-            g_keys = [instance[rule.p_lhs[p]] for p in p_keys]
-            if len(p_keys) > 1:
-                if hierarchy.directed:
-                    succs = set()
-                    preds = set()
-                    for p in p_keys:
-                        g = instance[rule.p_lhs[p]]
-                        succs.update([
-                            s for s in hierarchy.node[graph_id].graph.successors(g)
-                            if s not in g_keys
-                        ])
-                        preds.update([
-                            s for s in hierarchy.node[graph_id].graph.predecessors(g)
-                            if s not in g_keys
-                        ])
-                    for s in succs:
-                        path = nx.shortest_path(
-                            hierarchy, graph_id, typing_graph)
-                        graph_mapping = hierarchy.compose_path_typing(path)
-                        if s in graph_mapping.keys() and node in mapping:
-                            if (mapping[node], graph_mapping[s]) not in\
-                               hierarchy.node[typing_graph].graph.edges():
-                                raise RewritingError(
-                                    "Merge produces a forbidden edge "
-                                    "between nodes of types `%s` and `%s`!" %
-                                    (mapping[node], graph_mapping[s])
-                                )
-                    for p in preds:
-                        path = nx.shortest_path(
-                            hierarchy, graph_id, typing_graph)
-                        graph_mapping = hierarchy.compose_path_typing(path)
-                        if p in graph_mapping.keys() and node in mapping:
-                            if (graph_mapping[p], mapping[node]) not in\
-                               hierarchy.node[typing_graph].graph.edges():
-                                raise RewritingError(
-                                    "Merge produces a forbidden edge "
-                                    "between nodes of types `%s` and `%s`!" %
-                                    (graph_mapping[p], mapping[node])
-                                )
-
-                else:
-                    neighbours = set()
-                    for p in p_keys:
-                        g_node = instance[rule.p_lhs[p]]
-                        neighbours.update(
-                            hierarchy.node[graph_id].graph.neighbors(g_node)
-                        )
-                    for n in neighbours:
-                        graph_mapping = hierarchy.edge[
-                            graph_id][typing_graph].mapping
-                        if s in graph_mapping.keys():
-                            if (mapping[node], graph_mapping[s]) not in\
-                               hierarchy.node[typing_graph].graph.edges():
-                                raise RewritingError(
-                                    "Merge produces a forbidden edge "
-                                    "between nodes of types `%s` and `%s`!" %
-                                    (mapping[node], graph_mapping[s])
-                                )
-    return
+#                 else:
+#                     neighbours = set()
+#                     for p in p_keys:
+#                         g_node = instance[rule.p_lhs[p]]
+#                         neighbours.update(
+#                             hierarchy.node[graph_id].graph.neighbors(g_node)
+#                         )
+#                     for n in neighbours:
+#                         graph_mapping = hierarchy.edge[
+#                             graph_id][typing_graph].mapping
+#                         if s in graph_mapping.keys():
+#                             if (mapping[node], graph_mapping[s]) not in\
+#                                hierarchy.node[typing_graph].graph.edges():
+#                                 raise RewritingError(
+#                                     "Merge produces a forbidden edge "
+#                                     "between nodes of types `%s` and `%s`!" %
+#                                     (mapping[node], graph_mapping[s])
+#                                 )
+#     return
 
 
 def _autocomplete_typing(hierarchy, graph_id, instance,
-                         lhs_typing, rhs_typing, p_lhs, p_rhs):
+                         lhs_typing, rhs_typing_rel, p_lhs, p_rhs):
+
     if len(hierarchy.successors(graph_id)) > 0:
         if lhs_typing is None:
             new_lhs_typing = dict()
         else:
             new_lhs_typing = format_typing(lhs_typing)
-        if rhs_typing is None:
-            new_rhs_typing = dict()
+        if rhs_typing_rel is None:
+            new_rhs_typing_rel = dict()
         else:
-            new_rhs_typing = format_typing(rhs_typing)
+            new_rhs_typing_rel = format_typing(rhs_typing_rel)
+            for g, typing_rel in new_rhs_typing_rel.items():
+                for key, values in typing_rel.items():
+                    value_set = set()
+                    if type(values) == str:
+                        value_set.add(values)
+                    else:
+                        try:
+                            for v in values:
+                                value_set.add(v)
+                        except TypeError:
+                            value_set.add(v)
+                    new_rhs_typing_rel[g][key] = value_set
+
+        ancestors = hierarchy.get_ancestors(graph_id)
+        for anc, anc_typing in ancestors.items():
+            if anc not in new_rhs_typing_rel.keys():
+                new_rhs_typing_rel[anc] = dict()
+
+        merged_nodes = set()
+        for r_node in p_rhs.values():
+            p_nodes = keys_by_value(p_rhs, r_node)
+            if len(p_nodes) > 1:
+                merged_nodes.add(r_node)
 
         for typing_graph in hierarchy.successors(graph_id):
             typing = hierarchy.edge[graph_id][typing_graph].mapping
@@ -117,24 +122,24 @@ def _autocomplete_typing(hierarchy, graph_id, instance,
                         new_lhs_typing[typing_graph][source] = typing[target]
             for (p_node, l_node) in p_lhs.items():
                 if l_node in new_lhs_typing[typing_graph].keys():
-                    if typing_graph not in new_rhs_typing.keys():
-                        new_rhs_typing[typing_graph] = dict()
-                    if p_rhs[p_node] not in new_rhs_typing[typing_graph].keys():
-                        new_rhs_typing[typing_graph][p_rhs[p_node]] =\
-                            new_lhs_typing[typing_graph][l_node]
+                    if p_rhs[p_node] not in new_rhs_typing_rel[typing_graph].keys():
+                        new_rhs_typing_rel[typing_graph][p_rhs[p_node]] = set()
+
+                    new_rhs_typing_rel[typing_graph][p_rhs[p_node]].add(
+                        new_lhs_typing[typing_graph][l_node])
 
         # Second step of autocompletion of rhs typing
-        for typing_graph, typing in new_rhs_typing.items():
-            ancestors = hierarchy.get_ancestors(typing_graph)
+        for graph, typing in new_rhs_typing_rel.items():
+            ancestors = hierarchy.get_ancestors(graph)
             for ancestor, ancestor_typing in ancestors.items():
-                if ancestor in new_rhs_typing.keys():
-                    dif = set(typing.keys()) -\
-                        set(new_rhs_typing[ancestor].keys())
-                    for node in dif:
-                        new_rhs_typing[ancestor][node] =\
-                            ancestor_typing[new_rhs_typing[typing_graph][node]]
-
-        return (new_lhs_typing, new_rhs_typing)
+                dif = set(typing.keys()) -\
+                    set(new_rhs_typing_rel[ancestor].keys())
+                for node in dif:
+                    type_set = set()
+                    for el in new_rhs_typing_rel[graph][node]:
+                        type_set.add(ancestor_typing[el])
+                    new_rhs_typing_rel[ancestor][node] = type_set
+        return (new_lhs_typing, new_rhs_typing_rel)
     else:
         return (None, None)
 
@@ -147,16 +152,17 @@ def _check_lhs_rhs_consistency(hierarchy, graph_id, rule, instance,
             if ancestor in rhs_typing.keys():
                 for p_node in rule.p.nodes():
                     if rule.p_rhs[p_node] in rhs_typing[ancestor] and\
-                       rhs_typing[ancestor][rule.p_rhs[p_node]] !=\
-                       ancestor_typing[typing[rule.p_lhs[p_node]]]:
+                        len(rhs_typing[ancestor][rule.p_rhs[p_node]]) == 1 and\
+                        ancestor_typing[typing[rule.p_lhs[p_node]]] not in\
+                            rhs_typing[ancestor][rule.p_rhs[p_node]]:
                         raise RewritingError(
                             "Inconsistent typing of the rule: "
                             "node '%s' from the preserved part is typed "
                             "by a graph '%s' as "
                             "'%s' from the lhs and as a '%s' from the rhs." %
                             (p_node, ancestor,
-                             rhs_typing[ancestor][rule.p_rhs[p_node]],
-                             ancestor_typing[typing[rule.p_lhs[p_node]]])
+                             ancestor_typing[typing[rule.p_lhs[p_node]]],
+                             rhs_typing[ancestor][rule.p_rhs[p_node]])
                         )
 
 
@@ -166,10 +172,36 @@ def _check_self_consistency(hierarchy, typing):
         for anc, anc_typing in ancestors.items():
             if anc in typing.keys():
                 for key, value in mapping.items():
-                    if key in typing[anc].keys() and\
-                       value in anc_typing.keys() and\
-                       anc_typing[value] != typing[anc][key]:
-                        raise ReGraphError("typing is self inconsistent!")
+                    if key in typing[anc].keys():
+                        if type(value) == str:
+                            if value in anc_typing.keys() and\
+                               anc_typing[value] != typing[anc][key]:
+                                raise ReGraphError(
+                                    "Node '%s' is typed as "
+                                    "'%s' and '%s' in the graph '%s'" %
+                                    (key, anc_typing[value], typing[anc][key],
+                                        anc)
+                                )
+                        else:
+                            try:
+                                for val in value:
+                                    if val in anc_typing.keys() and\
+                                       anc_typing[val] not in typing[anc][key]:
+                                        raise ReGraphError(
+                                            "Node '%s' is typed as "
+                                            "'%s' and '%s' in the graph '%s'" %
+                                            (key, anc_typing[val], typing[anc][key],
+                                                anc)
+                                        )
+                            except TypeError as e:
+                                if value in anc_typing.keys() and\
+                                   anc_typing[value] != typing[anc][key]:
+                                    raise ReGraphError(
+                                        "Node '%s' is typed as "
+                                        "'%s' and '%s' in the graph '%s'" %
+                                        (key, anc_typing[value], typing[anc][key],
+                                            anc)
+                                    )
 
 
 def _check_totality(hierarchy, graph_id, rule, instance,

@@ -15,10 +15,9 @@ from regraph import rule_type_checking
 from regraph.attribute_sets import AttributeSet, FiniteSet
 from regraph.category_op import (compose,
                                  check_homomorphism,
-                                 is_total_homomorphism)
-from regraph.primitives import (add_node_attrs,
-                                add_edge_attrs,
-                                get_relabeled_graph,
+                                 is_total_homomorphism,
+                                 relation_to_span)
+from regraph.primitives import (get_relabeled_graph,
                                 relabel_node,
                                 get_edge,
                                 graph_to_json,
@@ -29,8 +28,7 @@ from regraph.utils import (is_subdict,
                            normalize_attrs,
                            to_set,
                            replace_source,
-                           replace_target,
-                           attrs_intersection)
+                           replace_target)
 from regraph.rules import Rule
 from regraph.exceptions import (HierarchyError,
                                 TotalityWarning,
@@ -720,41 +718,14 @@ class Hierarchy(nx.DiGraph):
                 "Relation between graphs '%s' and '%s' is not defined" %
                 (g1, g2)
             )
-        if self.directed:
-            new_graph = nx.DiGraph()
-        else:
-            new_graph = nx.Graph()
-        left_h = dict()
-        right_h = dict()
 
-        for a, b in self.relation[g1][g2].rel:
-            new_node = str(a) + "_" + str(b)
-            new_graph.add_node(new_node)
-            if attrs:
-                common_attrs = attrs_intersection(
-                    self.node[g1].graph.node[a],
-                    self.node[g2].graph.node[b]
-                )
-                add_node_attrs(new_graph, new_node, common_attrs)
-            left_h[new_node] = a
-            right_h[new_node] = b
-
-        for n1 in new_graph.nodes():
-            for n2 in new_graph.nodes():
-                if (left_h[n1], left_h[n2]) in self.node[g1].graph.edges() and\
-                   (right_h[n1], right_h[n2]) in self.node[g2].graph.edges():
-                    new_graph.add_edge(n1, n2)
-                    common_attrs = attrs_intersection(
-                        self.node[g1].graph.edge[left_h[n1]][left_h[n2]],
-                        self.node[g2].graph.edge[right_h[n1]][right_h[n2]],
-                    )
-                    add_edge_attrs(
-                        new_graph,
-                        n1, n2,
-                        common_attrs
-                    )
-
-        return (new_graph, left_h, right_h)
+        return relation_to_span(
+            self.node[g1].graph,
+            self.node[g2].graph,
+            self.relation[g1][g2].rel,
+            edges,
+            attrs,
+            self.directed)
 
     def remove_graph(self, graph_id, reconnect=False):
         """Remove graph from the hierarchy.
@@ -1373,8 +1344,7 @@ class Hierarchy(nx.DiGraph):
 
     def rewrite(self, graph_id, rule, instance,
                 lhs_typing=None, rhs_typing=None,
-                # strong_typing=True,
-                total=True, inplace=True):
+                total=True, inplace=True, propagate_down=True):
         """Rewrite and propagate the changes up & down."""
         if type(self.node[graph_id]) == RuleNode:
             raise ReGraphError("Rewriting of a rule is not implemented!")
@@ -1395,18 +1365,22 @@ class Hierarchy(nx.DiGraph):
         if lhs_typing is not None and rhs_typing is not None:
             try:
                 rule_type_checking._check_self_consistency(self, new_lhs_typing)
-            except ReGraphError:
-                raise RewritingError("Typing of the lhs is self inconsistent")
+            except ReGraphError as e:
+                raise RewritingError(
+                    "Typing of the lhs is self inconsistent: %s" % str(e)
+                )
             try:
                 rule_type_checking._check_self_consistency(self, new_rhs_typing)
-            except ReGraphError:
-                raise RewritingError("Typing of the rhs is self inconsistent")
+            except ReGraphError as e:
+                raise RewritingError(
+                    "Typing of the rhs is self inconsistent: %s" % str(e)
+                )
 
             rule_type_checking._check_lhs_rhs_consistency(
                 self, graph_id, rule, instance, new_lhs_typing, new_rhs_typing)
 
             # 1d. Check totality
-            if total:
+            if total and propagate_down is False:
                 rule_type_checking._check_totality(
                     self, graph_id, rule, instance,
                     new_lhs_typing, new_rhs_typing)
@@ -1414,8 +1388,8 @@ class Hierarchy(nx.DiGraph):
             # rhs of the rule (this mainly includes edges forbidden by some
             # typing)
 
-            rule_type_checking._check_rhs_sideffects(
-                self, graph_id, rule, instance, new_rhs_typing)
+            # rule_type_checking._check_rhs_sideffects(
+            #     self, graph_id, rule, instance, new_rhs_typing)
 
         # 2. Rewrite a graph `graph_id`
         base_changes = rewriting_utils._rewrite_base(
@@ -1447,7 +1421,7 @@ class Hierarchy(nx.DiGraph):
             upstream_changes["relations"] += new_upstream_changes["relations"]
 
         downstream_changes = None
-        if rule.is_relaxing():
+        if rule.is_relaxing() and propagate_down is True:
             graph_construct = (g_m, g_m_g, g_prime, g_m_g_prime, r_g_prime)
             downstream_changes =\
                 rewriting_utils._propagate_down(

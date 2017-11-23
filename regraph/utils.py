@@ -878,8 +878,8 @@ def replace_target(n1, n2, mapping):
             mapping[key] = n2
 
 
-def id_of(graph):
-    return {node: node for node in graph.nodes()}
+def id_of(elements):
+    return {e: e for e in elements}
 
 
 def restrict_mapping(nodes, mapping):
