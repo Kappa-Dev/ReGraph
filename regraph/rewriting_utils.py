@@ -248,7 +248,6 @@ def _propagate_down(hierarchy, origin_id, origin_construct,
 
     for graph in nx.bfs_tree(hierarchy, origin_id):
         if graph != origin_id:
-            print("\t Updating ", graph)
 
             relation_rhs_g = set()
             for key, values in rhs_typing_rels[graph].items():
@@ -280,15 +279,6 @@ def _propagate_down(hierarchy, origin_id, origin_construct,
 
             for pred in hierarchy.predecessors(graph):
                 if pred == origin_id:
-
-                    # print(origin_prime.nodes())
-                    # print(origin_m_origin_prime)
-                    # print(rhs_origin_prime)
-                    # print(compose_chain(
-                    #             [origin_m_origin,
-                    #              hierarchy.edge[pred][graph].mapping,
-                    #              g_g_prime]))
-                    # print(rhs_g_prime)
 
                     updated_homomorphisms[(pred, graph)] =\
                         get_unique_map_from_pushout(
