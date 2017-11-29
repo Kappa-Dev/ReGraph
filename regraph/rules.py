@@ -425,7 +425,7 @@ class Rule(object):
         return
 
     def remove_node_attrs_rhs(self, n, attrs):
-        """Remove attrs to a node in the rhs."""
+        """Remove attrs of a node in the rhs."""
         if n not in self.rhs.nodes():
             raise RuleError(
                 "Node '%s' does not exist in the right hand "
@@ -435,6 +435,14 @@ class Rule(object):
         for p_node in p_keys:
             primitives.remove_node_attrs(self.p, p_node, attrs)
         primitives.remove_node_attrs(self.rhs, n, attrs)
+
+    def remove_node_attrs_p(self, n, attrs):
+        """Remove attrs of a node in the p."""
+        if n not in self.p.nodes():
+            raise RuleError(
+                "Node '%s' does not exist in the preserved "
+                "part of the rule" % n)
+        primitives.remove_node_attrs(self.p, n, attrs)
 
     def remove_node_attrs(self, n, attrs):
         """Remove nodes attributes from a node in the graph."""

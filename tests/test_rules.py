@@ -301,14 +301,14 @@ class TestRule(object):
         p = nx.DiGraph()
         prim.add_nodes_from(
             p,
-            [(1, {'state': 'p'}), '1_clone', (2, {'name': 'BND'}), 3, 4])
+            [(1, {'state': 'p'}), ("1_clone", {'state': 'p'}), (2, {'name': 'BND'}), 3, 4])
         prim.add_edges_from(
             p, [(1, 2), ('1_clone', 2), (3, 4)])
 
         rhs = nx.DiGraph()
         prim.add_nodes_from(
             rhs,
-            [(1, {'state': 'p'}), '1_clone', (2, {'name': 'BND'}), 3, 4, 5])
+            [(1, {'state': 'p'}), ("1_clone", {'state': 'p'}), (2, {'name': 'BND'}), 3, 4, 5])
 
         prim.add_edges_from(
             rhs, [(1, 2, {'s': 'u'}), ('1_clone', 2), (2, 4), (3, 4), (5, 3)])
@@ -324,6 +324,6 @@ class TestRule(object):
             "add_edge 5 3."
 
         rule2 = Rule.from_transform(pattern, commands)
-        # print(rule1)
-        # print(rule2)
-        # assert(rule1 == rule2)
+        assert((5, 3) in rule2.rhs.edges())
+        assert(5 in rule2.rhs.nodes() and 5 not in rule2.p.nodes())
+        assert((2, 4) in rule2.rhs.edges())
