@@ -146,7 +146,6 @@ def remove_node_attrs(graph, node, attrs_dict):
     if node not in graph.nodes():
         raise GraphError("Node '%s' does not exist!" % str(node))
     elif attrs_dict is None:
-        pass
         warnings.warn(
             "You want to remove attrs from '%s' with an empty attrs_dict!" % node,
             GraphAttrsWarning

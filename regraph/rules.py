@@ -119,7 +119,7 @@ class Rule(object):
                     attrs = {}
                     if "attributes" in action.keys():
                         attrs = action["attributes"]
-                    rule.add_edge(
+                    rule.add_edge_rhs(
                         action["node_1"],
                         action["node_2"],
                         attrs)
@@ -230,7 +230,6 @@ class Rule(object):
         # Find nodes in p mapping to n1 & n2
         p_keys_1 = keys_by_value(self.p_lhs, n1)
         p_keys_2 = keys_by_value(self.p_lhs, n2)
-
         for k1 in p_keys_1:
             if k1 not in self.p.nodes():
                 raise RuleError(
@@ -391,7 +390,6 @@ class Rule(object):
                     )
                 nodes_to_merge.add(self.p_rhs[k1])
                 nodes_to_merge.add(self.p_rhs[k2])
-        print(nodes_to_merge)
         new_name = primitives.merge_nodes(
             self.rhs,
             list(nodes_to_merge),

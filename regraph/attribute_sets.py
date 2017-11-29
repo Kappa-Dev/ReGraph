@@ -329,6 +329,8 @@ class RegexSet(AttributeSet):
     def __str__(self):
         """String representation of RegexSet obj."""
         if self.pattern:
+            if self.is_universal():
+                return "<UniversalRegexSet>"
             return self.pattern
         else:
             return "<EmptyRegexSet>"

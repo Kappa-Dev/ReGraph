@@ -28,3 +28,4 @@ push.js
 RegraphGui
 examples/.ipynb_checkpoints/
 .pylintrc
+regraph/bin/*

@@ -281,3 +281,49 @@ class TestRule(object):
         assert(len(rule.added_node_attrs()) == 1 and
                100 in rule.added_node_attrs()[3]["a3"])
         assert(rule.is_restrictive() and rule.is_relaxing())
+
+    def test_from_commands(self):
+        pattern = nx.DiGraph()
+        prim.add_nodes_from(
+            pattern,
+            [(1, {'state': 'p'}),
+             (2, {'name': 'BND'}),
+             3,
+             4]
+        )
+        prim.add_edges_from(
+            pattern,
+            [(1, 2, {'s': 'p'}),
+             (3, 2, {'s': 'u'}),
+             (3, 4)]
+        )
+
+        p = nx.DiGraph()
+        prim.add_nodes_from(
+            p,
+            [(1, {'state': 'p'}), '1_clone', (2, {'name': 'BND'}), 3, 4])
+        prim.add_edges_from(
+            p, [(1, 2), ('1_clone', 2), (3, 4)])
+
+        rhs = nx.DiGraph()
+        prim.add_nodes_from(
+            rhs,
+            [(1, {'state': 'p'}), '1_clone', (2, {'name': 'BND'}), 3, 4, 5])
+
+        prim.add_edges_from(
+            rhs, [(1, 2, {'s': 'u'}), ('1_clone', 2), (2, 4), (3, 4), (5, 3)])
+
+        p_lhs = {1: 1, '1_clone': 1, 2: 2, 3: 3, 4: 4}
+        p_rhs = {1: 1, '1_clone': '1_clone', 2: 2, 3: 3, 4: 4}
+        rule1 = Rule(p, pattern, rhs, p_lhs, p_rhs)
+
+        commands = "clone 1.\n" +\
+            "delete_edge 3 2.\n" +\
+            "add_node 5.\n" +\
+            "add_edge 2 4.\n" +\
+            "add_edge 5 3."
+
+        rule2 = Rule.from_transform(pattern, commands)
+        # print(rule1)
+        # print(rule2)
+        # assert(rule1 == rule2)
