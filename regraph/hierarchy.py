@@ -1342,6 +1342,64 @@ class Hierarchy(nx.DiGraph):
                             suc1.intersection(suc2)
         return common_sucs
 
+    def rewrite_inplace(self, graph_id, rule, instance,
+                        lhs_typing=None, rhs_typing=None,
+                        total=True, inplace=True, propagate_down=True):
+        """Rewrite and propagate the changes up & down."""
+        if type(self.node[graph_id]) == RuleNode:
+            raise ReGraphError("Rewriting of a rule is not implemented!")
+
+        # 1. Check consistency of the input
+        # 1a. Autocomplete typing
+
+        new_lhs_typing, new_rhs_typing =\
+            rule_type_checking._autocomplete_typing(
+                self, graph_id, instance, lhs_typing,
+                rhs_typing, rule.p_lhs, rule.p_rhs)
+
+        # 1b. Check that instance is consistent with lhs & rhs typing
+        rule_type_checking._check_instance(
+            self, graph_id, rule.lhs, instance, new_lhs_typing)
+
+        # 1c. Check consistency of the (autocompleted) rhs & lhs typings
+        if lhs_typing is not None and rhs_typing is not None:
+            try:
+                rule_type_checking._check_self_consistency(self, new_lhs_typing)
+            except ReGraphError as e:
+                raise RewritingError(
+                    "Typing of the lhs is self inconsistent: %s" % str(e)
+                )
+            try:
+                rule_type_checking._check_self_consistency(self, new_rhs_typing)
+            except ReGraphError as e:
+                raise RewritingError(
+                    "Typing of the rhs is self inconsistent: %s" % str(e)
+                )
+
+            rule_type_checking._check_lhs_rhs_consistency(
+                self, graph_id, rule, instance, new_lhs_typing, new_rhs_typing)
+
+            # 1d. Check totality
+            if total and propagate_down is False:
+                rule_type_checking._check_totality(
+                    self, graph_id, rule, instance,
+                    new_lhs_typing, new_rhs_typing)
+
+        # 2. Rewrite a graph `graph_id`
+        base_changes = rewriting_utils._rewrite_base(
+            self, graph_id, rule, instance,
+            new_lhs_typing, new_rhs_typing, inplace)
+
+        (g_m, p_g_m, g_m_g, g_prime, g_m_g_prime, r_g_prime) =\
+            base_changes["graph"]
+
+        if rule.is_restrictive():
+            rewriting_utils._propagate_up_inplace(
+                self, graph_id, rule, instance, p_g_m, g_m_g_prime)
+
+        if rule.is_relaxing() and propagate_down is True:
+            pass
+
     def rewrite(self, graph_id, rule, instance,
                 lhs_typing=None, rhs_typing=None,
                 total=True, inplace=True, propagate_down=True):
@@ -1384,16 +1442,11 @@ class Hierarchy(nx.DiGraph):
                 rule_type_checking._check_totality(
                     self, graph_id, rule, instance,
                     new_lhs_typing, new_rhs_typing)
-            # 1e. Check if there are no forbidden side effects produced by
-            # rhs of the rule (this mainly includes edges forbidden by some
-            # typing)
-
-            # rule_type_checking._check_rhs_sideffects(
-            #     self, graph_id, rule, instance, new_rhs_typing)
 
         # 2. Rewrite a graph `graph_id`
         base_changes = rewriting_utils._rewrite_base(
-            self, graph_id, rule, instance, new_lhs_typing, new_rhs_typing)
+            self, graph_id, rule, instance,
+            new_lhs_typing, new_rhs_typing, inplace)
 
         (g_m, p_g_m, g_m_g, g_prime, g_m_g_prime, r_g_prime) =\
             base_changes["graph"]
@@ -1408,10 +1461,11 @@ class Hierarchy(nx.DiGraph):
 
         if rule.is_restrictive():
             # 4. Propagate rewriting up the hierarchy
-            # TODO: rename upsteam_graphs ..
+
             new_upstream_changes =\
                 rewriting_utils._propagate_up(
-                    self, graph_id, g_m, g_m_g, g_prime, g_m_g_prime)
+                    self, graph_id, rule, instance, p_g_m, g_m_g_prime, inplace)
+
             upstream_changes["graphs"].update(new_upstream_changes["graphs"])
             upstream_changes["homomorphisms"].update(
                 new_upstream_changes["homomorphisms"])
@@ -1426,7 +1480,7 @@ class Hierarchy(nx.DiGraph):
             downstream_changes =\
                 rewriting_utils._propagate_down(
                     self, graph_id, graph_construct,
-                    rule, instance, new_rhs_typing)
+                    rule, instance, new_rhs_typing, inplace)
 
         # 6. Apply all the changes in the hierarchy
         if inplace:
