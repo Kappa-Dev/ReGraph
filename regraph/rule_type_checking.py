@@ -9,7 +9,7 @@ from regraph.utils import keys_by_value, format_typing
 
 def _autocomplete_typing(hierarchy, graph_id, instance,
                          lhs_typing, rhs_typing_rel, p_lhs, p_rhs):
-    print("Initial rhs typing: ", rhs_typing_rel)
+    # print("Initial rhs typing: ", rhs_typing_rel)
     if len(hierarchy.successors(graph_id)) > 0:
         if lhs_typing is None:
             new_lhs_typing = dict()
@@ -63,13 +63,13 @@ def _autocomplete_typing(hierarchy, graph_id, instance,
 
         # Second step of autocompletion of rhs typing
         for graph, typing in new_rhs_typing_rel.items():
-            print("Autocompleting ancestors of: ", graph)
+            # print("Autocompleting ancestors of: ", graph)
             ancestors = hierarchy.get_ancestors(graph)
             for ancestor, ancestor_typing in ancestors.items():
-                print("\tAncestor: ", ancestor, ancestor_typing)
+                # print("\tAncestor: ", ancestor, ancestor_typing)
                 dif = set(typing.keys()) -\
                     set(new_rhs_typing_rel[ancestor].keys())
-                print("\tTyped here, but not ancestor: ", dif)
+                # print("\tTyped here, but not ancestor: ", dif)
                 for node in dif:
                     type_set = set()
                     for el in new_rhs_typing_rel[graph][node]:

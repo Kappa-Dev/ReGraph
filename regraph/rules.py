@@ -263,11 +263,16 @@ class Rule(object):
                     primitives.add_edge(self.rhs, rhs_key_1, rhs_key_2, attrs)
         return
 
+    def remove_edge_p(self, node1, node2):
+        """Remove edge from the p of the graph."""
+        primitives.remove_edge(self.p, node1, node2)
+
     def remove_edge_rhs(self, node1, node2):
         """Remove edge from the rhs of the graph."""
         primitives.remove_edge(self.rhs, node1, node2)
         for pn1 in keys_by_value(self.p_rhs, node1):
             for pn2 in keys_by_value(self.p_rhs, node2):
+                print(pn1, pn2)
                 try:
                     primitives.remove_edge(self.p, pn1, pn2)
                 except GraphError:
@@ -347,7 +352,6 @@ class Rule(object):
         rhs_new_nodes = []
         p_keys = keys_by_value(self.p_lhs, n)
         for k in p_keys:
-
             p_new_node = primitives.clone_node(self.p, k)
             p_new_nodes.append(p_new_node)
             rhs_new_node = primitives.clone_node(self.rhs, self.p_rhs[k])
@@ -842,7 +846,7 @@ class Rule(object):
                 for s_p_node in s_p_nodes:
                     for t_p_node in t_p_nodes:
                         if (s_p_node, t_p_node) not in self.p.edges():
-                            edges.add((s, t))
+                            edges.add((s_p_node, t_p_node))
         return edges
 
     def removed_node_attrs(self):

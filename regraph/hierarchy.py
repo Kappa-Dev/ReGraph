@@ -1020,7 +1020,7 @@ class Hierarchy(nx.DiGraph):
         """Type a node in a graph according to `typing_dict`."""
         if node_id not in self.node[graph_id].graph.nodes():
             raise HierarchyError(
-                "Node `%s` is not defined in the hierarchy!" %
+                "Node '%s' is not defined in the hierarchy graph '%s'!" %
                 (node_id, graph_id)
             )
 

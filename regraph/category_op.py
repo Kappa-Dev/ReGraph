@@ -31,10 +31,10 @@ from regraph.exceptions import (InvalidHomomorphism, ReGraphError)
 def subgraph(graph, nodes):
     """Get a subgraph induced by a set nodes.
 
-    :graph param:
-    :nodes param:
+    :param graph:
+    :param nodes:
 
-    :returns:
+    :return:
     """
     subgraph = copy.deepcopy(graph)
     for node in graph.nodes():
@@ -480,6 +480,7 @@ def pullback_complement(a, b, d, a_b, b_d, inplace=False):
 
     Makes changes to d inplace.
     """
+
     check_homomorphism(a, b, a_b, total=True)
     check_homomorphism(b, d, b_d, total=True)
 
@@ -496,15 +497,6 @@ def pullback_complement(a, b, d, a_b, b_d, inplace=False):
         c = d
     else:
         c = copy.deepcopy(d)
-
-    check_homomorphism(a, b, a_b, total=True)
-    check_homomorphism(b, d, b_d, total=True)
-
-    if not is_monic(b_d):
-        raise InvalidHomomorphism(
-            "Second homomorphism is not monic, "
-            "cannot find final pullback complement!"
-        )
 
     # Remove/clone nodes
     for b_node in b.nodes():
@@ -534,10 +526,9 @@ def pullback_complement(a, b, d, a_b, b_d, inplace=False):
             for k1 in a_keys_1:
                 for k2 in a_keys_2:
                     if d.is_directed():
-                        if (k1, k2) not in a.edges():
-                            if (a_c[k1], a_c[k2]) in d.edges():
-                                remove_edge(c, a_c[k1], a_c[k2])
-                                # removed_edges.add((a_c[k1], a_c[k2]))
+                        if (k1, k2) not in a.edges() and\
+                           (a_c[k1], a_c[k2]) in c.edges():
+                            remove_edge(c, a_c[k1], a_c[k2])
                     else:
                         if (k1, k2) not in a.edges() and\
                            (k2, k1) not in a.edges():
@@ -685,3 +676,73 @@ def relation_to_span(g1, g2, relation, edges=False, attrs=False, directed=True):
                     )
 
         return (new_graph, left_h, right_h)
+
+
+def left_dictionary(relation):
+    dictionary = dict()
+    for u, v in relation:
+        if u in dictionary.keys():
+            dictionary[u].add(v)
+        else:
+            dictionary[u] = set([v])
+    return dictionary
+
+
+def right_dictionary(relation):
+    dictionary = dict()
+    for u, v in relation:
+        if v in dictionary.keys():
+            dictionary[v].add(u)
+        else:
+            dictionary[v] = set([u])
+    return dictionary
+
+
+def pushout_from_relation(g1, g2, relation, inplace=False):
+    """Find the pushout from a relation."""
+
+    left_dict = left_dictionary(relation)
+    right_dict = right_dictionary(relation)
+
+    if inplace is True:
+        g12 = g1
+    else:
+        g12 = copy.deepcopy(g1)
+
+    g1_g12 = id_of(g12.nodes())
+    g2_g12 = dict()
+
+    for node in g1.nodes():
+        if node in left_dict.keys():
+            for g2_node in left_dict[node]:
+                g2_g12[g2_node] = node
+
+    for node in g2.nodes():
+        if node not in right_dict.keys():
+            add_node(g12, node, g2.node[node])
+            g2_g12[node] = node
+        elif len(right_dict[node]) == 1:
+            node_attrs_diff = dict_sub(
+                g2.node[node],
+                g1.node[list(right_dict[node])[0]])
+            add_node_attrs(
+                g12, list(right_dict[node])[0], node_attrs_diff)
+        elif len(right_dict[node]) > 1:
+            new_name = merge_nodes(g12, right_dict[node])
+            for g1_node in right_dict[node]:
+                g1_g12[g1_node] = new_name
+            g2_g12[node] = new_name
+            node_attrs_diff = dict_sub(
+                g2.node[node],
+                g12.node[new_name])
+            add_node_attrs(g12, new_name, node_attrs_diff)
+
+    for u, v in g2.edges():
+        if (g2_g12[u], g2_g12[v]) not in g12.edges():
+            add_edge(g12, g2_g12[u], g2_g12[v], get_edge(g2, u, v))
+        else:
+            edge_attrs_diff = dict_sub(
+                g2.edge[u][v],
+                g12.edge[g2_g12[u]][g2_g12[v]])
+            add_edge_attrs(g12, g2_g12[u], g2_g12[v], edge_attrs_diff)
+    return (g12, g1_g12, g2_g12)

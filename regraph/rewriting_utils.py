@@ -14,7 +14,8 @@ from regraph.category_op import (compose,
                                  pushout,
                                  relation_to_span,
                                  pullback_complement,
-                                 pushout)
+                                 pushout,
+                                 pushout_from_relation)
 from regraph import primitives
 from regraph.exceptions import RewritingError, TotalityWarning
 from regraph.rules import Rule
@@ -47,7 +48,8 @@ def _rewrite_base(hierarchy, graph_id, rule, instance,
     }
 
 
-def _temp_helper(graph, origin_typing, rule, instance, inplace=False):
+def _propagate_rule_to(graph, origin_typing, rule, instance, p_origin,
+                       inplace=False):
 
     if inplace is True:
         graph_prime = graph
@@ -56,25 +58,36 @@ def _temp_helper(graph, origin_typing, rule, instance, inplace=False):
 
     lhs_removed_nodes = rule.removed_nodes()
     lhs_removed_node_attrs = rule.removed_node_attrs()
-    lhs_removed_edges = rule.removed_edges()
-    lhs_removed_edge_attrs = rule.removed_edge_attrs()
+    p_removed_edges = rule.removed_edges()
+    p_removed_edge_attrs = rule.removed_edge_attrs()
     lhs_cloned_nodes = rule.cloned_nodes()
 
     graph_prime_graph = id_of(graph.nodes())
-    graph_prime_p = dict()
+    graph_prime_origin = dict()
 
     for lhs_node in rule.lhs.nodes():
+        origin_node = instance[lhs_node]
         g_nodes = keys_by_value(
-            origin_typing, instance[lhs_node])
+            origin_typing, origin_node)
         for node in g_nodes:
             if lhs_node in lhs_removed_nodes:
                 primitives.remove_node(
                     graph_prime, node)
                 del graph_prime_graph[node]
             else:
-                p_nodes = keys_by_value(rule.p_lhs, lhs_node)
-                if len(p_nodes) == 1:
-                    graph_prime_p[node] = p_nodes[0]
+                graph_prime_origin[node] = origin_node
+
+    for lhs_node, p_nodes in lhs_cloned_nodes.items():
+        nodes_to_clone = keys_by_value(origin_typing, instance[lhs_node])
+        for node in nodes_to_clone:
+            for i, p_node in enumerate(p_nodes):
+                if i == 0:
+                    graph_prime_origin[node] = p_origin[p_node]
+                else:
+                    new_name = primitives.clone_node(
+                        graph_prime,
+                        node)
+                    graph_prime_origin[new_name] = p_origin[p_node]
 
     for lhs_node, attrs in lhs_removed_node_attrs.items():
         nodes_to_remove_attrs = keys_by_value(
@@ -84,37 +97,25 @@ def _temp_helper(graph, origin_typing, rule, instance, inplace=False):
                 graph_prime,
                 node, attrs)
 
-    for lhs_u, lhs_v in lhs_removed_edges:
-
-        us = keys_by_value(origin_typing, instance[lhs_u])
-        vs = keys_by_value(origin_typing, instance[lhs_v])
+    for p_u, p_v in p_removed_edges:
+        us = keys_by_value(graph_prime_origin, p_origin[p_u])
+        vs = keys_by_value(graph_prime_origin, p_origin[p_v])
+        print(us, vs)
         for u in us:
             for v in vs:
                 if (u, v) in graph_prime.edges():
                     primitives.remove_edge(
                         graph_prime, u, v)
 
-    for (lhs_u, lhs_v), attrs in lhs_removed_edge_attrs.items():
-        us = keys_by_value(origin_typing, instance[lhs_u])
-        vs = keys_by_value(origin_typing, instance[lhs_v])
+    for (p_u, p_v), attrs in p_removed_edge_attrs.items():
+        us = keys_by_value(origin_typing, p_origin[p_u])
+        vs = keys_by_value(origin_typing, p_origin[p_v])
         for u in us:
             for v in vs:
                 primitives.removed_edge_attrs(
                     graph_prime, u, v, attrs)
 
-    for lhs_node, p_nodes in lhs_cloned_nodes.items():
-        nodes_to_clone = keys_by_value(origin_typing, lhs_node)
-        for node in nodes_to_clone:
-            for i, p_node in enumerate(p_nodes):
-                if i == 0:
-                    graph_prime_p[node] = p_node
-                else:
-                    new_name = primitives.clone_node(
-                        graph_prime,
-                        node)
-                    graph_prime_p[new_name] = p_node
-
-    return (graph_prime, graph_prime_graph, graph_prime_p)
+    return (graph_prime, graph_prime_graph, graph_prime_origin)
 
 
 def _propagate_up(hierarchy, graph_id, rule, instance,
@@ -132,18 +133,19 @@ def _propagate_up(hierarchy, graph_id, rule, instance,
 
                 origin_typing = hierarchy.get_typing(graph, graph_id)
 
-                (graph_prime, graph_prime_graph, graph_prime_p) =\
-                    _temp_helper(hierarchy.node[graph].graph,
-                                 origin_typing, rule, instance,
-                                 inplace)
+                (graph_prime, graph_prime_graph, graph_prime_origin) =\
+                    _propagate_rule_to(
+                        hierarchy.node[graph].graph,
+                        origin_typing, rule, instance,
+                        p_origin_m, inplace)
                 updated_graphs[graph] =\
-                    (graph_prime, graph_prime_graph, None, graph_prime_p)
+                    (graph_prime, graph_prime_graph, None, graph_prime_origin)
 
                 for suc in hierarchy.successors(graph):
 
                     if suc == graph_id:
                         updated_homomorphisms[(graph, suc)] =\
-                            compose(graph_prime_p, p_origin_m)
+                            graph_prime_origin
 
                     elif suc in updated_graphs.keys():
                         graph_prime_suc_prime =\
@@ -151,8 +153,10 @@ def _propagate_up(hierarchy, graph_id, rule, instance,
                                 updated_graphs[suc][0].nodes(),
                                 updated_graphs[suc][1],
                                 updated_graphs[suc][3],
-                                graph_prime_graph,
-                                graph_prime_p)
+                                compose(
+                                    graph_prime_graph,
+                                    hierarchy.edge[graph][suc].mapping),
+                                graph_prime_origin)
 
                         updated_homomorphisms[
                             (graph, suc)] = graph_prime_suc_prime
@@ -169,7 +173,7 @@ def _propagate_up(hierarchy, graph_id, rule, instance,
                         pred_m_graph_m = get_unique_map_to_pullback(
                             graph_prime.nodes(),
                             graph_prime_graph,
-                            graph_prime_p,
+                            graph_prime_origin,
                             updated_graphs[pred][1],
                             updated_graphs[pred][3]
                         )
@@ -189,37 +193,40 @@ def _propagate_up(hierarchy, graph_id, rule, instance,
                      rhs_origin_typing) =\
                         hierarchy.get_rule_typing(graph, graph_id)
 
-                    (lhs_prime, lhs_prime_lhs, lhs_prime_p) =\
-                        _temp_helper(rule_to_rewrite.lhs,
-                                     lhs_origin_typing, rule, instance,
-                                     inplace)
+                    (lhs_prime, lhs_prime_lhs, lhs_prime_origin) =\
+                        _propagate_rule_to(
+                            rule_to_rewrite.lhs,
+                            lhs_origin_typing, rule, instance,
+                            p_origin_m, inplace)
 
-                    (pr_prime, pr_prime_pr, pr_prime_p) =\
-                        _temp_helper(rule_to_rewrite.p,
-                                     p_origin_typing, rule, instance,
-                                     inplace)
+                    (pr_prime, pr_prime_pr, pr_prime_origin) =\
+                        _propagate_rule_to(
+                            rule_to_rewrite.p,
+                            p_origin_typing, rule, instance,
+                            p_origin_m, inplace)
 
-                    (rhs_prime, rhs_prime_rhs, rhs_prime_p) =\
-                        _temp_helper(rule_to_rewrite.rhs,
-                                     rhs_origin_typing, rule, instance,
-                                     inplace)
+                    (rhs_prime, rhs_prime_rhs, rhs_prime_origin) =\
+                        _propagate_rule_to(
+                            rule_to_rewrite.rhs,
+                            rhs_origin_typing, rule, instance,
+                            p_origin_m, inplace)
 
                     # find p_m -> lhs_m
                     new_p_lhs = get_unique_map_to_pullback(
                         lhs_prime.nodes(),
                         lhs_prime_lhs,
-                        lhs_prime_p,
+                        lhs_prime_origin,
                         compose(pr_prime_pr, rule.p_lhs),
-                        pr_prime_p
+                        pr_prime_origin
                     )
 
                     # find p_m -> rhs_m
                     new_p_rhs = get_unique_map_to_pullback(
                         rhs_prime.nodes(),
                         rhs_prime_rhs,
-                        rhs_prime_p,
+                        rhs_prime_origin,
                         compose(pr_prime_pr, rule.p_rhs),
-                        pr_prime_p
+                        pr_prime_origin
                     )
 
                     new_rule =\
@@ -233,21 +240,21 @@ def _propagate_up(hierarchy, graph_id, rule, instance,
                             lhs_prime_suc_prime = get_unique_map_to_pullback(
                                 updated_graphs[suc][0].nodes(),
                                 updated_graphs[suc][1],
-                                updated_graphs[suc][2],
+                                updated_graphs[suc][3],
                                 compose(
                                     lhs_prime_lhs,
                                     hierarchy.edge[graph][suc].lhs_mapping),
-                                lhs_prime_p
+                                lhs_prime_origin
                             )
                             rhs_prime_suc_prime = get_unique_map_to_pullback(
-                                updated_graphs[suc][0],
+                                updated_graphs[suc][0].nodes(),
                                 updated_graphs[suc][1],
-                                updated_graphs[suc][2],
+                                updated_graphs[suc][3],
                                 compose(
                                     rhs_prime_rhs,
                                     hierarchy.edge[graph][suc].rhs_mapping
                                 ),
-                                rhs_prime_p
+                                rhs_prime_origin
                             )
 
                         else:
@@ -478,21 +485,15 @@ def _propagate_down(hierarchy, origin_id, origin_construct,
     for graph in nx.bfs_tree(hierarchy, origin_id):
         if graph != origin_id:
 
-            relation_rhs_g = set()
+            relation_g_rhs = set()
             for key, values in rhs_typing_rels[graph].items():
                 for v in values:
-                    relation_rhs_g.add((key, v))
-
-            rhs_g, rhs_g_rhs, rhs_g_g =\
-                relation_to_span(
-                    rule.rhs,
-                    hierarchy.node[graph].graph,
-                    relation_rhs_g,
-                    directed=hierarchy.directed)
+                    relation_g_rhs.add((v, key))
 
             (g_prime, g_g_prime, rhs_g_prime) =\
-                pushout(rhs_g, hierarchy.node[graph].graph,
-                        rule.rhs, rhs_g_g, rhs_g_rhs)
+                pushout_from_relation(
+                    hierarchy.node[graph].graph, rule.rhs,
+                    relation_g_rhs, inplace)
 
             updated_graphs[graph] = (g_prime, g_g_prime, rhs_g_prime)
 

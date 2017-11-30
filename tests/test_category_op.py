@@ -1,5 +1,5 @@
 import networkx as nx
-
+import copy
 
 from nose.tools import assert_equals
 
@@ -89,7 +89,7 @@ class TestCategoryOp:
 
     def test_pullback(self):
         A, homAB, homAC = pullback(
-            self.B, self.C, self.D, self.homBD, self.homCD
+            self.B, self.C, self.D, self.homBD, self.homCD,
         )
         assert_equals(type(A), nx.DiGraph)
         assert_equals(set(A.nodes()), set(self.A.nodes()))
@@ -106,6 +106,19 @@ class TestCategoryOp:
             self.C, {2: "circle", 3: "dark_circle", "dark_square": "dark_square"}
         )
         assert_graph_eq(test_graph, C)
+        assert(id(self.D) != id(C))
+
+    def test_pullpack_complement_inplace(self):
+        D_copy = copy.deepcopy(self.D)
+        C, homAC, homCD = pullback_complement(
+            self.A, self.B, D_copy, self.homAB, self.homBD, inplace=True
+        )
+        assert_equals(type(C), nx.DiGraph)
+        test_graph = get_relabeled_graph(
+            self.C, {2: "circle", 3: "dark_circle", "dark_square": "dark_square"}
+        )
+        assert_graph_eq(test_graph, C)
+        assert(id(D_copy) == id(C))
 
     def test_pushout(self):
         D, homBD, homCD = pushout(
@@ -118,6 +131,21 @@ class TestCategoryOp:
 
         assert_equals(len(D.edges()),
                       len(self.D.edges()))
+        assert(id(self.B) != id(D))
+
+    def test_pushout_inplace(self):
+        B_copy = copy.deepcopy(self.B)
+        D, homBD, homCD = pushout(
+            self.A, B_copy, self.C, self.homAB, self.homAC, inplace=True
+        )
+        assert_equals(type(D), nx.DiGraph)
+
+        assert_equals(len(D.nodes()),
+                      len(self.D.nodes()))
+
+        assert_equals(len(D.edges()),
+                      len(self.D.edges()))
+        assert(id(B_copy) == id(D))
 
     def test_pushout_symmetry_directed(self):
 
@@ -142,13 +170,8 @@ class TestCategoryOp:
         D_inv, homCD_inv, homBD_inv = pushout(
             A, C, B, homAC, homAB
         )
-
-        # print("\n\n\n\n\n\n\n")
-        # print_graph(D)
-        # print_graph(D_inv)
-        # print(homBD, homBD_inv)
-        # print(homCD, homCD_inv)
-        # print("\n\n\n\n\n\n\n")
+        assert_equals(len(D.nodes()), len(D_inv.nodes()))
+        assert_equals(len(D.edges()), len(D_inv.edges()))
 
     def test_multi_pullback(self):
         B = nx.DiGraph()
