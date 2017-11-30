@@ -54,7 +54,6 @@ def _temp_helper(graph, origin_typing, rule, instance, inplace=False):
     else:
         graph_prime = copy.deepcopy(graph)
 
-    print(type(rule))
     lhs_removed_nodes = rule.removed_nodes()
     lhs_removed_node_attrs = rule.removed_node_attrs()
     lhs_removed_edges = rule.removed_edges()
@@ -86,12 +85,14 @@ def _temp_helper(graph, origin_typing, rule, instance, inplace=False):
                 node, attrs)
 
     for lhs_u, lhs_v in lhs_removed_edges:
+
         us = keys_by_value(origin_typing, instance[lhs_u])
         vs = keys_by_value(origin_typing, instance[lhs_v])
         for u in us:
             for v in vs:
-                primitives.remove_edge(
-                    graph_prime, u, v)
+                if (u, v) in graph_prime.edges():
+                    primitives.remove_edge(
+                        graph_prime, u, v)
 
     for (lhs_u, lhs_v), attrs in lhs_removed_edge_attrs.items():
         us = keys_by_value(origin_typing, instance[lhs_u])
@@ -136,7 +137,7 @@ def _propagate_up(hierarchy, graph_id, rule, instance,
                                  origin_typing, rule, instance,
                                  inplace)
                 updated_graphs[graph] =\
-                    (graph_prime, graph_prime_graph, graph_prime_p)
+                    (graph_prime, graph_prime_graph, None, graph_prime_p)
 
                 for suc in hierarchy.successors(graph):
 
@@ -147,9 +148,9 @@ def _propagate_up(hierarchy, graph_id, rule, instance,
                     elif suc in updated_graphs.keys():
                         graph_prime_suc_prime =\
                             get_unique_map_to_pullback(
-                                hierarchy.node[suc][0].nodes(),
+                                updated_graphs[suc][0].nodes(),
                                 updated_graphs[suc][1],
-                                updated_graphs[suc][2],
+                                updated_graphs[suc][3],
                                 graph_prime_graph,
                                 graph_prime_p)
 
@@ -170,7 +171,7 @@ def _propagate_up(hierarchy, graph_id, rule, instance,
                             graph_prime_graph,
                             graph_prime_p,
                             updated_graphs[pred][1],
-                            updated_graphs[pred][2]
+                            updated_graphs[pred][3]
                         )
                         updated_homomorphisms[
                             (pred, graph)] = pred_m_graph_m

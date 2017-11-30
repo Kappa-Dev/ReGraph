@@ -756,8 +756,7 @@ class Rule(object):
             self.p, self.lhs, graph, self.p_lhs, instance
         )
         g_prime, g_m_g_prime, rhs_g_prime = pushout(
-            self.p, g_m, self.rhs, p_g_m, self.p_rhs, total=True
-        )
+            self.p, g_m, self.rhs, p_g_m, self.p_rhs)
         return g_prime
 
     def added_nodes(self):

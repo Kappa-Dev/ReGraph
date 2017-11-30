@@ -7,76 +7,9 @@ from regraph.exceptions import RewritingError, ReGraphError
 from regraph.utils import keys_by_value, format_typing
 
 
-# def _check_rhs_sideffects(hierarchy, graph_id, rule, instance, typing_dict):
-#     for typing_graph, mapping in typing_dict.items():
-
-#         # check edges out of the g-(im(g->lhs)) do not violate typing
-#         for node in rule.rhs.nodes():
-#             p_keys = keys_by_value(rule.p_rhs, node)
-#             g_keys = [instance[rule.p_lhs[p]] for p in p_keys]
-#             if len(p_keys) > 1:
-#                 if hierarchy.directed:
-#                     succs = set()
-#                     preds = set()
-#                     for p in p_keys:
-#                         g = instance[rule.p_lhs[p]]
-#                         succs.update([
-#                             s for s in hierarchy.node[graph_id].graph.successors(g)
-#                             if s not in g_keys
-#                         ])
-#                         preds.update([
-#                             s for s in hierarchy.node[graph_id].graph.predecessors(g)
-#                             if s not in g_keys
-#                         ])
-#                     for s in succs:
-#                         path = nx.shortest_path(
-#                             hierarchy, graph_id, typing_graph)
-#                         graph_mapping = hierarchy.compose_path_typing(path)
-#                         if s in graph_mapping.keys() and node in mapping:
-#                             if (mapping[node], graph_mapping[s]) not in\
-#                                hierarchy.node[typing_graph].graph.edges():
-#                                 raise RewritingError(
-#                                     "Merge produces a forbidden edge "
-#                                     "between nodes of types `%s` and `%s`!" %
-#                                     (mapping[node], graph_mapping[s])
-#                                 )
-#                     for p in preds:
-#                         path = nx.shortest_path(
-#                             hierarchy, graph_id, typing_graph)
-#                         graph_mapping = hierarchy.compose_path_typing(path)
-#                         if p in graph_mapping.keys() and node in mapping:
-#                             if (graph_mapping[p], mapping[node]) not in\
-#                                hierarchy.node[typing_graph].graph.edges():
-#                                 raise RewritingError(
-#                                     "Merge produces a forbidden edge "
-#                                     "between nodes of types `%s` and `%s`!" %
-#                                     (graph_mapping[p], mapping[node])
-#                                 )
-
-#                 else:
-#                     neighbours = set()
-#                     for p in p_keys:
-#                         g_node = instance[rule.p_lhs[p]]
-#                         neighbours.update(
-#                             hierarchy.node[graph_id].graph.neighbors(g_node)
-#                         )
-#                     for n in neighbours:
-#                         graph_mapping = hierarchy.edge[
-#                             graph_id][typing_graph].mapping
-#                         if s in graph_mapping.keys():
-#                             if (mapping[node], graph_mapping[s]) not in\
-#                                hierarchy.node[typing_graph].graph.edges():
-#                                 raise RewritingError(
-#                                     "Merge produces a forbidden edge "
-#                                     "between nodes of types `%s` and `%s`!" %
-#                                     (mapping[node], graph_mapping[s])
-#                                 )
-#     return
-
-
 def _autocomplete_typing(hierarchy, graph_id, instance,
                          lhs_typing, rhs_typing_rel, p_lhs, p_rhs):
-
+    print("Initial rhs typing: ", rhs_typing_rel)
     if len(hierarchy.successors(graph_id)) > 0:
         if lhs_typing is None:
             new_lhs_typing = dict()
@@ -130,10 +63,13 @@ def _autocomplete_typing(hierarchy, graph_id, instance,
 
         # Second step of autocompletion of rhs typing
         for graph, typing in new_rhs_typing_rel.items():
+            print("Autocompleting ancestors of: ", graph)
             ancestors = hierarchy.get_ancestors(graph)
             for ancestor, ancestor_typing in ancestors.items():
+                print("\tAncestor: ", ancestor, ancestor_typing)
                 dif = set(typing.keys()) -\
                     set(new_rhs_typing_rel[ancestor].keys())
+                print("\tTyped here, but not ancestor: ", dif)
                 for node in dif:
                     type_set = set()
                     for el in new_rhs_typing_rel[graph][node]:

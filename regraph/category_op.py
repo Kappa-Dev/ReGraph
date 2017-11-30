@@ -28,12 +28,19 @@ from regraph.utils import (keys_by_value,
 from regraph.exceptions import (InvalidHomomorphism, ReGraphError)
 
 
-def subgraph(gr, nodes):
-    subg = copy.deepcopy(gr)
-    for node in gr.nodes():
+def subgraph(graph, nodes):
+    """Get a subgraph induced by a set nodes.
+
+    :graph param:
+    :nodes param:
+
+    :returns:
+    """
+    subgraph = copy.deepcopy(graph)
+    for node in graph.nodes():
         if node not in nodes:
-            remove_node(subg, node)
-    return subg
+            remove_node(subgraph, node)
+    return subgraph
 
 
 def compose(d1, d2):
@@ -184,6 +191,7 @@ def get_unique_map_from_pushout(p, a_p, b_p, a_z, b_z):
 
 
 def get_unique_map(a, b, c, d, a_b, b_d, c_d):
+    """Get a map a->c that makes a square commute."""
     a_c = dict()
     for node in b.nodes():
         a_keys = keys_by_value(a_b, node)
@@ -223,12 +231,15 @@ def is_monic(f):
         len(set(f.values()))
 
 
-def nary_pullback(b, cds):
+def nary_pullback(b, cds, total=True):
     """Find a pullback with multiple conspans."""
     # 1. find individual pullbacks
     pullbacks = []
     for c_name, (c, d, b_d, c_d) in cds.items():
-        pb = pullback(b, c, d, b_d, c_d, total=False)
+        if total:
+            pb = pullback(b, c, d, b_d, c_d)
+        else:
+            pb = partial_pullback(b, c, d, b_d, c_d)
         pullbacks.append((
             c_name, pb
         ))
@@ -239,10 +250,12 @@ def nary_pullback(b, cds):
         a_c = dict([(c_name1, a_c1)])
         for i in range(1, len(pullbacks)):
             c_name2, (a2, a_b2, a_c2) = pullbacks[i]
-            a1, a1_old_a1, a1_a2 = pullback(
-                a1, a2, b, a_b1, a_b2,
-                total=False
-            )
+            if total:
+                a1, a1_old_a1, a1_a2 = pullback(
+                    a1, a2, b, a_b1, a_b2)
+            else:
+                a1, a1_old_a1, a1_a2 = partial_pullback(
+                    a1, a2, b, a_b1, a_b2)
             a_b1 = compose(a1_old_a1, a_b1)
             # update a_c
             for c_name, old_a_c in a_c.items():
@@ -259,37 +272,25 @@ def nary_pullback(b, cds):
         return (a, a_b, a_c)
 
 
-# def pullback(b, c, d, b_d, c_d, total=False):
-#     if total:
-#         return total_pullback(b, c, d, b_d, c_d)
-#     else:
-#         return partial_pullback(b, c, d, b_d, c_d)
+def partial_pullback(b, c, d, b_d, c_d):
+    """Find partail pullback."""
+    check_homomorphism(b, d, b_d, total=False)
+    check_homomorphism(c, d, c_d, total=False)
 
+    bd_dom = subgraph(b, b_d.keys())
+    cd_dom = subgraph(c, c_d.keys())
 
-# def partial_pullback(b, c, d, b_d, c_d):
-#     try:
-#         check_totality(b, b_d)
-#         check_totality(c, c_d)
-#         return total_pullback(b, c, d, b_d, c_d)
-
-#     except InvalidHomomorphism as e:
-#         check_homomorphism(b, d, b_d, total=False)
-#         check_homomorphism(c, d, c_d, total=False)
-
-#         bd_dom = subgraph(b, b_d.keys())
-#         cd_dom = subgraph(c, c_d.keys())
-
-#         bd_b = {n: n for n in bd_dom.nodes()}
-#         cd_c = {n: n for n in cd_dom.nodes()}
-#         (tmp, tmp_bddom, tmp_cddom) = total_pullback(bd_dom, cd_dom, d, b_d, c_d)
-#         (b2, tmp_b2, b2_b) = pullback_complement(
-#             tmp, bd_dom, b, tmp_bddom, bd_b)
-#         (c2, tmp_c2, c2_c) = pullback_complement(
-#             tmp, cd_dom, c, tmp_cddom, cd_c)
-#         (new, b2_new, c2_new) = pushout(tmp, b2, c2, tmp_b2, tmp_c2)
-#         hom1 = {v: b2_b[k] for (k, v) in b2_new.items()}
-#         hom2 = {v: c2_c[k] for (k, v) in c2_new.items()}
-#         return(new, hom1, hom2)
+    bd_b = {n: n for n in bd_dom.nodes()}
+    cd_c = {n: n for n in cd_dom.nodes()}
+    (tmp, tmp_bddom, tmp_cddom) = pullback(bd_dom, cd_dom, d, b_d, c_d)
+    (b2, tmp_b2, b2_b) = pullback_complement(
+        tmp, bd_dom, b, tmp_bddom, bd_b)
+    (c2, tmp_c2, c2_c) = pullback_complement(
+        tmp, cd_dom, c, tmp_cddom, cd_c)
+    (new, b2_new, c2_new) = pushout(tmp, b2, c2, tmp_b2, tmp_c2)
+    hom1 = {v: b2_b[k] for (k, v) in b2_new.items()}
+    hom2 = {v: c2_c[k] for (k, v) in c2_new.items()}
+    return(new, hom1, hom2)
 
 
 def pullback(b, c, d, b_d, c_d, inplace=False):
@@ -354,198 +355,32 @@ def pullback(b, c, d, b_d, c_d, inplace=False):
     return (a, hom1, hom2)
 
 
-# def pushout(a, b, c, a_b, a_c, total=False):
-#     """Find the pushout from b <- a -> c.
+def partial_pushout(a, b, c, a_b, a_c):
+    """Find the partial pushout."""
+    check_homomorphism(a, b, a_b, total=False)
+    check_homomorphism(a, c, a_c, total=False)
+    if a.is_directed():
+        ab_dom = nx.DiGraph(a.subgraph(a_b.keys()))
+        ac_dom = nx.DiGraph(a.subgraph(a_c.keys()))
+    else:
+        ab_dom = nx.Graph(a.subgraph(a_b.keys()))
+        ac_dom = nx.Graph(a.subgraph(a_c.keys()))
 
-#     Given h1 : A -> B; h2 : A -> C returns D, rh1, rh2
-#     with rh1 : B -> D; rh2 : C -> D and D the pushout.
-#     """
-#     if total:
-#         return total_pushout(a, b, c, a_b, a_c)
-#     else:
-#         return total_pushout(a, b, c, a_b, a_c)
-#         # return partial_pushout(a, b, c, a_b, a_c)
+    ac_a = {n: n for n in ac_dom.nodes()}
+    ab_a = {n: n for n in ab_dom.nodes()}
 
+    (c2, a_c2, c_c2) = pushout(ac_dom, a, c, ac_a, a_c)
+    (b2, a_b2, b_b2) = pushout(ab_dom, a, b, ab_a, a_b)
 
-# def partial_pushout(a, b, c, a_b, a_c):
-#     try:
-#         check_totality(a, a_b)
-#         check_totality(a, a_c)
-#         return total_pushout(a, b, c, a_b, a_c)
+    (d, b2_d, c2_d) = pushout(a, b2, c2, a_b2, a_c2)
+    b_d = compose(b_b2, b2_d)
+    c_d = compose(c_c2, c2_d)
 
-#     except InvalidHomomorphism:
-#         check_homomorphism(a, b, a_b, total=False)
-#         check_homomorphism(a, c, a_c, total=False)
-#         if a.is_directed():
-#             ab_dom = nx.DiGraph(a.subgraph(a_b.keys()))
-#             ac_dom = nx.DiGraph(a.subgraph(a_c.keys()))
-#         else:
-#             ab_dom = nx.Graph(a.subgraph(a_b.keys()))
-#             ac_dom = nx.Graph(a.subgraph(a_c.keys()))
-
-#         ac_a = {n: n for n in ac_dom.nodes()}
-#         ab_a = {n: n for n in ab_dom.nodes()}
-
-#         (c2, a_c2, c_c2) = total_pushout(ac_dom, a, c, ac_a, a_c)
-#         (b2, a_b2, b_b2) = total_pushout(ab_dom, a, b, ab_a, a_b)
-
-#         (d, b2_d, c2_d) = total_pushout(a, b2, c2, a_b2, a_c2)
-#         b_d = compose(b_b2, b2_d)
-#         c_d = compose(c_c2, c2_d)
-
-#         return(d, b_d, c_d)
-
-
-def merge_classes(equ_elems, classes):
-    """Merge the equivalence classes containing elements from equ_elems."""
-    new_classes = []
-    merged_class = set()
-    for cl in classes:
-        if len(cl & equ_elems) > 0:
-            merged_class |= cl
-        else:
-            new_classes.append(cl)
-    if len(merged_class) > 0:
-        new_classes.append(merged_class)
-    return new_classes
-
-
-# def total_pushout(a, b, c, a_b, a_c, inplace=False):
-#     """Find the pushout from a span.
-
-#     :param a:
-#     :param b:
-#     :param c:
-#     :param a_b:
-#     :param a_c:
-#     :param inplace:
-
-#     :return:
-#     """
-#     check_homomorphism(a, b, a_b)
-#     check_homomorphism(a, c, a_c)
-
-#     hom1 = {}
-#     hom2 = {}
-
-#     if inplace is True:
-#         d = b
-#     else:
-#         d = type(b)()
-
-#     f = a_b
-#     g = a_c
-
-#     # add nodes to the graph
-
-#     classes = [{node} for node in a.nodes()]
-
-#     for node in c.nodes():
-#         a_keys = set(keys_by_value(g, node))
-#         if len(a_keys) >= 2:
-#             classes = merge_classes(a_keys, classes)
-#     for node in b.nodes():
-#         a_keys = set(keys_by_value(f, node))
-#         if len(a_keys) >= 2:
-#             classes = merge_classes(a_keys, classes)
-
-#     for cl in classes:
-#         b_nodes = {f[node] for node in cl}
-#         c_nodes = {g[node] for node in cl}
-#         if len(b_nodes) > 1:
-#             new_name = "_".join((str(b_node) for b_node in b_nodes))
-#         else:
-#             new_name = list(b_nodes)[0]
-
-#         new_name = unique_node_id(d, new_name)
-#         new_attrs = {}
-#         for node in b_nodes:
-#             new_attrs = merge_attributes(new_attrs, b.node[node])
-#             hom1[node] = new_name
-#         for node in c_nodes:
-#             new_attrs = merge_attributes(new_attrs, c.node[node])
-#             hom2[node] = new_name
-#         add_node(d, new_name, new_attrs)
-
-#     for n in c.nodes():
-#         if n not in g.values():
-#             new_name = n
-#             i = 1
-#             while new_name in d.nodes():
-#                 new_name = str(n) + "_" + str(i)
-#                 i += 1
-#             add_node(
-#                 d,
-#                 new_name,
-#                 c.node[n]
-#             )
-#             hom2[n] = n
-
-#     for n in b.nodes():
-#         if n not in f.values():
-#             new_name = n
-#             i = 1
-#             while new_name in d.nodes():
-#                 new_name = str(n) + "_" + str(i)
-#                 i += 1
-#             add_node(
-#                 d,
-#                 new_name,
-#                 b.node[n]
-#             )
-#             hom1[n] = new_name
-
-#     # add edges to the graph
-#     for (n1, n2) in c.edges():
-#         a_keys_1 = keys_by_value(g, n1)
-#         a_keys_2 = keys_by_value(g, n2)
-#         if len(a_keys_1) == 0 or len(a_keys_2) == 0:
-#             add_edge(d, hom2[n1], hom2[n2], get_edge(c, n1, n2))
-#         else:
-#             for a_key_1 in a_keys_1:
-#                 for a_key_2 in a_keys_2:
-#                     if (f[a_key_1], f[a_key_2]) in b.edges():
-#                         if (hom2[n1], hom2[n2]) not in d.edges():
-#                             add_edge(d, hom2[n1], hom2[n2], get_edge(
-#                                 b, f[a_key_1], f[a_key_2]))
-#                             if (a_key_1, a_key_2) in a.edges():
-#                                 add_edge_attrs(d, hom2[n1],
-#                                                hom2[n2],
-#                                                dict_sub(get_edge(c, n1, n2),
-#                                                         get_edge(a, a_key_1, a_key_2)))
-
-#                             else:
-#                                 add_edge_attrs(d, hom2[n1],
-#                                                hom2[n2],
-#                                                get_edge(c, n1, n2))
-#                         else:
-#                             if (f[a_key_1], f[a_key_2]) in b.edges():
-#                                 add_edge_attrs(d, hom2[n1],
-#                                                hom2[n2],
-#                                                get_edge(b, f[a_key_1], f[a_key_2]))
-#                             if (a_key_1, a_key_2) in a.edges():
-#                                 add_edge_attrs(d, hom2[n1],
-#                                                hom2[n2],
-#                                                dict_sub(get_edge(c, n1, n2),
-#                                                         get_edge(a, a_key_1, a_key_2)))
-#                     elif (hom2[n1], hom2[n2]) not in d.edges():
-#                         add_edge(d, hom2[n1], hom2[n2], get_edge(c, n1, n2))
-
-#     for (n1, n2) in b.edges():
-#         a_keys_1 = keys_by_value(f, n1)
-#         a_keys_2 = keys_by_value(f, n2)
-#         if len(a_keys_1) == 0 or len(a_keys_2) == 0:
-#             add_edge(d, hom1[n1], hom1[n2], get_edge(b, n1, n2))
-#         elif (hom1[n1], hom1[n2]) not in d.edges():
-#             add_edge(d, hom1[n1], hom1[n2], get_edge(b, n1, n2))
-
-#     check_homomorphism(b, d, hom1)
-#     check_homomorphism(c, d, hom2)
-#     return (d, hom1, hom2)
+    return(d, b_d, c_d)
 
 
 def pushout(a, b, c, a_b, a_c, inplace=False):
-
+    """Find the pushour of the span b <- a -> c."""
     check_homomorphism(a, b, a_b)
     check_homomorphism(a, c, a_c)
 
@@ -640,107 +475,8 @@ def pushout(a, b, c, a_b, a_c, inplace=False):
     return (d, b_d, c_d)
 
 
-# def pullback_complement(a, b, d, a_b, b_d, inplace=False):
-#     """Find the pullback complement.
-
-#     Given h1 : A -> B; h2 : B -> D returns C, rh1, rh2
-#     with rh1 : A -> C; rh2 : C -> D and C the pullback_complement.
-#     Doesn't work if h2 is not a matching
-#     """
-#     check_homomorphism(a, b, a_b, total=True)
-#     check_homomorphism(b, d, b_d, total=True)
-
-#     if not is_monic(b_d):
-#         raise InvalidHomomorphism(
-#             "Second homomorphism is not monic, "
-#             "cannot find final pullback complement!"
-#         )
-
-#     if inplace is True:
-#         c = d
-#     else:
-#         c = type(b)()
-
-#     f = a_b
-#     g = b_d
-
-#     hom1 = {}
-#     hom2 = {}
-
-#     # a_d = compose(g, f)
-#     d_m_b = subtract(d, b, g)
-
-#     for n in a.nodes():
-#         if g[f[n]] not in c.nodes():
-#             add_node(c, g[f[n]],
-#                      dict_sub(d.node[g[f[n]]], b.node[f[n]]))
-#             add_node_attrs(c, g[f[n]], a.node[n])
-#             hom1[n] = g[f[n]]
-#             hom2[g[f[n]]] = g[f[n]]
-#         else:
-#             new_name = clone_node(c, g[f[n]])
-#             update_node_attrs(
-#                 c, new_name,
-#                 dict_sub(d.node[g[f[n]]], b.node[f[n]])
-#             )
-#             add_node_attrs(c, new_name, a.node[n])
-#             hom1[n] = new_name
-#             hom2[new_name] = g[f[n]]
-
-#     for n in d_m_b.nodes():
-#         is_in_a = False
-#         for n0 in a.nodes():
-#             if g[f[n0]] == n:
-#                 is_in_a = True
-#                 break
-#         if not is_in_a:
-#             new_name = n
-#             i = 1
-#             while new_name in c.nodes():
-#                 new_name = str(n) + "_" + str(i)
-#                 i += 1
-#             add_node(c, new_name, d_m_b.node[n])
-#             hom2[new_name] = n
-
-#     # Add edges from preserved part
-#     for (n1, n2) in a.edges():
-#         attrs = dict_sub(
-#             get_edge(d, g[f[n1]], g[f[n2]]), get_edge(b, f[n1], f[n2]))
-#         add_edge(c, hom1[n1], hom1[n2], attrs)
-#         add_edge_attrs(c, hom1[n1], hom1[n2], get_edge(a, n1, n2))
-
-#     # Add remaining edges from D
-#     for (n1, n2) in d.edges():
-#         b_key_1 = keys_by_value(g, n1)
-#         b_key_2 = keys_by_value(g, n2)
-#         if len(b_key_1) == 0 or len(b_key_2) == 0:
-#             if len(b_key_1) == 0 and len(b_key_2) != 0:
-#                 a_keys_2 = keys_by_value(f, b_key_2[0])
-#                 for k in a_keys_2:
-#                     add_edge(c, n1, hom1[k], get_edge(d, n1, n2))
-#             elif len(b_key_1) != 0 and len(b_key_2) == 0:
-#                 a_keys_1 = keys_by_value(f, b_key_1[0])
-#                 for k in a_keys_1:
-#                     add_edge(c, hom1[k], n2, get_edge(d, n1, n2))
-#             else:
-#                 add_edge(c, n1, n2, get_edge(d, n1, n2))
-#         else:
-#             if (b_key_1[0], b_key_2[0]) not in b.edges():
-#                 c_keys_1 = keys_by_value(hom2, n1)
-#                 c_keys_2 = keys_by_value(hom2, n2)
-#                 for c1 in c_keys_1:
-#                     for c2 in c_keys_2:
-#                         if (c1, c2) not in c.edges():
-#                             add_edge(c, c1, c2, get_edge(d, n1, n2))
-
-#     check_homomorphism(a, c, hom1)
-#     check_homomorphism(c, d, hom2)
-
-#     return (c, hom1, hom2)
-
-
 def pullback_complement(a, b, d, a_b, b_d, inplace=False):
-    """Inplace pullback complement.
+    """Find the final pullback complement from a->b->d.
 
     Makes changes to d inplace.
     """
@@ -830,7 +566,7 @@ def pullback_complement(a, b, d, a_b, b_d, inplace=False):
 
 
 def pullback_pushout(b, c, d, b_d, c_d, pullback_filter=None):
-    """do a pullback and then a pushout"""
+    """Do a pullback and then a pushout."""
     (a, a_b, a_c) = pullback(b, c, d, b_d, c_d)
     if pullback_filter is not None:
         valid_nodes = [n for n in a.nodes()
