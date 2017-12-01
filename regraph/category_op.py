@@ -389,7 +389,7 @@ def pushout(a, b, c, a_b, a_c, inplace=False):
     else:
         d = copy.deepcopy(b)
 
-    b_d = dict()
+    b_d = id_of(b.nodes())
     c_d = dict()
 
     # Add/merge nodes
@@ -409,6 +409,8 @@ def pushout(a, b, c, a_b, a_c, inplace=False):
                 nodes_to_merge.append(a_b[k])
             new_name = merge_nodes(d, nodes_to_merge)
             c_d[c_n] = new_name
+            for node in nodes_to_merge:
+                b_d[node] = new_name
 
     # Add edges
     for (n1, n2) in c.edges():
@@ -490,13 +492,13 @@ def pullback_complement(a, b, d, a_b, b_d, inplace=False):
             "cannot find final pullback complement!"
         )
 
-    a_c = dict()
-    c_d = dict()
-
     if inplace is True:
         c = d
     else:
         c = copy.deepcopy(d)
+
+    a_c = dict()
+    c_d = id_of(c.nodes())
 
     # Remove/clone nodes
     for b_node in b.nodes():
@@ -504,6 +506,7 @@ def pullback_complement(a, b, d, a_b, b_d, inplace=False):
         # Remove nodes
         if len(a_keys) == 0:
             remove_node(c, b_d[b_node])
+            del c_d[b_d[b_node]]
         # Keep nodes
         elif len(a_keys) == 1:
             a_c[a_keys[0]] = b_d[b_node]
@@ -513,9 +516,11 @@ def pullback_complement(a, b, d, a_b, b_d, inplace=False):
             for k in a_keys:
                 if i == 1:
                     a_c[k] = b_d[b_node]
+                    c_d[b_d[b_node]] = b_d[b_node]
                 else:
                     new_name = clone_node(c, b_d[b_node])
                     a_c[k] = new_name
+                    c_d[new_name] = b_d[b_node]
                 i += 1
 
     # Remove edges
@@ -678,7 +683,7 @@ def relation_to_span(g1, g2, relation, edges=False, attrs=False, directed=True):
         return (new_graph, left_h, right_h)
 
 
-def left_dictionary(relation):
+def left_relation_dict(relation):
     dictionary = dict()
     for u, v in relation:
         if u in dictionary.keys():
@@ -688,7 +693,7 @@ def left_dictionary(relation):
     return dictionary
 
 
-def right_dictionary(relation):
+def right_relation_dict(relation):
     dictionary = dict()
     for u, v in relation:
         if v in dictionary.keys():
@@ -701,8 +706,8 @@ def right_dictionary(relation):
 def pushout_from_relation(g1, g2, relation, inplace=False):
     """Find the pushout from a relation."""
 
-    left_dict = left_dictionary(relation)
-    right_dict = right_dictionary(relation)
+    left_dict = left_relation_dict(relation)
+    right_dict = right_relation_dict(relation)
 
     if inplace is True:
         g12 = g1
@@ -746,3 +751,14 @@ def pushout_from_relation(g1, g2, relation, inplace=False):
                 g12.edge[g2_g12[u]][g2_g12[v]])
             add_edge_attrs(g12, g2_g12[u], g2_g12[v], edge_attrs_diff)
     return (g12, g1_g12, g2_g12)
+
+
+def compose_relation_dicts(left_dict, right_dict):
+    pairs = set()
+
+    for left_el, right_els in left_dict.items():
+        for right_el in right_els:
+            if right_el in right_dict.keys():
+                pairs.add((left_el, right_el))
+
+    return pairs
