@@ -450,30 +450,26 @@ def pushout(a, b, c, a_b, a_c, inplace=False):
 
     # Add edge attrs
     for (n1, n2) in c.edges():
-        p_keys_1 = keys_by_value(c_d, n1)
-        p_keys_2 = keys_by_value(c_d, n2)
-        for k1 in p_keys_1:
-            for k2 in p_keys_2:
-                if b.is_directed():
-                    if (k1, k2) in a.edges():
-                        attrs_to_add = dict_sub(
-                            get_edge(c, n1, n2),
-                            get_edge(a, k1, k2)
-                        )
-                        add_edge_attrs(
-                            d, c_d[n1], c_d[n2],
-                            attrs_to_add
-                        )
-                else:
-                    if (k1, k2) in a.edges() or (k2, k1) in a.edges():
-                        attrs_to_add = dict_sub(
-                            get_edge(c, n1, n2),
-                            get_edge(a, k1, k2)
-                        )
-                        add_edge_attrs(
-                            d, c_d[n1], c_d[n2],
-                            attrs_to_add
-                        )
+        d_n1 = c_d[n1]
+        d_n2 = c_d[n2]
+        if d.is_directed():
+            attrs_to_add = dict_sub(
+                get_edge(c, n1, n2),
+                get_edge(d, d_n1, d_n2)
+            )
+            add_edge_attrs(
+                d, c_d[n1], c_d[n2],
+                attrs_to_add
+            )
+        else:
+            attrs_to_add = dict_sub(
+                get_edge(c, n1, n2),
+                get_edge(d, d_n1, d_n2)
+            )
+            add_edge_attrs(
+                d, c_d[n1], c_d[n2],
+                attrs_to_add
+            )
     return (d, b_d, c_d)
 
 

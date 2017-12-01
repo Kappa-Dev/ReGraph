@@ -92,12 +92,19 @@ def plot_graph(graph, types=True, filename=None, parent_pos=None):
     return pos
 
 
-def plot_instance(graph, pattern, instance, filename=None, pos=None):
+def plot_instance(graph, pattern, instance, filename=None, parent_pos=None):
     """Plot the graph with instance of pattern highlighted."""
     new_colors = ["g" if not graph.nodes()[i] in instance.values()
                   else "r" for i, c in enumerate(graph.nodes())]
-    if not pos:
+    if not parent_pos:
         pos = nx.spring_layout(graph)
+    else:
+        pos = copy.deepcopy(parent_pos)
+        random_pos = nx.spring_layout(graph)
+        for node in graph.nodes():
+            if node not in pos:
+                pos[node] = random_pos[node]
+
     nx.draw_networkx_nodes(
         graph, pos, node_color=new_colors,
         node_size=100, arrows=True)
