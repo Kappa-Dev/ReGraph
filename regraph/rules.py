@@ -397,7 +397,7 @@ class Rule(object):
         new_name = primitives.merge_nodes(
             self.rhs,
             list(nodes_to_merge),
-            node_name=node_name
+            node_id=node_name
         )
         # Update mappings
         keys = p_keys_1 + p_keys_2

@@ -408,7 +408,7 @@ def update_edge_attrs(graph, s, t, attrs):
         normalize_attrs(new_attrs)
         graph.edge[s][t] = new_attrs
         if not graph.is_directed():
-            graph.edge[s][t] = new_attrs
+            graph.edge[t][s] = new_attrs
 
 
 def remove_edge_attrs(graph, s, t, attrs):
@@ -888,9 +888,12 @@ def merge_nodes(graph, nodes, node_id=None, method="union", edge_method="union")
             if self_loop:
                 add_edges_from(graph, [(node_id, node_id)])
                 graph.edge[node_id][node_id] = self_loop_attrs
-
-            add_edges_from(graph, [(n, node_id) for n in source_nodes])
-            add_edges_from(graph, [(node_id, n) for n in target_nodes])
+            for n in source_nodes:
+                if not exists_edge(graph, n, node_id):
+                    add_edge(graph, n, node_id)
+            for n in target_nodes:
+                if not exists_edge(graph, node_id, n):
+                    add_edge(graph, node_id, n)
 
             # Attach accumulated attributes to edges
             for node, attrs in source_dict.items():
@@ -916,7 +919,12 @@ def merge_nodes(graph, nodes, node_id=None, method="union", edge_method="union")
 
 
 def subtract(a, b, ba_mapping):
-    """Return a graph difference between A and B having B-> A mapping."""
+    """Subtract graphs provided node mapping.
+
+    Subtract graph B from A having mapping of B to A specified
+
+
+    Return a graph difference between A and B having B-> A mapping."""
     res = type(a)()
     f = ba_mapping
 

@@ -415,13 +415,13 @@ def pushout(a, b, c, a_b, a_c, inplace=False):
     # Add edges
     for (n1, n2) in c.edges():
         if b.is_directed():
-            if (c_d[n1], c_d[n2]) not in b.edges():
+            if (c_d[n1], c_d[n2]) not in d.edges():
                 add_edge(
                     d, c_d[n1], c_d[n2],
                     get_edge(c, n1, n2))
         else:
-            if (c_d[n1], c_d[n2]) not in b.edges() and\
-               (c_d[n2], c_d[n1]) not in b.edges():
+            if (c_d[n1], c_d[n2]) not in d.edges() and\
+               (c_d[n2], c_d[n1]) not in d.edges():
                 add_edge(
                     d, c_d[n1], c_d[n2],
                     get_edge(c, n1, n2)
