@@ -274,6 +274,14 @@ class RuleRelation(Relation):
 class Hierarchy(nx.DiGraph):
     """Implements a hierarchy of graphs as a DAG."""
 
+    # Similar to NetworkX node_dict_factory
+    graph_dict_factory = dict
+    rule_dict_factory = dict
+    typing_dict_factory = dict
+    rule_lhs_typing_dict_factory = dict
+    rule_rhs_typing_dict_factory = dict
+    relation_dict_factory = dict
+
     def __init__(self, directed=True,
                  graph_node_cls=GraphNode,
                  rule_node_cls=RuleNode,
@@ -283,6 +291,20 @@ class Hierarchy(nx.DiGraph):
                  data=None):
         """Initialize an hierarchy of graphs."""
         nx.DiGraph.__init__(self, data)
+
+        self.graph_dict_factory = gdf = self.graph_dict_factory
+        self.graph = gdf()
+        self.rule_dict_factory = rdf = self.rule_dict_factory
+        self.rule = rdf()
+        self.typing_dict_factory = tdf = self.typing_dict_factory
+        self.typing = tdf()
+        self.rule_lhs_typing_dict_factory = rltdf =\
+            self.rule_lhs_typing_dict_factory
+        self.rule_lhs_typing = rltdf()
+        self.rule_rhs_typing_dict_factory = rrtdf =\
+            self.rule_rhs_typing_dict_factory
+        self.rule_rhs_typing = rrtdf()
+
         self.attrs = dict()
         self.directed = directed
         self.graph_node_cls = graph_node_cls
@@ -292,57 +314,6 @@ class Hierarchy(nx.DiGraph):
         self.relation_cls = relation_cls
         self.relation = dict()
         return
-
-    def add_attrs(self, attrs_dict):
-        """Add attrs_dict to hierarchy attrs."""
-        normalize_attrs(attrs_dict)
-        old_attrs = self.attrs
-        if old_attrs is None:
-            self.attrs = copy.deepcopy(attrs_dict)
-        else:
-            for key in attrs_dict:
-                if key in old_attrs:
-                    old_attrs[key] = old_attrs[key].union(attrs_dict[key])
-                else:
-                    old_attrs[key] = attrs_dict[key]
-
-    def add_node(self, n, attr_dict=None, **attr):
-        """Overloading NetworkX method `add_node`."""
-        nx.DiGraph.add_node(self, n, attr_dict)
-        if n not in self.relation.keys():
-            self.relation.update({n: dict()})
-        return
-
-    def remove_node(self, n):
-        """Overloading NetworkX method `remove_node`."""
-        nx.DiGraph.remove_node(self, n)
-        if n in self.relation.keys():
-            del self.relation[n]
-        for k, v in self.relation.items():
-            if n in v.keys():
-                del self.relation[k][n]
-        return
-
-    def remove_relation(self, g1, g2):
-        """Remove relation from the hierarchy."""
-        if (g1, g2) not in self.relations() and\
-           (g2, g1) not in self.relations():
-            raise HierarchyError(
-                "Relation '%s-%s' is not defined in the hierarchy" %
-                (g1, g2)
-            )
-        self.relation.update({g1: dict()})
-        del self.relation[g2][g1]
-
-    def relations(self):
-        """Return a list of relations."""
-        rel = list()
-        for k, v in self.relation.items():
-            if len(self.relation[k]) > 0:
-                for v, _ in self.relation[k].items():
-                    if (k, v) not in rel and (v, k) not in rel:
-                        rel.append((k, v))
-        return rel
 
     def __str__(self):
         """Print the hierarchy."""
@@ -449,6 +420,50 @@ class Hierarchy(nx.DiGraph):
                 return False
         return True
 
+    def add_attrs(self, attrs_dict):
+        """Add attrs_dict to hierarchy attrs."""
+        normalize_attrs(attrs_dict)
+        old_attrs = self.attrs
+        if old_attrs is None:
+            self.attrs = copy.deepcopy(attrs_dict)
+        else:
+            for key in attrs_dict:
+                if key in old_attrs:
+                    old_attrs[key] = old_attrs[key].union(attrs_dict[key])
+                else:
+                    old_attrs[key] = attrs_dict[key]
+
+    def remove_node(self, n):
+        """Overloading NetworkX method `remove_node`."""
+        nx.DiGraph.remove_node(self, n)
+        if n in self.relation.keys():
+            del self.relation[n]
+        for k, v in self.relation.items():
+            if n in v.keys():
+                del self.relation[k][n]
+        return
+
+    def remove_relation(self, g1, g2):
+        """Remove relation from the hierarchy."""
+        if (g1, g2) not in self.relations() and\
+           (g2, g1) not in self.relations():
+            raise HierarchyError(
+                "Relation '%s-%s' is not defined in the hierarchy" %
+                (g1, g2)
+            )
+        self.relation.update({g1: dict()})
+        del self.relation[g2][g1]
+
+    def relations(self):
+        """Return a list of relations."""
+        rel = list()
+        for k, v in self.relation.items():
+            if len(self.relation[k]) > 0:
+                for v, _ in self.relation[k].items():
+                    if (k, v) not in rel and (v, k) not in rel:
+                        rel.append((k, v))
+        return rel
+
     def add_graph(self, graph_id, graph, graph_attrs=None):
         """Add graph to the hierarchy."""
         if self.directed != graph.is_directed():
@@ -469,6 +484,11 @@ class Hierarchy(nx.DiGraph):
         if graph_attrs is not None:
             normalize_attrs(graph_attrs)
         self.node[graph_id] = self.graph_node_cls(graph, graph_attrs)
+        if graph_id not in self.relation.keys():
+            self.relation.update({graph_id: dict()})
+        self.graph[graph_id] = self.node[graph_id].graph
+        if graph_id not in self.typing.keys():
+            self.typing[graph_id] = dict()
         return
 
     def add_rule(self, rule_id, rule, rule_attrs=None):
@@ -497,7 +517,14 @@ class Hierarchy(nx.DiGraph):
                 rule_id
             )
         self.add_node(rule_id)
+        if rule_attrs is not None:
+            normalize_attrs(rule_attrs)
         self.node[rule_id] = RuleNode(rule, rule_attrs)
+        self.rule[rule_id] = self.node[rule_id].rule
+        if rule_id not in self.rule_lhs_typing.keys():
+            self.rule_lhs_typing[rule_id] = dict()
+        if rule_id not in self.rule_rhs_typing.keys():
+            self.rule_rhs_typing[rule_id] = dict()
         return
 
     def add_typing(self, source, target, mapping,
@@ -555,15 +582,12 @@ class Hierarchy(nx.DiGraph):
         self._check_consistency(source, target, mapping)
 
         self.add_edge(source, target)
+        if attrs is not None:
+            normalize_attrs(attrs)
         self.edge[source][target] = self.graph_typing_cls(
             mapping, total, attrs)
+        self.typing[source][target] = self.edge[source][target].mapping
         return
-
-    def add_partial_typing(self, source, target,
-                           mapping, attrs=None):
-        """Add partial homomorphism A -> B."""
-        raise ReGraphError(
-            "Deprecated: use `add_typing` with parameter `total=False`!")
 
     def add_rule_typing(self, rule_id, graph_id, lhs_mapping,
                         rhs_mapping=None,
@@ -633,7 +657,8 @@ class Hierarchy(nx.DiGraph):
             rule_id, graph_id, lhs_mapping, new_rhs_mapping)
 
         self.add_edge(rule_id, graph_id)
-
+        if attrs is not None:
+            normalize_attrs(attrs)
         self.edge[rule_id][graph_id] = self.rule_typing_cls(
             lhs_mapping,
             new_rhs_mapping,
@@ -641,6 +666,10 @@ class Hierarchy(nx.DiGraph):
             rhs_total,
             attrs
         )
+        self.rule_lhs_typing[rule_id][graph_id] =\
+            self.edge[rule_id][graph_id].lhs_mapping
+        self.rule_rhs_typing[rule_id][graph_id] =\
+            self.edge[rule_id][graph_id].rhs_mapping
         return
 
     def add_relation(self, g1, g2, rel_pairs, attrs=None):
@@ -684,9 +713,8 @@ class Hierarchy(nx.DiGraph):
                     "exist in a graph '%s'" %
                     (n2, g2)
                 )
-        if not attrs:
-            attrs = dict()
-
+        if attrs is not None:
+            normalize_attrs(attrs)
         rel_ab_obj = GraphRelation(rel_pairs, attrs)
         rel_ba_obj = GraphRelation(
             set([(b, a) for a, b in rel_pairs]),
@@ -1342,9 +1370,8 @@ class Hierarchy(nx.DiGraph):
                             suc1.intersection(suc2)
         return common_sucs
 
-    def rewrite_inplace(self, graph_id, rule, instance,
-                        lhs_typing=None, rhs_typing=None,
-                        total=True, inplace=True, propagate_down=True):
+    def rewrite(self, graph_id, rule, instance,
+                lhs_typing=None, rhs_typing=None, strict=True, inplace=True):
         """Rewrite and propagate the changes up & down."""
         if type(self.node[graph_id]) == RuleNode:
             raise ReGraphError("Rewriting of a rule is not implemented!")
@@ -1362,25 +1389,28 @@ class Hierarchy(nx.DiGraph):
             self, graph_id, rule.lhs, instance, new_lhs_typing)
 
         # 1c. Check consistency of the (autocompleted) rhs & lhs typings
-        if lhs_typing is not None and rhs_typing is not None:
+        if new_lhs_typing is not None and new_rhs_typing is not None:
             try:
-                rule_type_checking._check_self_consistency(self, new_lhs_typing)
+                rule_type_checking._check_self_consistency(
+                    self, new_lhs_typing)
             except ReGraphError as e:
                 raise RewritingError(
                     "Typing of the lhs is self inconsistent: %s" % str(e)
                 )
             try:
-                rule_type_checking._check_self_consistency(self, new_rhs_typing)
+                rule_type_checking._check_self_consistency(
+                    self, new_rhs_typing, strict)
             except ReGraphError as e:
                 raise RewritingError(
                     "Typing of the rhs is self inconsistent: %s" % str(e)
                 )
 
             rule_type_checking._check_lhs_rhs_consistency(
-                self, graph_id, rule, instance, new_lhs_typing, new_rhs_typing)
+                self, graph_id, rule, instance,
+                new_lhs_typing, new_rhs_typing,
+                strict)
 
-            # 1d. Check totality
-            if total and propagate_down is False:
+            if strict is True:
                 rule_type_checking._check_totality(
                     self, graph_id, rule, instance,
                     new_lhs_typing, new_rhs_typing)
@@ -1393,67 +1423,9 @@ class Hierarchy(nx.DiGraph):
         (g_m, p_g_m, g_m_g, g_prime, g_m_g_prime, r_g_prime) =\
             base_changes["graph"]
 
-        if rule.is_restrictive():
-            rewriting_utils._propagate_up_inplace(
-                self, graph_id, rule, instance, p_g_m, g_m_g_prime)
-
-        if rule.is_relaxing() and propagate_down is True:
-            pass
-
-    def rewrite(self, graph_id, rule, instance,
-                lhs_typing=None, rhs_typing=None,
-                total=True, inplace=True):
-        """Rewrite and propagate the changes up & down."""
-        if type(self.node[graph_id]) == RuleNode:
-            raise ReGraphError("Rewriting of a rule is not implemented!")
-
-        # 1. Check consistency of the input
-        # 1a. Autocomplete typing
-
-        new_lhs_typing, new_rhs_typing =\
-            rule_type_checking._autocomplete_typing(
-                self, graph_id, instance, lhs_typing,
-                rhs_typing, rule.p_lhs, rule.p_rhs)
-
-        # 1b. Check that instance is consistent with lhs & rhs typing
-        rule_type_checking._check_instance(
-            self, graph_id, rule.lhs, instance, new_lhs_typing)
-
-        # 1c. Check consistency of the (autocompleted) rhs & lhs typings
-        if lhs_typing is not None and rhs_typing is not None:
-            try:
-                rule_type_checking._check_self_consistency(self, new_lhs_typing)
-            except ReGraphError as e:
-                raise RewritingError(
-                    "Typing of the lhs is self inconsistent: %s" % str(e)
-                )
-            try:
-                rule_type_checking._check_self_consistency(self, new_rhs_typing)
-            except ReGraphError as e:
-                raise RewritingError(
-                    "Typing of the rhs is self inconsistent: %s" % str(e)
-                )
-
-            rule_type_checking._check_lhs_rhs_consistency(
-                self, graph_id, rule, instance, new_lhs_typing, new_rhs_typing)
-
-            # 1d. Check totality
-            # if total:
-            #     rule_type_checking._check_totality(
-            #         self, graph_id, rule, instance,
-            #         new_lhs_typing, new_rhs_typing)
-
-        # 2. Rewrite a graph `graph_id`
-        base_changes = rewriting_utils._rewrite_base(
-            self, graph_id, rule, instance,
-            new_lhs_typing, new_rhs_typing, inplace)
-
-        (g_m, p_g_m, g_m_g, g_prime, g_m_g_prime, r_g_prime) =\
-            base_changes["graph"]
-
         upstream_changes = {
             "graphs": {graph_id: (g_m, g_m_g, g_prime, g_m_g_prime)},
-            "homomorphisms": dict(),
+            "homomorphisms": base_changes["homomorphisms"],
             "rule_homomorphisms": dict(),
             "rules": dict(),
             "relations": base_changes["relations"]
@@ -1461,7 +1433,6 @@ class Hierarchy(nx.DiGraph):
 
         if rule.is_restrictive():
             # 4. Propagate rewriting up the hierarchy
-
             new_upstream_changes =\
                 rewriting_utils._propagate_up(
                     self, graph_id, rule, instance, p_g_m, g_m_g_prime, inplace)
@@ -1474,19 +1445,21 @@ class Hierarchy(nx.DiGraph):
                 new_upstream_changes["rule_homomorphisms"])
             upstream_changes["relations"] += new_upstream_changes["relations"]
 
-        downstream_changes = None
         graph_construct = (g_m, g_m_g, g_prime, g_m_g_prime, r_g_prime)
-        downstream_changes =\
-            rewriting_utils._propagate_down(
-                self, graph_id, graph_construct,
-                rule, instance, new_rhs_typing, inplace)
+
+        downstream_changes = dict()
+        if strict is False:
+            downstream_changes =\
+                rewriting_utils._propagate_down(
+                    self, graph_id, graph_construct,
+                    rule, instance, new_rhs_typing, inplace)
 
         # 6. Apply all the changes in the hierarchy
         if inplace:
             rewriting_utils._apply_changes(
                 self, upstream_changes, downstream_changes)
             updated_graphs = None
-            return (None, updated_graphs)
+            return (self, updated_graphs)
         else:
             # First, create a new hierarchy
             new_graph = copy.deepcopy(self)
@@ -1737,40 +1710,12 @@ class Hierarchy(nx.DiGraph):
                 ancestors[typing].update(mapping)
             else:
                 ancestors[typing] = mapping
-            for (anc, typ) in typing_ancestors.items():
+            for anc, typ in typing_ancestors.items():
                 if anc in ancestors.keys():
                     ancestors[anc].update(compose(mapping, typ))
                 else:
                     ancestors[anc] = compose(mapping, typ)
         return ancestors
-
-    # def get_ignore_values(self, graph_id, maybe=None):
-    #     """Return the ignore attrs for each node of the graph and ancestor."""
-    #     ancestors = {}
-    #     for _, typing in self.out_edges(graph_id):
-    #         if maybe is not None and typing not in maybe:
-    #             continue
-    #         mapping = self.edge[graph_id][typing].mapping
-    #         if self.edge[graph_id][typing].ignore_attrs:
-    #             not_ignored_nodes = set()
-    #         else:
-    #             not_ignored_nodes = set(mapping.keys())
-    #         if typing in ancestors.keys():
-    #             ancestors[typing] |= not_ignored_nodes
-    #         else:
-    #             ancestors[typing] = not_ignored_nodes
-
-    #         typing_ancestors = self.get_ignore_values(typing, maybe)
-    #         for (anc, anc_non_ignored) in typing_ancestors.items():
-    #             not_ignored_through_typing =\
-    #                 (ancestors[typing] &
-    #                  {node for node in not_ignored_nodes
-    #                   if mapping[node] in anc_non_ignored})
-    #             if anc in ancestors.keys():
-    #                 ancestors[anc] |= not_ignored_through_typing
-    #             else:
-    #                 ancestors[anc] = not_ignored_through_typing
-    #     return ancestors
 
     def to_nx_graph(self):
         """Create a simple networkx graph representing the hierarchy."""

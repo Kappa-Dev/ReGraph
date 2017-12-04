@@ -1,4 +1,4 @@
-"""A collection of utils for rewriting and propagation in the hierarchy."""
+"""A collection of (internal usage) utils for rewriting and propagation in the hierarchy."""
 import copy
 import networkx as nx
 import warnings
@@ -10,10 +10,8 @@ from regraph.category_op import (compose,
                                  get_unique_map_to_pullback,
                                  id_of,
                                  is_total_homomorphism,
-                                 pullback,
                                  pullback_complement,
                                  pushout,
-                                 relation_to_span,
                                  pushout_from_relation,
                                  left_relation_dict,
                                  right_relation_dict)
@@ -31,18 +29,73 @@ def _rewrite_base(hierarchy, graph_id, rule, instance,
 
     g_prime, g_m_g_prime, r_g_prime = pushout(rule.p, g_m, rule.rhs,
                                               p_g_m, rule.p_rhs, inplace)
-    # Update typings of the graph_id after rewriting
-    # typing_updates =\
-    #     _update_typing(
-    #         hierarchy, graph_id, rule, instance, lhs_typing,
-    #         rhs_typing, p_g_m, r_g_prime)
 
     relation_updates = []
     for related_g in hierarchy.adjacent_relations(graph_id):
         relation_updates.append((graph_id, related_g))
 
+    updated_homomorphisms = dict()
+
+    for typing_graph in hierarchy.successors(graph_id):
+
+        new_hom = copy.deepcopy(hierarchy.edge[graph_id][typing_graph].mapping)
+        removed_nodes = set()
+        new_nodes = dict()
+
+        for node in rule.lhs.nodes():
+            p_keys = keys_by_value(rule.p_lhs, node)
+            # nodes that were removed
+            if len(p_keys) == 0:
+                removed_nodes.add(instance[node])
+            elif len(p_keys) == 1:
+                if typing_graph not in rhs_typing.keys() or\
+                   rule.p_rhs[p_keys[0]] not in rhs_typing[typing_graph].keys():
+                    if r_g_prime[rule.p_rhs[p_keys[0]]] in new_hom.keys():
+                        removed_nodes.add(r_g_prime[rule.p_rhs[p_keys[0]]])
+            # nodes were clonned
+            elif len(p_keys) > 1:
+                for k in p_keys:
+                    if typing_graph in rhs_typing.keys() and\
+                       rule.p_rhs[k] in rhs_typing[typing_graph].keys():
+                        new_nodes[r_g_prime[rule.p_rhs[k]]] =\
+                            list(rhs_typing[typing_graph][rule.p_rhs[k]])[0]
+                    else:
+                        removed_nodes.add(r_g_prime[rule.p_rhs[k]])
+
+        for node in rule.rhs.nodes():
+            p_keys = keys_by_value(rule.p_rhs, node)
+
+            # nodes that were added
+            if len(p_keys) == 0:
+                if typing_graph in rhs_typing.keys():
+                    if node in rhs_typing[typing_graph].keys():
+                        new_nodes[node] = list(rhs_typing[
+                            typing_graph][node])[0]
+
+            # nodes that were merged
+            elif len(p_keys) > 1:
+                for k in p_keys:
+                    removed_nodes.add(p_g_m[k])
+                # assign new type of node
+                if typing_graph in rhs_typing.keys():
+                    if node in rhs_typing[typing_graph].keys():
+                        new_type = list(rhs_typing[typing_graph][node])
+                        new_nodes[r_g_prime[node]] = new_type
+
+        # update homomorphisms
+        for n in removed_nodes:
+            if n in new_hom.keys():
+                del new_hom[n]
+
+        new_hom.update(new_nodes)
+
+        updated_homomorphisms.update({
+            (graph_id, typing_graph): new_hom
+        })
+
     return {
         "graph": (g_m, p_g_m, g_m_g, g_prime, g_m_g_prime, r_g_prime),
+        "homomorphisms": updated_homomorphisms,
         "relations": relation_updates
     }
 
@@ -310,7 +363,6 @@ def _propagate_down(hierarchy, origin_id, origin_construct,
                 pushout_from_relation(
                     hierarchy.node[graph].graph, rule.rhs,
                     relation_g_rhs, inplace)
-
             updated_graphs[graph] = (g_prime, g_g_prime, rhs_g_prime)
 
             for suc in hierarchy.successors(graph):
@@ -391,8 +443,9 @@ def _apply_changes(hierarchy, upstream_changes, downstream_changes):
                     new_left_dict, new_right_dict)
 
             # downstream changes in one of the related graphs
-            elif downstream_changes is not None and\
-                    (g2, g1) in downstream_changes["relations"]:
+            elif "relations" in downstream_changes.keys() and\
+                 "graphs" in downstream_changes.keys() and\
+                 (g2, g1) in downstream_changes["relations"]:
                 # update left side
                 left_dict = left_relation_dict(hierarchy.relation[g1][g2].rel)
                 for node in upstream_changes["graphs"][g1][0].nodes():
@@ -417,7 +470,8 @@ def _apply_changes(hierarchy, upstream_changes, downstream_changes):
             rels[(g1, g2)] = new_pairs
             visited.add((g1, g2))
 
-    if downstream_changes is not None:
+    if "relations" in downstream_changes.keys() and\
+       "graphs" in downstream_changes.keys():
         for g1, g2 in downstream_changes["relations"]:
             if (g1, g2) not in visited and (g2, g1) not in visited:
                 # # downstream changes in both related graphs
@@ -448,21 +502,23 @@ def _apply_changes(hierarchy, upstream_changes, downstream_changes):
             hierarchy.node[graph].graph = graph_prime
         else:
             hierarchy.node[graph].graph = graph_m
-    if downstream_changes is not None:
+        hierarchy.graph[graph] = hierarchy.node[graph].graph
+
+    if "graphs" in downstream_changes.keys():
         for graph, (graph_prime, _, _) in downstream_changes["graphs"].items():
             hierarchy.node[graph].graph = graph_prime
+            hierarchy.graph[graph] = hierarchy.node[graph].graph
 
     for (g1, g2), rel in rels.items():
-        old_attrs = copy.deepcopy(hierarchy.relation[g1][g2])
+        old_attrs = copy.deepcopy(hierarchy.relation[g1][g2].attrs)
         hierarchy.remove_relation(g1, g2)
         hierarchy.add_relation(g1, g2, rel, old_attrs)
 
     # update homomorphisms
     updated_homomorphisms = dict()
     updated_homomorphisms.update(upstream_changes["homomorphisms"])
-    if downstream_changes is not None:
-        for hom in downstream_changes["homomorphisms"].keys():
-            updated_homomorphisms.update(downstream_changes["homomorphisms"])
+    if "homomorphisms" in downstream_changes.keys():
+        updated_homomorphisms.update(downstream_changes["homomorphisms"])
 
     for (s, t), mapping in updated_homomorphisms.items():
         total = False
@@ -479,80 +535,18 @@ def _apply_changes(hierarchy, upstream_changes, downstream_changes):
         hierarchy.edge[s][t] = hierarchy.graph_typing_cls(
             mapping, total, hierarchy.edge[s][t].attrs
         )
-
+        hierarchy.typing[s][t] = hierarchy.edge[s][t].mapping
     # update rules & rule homomorphisms
     for rule, new_rule in upstream_changes["rules"].items():
         hierarchy.node[rule] = hierarchy.rule_node_cls(
             new_rule, hierarchy.node[rule].attrs
         )
+        hierarchy.rule[rule] = hierarchy.node[rule].rule
     for (s, t), (lhs_h, rhs_h) in upstream_changes["rule_homomorphisms"].items():
         hierarchy.edge[s][t] = hierarchy.rule_typing_cls(
             lhs_h, rhs_h,
             hierarchy.edge[s][t].attrs
         )
+        hierarchy.rule_lhs_typing[s][t] = hierarchy.edge[s][t].lhs_mapping
+        hierarchy.rule_rhs_typing[s][t] = hierarchy.edge[s][t].rhs_mapping
     return
-
-
-# def _update_typing(hierarchy, graph_id, rule, instance,
-#                    new_lhs_typing, new_rhs_typing,
-#                    p_g_m, r_g_prime):
-
-#     updated_homomorphisms = dict()
-
-#     for typing_graph in hierarchy.successors(graph_id):
-
-#         new_hom = copy.deepcopy(hierarchy.edge[graph_id][typing_graph].mapping)
-#         removed_nodes = set()
-#         new_nodes = dict()
-
-#         for node in rule.lhs.nodes():
-#             p_keys = keys_by_value(rule.p_lhs, node)
-#             # nodes that were removed
-#             if len(p_keys) == 0:
-#                 removed_nodes.add(instance[node])
-#             elif len(p_keys) == 1:
-#                 if typing_graph not in new_rhs_typing.keys() or\
-#                    rule.p_rhs[p_keys[0]] not in new_rhs_typing[typing_graph].keys():
-#                     if r_g_prime[rule.p_rhs[p_keys[0]]] in new_hom.keys():
-#                         removed_nodes.add(r_g_prime[rule.p_rhs[p_keys[0]]])
-#             # nodes were clonned
-#             elif len(p_keys) > 1:
-#                 for k in p_keys:
-#                     if typing_graph in new_rhs_typing.keys() and\
-#                        rule.p_rhs[k] in new_rhs_typing[typing_graph].keys():
-#                         new_nodes[r_g_prime[rule.p_rhs[k]]] =\
-#                             new_rhs_typing[typing_graph][rule.p_rhs[k]]
-#                     else:
-#                         removed_nodes.add(r_g_prime[rule.p_rhs[k]])
-
-#         for node in rule.rhs.nodes():
-#             p_keys = keys_by_value(rule.p_rhs, node)
-
-#             # nodes that were added
-#             if len(p_keys) == 0:
-#                 if typing_graph in new_rhs_typing.keys():
-#                     if node in new_rhs_typing[typing_graph].keys():
-#                         new_nodes[node] = new_rhs_typing[
-#                             typing_graph][node]
-
-#             # nodes that were merged
-#             elif len(p_keys) > 1:
-#                 for k in p_keys:
-#                     removed_nodes.add(p_g_m[k])
-#                 # assign new type of node
-#                 if typing_graph in new_rhs_typing.keys():
-#                     if node in new_rhs_typing[typing_graph].keys():
-#                         new_type = new_rhs_typing[typing_graph][node]
-#                         new_nodes[r_g_prime[node]] = new_type
-
-#         # update homomorphisms
-#         for n in removed_nodes:
-#             if n in new_hom.keys():
-#                 del new_hom[n]
-
-#         new_hom.update(new_nodes)
-
-#         updated_homomorphisms.update({
-#             (graph_id, typing_graph): new_hom
-#         })
-#     return updated_homomorphisms

@@ -3,13 +3,12 @@ import networkx as nx
 from networkx.exception import NetworkXNoPath
 
 from regraph.category_op import check_homomorphism
-from regraph.exceptions import RewritingError, ReGraphError
+from regraph.exceptions import RewritingError
 from regraph.utils import keys_by_value, format_typing
 
 
 def _autocomplete_typing(hierarchy, graph_id, instance,
                          lhs_typing, rhs_typing_rel, p_lhs, p_rhs):
-    # print("Initial rhs typing: ", rhs_typing_rel)
     if len(hierarchy.successors(graph_id)) > 0:
         if lhs_typing is None:
             new_lhs_typing = dict()
@@ -47,7 +46,6 @@ def _autocomplete_typing(hierarchy, graph_id, instance,
             typing = hierarchy.edge[graph_id][typing_graph].mapping
             # Autocomplete lhs and rhs typings
             # by immediate successors induced by an instance
-
             for (source, target) in instance.items():
                 if typing_graph not in new_lhs_typing.keys():
                     new_lhs_typing[typing_graph] = dict()
@@ -65,13 +63,10 @@ def _autocomplete_typing(hierarchy, graph_id, instance,
 
         # Second step of autocompletion of rhs typing
         for graph, typing in new_rhs_typing_rel.items():
-            # print("Autocompleting ancestors of: ", graph)
             ancestors = hierarchy.get_ancestors(graph)
             for ancestor, ancestor_typing in ancestors.items():
-                # print("\tAncestor: ", ancestor, ancestor_typing)
                 dif = set(typing.keys()) -\
                     set(new_rhs_typing_rel[ancestor].keys())
-                # print("\tTyped here, but not ancestor: ", dif)
                 for node in dif:
                     type_set = set()
                     for el in new_rhs_typing_rel[graph][node]:
@@ -83,29 +78,7 @@ def _autocomplete_typing(hierarchy, graph_id, instance,
         return (None, None)
 
 
-def _check_lhs_rhs_consistency(hierarchy, graph_id, rule, instance,
-                               lhs_typing, rhs_typing):
-    for typing_graph, typing in lhs_typing.items():
-        typing_graph_ancestors = hierarchy.get_ancestors(typing_graph)
-        for ancestor, ancestor_typing in typing_graph_ancestors.items():
-            if ancestor in rhs_typing.keys():
-                for p_node in rule.p.nodes():
-                    if rule.p_rhs[p_node] in rhs_typing[ancestor] and\
-                        len(rhs_typing[ancestor][rule.p_rhs[p_node]]) == 1 and\
-                        ancestor_typing[typing[rule.p_lhs[p_node]]] not in\
-                            rhs_typing[ancestor][rule.p_rhs[p_node]]:
-                        raise RewritingError(
-                            "Inconsistent typing of the rule: "
-                            "node '%s' from the preserved part is typed "
-                            "by a graph '%s' as "
-                            "'%s' from the lhs and as a '%s' from the rhs." %
-                            (p_node, ancestor,
-                             ancestor_typing[typing[rule.p_lhs[p_node]]],
-                             rhs_typing[ancestor][rule.p_rhs[p_node]])
-                        )
-
-
-def _check_self_consistency(hierarchy, typing):
+def _check_self_consistency(hierarchy, typing, strict=True):
     for typing_graph, mapping in typing.items():
         ancestors = hierarchy.get_ancestors(typing_graph)
         for anc, anc_typing in ancestors.items():
@@ -115,32 +88,79 @@ def _check_self_consistency(hierarchy, typing):
                         if type(value) == str:
                             if value in anc_typing.keys() and\
                                anc_typing[value] != typing[anc][key]:
-                                raise ReGraphError(
+                                raise RewritingError(
                                     "Node '%s' is typed as "
                                     "'%s' and '%s' in the graph '%s'" %
                                     (key, anc_typing[value], typing[anc][key],
-                                        anc)
-                                )
+                                        anc))
                         else:
                             try:
                                 for val in value:
                                     if val in anc_typing.keys() and\
                                        anc_typing[val] not in typing[anc][key]:
-                                        raise ReGraphError(
+                                        raise RewritingError(
                                             "Node '%s' is typed as "
                                             "'%s' and '%s' in the graph '%s'" %
-                                            (key, anc_typing[val], typing[anc][key],
-                                                anc)
-                                        )
-                            except TypeError as e:
+                                            (key, anc_typing[val],
+                                             ", ".join(typing[anc][key]),
+                                             anc))
+                            except TypeError:
                                 if value in anc_typing.keys() and\
                                    anc_typing[value] != typing[anc][key]:
-                                    raise ReGraphError(
+                                    raise RewritingError(
                                         "Node '%s' is typed as "
                                         "'%s' and '%s' in the graph '%s'" %
-                                        (key, anc_typing[value], typing[anc][key],
-                                            anc)
-                                    )
+                                        (key, anc_typing[value],
+                                         ", ".join(typing[anc][key]),
+                                         anc))
+
+
+def _check_lhs_rhs_consistency(hierarchy, graph_id, rule, instance,
+                               lhs_typing, rhs_typing, strict=True):
+    """Check consistency of typing of the lhs and the rhs of the rule."""
+    for typing_graph, typing in lhs_typing.items():
+        for p_node in rule.p.nodes():
+
+            if typing_graph in rhs_typing.keys():
+
+                if strict is True and\
+                   rule.p_rhs[p_node] in rhs_typing[typing_graph].keys() and\
+                   len(rhs_typing[typing_graph][rule.p_rhs[p_node]]) > 1:
+                    raise RewritingError(
+                        "Inconsistent typing of the rule: node "
+                        "'%s' from the preserved part is typed "
+                        "by a graph '%s' as '%s' from the lhs and "
+                        "as a '%s' from the rhs." %
+                        (p_node, typing_graph,
+                         typing[rule.p_lhs[p_node]],
+                         ", ".join(
+                             rhs_typing[typing_graph][rule.p_rhs[p_node]])))
+            typing_graph_ancestors = hierarchy.get_ancestors(typing_graph)
+            for anc, anc_typing in typing_graph_ancestors.items():
+                if anc in rhs_typing.keys():
+                    if rule.p_rhs[p_node] in rhs_typing[anc]:
+                        if strict is True:
+                            if len(rhs_typing[anc][rule.p_rhs[p_node]]) > 1:
+                                raise RewritingError(
+                                    "Inconsistent typing of the rule: node "
+                                    "'%s' from the preserved part is typed "
+                                    "by a graph '%s' as '%s' from the lhs and "
+                                    "as a '%s' from the rhs." %
+                                    (p_node, anc,
+                                     anc_typing[typing[rule.p_lhs[p_node]]],
+                                     ", ".join(
+                                         rhs_typing[anc][rule.p_rhs[p_node]])))
+                        if len(rhs_typing[anc][rule.p_rhs[p_node]]) == 1 and\
+                            anc_typing[typing[rule.p_lhs[p_node]]] not in\
+                                rhs_typing[anc][rule.p_rhs[p_node]]:
+                            raise RewritingError(
+                                "Inconsistent typing of the rule: node "
+                                "'%s' from the preserved part is typed "
+                                "by a graph '%s' as '%s' from the lhs and "
+                                "as a '%s' from the rhs." %
+                                (p_node, anc,
+                                 anc_typing[typing[rule.p_lhs[p_node]]],
+                                 list(rhs_typing[anc][rule.p_rhs[p_node]])[0]))
 
 
 def _check_totality(hierarchy, graph_id, rule, instance,
@@ -165,35 +185,12 @@ def _check_totality(hierarchy, graph_id, rule, instance,
                node in rhs_typing[typing_graph].keys():
                 continue
             else:
-                visited_successors = set()
-                resolved_successors = set()
-                successors_to_visit = set(
-                    hierarchy.successors(typing_graph)
-                )
-                while len(successors_to_visit) > 0:
-                    for suc in successors_to_visit:
-                        visited_successors.add(suc)
-                        if suc in rhs_typing.keys() and\
-                           node in rhs_typing[suc].keys():
-                            resolved_successors.add(suc)
-
-                    new_successors_to_visit = set()
-                    for suc in successors_to_visit:
-                        new_successors_to_visit.update(
-                            [s for s in hierarchy.successors(suc)
-                             if s not in visited_successors]
-                        )
-                    successors_to_visit = new_successors_to_visit
-
-                if len(visited_successors - resolved_successors) > 0:
-                    raise RewritingError(
-                        "Rewriting parameter `total` is set to True, "
-                        "typing of the node `%s` "
-                        "in rhs is required (typing by the following "
-                        "graphs stays unresolved: %s)!" %
-                        (node,
-                         ", ".join(visited_successors - resolved_successors))
-                    )
+                raise RewritingError(
+                    "Rewriting is strict (no propagation of types is "
+                    "allowed), typing of the node `%s` "
+                    "in rhs is required (typing by the following "
+                    "graph stays unresolved: '%s')!" %
+                    (node, typing_graph))
 
 
 def _check_instance(hierarchy, graph_id, pattern, instance, pattern_typing):
@@ -209,19 +206,15 @@ def _check_instance(hierarchy, graph_id, pattern, instance, pattern_typing):
             for typing_graph, typing in pattern_typing.items():
                 try:
                     instance_typing = hierarchy.compose_path_typing(
-                        nx.shortest_path(hierarchy, graph_id, typing_graph)
-                    )
+                        nx.shortest_path(hierarchy, graph_id, typing_graph))
                     if node in pattern_typing.keys() and\
                        instance[node] in instance_typing.keys():
                         if typing[node] != instance_typing[instance[node]]:
                             raise RewritingError(
                                 "Typing of the instance of LHS does not " +
-                                " coincide with typing of LHS!"
-                            )
+                                " coincide with typing of LHS!")
                 except NetworkXNoPath:
-                    raise ReGraphError(
+                    raise RewritingError(
                         "Graph '%s' is not typed by '%s' specified "
                         "as a typing graph of the lhs of the rule." %
-                        (graph_id, typing_graph)
-                    )
-    return
+                        (graph_id, typing_graph))
