@@ -22,27 +22,22 @@ from regraph.attribute_sets import (FiniteSet,
                                     AttributeSet)
 
 
-def unique_node_id(graph, prefix):
-    """Get a unique id starting by prefix."""
-    if prefix not in graph.nodes():
-        return prefix
-    idx = 0
-    new_id = "{}_{}".format(prefix, idx)
-    while new_id in graph.nodes():
-        idx += 1
-        new_id = "{}_{}".format(prefix, idx)
-    return new_id
-
-
-def copy_node(graph, node_id):
-    """Copy node."""
-    new_name = unique_node_id(graph, node_id)
-    add_node(graph, new_name, graph.node[node_id])
-    return new_name
-
-
 def add_node(graph, node_id, attrs=None):
-    """Add node to a nx.(Di)Graph."""
+    """Add a node to a graph.
+
+    Parameters
+    ----------
+    graph : networkx.(Di)Graph
+    node_id : hashable
+        Prefix that is prepended to the new unique name.
+    attrs : dict, optional
+        Node attributes.
+
+    Raises
+    -------
+    regraph.exceptions.GraphError
+        Raises an error if node already exists in the graph.
+    """
     new_attrs = deepcopy(attrs)
     if new_attrs is None:
         new_attrs = dict()
@@ -54,27 +49,24 @@ def add_node(graph, node_id, attrs=None):
         raise GraphError("Node '%s' already exists!" % node_id)
 
 
-def add_node_new_id(graph, node_id, attrs=None):
-    """Create a new node id if node_id already exists."""
-    new_id = unique_node_id(graph, node_id)
-    add_node(graph, new_id, attrs)
-    return new_id
-
-
-def remove_node(graph, node):
-    """Remove node from the self."""
-    if node in graph.nodes():
-        neighbors = set(graph.__getitem__(node).keys())
-        neighbors -= {node}
-        graph.remove_node(node)
-        # self.unckecked_nodes |= neighbors
-    else:
-        raise GraphError("Node %s does not exist!" % str(node))
-    return
-
-
 def add_nodes_from(graph, node_list):
-    """Add nodes from a list."""
+    """Add nodes from a node list.
+
+    Parameters
+    ----------
+    graph : networkx.(Di)Graph
+    node_list : iterable
+        Iterable containing a collection of nodes, optionally,
+        with their attributes
+
+
+    Examples
+        --------
+        >>> import networkx as nx
+        >>> from regraph.primitives import add_nodes_from
+        >>> G = nx.Graph()
+        >>> add_nodes_from(G, [1, (2, {"a": 1}), 3])
+    """
     for n in node_list:
         try:
             node_id, node_attrs = n
@@ -83,92 +75,58 @@ def add_nodes_from(graph, node_list):
             add_node(graph, n)
 
 
-# def add_node_attrs(graph, node, attrs_dict):
-#     """Add new attributes to the node."""
-#     new_attrs = deepcopy(attrs_dict)
-#     if node not in graph.nodes():
-#         raise GraphError("Node '%s' does not exist!" % str(node))
-#     elif new_attrs is None:
-#         pass
-#     else:
-#         # if not self.valid_attributes(node, attrs_dict):
-#         #     raise ValueError("The attributes are not valid!")
-#         if graph.node[node] is None:
-#             graph.node[node] = deepcopy(new_attrs)
-#             normalize_attrs(graph.node[node])
-#         else:
-#             normalize_attrs(graph.node[node])
-#             for key, value in new_attrs.items():
-#                 if key not in graph.node[node].keys():
-#                     graph.node[node].update({key: to_set(value)})
-#                 else:
-#                     graph.node[node][key] =\
-#                         graph.node[node][key].union(to_set(value))
+def add_node_attrs(graph, node, attrs):
+    """Add new attributes to a node.
 
-def add_node_attrs(graph, node, attrs_dict):
-    """Add new attributes to the node."""
+    Parameters
+    ----------
+    graph : networkx.(Di)Graph
+    node : hashable
+        Id of a node to add attributes to.
+    attrs : dict
+        Attributes to add.
+
+    Raises
+    ------
+    GraphError
+        If a node with the specified id does not exist.
+    """
     if node not in graph.nodes():
         raise GraphError("Node '%s' does not exist!" % str(node))
-    normalize_attrs(attrs_dict)
+    normalize_attrs(attrs)
     node_attrs = graph.node[node]
     if node_attrs is None:
-        graph.node[node] = copy.deepcopy(attrs_dict)
+        graph.node[node] = copy.deepcopy(attrs)
     else:
-        for key in attrs_dict:
+        for key in attrs:
             if key in node_attrs:
                 # node_attrs[key] = hyb_union(node_attrs[key], attrs_dict[key])
-                node_attrs[key] = node_attrs[key].union(attrs_dict[key])
+                node_attrs[key] = node_attrs[key].union(attrs[key])
             else:
-                node_attrs[key] = attrs_dict[key]
-
-
-def update_node_attrs(graph, node, attrs):
-    """ Update attributes of a node. """
-
-    new_attrs = deepcopy(attrs)
-    if node not in graph.nodes():
-        raise GraphError("Node '%s' does not exist!" % str(node))
-    elif new_attrs is None:
-        warnings.warn(
-            "You want to update '%s' attrs with an empty attrs_dict!" % node,
-            GraphAttrsWarning
-        )
-    else:
-        # if not self.valid_attributes(node, new_attrs):
-        #     raise ValueError("The attributes are not valid")
-        normalize_attrs(new_attrs)
-        # if self.node[node].attrs_ is None:
-        graph.node[node] = new_attrs
-
-
-def remove_node_attrs(graph, node, attrs_dict):
-    """Remove attrs of a node specified by attrs_dict."""
-    if node not in graph.nodes():
-        raise GraphError("Node '%s' does not exist!" % str(node))
-    elif attrs_dict is None:
-        warnings.warn(
-            "You want to remove attrs from '%s' with an empty attrs_dict!" % node,
-            GraphAttrsWarning
-        )
-    elif graph.node[node] is None:
-        warnings.warn(
-            "Node '%s' does not have any attribute!" % node, GraphAttrsWarning
-        )
-    else:
-        normalize_attrs(attrs_dict)
-        old_attrs = graph.node[node]
-        for key, value in attrs_dict.items():
-            if key in old_attrs:
-                new_set = old_attrs[key].difference(value)
-                if not new_set:
-                    del old_attrs[key]
-                else:
-                    old_attrs[key] = new_set
+                node_attrs[key] = attrs[key]
 
 
 def add_edge(graph, s, t, attrs=None, **attr):
-    """Add edge."""
-    # set up attribute dict (from Networkx to preserve the signature).
+    """Add an edge to a graph.
+
+    Parameters
+    ----------
+    graph : networkx.(Di)Graph
+    s : hashable, source node id.
+    t : hashable, target node id.
+    attrs : dict
+        Edge attributes.
+
+    Raises
+    ------
+    ReGraphError
+        If `attrs` is not a dictionary
+    GraphError
+        If either one of the nodes does not exist in the graph or
+        an edge between `s` and `t` already
+        exists.
+    """
+    # Set up attribute dict (from Networkx to preserve the signature).
     if attrs is None:
         attrs = attr
     else:
@@ -178,6 +136,7 @@ def add_edge(graph, s, t, attrs=None, **attr):
             raise ReGraphError(
                 "The attr_dict argument must be a dictionary."
             )
+
     new_attrs = deepcopy(attrs)
     if s not in graph.nodes():
         raise GraphError("Node '%s' does not exist!" % s)
@@ -186,16 +145,71 @@ def add_edge(graph, s, t, attrs=None, **attr):
     normalize_attrs(new_attrs)
 
     if graph.is_directed():
+        if (s, t) in graph.edges():
+            raise GraphError(
+                "Edge '%s'->'%s' already exists!" %
+                (s, t)
+            )
         graph.add_edge(s, t, new_attrs)
     else:
+        if (s, t) in graph.edges() or (t, s) in graph.edges():
+            raise GraphError(
+                "Edge '%s'->'%s' already exists!" %
+                (s, t)
+            )
         graph.add_edge(s, t)
         graph.edge[s][t] = new_attrs
         graph.edge[t][s] = new_attrs
-    # self.unckecked_nodes |= {s, t}
+
+
+def remove_edge(graph, s, t):
+    """Remove edge from a graph.
+
+    Parameters
+    ----------
+    graph : networkx.(Di)Graph
+    s : hashable, source node id.
+    t : hashable, target node id.
+
+    Raises
+    ------
+    GraphError
+        If edge between `s` and `t` does not exist.
+
+    """
+    if graph.is_directed():
+        if (s, t) not in graph.edges():
+            raise GraphError(
+                "Edge '%s->%s' does not exist!" % (str(s), str(t)))
+    graph.remove_edge(s, t)
 
 
 def add_edges_from(graph, edge_list):
-    """Add edges from an edge list."""
+    """Add edges from an edge list.
+
+    Parameters
+    ----------
+    graph : networkx.(Di)Graph
+    edge_list : iterable
+        Iterable containing a collection of edges, optionally,
+        with their attributes
+
+    Raises
+    ------
+    ReGraphError
+        If an element of the collection is neither a tuple of size 2
+        (containing a source and a target of an edge), not a tuple
+        of size 3 (containing a source, a target and attributes of an edge).
+
+    Examples
+    --------
+        >>> import networkx as nx
+        >>> from regraph.primitives import add_nodes_from, add_edges_from
+        >>> G = nx.Graph()
+        >>> add_nodes_from(G, [1, 2, 3])
+        >>> add_edges_from(G, [(1, 2), (2, 3, {"a": 1})])
+
+    """
     for e in edge_list:
         if len(e) == 2:
             add_edge(graph, e[0], e[1])
@@ -208,199 +222,408 @@ def add_edges_from(graph, edge_list):
             )
 
 
-def remove_edge(graph, source, target):
-    """Remove edge from a graph."""
-    if graph.is_directed():
-        if (source, target) not in graph.edges():
-            raise GraphError(
-                "Edge '%s->%s' does not exist!" % (str(source), str(target)))
-    graph.remove_edge(source, target)
+def copy_node(graph, node_id):
+    """Copy node.
+
+    Create a copy of a node in a graph. A new id for the copy is
+    generated by unique_node_id_.
+
+    Parameters
+    ----------
+    graph : networkx.(Di)Graph
+    node_id : hashable, node to copy.
+
+    Returns
+    -------
+    new_name
+        Id of the copy node.
+
+    """
+    new_name = unique_node_id(graph, node_id)
+    add_node(graph, new_name, graph.node[node_id])
+    return new_name
 
 
-# def add_edge_attrs(graph, node_1, node_2, attrs_dict):
-#     """Add attributes of an edge in a graph."""
-#     new_attrs = deepcopy(attrs_dict)
-#     if (node_1, node_2) not in graph.edges():
-#         raise(
-#             GraphError("Edge '%s->%s' does not exist" %
-#                        (str(node_1), str(node_2)))
-#         )
-#     elif new_attrs is None:
-#         pass
-#     else:
-#         normalize_attrs(new_attrs)
-#         for key, value in new_attrs.items():
-#             if key not in graph.edge[node_1][node_2].keys():
-#                 graph.edge[node_1][node_2].update({key: to_set(value)})
-#             else:
-#                 graph.edge[node_1][node_2][key].update(to_set(value))
-#             if not graph.is_directed():
-#                 if key not in graph.edge[node_2][node_1].keys():
-#                     graph.edge[node_2][node_1].update({key: to_set(value)})
-#                 else:
-#                     graph.edge[node_2][node_1][key].update(to_set(value))
-#     return
+def add_node_new_id(graph, node_id, attrs=None):
+    """Create a new node id if node_id already exists."""
+    new_id = unique_node_id(graph, node_id)
+    add_node(graph, new_id, attrs)
+    return new_id
 
-def add_edge_attrs(graph, node_1, node_2, attrs_dict):
-    """Add attributes of an edge in a graph."""
-    new_attrs = deepcopy(attrs_dict)
-    if not graph.has_edge(node_1, node_2):
+
+def remove_node(graph, node_id):
+    """Remove node.
+
+    Parameters
+    ----------
+    graph : networkx.(Di)Graph
+    node_id : hashable, node to remove.
+
+    Raises
+    ------
+    GraphError
+        If a node with the specified id does not exist.
+
+    """
+    if node_id in graph.nodes():
+        neighbors = set(graph.__getitem__(node_id).keys())
+        neighbors -= {node_id}
+        graph.remove_node(node_id)
+    else:
+        raise GraphError("Node %s does not exist!" % str(node_id))
+    return
+
+
+def update_node_attrs(graph, node_id, attrs):
+    """Update attributes of a node.
+
+    Parameters
+    ----------
+    graph : networkx.(Di)Graph
+    node_id : hashable, node to update.
+    attrs : dict
+        New attributes to assign to the node
+
+    Raises
+    ------
+    GraphError
+        If a node with the specified id does not exist.
+
+    """
+    new_attrs = deepcopy(attrs)
+    if node_id not in graph.nodes():
+        raise GraphError("Node '%s' does not exist!" % str(node_id))
+    elif new_attrs is None:
+        warnings.warn(
+            "You want to update '%s' attrs with an empty attrs_dict!" % node_id,
+            GraphAttrsWarning
+        )
+    else:
+        normalize_attrs(new_attrs)
+        graph.node[node_id] = new_attrs
+
+
+def remove_node_attrs(graph, node_id, attrs):
+    """Remove attrs of a node specified by attrs_dict.
+
+    Parameters
+    ----------
+    graph : networkx.(Di)Graph
+    node_id : hashable
+        Node whose attributes to remove.
+    attrs : dict
+        Dictionary with attributes to remove.
+
+    Raises
+    ------
+    GraphError
+        If a node with the specified id does not exist.
+    """
+    if node_id not in graph.nodes():
+        raise GraphError("Node '%s' does not exist!" % str(node_id))
+    elif attrs is None:
+        warnings.warn(
+            "You want to remove attrs from '%s' with an empty attrs_dict!" %
+            node_id,
+            GraphAttrsWarning
+        )
+    elif graph.node[node_id] is None:
+        warnings.warn(
+            "Node '%s' does not have any attribute!" %
+            node_id, GraphAttrsWarning
+        )
+    else:
+        normalize_attrs(attrs)
+        old_attrs = graph.node[node_id]
+        for key, value in attrs.items():
+            if key in old_attrs:
+                new_set = old_attrs[key].difference(value)
+                if not new_set:
+                    del old_attrs[key]
+                else:
+                    old_attrs[key] = new_set
+
+
+def add_edge_attrs(graph, s, t, attrs):
+    """Add attributes of an edge in a graph.
+
+    Parameters
+    ----------
+    graph : networkx.(Di)Graph
+    s : hashable, source node id.
+    t : hashable, target node id.
+    attrs : dict
+        Dictionary with attributes to remove.
+
+    Raises
+    ------
+    GraphError
+        If an edge between `s` and `t` does not exist.
+    """
+    new_attrs = deepcopy(attrs)
+    if not graph.has_edge(s, t):
         raise(
             GraphError("Edge '%s->%s' does not exist" %
-                       (str(node_1), str(node_2)))
+                       (str(s), str(t)))
         )
     elif new_attrs is None:
         pass
     else:
         normalize_attrs(new_attrs)
-        edge_attrs = get_edge(graph, node_1, node_2)
+        edge_attrs = get_edge(graph, s, t)
         for key, value in new_attrs.items():
             if key in edge_attrs:
                 edge_attrs[key] = edge_attrs[key].union(value)
             else:
                 edge_attrs[key] = value
-        set_edge(graph, node_1, node_2, edge_attrs)
+        set_edge(graph, s, t, edge_attrs)
 
 
-def update_edge_attrs(graph, node_1, node_2, attrs):
-    """Update attributes of an edge in a graph."""
-    if not graph.has_edge(node_1, node_2):
+def update_edge_attrs(graph, s, t, attrs):
+    """Update attributes of an edge.
+
+    Parameters
+    ----------
+    graph : networkx.(Di)Graph
+    s : hashable, source node id.
+    t : hashable, target node id.
+    attrs : dict
+        New attributes to assign to the edge
+
+    Raises
+    ------
+    GraphError
+        If an edge between `s` and `t` does not exist.
+    """
+    if not graph.has_edge(s, t):
         raise GraphError("Edge '%s->%s' does not exist!" %
-                         (str(node_1), str(node_2)))
+                         (str(s), str(t)))
     elif attrs is None:
         warnings.warn(
             "You want to update '%s->%s' attrs with an empty attrs_dict" %
-            (str(node_1), str(node_2)), GraphAttrsWarning
+            (str(s), str(t)), GraphAttrsWarning
         )
     else:
         new_attrs = deepcopy(attrs)
         normalize_attrs(new_attrs)
-        graph.edge[node_1][node_2] = new_attrs
+        graph.edge[s][t] = new_attrs
         if not graph.is_directed():
-            graph.edge[node_2][node_1] = new_attrs
+            graph.edge[s][t] = new_attrs
 
 
-def remove_edge_attrs(graph, node_1, node_2, attrs_dict):
-    """Remove attributes of an edge in a graph."""
-    if not graph.has_edge(node_1, node_2):
+def remove_edge_attrs(graph, s, t, attrs):
+    """Remove attrs of an edge specified by attrs.
+
+    Parameters
+    ----------
+    graph : networkx.(Di)Graph
+    s : hashable, source node id.
+    t : hashable, target node id.
+    attrs : dict
+        Dictionary with attributes to remove.
+
+    Raises
+    ------
+    GraphError
+        If an edge between `s` and `t` does not exist.
+    """
+    if not graph.has_edge(s, t):
         raise GraphError("Edge %s-%s does not exist"
-                         % (str(node_1), str(node_2)))
+                         % (str(s), str(t)))
     else:
-        normalize_attrs(attrs_dict)
-        old_attrs = get_edge(graph, node_1, node_2)
-        for key, value in attrs_dict.items():
+        normalize_attrs(attrs)
+        old_attrs = get_edge(graph, s, t)
+        for key, value in attrs.items():
             if key in old_attrs:
                 new_set = old_attrs[key].difference(value)
                 if new_set:
                     old_attrs[key] = new_set
                 else:
                     del old_attrs[key]
-        set_edge(graph, node_1, node_2, old_attrs)
+        set_edge(graph, s, t, old_attrs)
 
 
-def get_edge(graph, u, v):
-    """Get edge attrs."""
+def get_edge(graph, s, t):
+    """Get edge attributes.
+
+    Parameters
+    ----------
+    graph : networkx.(Di)Graph
+    s : hashable, source node id.
+    t : hashable, target node id.
+    """
     if graph.is_directed():
-        return graph.edge[u][v]
+        return graph.edge[s][t]
     else:
-        return merge_attributes(graph.edge[u][v], graph.edge[v][u])
+        return merge_attributes(graph.edge[s][t], graph.edge[s][t])
 
 
-def exists_edge(graph, source, target):
-    """Check edge exists."""
+def exists_edge(graph, s, t):
+    """Check if an edge exists.
+
+    Parameters
+    ----------
+    graph : networkx.(Di)Graph
+    s : hashable, source node id.
+    t : hashable, target node id.
+    """
     if graph.is_directed():
-        return(source in graph.edge and target in graph.edge[source])
+        return(s in graph.edge and t in graph.edge[s])
     else:
-        s_t = source in graph.edge and target in graph.edge[source]
-        t_s = target in graph.edge and source in graph.edge[target]
+        s_t = s in graph.edge and t in graph.edge[s]
+        t_s = t in graph.edge and s in graph.edge[t]
         return(s_t and t_s)
 
-    def filter_edges_by_attributes(self, attr_key, attr_cond):
-        for (n1, n2) in self.edges():
-            if (attr_key not in self.edge[n1][n2].keys() or
-                    not attr_cond(self.edge[n1][n2][attr_key])):
-                self.remove_edge(n1, n2)
-        return self
+
+def filter_edges_by_attributes(graph, attr_key, attr_cond):
+    """Filter graph edges by attributes.
+
+    Removes all the edges of the graph (inplace) that do not
+    satisfy `attr_cond`.
+
+    Parameters
+    ----------
+    graph : networkx.(Di)Graph
+    attrs_key : attribute key
+    attrs_cond : callable
+        Condition for an attribute to satisfy: callable that returns
+        `True` if condition is satisfied, `False` otherwise.
+
+    """
+    for (s, t) in graph.edges():
+        if (attr_key not in graph.edge[s][t].keys() or
+                not attr_cond(graph.edge[s][t][attr_key])):
+            graph.remove_edge(s, t)
 
 
-def set_edge(graph, source, target, attrs):
-    """Set edge attrs."""
+def set_edge(graph, s, t, attrs):
+    """Set edge attrs.
+
+    Parameters
+    ----------
+    graph : networkx.(Di)Graph
+    s : hashable, source node id.
+    t : hashable, target node id.
+    attrs : dictionary
+        Dictionary with attributes to set.
+
+    Raises
+    ------
+    GraphError
+        If an edge between `s` and `t` does not exist.
+    """
     new_attrs = deepcopy(attrs)
-    if not graph.has_edge(source, target):
+    if not graph.has_edge(s, t):
         raise GraphError(
-            "Edge %s->%s does not exist" % (str(source), str(target)))
+            "Edge %s->%s does not exist" % (str(s), str(t)))
 
     normalize_attrs(new_attrs)
-    graph.edge[source][target] = new_attrs
+    graph.edge[s][t] = new_attrs
     if not graph.is_directed():
-        graph.edge[target][source] = new_attrs
+        graph.edge[t][s] = new_attrs
 
 
-def clone_node(graph, node, name=None):
-    """Clone existing node and all its edges."""
-    if node not in graph.nodes():
-        raise GraphError("Node '%s' does not exist!" % str(node))
+def clone_node(graph, node_id, name=None):
+    """Clone node.
+
+    Create a new node, a copy of a node with `node_id`, and reconnect it
+    with all the adjacent nodes of `node_id`.
+
+    Parameters
+    ----------
+    graph : networkx.(Di)Graph
+    node_id : id of a node to clone.
+    name : id for the clone, optional
+        If is not specified, new id will be generated.
+
+    Returns
+    -------
+    new_node : hashable, clone's id
+
+    Raises
+    ------
+    GraphError
+        If node wiht `node_id` does not exists or a node with
+        `name` (clone's name) already exists.
+
+    """
+    if node_id not in graph.nodes():
+        raise GraphError("Node '%s' does not exist!" % str(node_id))
 
     # generate new name for a clone
     if name is None:
         i = 1
-        new_node = str(node) + str(i)
+        new_node = str(node_id) + str(i)
         while new_node in graph.nodes():
             i += 1
-            new_node = str(node) + str(i)
+            new_node = str(node_id) + str(i)
     else:
         if name in graph.nodes():
             raise GraphError("Node '%s' already exists!" % str(name))
         else:
             new_node = name
 
-    # part with constraints (?)
-    # graph.unckecked_nodes |= set(graph.__getitem__(node).keys())
-    graph.add_node(new_node, deepcopy(graph.node[node]))
-    # graph.unckecked_nodes |= {new_node}
-    # if node in graph.input_constraints.keys():
-    # graph.input_constraints[new_node] =
-    # graph.input_constraints[node].deepcopy()
+    graph.add_node(new_node, deepcopy(graph.node[node_id]))
 
     # Connect all the edges
     if graph.is_directed():
         add_edges_from(
             graph,
-            [(n, new_node) for n, _ in graph.in_edges(node)])
+            [(n, new_node) for n, _ in graph.in_edges(node_id)])
         add_edges_from(
             graph,
-            [(new_node, n) for _, n in graph.out_edges(node)])
+            [(new_node, n) for _, n in graph.out_edges(node_id)])
 
         # Copy the attributes of the edges
-        for s, t in graph.in_edges(node):
+        for s, t in graph.in_edges(node_id):
             graph.edge[s][new_node] = deepcopy(graph.edge[s][t])
-        for s, t in graph.out_edges(node):
+        for s, t in graph.out_edges(node_id):
             graph.edge[new_node][t] = deepcopy(graph.edge[s][t])
     else:
         add_edges_from(
             graph,
-            [(n, new_node) for n in graph.neighbors(node)]
+            [(n, new_node) for n in graph.neighbors(node_id)]
         )
 
         # Copy the attributes of the edges
-        for n in graph.neighbors(node):
-            graph.edge[new_node][n] = deepcopy(graph.edge[n][node])
+        for n in graph.neighbors(node_id):
+            graph.edge[new_node][n] = deepcopy(graph.edge[n][node_id])
             graph.edge[n][new_node] = graph.edge[new_node][n]
 
     return new_node
 
 
-def relabel_node(graph, n, new_name):
-    """Relabel a node in the graph."""
-    clone_node(graph, n, new_name)
-    graph.remove_node(n)
+def relabel_node(graph, node_id, new_id):
+    """Relabel a node in the graph.
+
+    Parameters
+    ----------
+    graph : networkx.(Di)Graph
+    node_id : id of a node to relabel.
+    new_id : hashable, new label of a node.
+    """
+    clone_node(graph, node_id, new_id)
+    graph.remove_node(node_id)
 
 
 def relabel_nodes(graph, mapping):
-    """Relabel graph nodes in place.
+    """Relabel graph nodes inplace given a mapping.
 
     Similar to networkx.relabel.relabel_nodes:
     https://networkx.github.io/documentation/development/_modules/networkx/relabel.html
+
+    Parameters
+    ----------
+    graph : networkx.(Di)Graph
+    mapping: dict
+        A dictionary with keys being old node ids and their values
+        being new id's of the respective nodes.
+
+    Raises
+    ------
+    ReGraphError
+        If new id's do not define a set of distinct node id's.
+
     """
     unique_names = set(mapping.values())
     if len(unique_names) != len(graph.nodes()):
@@ -431,6 +654,28 @@ def get_relabeled_graph(graph, mapping):
 
     Similar to networkx.relabel.relabel_nodes:
     https://networkx.github.io/documentation/development/_modules/networkx/relabel.html
+
+    Parameters
+    ----------
+    graph : networkx.(Di)Graph
+    mapping: dict
+        A dictionary with keys being old node ids and their values
+        being new id's of the respective nodes.
+
+    Returns
+    -------
+    g : networkx.(Di)Graph
+        New graph object isomorphic to the `graph` with the relabled nodes.
+
+    Raises
+    ------
+    ReGraphError
+        If new id's do not define a set of distinct node id's.
+
+
+    See also
+    --------
+    regraph.primitives.relabel_nodes
     """
     g = type(graph)()
 
@@ -469,11 +714,43 @@ def get_relabeled_graph(graph, mapping):
     return g
 
 
-def merge_nodes(graph, nodes, node_name=None, method="union", edge_method="union"):
-    """Merge list of nodes."""
+def merge_nodes(graph, nodes, node_id=None, method="union", edge_method="union"):
+    """Merge a list of nodes.
+
+    Parameters
+    ----------
+
+    graph : nx.(Di)Graph
+    nodes : iterable
+        Collection of node id's to merge.
+    node_id : hashable, optional
+        Id of a new node corresponding to the result of merge.
+    method : optional
+        Method of node attributes merge: if `"union"` the resulting node
+        will contain the union of all attributes of the merged nodes,
+        if `"intersection"`, the resulting node will contain their
+        intersection. Default value is `"union"`.
+    edge_method : optional
+        Method of edge attributes merge: if `"union"` the edges that were
+        merged will contain the union of all attributes,
+        if `"intersection"` -- their ntersection. Default value is `"union"`.
+
+    Returns
+    -------
+    node_id : hashable
+        Id of a new node corresponding to the result of merge.
+
+    Raises
+    ------
+    ReGraphError
+        If unknown merging method is provided
+    GraphError
+        If some nodes from `nodes` do not exist in the graph.
+
+    """
     if len(nodes) == 1:
-        if node_name is not None:
-            relabel_node(graph, nodes[0], node_name)
+        if node_id is not None:
+            relabel_node(graph, nodes[0], node_id)
 
     elif len(nodes) > 1:
 
@@ -484,12 +761,12 @@ def merge_nodes(graph, nodes, node_name=None, method="union", edge_method="union
             method = "union"
 
         # Generate name for new node
-        if node_name is None:
-            node_name = "_".join([str(n) for n in nodes])
-        elif node_name in graph.nodes() and (node_name not in nodes):
-            raise ReGraphError(
+        if node_id is None:
+            node_id = "_".join([str(n) for n in nodes])
+        elif node_id in graph.nodes() and (node_id not in nodes):
+            raise GraphError(
                 "New name for merged node is not valid: "
-                "node with name '%s' already exists!" % node_name
+                "node with name '%s' already exists!" % node_id
             )
 
         # Merge data attached to node according to the method specified
@@ -548,10 +825,10 @@ def merge_nodes(graph, nodes, node_name=None, method="union", edge_method="union
                                 edge_method)
 
                 source_nodes.update(
-                    [n if n not in nodes else node_name
+                    [n if n not in nodes else node_id
                      for n, _ in in_edges])
                 target_nodes.update(
-                    [n if n not in nodes else node_name
+                    [n if n not in nodes else node_id
                      for _, n in out_edges])
 
                 for edge in in_edges:
@@ -604,41 +881,38 @@ def merge_nodes(graph, nodes, node_name=None, method="union", edge_method="union
             graph.remove_node(node)
             all_neighbors -= {node}
 
-        add_node(graph, node_name, attr_accumulator)
-        all_neighbors.add(node_name)
-
-        # (???)
-        # graph.unckecked_nodes |= all_neighbors
+        add_node(graph, node_id, attr_accumulator)
+        all_neighbors.add(node_id)
 
         if graph.is_directed():
             if self_loop:
-                add_edges_from(graph, [(node_name, node_name)])
-                graph.edge[node_name][node_name] = self_loop_attrs
+                add_edges_from(graph, [(node_id, node_id)])
+                graph.edge[node_id][node_id] = self_loop_attrs
 
-            add_edges_from(graph, [(n, node_name) for n in source_nodes])
-            add_edges_from(graph, [(node_name, n) for n in target_nodes])
+            add_edges_from(graph, [(n, node_id) for n in source_nodes])
+            add_edges_from(graph, [(node_id, n) for n in target_nodes])
 
             # Attach accumulated attributes to edges
             for node, attrs in source_dict.items():
                 if node not in nodes:
-                    graph.edge[node][node_name] = attrs
+                    graph.edge[node][node_id] = attrs
             for node, attrs in target_dict.items():
                 if node not in nodes:
-                    graph.edge[node_name][node] = attrs
+                    graph.edge[node_id][node] = attrs
         else:
             if self_loop:
-                add_edges_from(graph, [(node_name, node_name)])
-                graph.edge[node_name][node_name] = self_loop_attrs
+                add_edges_from(graph, [(node_id, node_id)])
+                graph.edge[node_id][node_id] = self_loop_attrs
 
-            add_edges_from(graph, [(n, node_name) for n in neighbors])
+            add_edges_from(graph, [(n, node_id) for n in neighbors])
 
             # Attach accumulated attributes to edges
             for node, attrs in neighbors_dict.items():
                 if node not in nodes:
-                    graph.edge[node][node_name] = attrs
-                    graph.edge[node_name][node] = attrs
+                    graph.edge[node][node_id] = attrs
+                    graph.edge[node_id][node] = attrs
 
-        return node_name
+        return node_id
 
 
 def subtract(a, b, ba_mapping):
@@ -840,17 +1114,6 @@ def find_matching(graph, pattern):
     return instances
 
 
-# def rewrite(graph, instance, rule, inplace=False):
-#     """Rewrite an instance of a rule in a graph."""
-#     g_m, p_g_m, g_m_g = pullback_complement(
-#         self.p, self.lhs, graph, self.p_lhs, instance,
-#         inplace
-#     )
-#     g_prime, g_m_g_prime, rhs_g_prime = pushout(
-#         self.p, g_m, self.rhs, p_g_m, self.p_rhs, inplace)
-#     return (g_prime, rhs_g_prime)
-
-
 def print_graph(graph):
     """Util for nx graphs printing."""
     print("\nNodes:\n")
@@ -909,7 +1172,7 @@ def find_match(graph, pattern, graph_typings, pattern_typings, typing_graphs,
 
     may_edges = [edge for edge in itertools.product(pattern.nodes(),
                                                     pattern.nodes())
-                 if (_allowed_edge(*edge, pattern_typings) and
+                 if (_allowed_edge(*edge, typings=pattern_typings) and
                      edge not in pattern.edges())]
     may_edges_subsets = itertools.chain.from_iterable(
         itertools.combinations(may_edges, r) for r in range(len(may_edges) + 1))
@@ -962,22 +1225,6 @@ def find_match(graph, pattern, graph_typings, pattern_typings, typing_graphs,
     return matchings
 
 
-# def maximal_machings(gr):
-#     """ not the same matchings (couplage in french)"""
-#     return set(map(frozenset, _naive_maximal_machings(gr)))
-
-
-# def _naive_maximal_machings(gr):
-#     matchings = []
-#     for (source, target) in gr.edges():
-#         gr_copy = copy.copy(gr)
-#         remove_node(gr_copy, source)
-#         remove_node(gr_copy, target)
-#         submatchings = _naive_maximal_machings(gr_copy)
-#         matchings += [subm.add((source, target)) for subm in submatchings]
-#     return matchings
-
-
 def _check_input(input_set):
     pass
 
@@ -998,3 +1245,28 @@ def json_dict_to_attrs(d):
             v = new_v
         attrs[k] = AttributeSet.from_json(v)
     return attrs
+
+
+def unique_node_id(graph, prefix):
+    """Generate a unique id starting by a prefix.
+
+    Parameters
+    ----------
+    graph : networkx.Graph
+    prefix : str
+        Prefix that is prepended to the new unique name.
+
+
+    Returns
+    -------
+    str
+        New unique node id starting with a prefix.
+    """
+    if prefix not in graph.nodes():
+        return prefix
+    idx = 0
+    new_id = "{}_{}".format(prefix, idx)
+    while new_id in graph.nodes():
+        idx += 1
+        new_id = "{}_{}".format(prefix, idx)
+    return new_id

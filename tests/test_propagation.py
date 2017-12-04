@@ -273,3 +273,4 @@ class TestPropagation(object):
         # assert("a" in new_hierarchy.graph["mm"].node["gene"])
         # assert("a" in new_hierarchy.graph["mmm"].node["component"])
         # assert("a" in new_hierarchy.graph["colors"].node["red"])
+
