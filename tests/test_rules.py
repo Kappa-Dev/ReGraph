@@ -258,7 +258,8 @@ class TestRule(object):
         rule = Rule.from_transform(pattern)
         rule.remove_node(1)
         rule.remove_edge(2, 3)
-        rule.clone_node(2)
+        new_name, _ = rule.clone_node(2)
+        print(new_name)
         rule.remove_node_attrs(3, {"a3": {3}})
         rule.remove_edge_attrs(3, 2, {"a32": {32}})
         rule.add_node_attrs(3, {"a3": {100}})
@@ -266,7 +267,8 @@ class TestRule(object):
         rule.add_edge_rhs(4, "21")
 
         assert(rule.removed_nodes() == {1})
-        assert(rule.removed_edges() == {(2, 3)})
+        print(rule.removed_edges())
+        assert(rule.removed_edges() == {(2, 3), (new_name[0], 3)})
         assert(len(rule.cloned_nodes()) == 1 and
                2 in rule.cloned_nodes().keys())
         assert(len(rule.removed_node_attrs()) == 1 and

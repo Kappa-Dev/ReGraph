@@ -340,5 +340,5 @@ class TestPrimitives(object):
 
         rule = Rule(p, pattern, rhs, p_lhs, p_rhs)
         instances = find_match(self.graph, rule.lhs, {}, {}, {})
-        rewrite(self.graph, instances[0], rule)
+        rule.apply_to(self.graph, instances[0], rule)
         # print_graph(self.graph)
