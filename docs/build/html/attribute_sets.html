@@ -41,35 +41,33 @@
             
   <div class="section" id="module-regraph.attribute_sets">
 <span id="id1"></span><span id="attribute-sets"></span><h1>Attribute Sets<a class="headerlink" href="#module-regraph.attribute_sets" title="Permalink to this headline">¶</a></h1>
-<p>A collection of data structures for attributes on the nodes of graphs.</p>
-<dl class="docutils">
-<dt>Implements the following data structures:</dt>
-<dd><ul class="first simple">
-<li><cite>AttributeSet</cite> – abstract class for attribute sets in <cite>ReGraph</cite></li>
-</ul>
-<p class="last">(provides interface, implements some common behaviour);
-- <cite>FiniteSet</cite> – wrapper for Python finite sets, inherits <cite>AttributeSet</cite>;
-- <cite>RegexSet</cite> – a class for possibly infinite sets of strings given by
+<p>A collection of data structures for values of attributes on nodes/edges of graphs.</p>
+<p>Implements the following data structures:</p>
+<ul class="simple">
+<li><cite>AttributeSet</cite> – a base class for attribute sets in <cite>ReGraph</cite>,
+provides an interface, implements some common behaviour;</li>
+<li><cite>FiniteSet</cite> – wrapper for Python finite sets, inherits <cite>AttributeSet</cite>;</li>
+<li><cite>RegexSet</cite> – a class for possibly infinite sets of strings given by
 regular expressions. It uses the <cite>greenery</cite> library for finding
 inclusion and intersection of regular expressions, its method <cite>match</cite> can
 be used to test if a given string is in a set of strings defined by
-regular expressions;
-- <cite>IntegerSet</cite> – a class for possibly infinite sets of integers
+regular expressions;</li>
+<li><cite>IntegerSet</cite> – a class for possibly infinite sets of integers
 defined by a set of disjoint intervals, inherits <cite>AttributeSet</cite>,
-provides the method <cite>in_range</cite> for testing if a given integer is in
-the set of integers.</p>
-</dd>
-</dl>
-<p>TODO:</p>
-<blockquote>
-<div><ul class="simple">
-<li><cite>RealSet</cite></li>
+provides the method <cite>contains</cite> for testing if a given integer is in
+the set of integers.</li>
 </ul>
-</div></blockquote>
+<p>TODO:</p>
+<ul class="simple">
+<li><cite>RealSet</cite> – a class for possibly infinite sets of reals
+defined by a set of open/closed intervals, inherits <cite>AttributeSet</cite>,
+provides the method <cite>contains</cite> for testing if a given real is in
+the set of reals.</li>
+</ul>
 <dl class="class">
 <dt id="regraph.attribute_sets.AttributeSet">
 <em class="property">class </em><code class="descclassname">regraph.attribute_sets.</code><code class="descname">AttributeSet</code><a class="reference internal" href="_modules/regraph/attribute_sets.html#AttributeSet"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.attribute_sets.AttributeSet" title="Permalink to this definition">¶</a></dt>
-<dd><p>Parent class for attribute sets.</p>
+<dd><p>Base class for ReGraph attribute sets.</p>
 <p class="rubric">Methods</p>
 <table border="1" class="longtable docutils">
 <colgroup>
@@ -78,7 +76,7 @@ the set of integers.</p>
 </colgroup>
 <tbody valign="top">
 <tr class="row-odd"><td><a class="reference internal" href="#regraph.attribute_sets.AttributeSet.difference" title="regraph.attribute_sets.AttributeSet.difference"><code class="xref py py-obj docutils literal"><span class="pre">difference</span></code></a>(other)</td>
-<td>Find difference.</td>
+<td>Find difference attribute set.</td>
 </tr>
 <tr class="row-even"><td><a class="reference internal" href="#regraph.attribute_sets.AttributeSet.from_json" title="regraph.attribute_sets.AttributeSet.from_json"><code class="xref py py-obj docutils literal"><span class="pre">from_json</span></code></a>(json_data)</td>
 <td>Create attribute set object from json-like dictionary.</td>
@@ -97,7 +95,7 @@ the set of integers.</p>
 <dl class="method">
 <dt id="regraph.attribute_sets.AttributeSet.difference">
 <code class="descname">difference</code><span class="sig-paren">(</span><em>other</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/attribute_sets.html#AttributeSet.difference"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.attribute_sets.AttributeSet.difference" title="Permalink to this definition">¶</a></dt>
-<dd><p>Find difference.</p>
+<dd><p>Find difference attribute set.</p>
 </dd></dl>
 
 <dl class="classmethod">
@@ -211,6 +209,18 @@ the set of integers.</p>
 <dt id="regraph.attribute_sets.FiniteSet">
 <em class="property">class </em><code class="descclassname">regraph.attribute_sets.</code><code class="descname">FiniteSet</code><span class="sig-paren">(</span><em>fset=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/attribute_sets.html#FiniteSet"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.attribute_sets.FiniteSet" title="Permalink to this definition">¶</a></dt>
 <dd><p>Wrapper for finite sets as attribute sets.</p>
+<p class="rubric">Attributes</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="12%" />
+<col width="88%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td><strong>fset</strong></td>
+<td>(set) Python finite set that is being wrapped by the object</td>
+</tr>
+</tbody>
+</table>
 <p class="rubric">Methods</p>
 <table border="1" class="longtable docutils">
 <colgroup>
@@ -222,7 +232,7 @@ the set of integers.</p>
 <td>Add an element.</td>
 </tr>
 <tr class="row-even"><td><a class="reference internal" href="#regraph.attribute_sets.FiniteSet.difference" title="regraph.attribute_sets.FiniteSet.difference"><code class="xref py py-obj docutils literal"><span class="pre">difference</span></code></a>(other)</td>
-<td>Difference of self with other finite set.</td>
+<td>Find the difference set with another set.</td>
 </tr>
 <tr class="row-odd"><td><code class="xref py py-obj docutils literal"><span class="pre">from_json</span></code>(json_data)</td>
 <td>Create attribute set object from json-like dictionary.</td>
@@ -231,7 +241,7 @@ the set of integers.</p>
 <td>Find intersection attribute set.</td>
 </tr>
 <tr class="row-odd"><td><a class="reference internal" href="#regraph.attribute_sets.FiniteSet.intersection" title="regraph.attribute_sets.FiniteSet.intersection"><code class="xref py py-obj docutils literal"><span class="pre">intersection</span></code></a>(other)</td>
-<td>Intesection of a finite set with another set.</td>
+<td>Find the intersection set with another set.</td>
 </tr>
 <tr class="row-even"><td><a class="reference internal" href="#regraph.attribute_sets.FiniteSet.is_empty" title="regraph.attribute_sets.FiniteSet.is_empty"><code class="xref py py-obj docutils literal"><span class="pre">is_empty</span></code></a>()</td>
 <td>Test if finite set is empty.</td>
@@ -243,10 +253,10 @@ the set of integers.</p>
 <td>Test if subset of another set.</td>
 </tr>
 <tr class="row-odd"><td><a class="reference internal" href="#regraph.attribute_sets.FiniteSet.to_json" title="regraph.attribute_sets.FiniteSet.to_json"><code class="xref py py-obj docutils literal"><span class="pre">to_json</span></code></a>()</td>
-<td>JSON represenation of finite set.</td>
+<td>JSON represenation.</td>
 </tr>
 <tr class="row-even"><td><a class="reference internal" href="#regraph.attribute_sets.FiniteSet.union" title="regraph.attribute_sets.FiniteSet.union"><code class="xref py py-obj docutils literal"><span class="pre">union</span></code></a>(other)</td>
-<td>Union of a finite set with another set.</td>
+<td>Find the union with another set.</td>
 </tr>
 <tr class="row-odd"><td><a class="reference internal" href="#regraph.attribute_sets.FiniteSet.update" title="regraph.attribute_sets.FiniteSet.update"><code class="xref py py-obj docutils literal"><span class="pre">update</span></code></a>(element)</td>
 <td>Update finite set.</td>
@@ -262,13 +272,34 @@ the set of integers.</p>
 <dl class="method">
 <dt id="regraph.attribute_sets.FiniteSet.difference">
 <code class="descname">difference</code><span class="sig-paren">(</span><em>other</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/attribute_sets.html#FiniteSet.difference"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.attribute_sets.FiniteSet.difference" title="Permalink to this definition">¶</a></dt>
-<dd><p>Difference of self with other finite set.</p>
+<dd><p>Find the difference set with another set.</p>
+<p>Finds a <cite>self</cite> - <cite>other</cite> set.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>other</strong> : set, FiniteSet, RegexSet, IntegerSet, EmptySet or UniversalSet</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">The difference set</td>
+</tr>
+</tbody>
+</table>
 </dd></dl>
 
 <dl class="method">
 <dt id="regraph.attribute_sets.FiniteSet.intersection">
 <code class="descname">intersection</code><span class="sig-paren">(</span><em>other</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/attribute_sets.html#FiniteSet.intersection"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.attribute_sets.FiniteSet.intersection" title="Permalink to this definition">¶</a></dt>
-<dd><p>Intesection of a finite set with another set.</p>
+<dd><p>Find the intersection set with another set.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>other</strong> : set, FiniteSet, RegexSet, IntegerSet, EmptySet or UniversalSet</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">The intersection set</td>
+</tr>
+</tbody>
+</table>
 </dd></dl>
 
 <dl class="method">
@@ -281,24 +312,52 @@ the set of integers.</p>
 <dt id="regraph.attribute_sets.FiniteSet.is_universal">
 <code class="descname">is_universal</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/attribute_sets.html#FiniteSet.is_universal"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.attribute_sets.FiniteSet.is_universal" title="Permalink to this definition">¶</a></dt>
 <dd><p>Test if finite set is universal.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">False, as finite set is never a universal set</td>
+</tr>
+</tbody>
+</table>
 </dd></dl>
 
 <dl class="method">
 <dt id="regraph.attribute_sets.FiniteSet.issubset">
 <code class="descname">issubset</code><span class="sig-paren">(</span><em>other</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/attribute_sets.html#FiniteSet.issubset"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.attribute_sets.FiniteSet.issubset" title="Permalink to this definition">¶</a></dt>
 <dd><p>Test if subset of another set.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>other</strong> : set, FiniteSet, RegexSet, IntegerSet, EmptySet or UniversalSet</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><cite>True</cite> is <cite>self</cite> defines a subset of <cite>other</cite>, <cite>False</cite> otherwise</td>
+</tr>
+</tbody>
+</table>
 </dd></dl>
 
 <dl class="method">
 <dt id="regraph.attribute_sets.FiniteSet.to_json">
 <code class="descname">to_json</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/attribute_sets.html#FiniteSet.to_json"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.attribute_sets.FiniteSet.to_json" title="Permalink to this definition">¶</a></dt>
-<dd><p>JSON represenation of finite set.</p>
+<dd><p>JSON represenation.</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="regraph.attribute_sets.FiniteSet.union">
 <code class="descname">union</code><span class="sig-paren">(</span><em>other</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/attribute_sets.html#FiniteSet.union"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.attribute_sets.FiniteSet.union" title="Permalink to this definition">¶</a></dt>
-<dd><p>Union of a finite set with another set.</p>
+<dd><p>Find the union with another set.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>other</strong> : set, FiniteSet, RegexSet, IntegerSet, EmptySet or UniversalSet</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">The union set</td>
+</tr>
+</tbody>
+</table>
 </dd></dl>
 
 <dl class="method">
@@ -312,7 +371,19 @@ the set of integers.</p>
 <dl class="class">
 <dt id="regraph.attribute_sets.IntegerSet">
 <em class="property">class </em><code class="descclassname">regraph.attribute_sets.</code><code class="descname">IntegerSet</code><span class="sig-paren">(</span><em>interval_list</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/attribute_sets.html#IntegerSet"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.attribute_sets.IntegerSet" title="Permalink to this definition">¶</a></dt>
-<dd><p>Set of integers (possible infinite) defined by a set of intervals.</p>
+<dd><p>Set of integers defined by a list of disjoint intervals.</p>
+<p class="rubric">Attributes</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="19%" />
+<col width="81%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td><strong>intervals</strong></td>
+<td>(list) List of sorted intervals defining an integer set.</td>
+</tr>
+</tbody>
+</table>
 <p class="rubric">Methods</p>
 <table border="1" class="longtable docutils">
 <colgroup>
@@ -320,20 +391,20 @@ the set of integers.</p>
 <col width="90%" />
 </colgroup>
 <tbody valign="top">
-<tr class="row-odd"><td><a class="reference internal" href="#regraph.attribute_sets.IntegerSet.difference" title="regraph.attribute_sets.IntegerSet.difference"><code class="xref py py-obj docutils literal"><span class="pre">difference</span></code></a>(other)</td>
+<tr class="row-odd"><td><a class="reference internal" href="#regraph.attribute_sets.IntegerSet.contains" title="regraph.attribute_sets.IntegerSet.contains"><code class="xref py py-obj docutils literal"><span class="pre">contains</span></code></a>(num)</td>
+<td>Test if provided integer is in integer set.</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#regraph.attribute_sets.IntegerSet.difference" title="regraph.attribute_sets.IntegerSet.difference"><code class="xref py py-obj docutils literal"><span class="pre">difference</span></code></a>(other)</td>
 <td>Difference of self with the other.</td>
 </tr>
-<tr class="row-even"><td><a class="reference internal" href="#regraph.attribute_sets.IntegerSet.empty" title="regraph.attribute_sets.IntegerSet.empty"><code class="xref py py-obj docutils literal"><span class="pre">empty</span></code></a>()</td>
+<tr class="row-odd"><td><a class="reference internal" href="#regraph.attribute_sets.IntegerSet.empty" title="regraph.attribute_sets.IntegerSet.empty"><code class="xref py py-obj docutils literal"><span class="pre">empty</span></code></a>()</td>
 <td>Empty integer set.</td>
 </tr>
-<tr class="row-odd"><td><a class="reference internal" href="#regraph.attribute_sets.IntegerSet.from_finite_set" title="regraph.attribute_sets.IntegerSet.from_finite_set"><code class="xref py py-obj docutils literal"><span class="pre">from_finite_set</span></code></a>(s)</td>
+<tr class="row-even"><td><a class="reference internal" href="#regraph.attribute_sets.IntegerSet.from_finite_set" title="regraph.attribute_sets.IntegerSet.from_finite_set"><code class="xref py py-obj docutils literal"><span class="pre">from_finite_set</span></code></a>(s)</td>
 <td>Create Integer set object from a finite set.</td>
 </tr>
-<tr class="row-even"><td><code class="xref py py-obj docutils literal"><span class="pre">from_json</span></code>(json_data)</td>
+<tr class="row-odd"><td><code class="xref py py-obj docutils literal"><span class="pre">from_json</span></code>(json_data)</td>
 <td>Create attribute set object from json-like dictionary.</td>
-</tr>
-<tr class="row-odd"><td><a class="reference internal" href="#regraph.attribute_sets.IntegerSet.in_range" title="regraph.attribute_sets.IntegerSet.in_range"><code class="xref py py-obj docutils literal"><span class="pre">in_range</span></code></a>(num)</td>
-<td>Test if probided integer is in integer set.</td>
 </tr>
 <tr class="row-even"><td><code class="xref py py-obj docutils literal"><span class="pre">intersect</span></code>(other)</td>
 <td>Find intersection attribute set.</td>
@@ -362,6 +433,12 @@ the set of integers.</p>
 </tbody>
 </table>
 <dl class="method">
+<dt id="regraph.attribute_sets.IntegerSet.contains">
+<code class="descname">contains</code><span class="sig-paren">(</span><em>num</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/attribute_sets.html#IntegerSet.contains"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.attribute_sets.IntegerSet.contains" title="Permalink to this definition">¶</a></dt>
+<dd><p>Test if provided integer is in integer set.</p>
+</dd></dl>
+
+<dl class="method">
 <dt id="regraph.attribute_sets.IntegerSet.difference">
 <code class="descname">difference</code><span class="sig-paren">(</span><em>other</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/attribute_sets.html#IntegerSet.difference"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.attribute_sets.IntegerSet.difference" title="Permalink to this definition">¶</a></dt>
 <dd><p>Difference of self with the other.</p>
@@ -377,12 +454,6 @@ the set of integers.</p>
 <dt id="regraph.attribute_sets.IntegerSet.from_finite_set">
 <em class="property">classmethod </em><code class="descname">from_finite_set</code><span class="sig-paren">(</span><em>s</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/attribute_sets.html#IntegerSet.from_finite_set"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.attribute_sets.IntegerSet.from_finite_set" title="Permalink to this definition">¶</a></dt>
 <dd><p>Create Integer set object from a finite set.</p>
-</dd></dl>
-
-<dl class="method">
-<dt id="regraph.attribute_sets.IntegerSet.in_range">
-<code class="descname">in_range</code><span class="sig-paren">(</span><em>num</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/attribute_sets.html#IntegerSet.in_range"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.attribute_sets.IntegerSet.in_range" title="Permalink to this definition">¶</a></dt>
-<dd><p>Test if probided integer is in integer set.</p>
 </dd></dl>
 
 <dl class="method">
@@ -432,7 +503,22 @@ the set of integers.</p>
 <dl class="class">
 <dt id="regraph.attribute_sets.RegexSet">
 <em class="property">class </em><code class="descclassname">regraph.attribute_sets.</code><code class="descname">RegexSet</code><span class="sig-paren">(</span><em>regexp</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/attribute_sets.html#RegexSet"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.attribute_sets.RegexSet" title="Permalink to this definition">¶</a></dt>
-<dd><p>A set of strings defined by regular expression.</p>
+<dd><p>Class defining a set of strings recognized by a regular expression.</p>
+<p>RegexSet is defined by a regular expression, and
+is morally associated to a set of strings that
+the regular expression recognizes.</p>
+<p class="rubric">Attributes</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="26%" />
+<col width="74%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td><strong>pattern</strong></td>
+<td>(str) Regular expression pattern</td>
+</tr>
+</tbody>
+</table>
 <p class="rubric">Methods</p>
 <table border="1" class="longtable docutils">
 <colgroup>
@@ -441,7 +527,7 @@ the set of integers.</p>
 </colgroup>
 <tbody valign="top">
 <tr class="row-odd"><td><a class="reference internal" href="#regraph.attribute_sets.RegexSet.difference" title="regraph.attribute_sets.RegexSet.difference"><code class="xref py py-obj docutils literal"><span class="pre">difference</span></code></a>(other)</td>
-<td>Difference of self with other regex.</td>
+<td>Find the difference of two regexps.</td>
 </tr>
 <tr class="row-even"><td><a class="reference internal" href="#regraph.attribute_sets.RegexSet.empty" title="regraph.attribute_sets.RegexSet.empty"><code class="xref py py-obj docutils literal"><span class="pre">empty</span></code></a>()</td>
 <td>Create a RegexSet object not matching any string.</td>
@@ -456,7 +542,7 @@ the set of integers.</p>
 <td>Find intersection attribute set.</td>
 </tr>
 <tr class="row-even"><td><a class="reference internal" href="#regraph.attribute_sets.RegexSet.intersection" title="regraph.attribute_sets.RegexSet.intersection"><code class="xref py py-obj docutils literal"><span class="pre">intersection</span></code></a>(other)</td>
-<td>Smart intersection of two regexps.</td>
+<td>Find the intersection of two regexps.</td>
 </tr>
 <tr class="row-odd"><td><a class="reference internal" href="#regraph.attribute_sets.RegexSet.is_empty" title="regraph.attribute_sets.RegexSet.is_empty"><code class="xref py py-obj docutils literal"><span class="pre">is_empty</span></code></a>()</td>
 <td>Test if an object is an empty RegexSet.</td>
@@ -465,7 +551,7 @@ the set of integers.</p>
 <td>Test if an object is a universal RegexSet.</td>
 </tr>
 <tr class="row-odd"><td><a class="reference internal" href="#regraph.attribute_sets.RegexSet.issubset" title="regraph.attribute_sets.RegexSet.issubset"><code class="xref py py-obj docutils literal"><span class="pre">issubset</span></code></a>(other)</td>
-<td>Test for regexp inclusion.</td>
+<td>Test regexp inclusion relation.</td>
 </tr>
 <tr class="row-even"><td><a class="reference internal" href="#regraph.attribute_sets.RegexSet.match" title="regraph.attribute_sets.RegexSet.match"><code class="xref py py-obj docutils literal"><span class="pre">match</span></code></a>(string)</td>
 <td>Check if a string is in RegexSet.</td>
@@ -474,7 +560,7 @@ the set of integers.</p>
 <td>JSON represenation of RegexSet.</td>
 </tr>
 <tr class="row-even"><td><a class="reference internal" href="#regraph.attribute_sets.RegexSet.union" title="regraph.attribute_sets.RegexSet.union"><code class="xref py py-obj docutils literal"><span class="pre">union</span></code></a>(other)</td>
-<td>Union of two regexps.</td>
+<td>Find the union with another set.</td>
 </tr>
 <tr class="row-odd"><td><a class="reference internal" href="#regraph.attribute_sets.RegexSet.universal" title="regraph.attribute_sets.RegexSet.universal"><code class="xref py py-obj docutils literal"><span class="pre">universal</span></code></a>()</td>
 <td>Create a RegexSet object matching any string.</td>
@@ -484,7 +570,36 @@ the set of integers.</p>
 <dl class="method">
 <dt id="regraph.attribute_sets.RegexSet.difference">
 <code class="descname">difference</code><span class="sig-paren">(</span><em>other</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/attribute_sets.html#RegexSet.difference"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.attribute_sets.RegexSet.difference" title="Permalink to this definition">¶</a></dt>
-<dd><p>Difference of self with other regex.</p>
+<dd><p>Find the difference of two regexps.</p>
+<p>This method uses greenery library to find and
+reduce the difference pattern between two regex’s.</p>
+<ul class="simple">
+<li>If <cite>other</cite> is a string, a Python dict or a FiniteSet,
+it is converted to a regex pattern, after which it
+is parsed by <cite>greenery.lego.parse</cite> method and its
+difference with the pattern of the <cite>self</cite> is found.
+See more details here:
+<a class="reference external" href="https://github.com/qntm/greenery">https://github.com/qntm/greenery</a></li>
+<li>If <cite>other</cite> is an instance of <cite>EmpySet</cite>, the difference
+is a copy of <cite>self</cite>.</li>
+<li>If <cite>other</cite> is an instance of <cite>UniversalSet</cite>, the difference
+is an instance of <cite>EmptySet</cite>.</li>
+</ul>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>other</strong> : set, str, re._pattern_type, RegexSet</p>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>result</strong> : RegexSet</p>
+<blockquote class="last">
+<div><p>The union set</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
 </dd></dl>
 
 <dl class="classmethod">
@@ -503,8 +618,39 @@ the set of integers.</p>
 <dl class="method">
 <dt id="regraph.attribute_sets.RegexSet.intersection">
 <code class="descname">intersection</code><span class="sig-paren">(</span><em>other</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/attribute_sets.html#RegexSet.intersection"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.attribute_sets.RegexSet.intersection" title="Permalink to this definition">¶</a></dt>
-<dd><p>Smart intersection of two regexps.</p>
-<p>Uses greenery library to find and reduce intersection.</p>
+<dd><p>Find the intersection of two regexps.</p>
+<p>This method uses greenery library to find and
+reduce the intersection pattern.</p>
+<ul class="simple">
+<li>If <cite>other</cite> is a string, a Python dict or a FiniteSet,
+it is converted to a regex pattern, after which it
+is parsed by <cite>greenery.lego.parse</cite> method and its
+intersection with the pattern of the <cite>self</cite> is found.
+The library <cite>greenery</cite> finds the intersection between two
+regex’s by constructing corresponding FSM’s (finite state
+machines) and finding their intersection, after which it
+is converted back to a regex. See more details here:
+<a class="reference external" href="https://github.com/qntm/greenery">https://github.com/qntm/greenery</a></li>
+<li>If <cite>other</cite> is an instance of <cite>EmpySet</cite>, the intersection
+is a <cite>EmpySet</cite> object.</li>
+<li>If <cite>other</cite> is an instance of <cite>UniversalSet</cite>, the intersection
+is a copy of <cite>self</cite>.</li>
+</ul>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>other</strong> : set, str, re._pattern_type, RegexSet</p>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>result</strong> : RegexSet</p>
+<blockquote class="last">
+<div><p>The union set</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
 </dd></dl>
 
 <dl class="method">
@@ -522,7 +668,30 @@ the set of integers.</p>
 <dl class="method">
 <dt id="regraph.attribute_sets.RegexSet.issubset">
 <code class="descname">issubset</code><span class="sig-paren">(</span><em>other</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/attribute_sets.html#RegexSet.issubset"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.attribute_sets.RegexSet.issubset" title="Permalink to this definition">¶</a></dt>
-<dd><p>Test for regexp inclusion.</p>
+<dd><p>Test regexp inclusion relation.</p>
+<p>Tests if a set defined by <cite>self</cite> is a included
+in a set defined by <cite>other</cite>.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>other</strong> : set, str, re._pattern_type, RegexSet</p>
+<blockquote>
+<div><p>Another regex to test inclusion.</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><cite>True</cite> is <cite>self</cite> defines a subset of <cite>other</cite>, <cite>False</cite> otherwise</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Raises:</th><td class="field-body"><p class="first"><strong>AttributeSetError</strong></p>
+<blockquote class="last">
+<div><p>If the type <cite>other</cite> is not recognized.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
 </dd></dl>
 
 <dl class="method">
@@ -540,7 +709,33 @@ the set of integers.</p>
 <dl class="method">
 <dt id="regraph.attribute_sets.RegexSet.union">
 <code class="descname">union</code><span class="sig-paren">(</span><em>other</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/attribute_sets.html#RegexSet.union"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.attribute_sets.RegexSet.union" title="Permalink to this definition">¶</a></dt>
-<dd><p>Union of two regexps.</p>
+<dd><p>Find the union with another set.</p>
+<p>The union is found in the following ways:</p>
+<ul class="simple">
+<li>If <cite>other</cite> is a string, a Python dict or a FiniteSet
+the result of the union is a simple concatenation of the
+string representations of the elements of <cite>other</cite>
+with the pattern of <cite>self</cite>.</li>
+<li>If <cite>other</cite> is an instance of <cite>UniversalSet</cite>, the union
+is a <cite>UniversalSet</cite> object.</li>
+<li>If <cite>other</cite> is an instance of <cite>EmptySet</cite>, the union is
+a copy of <cite>self</cite>.</li>
+</ul>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>other</strong> : set, str, re._pattern_type, RegexSet</p>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>result</strong> : RegexSet</p>
+<blockquote class="last">
+<div><p>The union set</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
 </dd></dl>
 
 <dl class="classmethod">

@@ -97,6 +97,15 @@ class TestAttributeSets:
             ) == IntegerSet.universal()
         )
 
+        a = IntegerSet({(0, 3), (20, 30)})
+        b1 = a.intersection({1, 2, 3})
+        b2 = a.intersection(FiniteSet({1, 2, 3}))
+        assert(b1 == b2)
+        a = IntegerSet({(0, 3), (20, 30)})
+        b1 = a.union({1, 2, 3})
+        b2 = a.union(FiniteSet({1, 2, 3}))
+        assert(b1 == b2)
+
     def test_finite_set(self):
         """Test FiniteSet data structure."""
         uniprot =\

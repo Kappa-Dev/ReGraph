@@ -1327,92 +1327,99 @@
         <span class="k">if</span> <span class="n">graph1</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">node</span><span class="p">]</span> <span class="o">!=</span> <span class="n">graph2</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">node</span><span class="p">]:</span>
             <span class="k">return</span> <span class="kc">False</span>
     <span class="k">for</span> <span class="n">s</span><span class="p">,</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">graph1</span><span class="o">.</span><span class="n">edges</span><span class="p">():</span>
-        <span class="c1"># normalize_attrs(get_edge(graph1, s, t))</span>
-        <span class="c1"># normalize_attrs(get_edge(graph2, s, t))</span>
         <span class="k">if</span> <span class="n">get_edge</span><span class="p">(</span><span class="n">graph1</span><span class="p">,</span> <span class="n">s</span><span class="p">,</span> <span class="n">t</span><span class="p">)</span> <span class="o">!=</span> <span class="n">get_edge</span><span class="p">(</span><span class="n">graph2</span><span class="p">,</span> <span class="n">s</span><span class="p">,</span> <span class="n">t</span><span class="p">):</span>
             <span class="k">return</span> <span class="kc">False</span>
     <span class="k">return</span> <span class="kc">True</span></div>
 
 
-<span class="c1"># def find_match(graph, pattern, graph_typings, pattern_typings, typing_graphs,</span>
-<span class="c1">#                decr_types=False):</span>
-<span class="c1">#     &quot;&quot;&quot;</span>
-<span class="c1">#     graph_typings = dictionnary of typings of the graph</span>
-<span class="c1">#     pattern_typings = dictionnary of typings of the pattern</span>
-<span class="c1">#     typing_graph = dictionnary of the graphs typing the pattern</span>
+<div class="viewcode-block" id="find_matching_with_types"><a class="viewcode-back" href="../../primitives.html#regraph.primitives.find_matching_with_types">[docs]</a><span class="k">def</span> <span class="nf">find_matching_with_types</span><span class="p">(</span><span class="n">graph</span><span class="p">,</span> <span class="n">pattern</span><span class="p">,</span> <span class="n">graph_typings</span><span class="p">,</span>
+                             <span class="n">pattern_typings</span><span class="p">,</span> <span class="n">typing_graphs</span><span class="p">,</span>
+                             <span class="n">decr_types</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Find matching of a typed pattern in a typed graph.</span>
 
-<span class="c1">#     networkX can only look at nodes attributes to compare them</span>
-<span class="c1">#     so we put the typings inside during matching</span>
-<span class="c1">#     we assume that no key is named:</span>
-<span class="c1">#     regraph_tmp_typings_key_that_you_should_not_use</span>
-<span class="c1">#     &quot;&quot;&quot;</span>
-<span class="c1">#     typing_key = &quot;regraph_tmp_typings_key_that_you_should_not_use&quot;</span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    graph : networkx.(Di)Graph</span>
+<span class="sd">    pattern : networkx.(Di)Graph</span>
+<span class="sd">    graph_typings : dict</span>
+<span class="sd">        Dictionnary of typings of the graph</span>
+<span class="sd">    pattern_typings : dict</span>
+<span class="sd">        Dictionnary of typings of the pattern</span>
+<span class="sd">    typing_graph : dict</span>
+<span class="sd">        Dictionnary of the graphs typing the pattern</span>
 
-<span class="c1">#     def _allowed_edge(source, target, typings):</span>
-<span class="c1">#         for (typ_id, typ_map) in typings.items():</span>
-<span class="c1">#             if typ_id not in typing_graphs.keys():</span>
-<span class="c1">#                 raise ValueError(</span>
-<span class="c1">#                     &quot;typing graph or pattern not in typing_graphs&quot;)</span>
-<span class="c1">#             typ_gr = typing_graphs[typ_id]</span>
-<span class="c1">#             if (source in typ_map.keys() and</span>
-<span class="c1">#                     target in typ_map.keys() and</span>
-<span class="c1">#                     typ_map[target] not in typ_gr.successors(typ_map[source])):</span>
-<span class="c1">#                 return False</span>
-<span class="c1">#         return True</span>
+<span class="sd">    networkX can only look at nodes attributes to compare them</span>
+<span class="sd">    so we put the typings inside the nodes&#39; attrs during matching</span>
+<span class="sd">    we assume that no key is named:</span>
+<span class="sd">    regraph_tmp_typings_key_that_you_should_not_use</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">typing_key</span> <span class="o">=</span> <span class="s2">&quot;regraph_tmp_typings_key_that_you_should_not_use&quot;</span>
 
-<span class="c1">#     may_edges = [edge for edge in itertools.product(pattern.nodes(),</span>
-<span class="c1">#                                                     pattern.nodes())</span>
-<span class="c1">#                  if (_allowed_edge(*edge, typings=pattern_typings) and</span>
-<span class="c1">#                      edge not in pattern.edges())]</span>
-<span class="c1">#     may_edges_subsets = itertools.chain.from_iterable(</span>
-<span class="c1">#         itertools.combinations(may_edges, r) for r in range(len(may_edges) + 1))</span>
+    <span class="k">def</span> <span class="nf">_allowed_edge</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="n">target</span><span class="p">,</span> <span class="n">typings</span><span class="p">):</span>
+        <span class="k">for</span> <span class="p">(</span><span class="n">typ_id</span><span class="p">,</span> <span class="n">typ_map</span><span class="p">)</span> <span class="ow">in</span> <span class="n">typings</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">typ_id</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">typing_graphs</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="s2">&quot;typing graph or pattern not in typing_graphs&quot;</span><span class="p">)</span>
+            <span class="n">typ_gr</span> <span class="o">=</span> <span class="n">typing_graphs</span><span class="p">[</span><span class="n">typ_id</span><span class="p">]</span>
+            <span class="k">if</span> <span class="p">(</span><span class="n">source</span> <span class="ow">in</span> <span class="n">typ_map</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span> <span class="ow">and</span>
+                    <span class="n">target</span> <span class="ow">in</span> <span class="n">typ_map</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span> <span class="ow">and</span>
+                    <span class="n">typ_map</span><span class="p">[</span><span class="n">target</span><span class="p">]</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">typ_gr</span><span class="o">.</span><span class="n">successors</span><span class="p">(</span><span class="n">typ_map</span><span class="p">[</span><span class="n">source</span><span class="p">])):</span>
+                <span class="k">return</span> <span class="kc">False</span>
+        <span class="k">return</span> <span class="kc">True</span>
 
-<span class="c1">#     def _put_typings_in_attrs(gr, typings):</span>
-<span class="c1">#         for (node, (typ_id, typ_map)) in\</span>
-<span class="c1">#                 itertools.product(gr.nodes(), typings.items()):</span>
-<span class="c1">#             if node in typ_map.keys():</span>
-<span class="c1">#                 add_node_attrs(</span>
-<span class="c1">#                     gr, node, {typing_key: FiniteSet([(typ_id, typ_map[node])])})</span>
+    <span class="n">may_edges</span> <span class="o">=</span> <span class="p">[</span><span class="n">edge</span> <span class="k">for</span> <span class="n">edge</span> <span class="ow">in</span> <span class="n">itertools</span><span class="o">.</span><span class="n">product</span><span class="p">(</span><span class="n">pattern</span><span class="o">.</span><span class="n">nodes</span><span class="p">(),</span>
+                                                    <span class="n">pattern</span><span class="o">.</span><span class="n">nodes</span><span class="p">())</span>
+                 <span class="k">if</span> <span class="p">(</span><span class="n">_allowed_edge</span><span class="p">(</span><span class="o">*</span><span class="n">edge</span><span class="p">,</span> <span class="n">typings</span><span class="o">=</span><span class="n">pattern_typings</span><span class="p">)</span> <span class="ow">and</span>
+                     <span class="n">edge</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">pattern</span><span class="o">.</span><span class="n">edges</span><span class="p">())]</span>
+    <span class="n">may_edges_subsets</span> <span class="o">=</span> <span class="n">itertools</span><span class="o">.</span><span class="n">chain</span><span class="o">.</span><span class="n">from_iterable</span><span class="p">(</span>
+        <span class="n">itertools</span><span class="o">.</span><span class="n">combinations</span><span class="p">(</span><span class="n">may_edges</span><span class="p">,</span> <span class="n">r</span><span class="p">)</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">may_edges</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span><span class="p">))</span>
 
-<span class="c1">#     _put_typings_in_attrs(pattern, pattern_typings)</span>
-<span class="c1">#     _put_typings_in_attrs(graph, graph_typings)</span>
+    <span class="k">def</span> <span class="nf">_put_typings_in_attrs</span><span class="p">(</span><span class="n">gr</span><span class="p">,</span> <span class="n">typings</span><span class="p">):</span>
+        <span class="k">for</span> <span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="p">(</span><span class="n">typ_id</span><span class="p">,</span> <span class="n">typ_map</span><span class="p">))</span> <span class="ow">in</span>\
+                <span class="n">itertools</span><span class="o">.</span><span class="n">product</span><span class="p">(</span><span class="n">gr</span><span class="o">.</span><span class="n">nodes</span><span class="p">(),</span> <span class="n">typings</span><span class="o">.</span><span class="n">items</span><span class="p">()):</span>
+            <span class="k">if</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">typ_map</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                <span class="n">add_node_attrs</span><span class="p">(</span>
+                    <span class="n">gr</span><span class="p">,</span> <span class="n">node</span><span class="p">,</span> <span class="p">{</span><span class="n">typing_key</span><span class="p">:</span> <span class="n">FiniteSet</span><span class="p">([(</span><span class="n">typ_id</span><span class="p">,</span> <span class="n">typ_map</span><span class="p">[</span><span class="n">node</span><span class="p">])])})</span>
 
-<span class="c1">#     if decr_types:</span>
-<span class="c1">#         def _compare_dicts(d1, d2):</span>
-<span class="c1">#             types1 = d1[typing_key]</span>
-<span class="c1">#             types2 = d2[typing_key]</span>
-<span class="c1">#             d1_without_types = copy.copy(d1)</span>
-<span class="c1">#             d2_without_types = copy.copy(d1)</span>
-<span class="c1">#             del d1_without_types[typing_key]</span>
-<span class="c1">#             del d2_without_types[typing_key]</span>
-<span class="c1">#             return (valid_attributes(types2, types1) and</span>
-<span class="c1">#                     valid_attributes(d1_without_types, d2_without_types))</span>
+    <span class="n">_put_typings_in_attrs</span><span class="p">(</span><span class="n">pattern</span><span class="p">,</span> <span class="n">pattern_typings</span><span class="p">)</span>
+    <span class="n">_put_typings_in_attrs</span><span class="p">(</span><span class="n">graph</span><span class="p">,</span> <span class="n">graph_typings</span><span class="p">)</span>
 
-<span class="c1">#     else:</span>
-<span class="c1">#         def _compare_dicts(d1, d2):</span>
-<span class="c1">#             return valid_attributes(d2, d1)</span>
+    <span class="k">if</span> <span class="n">decr_types</span><span class="p">:</span>
+        <span class="k">def</span> <span class="nf">_compare_dicts</span><span class="p">(</span><span class="n">d1</span><span class="p">,</span> <span class="n">d2</span><span class="p">):</span>
+            <span class="n">types1</span> <span class="o">=</span> <span class="n">d1</span><span class="p">[</span><span class="n">typing_key</span><span class="p">]</span>
+            <span class="n">types2</span> <span class="o">=</span> <span class="n">d2</span><span class="p">[</span><span class="n">typing_key</span><span class="p">]</span>
+            <span class="n">d1_without_types</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">d1</span><span class="p">)</span>
+            <span class="n">d2_without_types</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">d1</span><span class="p">)</span>
+            <span class="k">del</span> <span class="n">d1_without_types</span><span class="p">[</span><span class="n">typing_key</span><span class="p">]</span>
+            <span class="k">del</span> <span class="n">d2_without_types</span><span class="p">[</span><span class="n">typing_key</span><span class="p">]</span>
+            <span class="k">return</span> <span class="p">(</span><span class="n">valid_attributes</span><span class="p">(</span><span class="n">types2</span><span class="p">,</span> <span class="n">types1</span><span class="p">)</span> <span class="ow">and</span>
+                    <span class="n">valid_attributes</span><span class="p">(</span><span class="n">d1_without_types</span><span class="p">,</span> <span class="n">d2_without_types</span><span class="p">))</span>
 
-<span class="c1">#     matchings = []</span>
-<span class="c1">#     for added_edges in may_edges_subsets:</span>
-<span class="c1">#         pat = copy.deepcopy(pattern)</span>
-<span class="c1">#         pat.add_edges_from(added_edges)</span>
-<span class="c1">#         if graph.is_directed():</span>
-<span class="c1">#             matcher = isomorphism.DiGraphMatcher(graph, pat, _compare_dicts,</span>
-<span class="c1">#                                                  _compare_dicts)</span>
-<span class="c1">#         else:</span>
-<span class="c1">#             matcher = isomorphism.GraphMatcher(graph, pat, _compare_dicts,</span>
-<span class="c1">#                                                _compare_dicts)</span>
-<span class="c1">#         for sub in matcher.subgraph_isomorphisms_iter():</span>
-<span class="c1">#             matchings.append({v: k for (k, v) in sub.items()})</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">def</span> <span class="nf">_compare_dicts</span><span class="p">(</span><span class="n">d1</span><span class="p">,</span> <span class="n">d2</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">valid_attributes</span><span class="p">(</span><span class="n">d2</span><span class="p">,</span> <span class="n">d1</span><span class="p">)</span>
 
-<span class="c1">#     def _remove_typings_in_attrs(gr):</span>
-<span class="c1">#         for node in gr.nodes():</span>
-<span class="c1">#             if typing_key in gr.node[node].keys():</span>
-<span class="c1">#                 del gr.node[node][typing_key]</span>
+    <span class="n">matchings</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">added_edges</span> <span class="ow">in</span> <span class="n">may_edges_subsets</span><span class="p">:</span>
+        <span class="n">pat</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">pattern</span><span class="p">)</span>
+        <span class="n">pat</span><span class="o">.</span><span class="n">add_edges_from</span><span class="p">(</span><span class="n">added_edges</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">graph</span><span class="o">.</span><span class="n">is_directed</span><span class="p">():</span>
+            <span class="n">matcher</span> <span class="o">=</span> <span class="n">isomorphism</span><span class="o">.</span><span class="n">DiGraphMatcher</span><span class="p">(</span><span class="n">graph</span><span class="p">,</span> <span class="n">pat</span><span class="p">,</span> <span class="n">_compare_dicts</span><span class="p">,</span>
+                                                 <span class="n">_compare_dicts</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">matcher</span> <span class="o">=</span> <span class="n">isomorphism</span><span class="o">.</span><span class="n">GraphMatcher</span><span class="p">(</span><span class="n">graph</span><span class="p">,</span> <span class="n">pat</span><span class="p">,</span> <span class="n">_compare_dicts</span><span class="p">,</span>
+                                               <span class="n">_compare_dicts</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">sub</span> <span class="ow">in</span> <span class="n">matcher</span><span class="o">.</span><span class="n">subgraph_isomorphisms_iter</span><span class="p">():</span>
+            <span class="n">matchings</span><span class="o">.</span><span class="n">append</span><span class="p">({</span><span class="n">v</span><span class="p">:</span> <span class="n">k</span> <span class="k">for</span> <span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span> <span class="ow">in</span> <span class="n">sub</span><span class="o">.</span><span class="n">items</span><span class="p">()})</span>
 
-<span class="c1">#     _remove_typings_in_attrs(graph)</span>
-<span class="c1">#     _remove_typings_in_attrs(pattern)</span>
-<span class="c1">#     return matchings</span>
+    <span class="k">def</span> <span class="nf">_remove_typings_in_attrs</span><span class="p">(</span><span class="n">gr</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">gr</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">typing_key</span> <span class="ow">in</span> <span class="n">gr</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">node</span><span class="p">]</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                <span class="k">del</span> <span class="n">gr</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">node</span><span class="p">][</span><span class="n">typing_key</span><span class="p">]</span>
+
+    <span class="n">_remove_typings_in_attrs</span><span class="p">(</span><span class="n">graph</span><span class="p">)</span>
+    <span class="n">_remove_typings_in_attrs</span><span class="p">(</span><span class="n">pattern</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">matchings</span></div>
 
 
 <div class="viewcode-block" id="unique_node_id"><a class="viewcode-back" href="../../primitives.html#regraph.primitives.unique_node_id">[docs]</a><span class="k">def</span> <span class="nf">unique_node_id</span><span class="p">(</span><span class="n">graph</span><span class="p">,</span> <span class="n">prefix</span><span class="p">):</span>

@@ -447,6 +447,38 @@ pattern, and values are corresponding nodes of the graph.</p>
 </dd></dl>
 
 <dl class="function">
+<dt id="regraph.primitives.find_matching_with_types">
+<code class="descclassname">regraph.primitives.</code><code class="descname">find_matching_with_types</code><span class="sig-paren">(</span><em>graph</em>, <em>pattern</em>, <em>graph_typings</em>, <em>pattern_typings</em>, <em>typing_graphs</em>, <em>decr_types=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/primitives.html#find_matching_with_types"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.primitives.find_matching_with_types" title="Permalink to this definition">¶</a></dt>
+<dd><p>Find matching of a typed pattern in a typed graph.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>graph</strong> : networkx.(Di)Graph</p>
+<p><strong>pattern</strong> : networkx.(Di)Graph</p>
+<p><strong>graph_typings</strong> : dict</p>
+<blockquote>
+<div><p>Dictionnary of typings of the graph</p>
+</div></blockquote>
+<p><strong>pattern_typings</strong> : dict</p>
+<blockquote>
+<div><p>Dictionnary of typings of the pattern</p>
+</div></blockquote>
+<p><strong>typing_graph</strong> : dict</p>
+<blockquote>
+<div><p>Dictionnary of the graphs typing the pattern</p>
+</div></blockquote>
+<p><strong>networkX can only look at nodes attributes to compare them</strong></p>
+<p><strong>so we put the typings inside the nodes’ attrs during matching</strong></p>
+<p><strong>we assume that no key is named:</strong></p>
+<p class="last"><strong>regraph_tmp_typings_key_that_you_should_not_use</strong></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
 <dt id="regraph.primitives.get_edge">
 <code class="descclassname">regraph.primitives.</code><code class="descname">get_edge</code><span class="sig-paren">(</span><em>graph</em>, <em>s</em>, <em>t</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/primitives.html#get_edge"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.primitives.get_edge" title="Permalink to this definition">¶</a></dt>
 <dd><p>Get edge attributes.</p>

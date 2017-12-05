@@ -40,25 +40,30 @@
           <div class="body" role="main">
             
   <h1>Source code for regraph.attribute_sets</h1><div class="highlight"><pre>
-<span></span><span class="sd">&quot;&quot;&quot;A collection of data structures for attributes on the nodes of graphs.</span>
+<span></span><span class="sd">&quot;&quot;&quot;A collection of data structures for values of attributes on nodes/edges of graphs.</span>
 
 <span class="sd">Implements the following data structures:</span>
-<span class="sd">    - `AttributeSet` -- abstract class for attribute sets in `ReGraph`</span>
-<span class="sd">    (provides interface, implements some common behaviour);</span>
-<span class="sd">    - `FiniteSet` -- wrapper for Python finite sets, inherits `AttributeSet`;</span>
-<span class="sd">    - `RegexSet` -- a class for possibly infinite sets of strings given by</span>
-<span class="sd">    regular expressions. It uses the `greenery` library for finding</span>
-<span class="sd">    inclusion and intersection of regular expressions, its method `match` can</span>
-<span class="sd">    be used to test if a given string is in a set of strings defined by</span>
-<span class="sd">    regular expressions;</span>
-<span class="sd">    - `IntegerSet` -- a class for possibly infinite sets of integers</span>
-<span class="sd">    defined by a set of disjoint intervals, inherits `AttributeSet`,</span>
-<span class="sd">    provides the method `in_range` for testing if a given integer is in</span>
-<span class="sd">    the set of integers.</span>
+
+<span class="sd">* `AttributeSet` -- a base class for attribute sets in `ReGraph`,</span>
+<span class="sd">  provides an interface, implements some common behaviour;</span>
+<span class="sd">* `FiniteSet` -- wrapper for Python finite sets, inherits `AttributeSet`;</span>
+<span class="sd">* `RegexSet` -- a class for possibly infinite sets of strings given by</span>
+<span class="sd">  regular expressions. It uses the `greenery` library for finding</span>
+<span class="sd">  inclusion and intersection of regular expressions, its method `match` can</span>
+<span class="sd">  be used to test if a given string is in a set of strings defined by</span>
+<span class="sd">  regular expressions;</span>
+
+<span class="sd">* `IntegerSet` -- a class for possibly infinite sets of integers</span>
+<span class="sd">  defined by a set of disjoint intervals, inherits `AttributeSet`,</span>
+<span class="sd">  provides the method `contains` for testing if a given integer is in</span>
+<span class="sd">  the set of integers.</span>
 
 <span class="sd">TODO:</span>
 
-<span class="sd">    - `RealSet`</span>
+<span class="sd">* `RealSet` -- a class for possibly infinite sets of reals</span>
+<span class="sd">  defined by a set of open/closed intervals, inherits `AttributeSet`,</span>
+<span class="sd">  provides the method `contains` for testing if a given real is in</span>
+<span class="sd">  the set of reals.</span>
 <span class="sd">&quot;&quot;&quot;</span>
 
 <span class="kn">import</span> <span class="nn">copy</span>
@@ -98,7 +103,7 @@
 
 
 <div class="viewcode-block" id="AttributeSet"><a class="viewcode-back" href="../../attribute_sets.html#regraph.attribute_sets.AttributeSet">[docs]</a><span class="k">class</span> <span class="nc">AttributeSet</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;Parent class for attribute sets.&quot;&quot;&quot;</span>
+    <span class="sd">&quot;&quot;&quot;Base class for ReGraph attribute sets.&quot;&quot;&quot;</span>
 
     <span class="k">def</span> <span class="nf">__bool__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Bool representation of attribute set.&quot;&quot;&quot;</span>
@@ -111,22 +116,6 @@
     <span class="k">def</span> <span class="nf">__len__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Length of attribute set.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
-
-<div class="viewcode-block" id="AttributeSet.union"><a class="viewcode-back" href="../../attribute_sets.html#regraph.attribute_sets.AttributeSet.union">[docs]</a>    <span class="k">def</span> <span class="nf">union</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Find union attribute set.&quot;&quot;&quot;</span>
-        <span class="k">pass</span></div>
-
-<div class="viewcode-block" id="AttributeSet.intersect"><a class="viewcode-back" href="../../attribute_sets.html#regraph.attribute_sets.AttributeSet.intersect">[docs]</a>    <span class="k">def</span> <span class="nf">intersect</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Find intersection attribute set.&quot;&quot;&quot;</span>
-        <span class="k">pass</span></div>
-
-<div class="viewcode-block" id="AttributeSet.difference"><a class="viewcode-back" href="../../attribute_sets.html#regraph.attribute_sets.AttributeSet.difference">[docs]</a>    <span class="k">def</span> <span class="nf">difference</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Find difference.&quot;&quot;&quot;</span>
-        <span class="k">pass</span></div>
-
-<div class="viewcode-block" id="AttributeSet.issubset"><a class="viewcode-back" href="../../attribute_sets.html#regraph.attribute_sets.AttributeSet.issubset">[docs]</a>    <span class="k">def</span> <span class="nf">issubset</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Test if subset of another set.&quot;&quot;&quot;</span>
-        <span class="k">pass</span></div>
 
     <span class="k">def</span> <span class="nf">__eq__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Test equality with another set.&quot;&quot;&quot;</span>
@@ -145,8 +134,24 @@
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">issubset</span><span class="p">(</span><span class="n">other</span><span class="p">)</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">other</span><span class="o">.</span><span class="n">issubset</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">__le__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Less or equal.&quot;&quot;&quot;</span>
+        <span class="sd">&quot;&quot;&quot;Test if  less or equal than another set.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">issubset</span><span class="p">(</span><span class="n">other</span><span class="p">)</span>
+
+<div class="viewcode-block" id="AttributeSet.union"><a class="viewcode-back" href="../../attribute_sets.html#regraph.attribute_sets.AttributeSet.union">[docs]</a>    <span class="k">def</span> <span class="nf">union</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Find union attribute set.&quot;&quot;&quot;</span>
+        <span class="k">pass</span></div>
+
+<div class="viewcode-block" id="AttributeSet.intersect"><a class="viewcode-back" href="../../attribute_sets.html#regraph.attribute_sets.AttributeSet.intersect">[docs]</a>    <span class="k">def</span> <span class="nf">intersect</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Find intersection attribute set.&quot;&quot;&quot;</span>
+        <span class="k">pass</span></div>
+
+<div class="viewcode-block" id="AttributeSet.difference"><a class="viewcode-back" href="../../attribute_sets.html#regraph.attribute_sets.AttributeSet.difference">[docs]</a>    <span class="k">def</span> <span class="nf">difference</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Find difference attribute set.&quot;&quot;&quot;</span>
+        <span class="k">pass</span></div>
+
+<div class="viewcode-block" id="AttributeSet.issubset"><a class="viewcode-back" href="../../attribute_sets.html#regraph.attribute_sets.AttributeSet.issubset">[docs]</a>    <span class="k">def</span> <span class="nf">issubset</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Test if subset of another set.&quot;&quot;&quot;</span>
+        <span class="k">pass</span></div>
 
 <div class="viewcode-block" id="AttributeSet.from_json"><a class="viewcode-back" href="../../attribute_sets.html#regraph.attribute_sets.AttributeSet.from_json">[docs]</a>    <span class="nd">@classmethod</span>
     <span class="k">def</span> <span class="nf">from_json</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">json_data</span><span class="p">):</span>
@@ -165,18 +170,18 @@
                 <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">element</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">init_args</span><span class="p">):</span>
                     <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">element</span><span class="p">)</span> <span class="o">==</span> <span class="nb">list</span><span class="p">:</span>
                         <span class="n">init_args</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">element</span><span class="p">)</span>
-            <span class="k">return</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">modules</span><span class="p">[</span><span class="vm">__name__</span><span class="p">],</span> <span class="n">json_data</span><span class="p">[</span><span class="s2">&quot;type&quot;</span><span class="p">])(</span><span class="n">init_args</span><span class="p">)</span>
-        <span class="c1"># else:</span>
-        <span class="c1">#     if &quot;strSet&quot; in json_data.keys() and &quot;numSet&quot; in json_data.keys():</span>
-        <span class="c1">#         if &quot;neg_list&quot; in json_data[&quot;strSet&quot;].keys() and\</span>
-        <span class="c1">#            len(json_data[&quot;strSet&quot;][&quot;neg_list&quot;]) == 0:</span>
-        <span class="c1">#             return UniversalSet()</span>
-
-            <span class="k">return</span> <span class="n">FiniteSet</span><span class="p">(</span><span class="n">json_data</span><span class="p">)</span></div></div>
+            <span class="k">return</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">modules</span><span class="p">[</span><span class="vm">__name__</span><span class="p">],</span> <span class="n">json_data</span><span class="p">[</span><span class="s2">&quot;type&quot;</span><span class="p">])(</span><span class="n">init_args</span><span class="p">)</span></div></div>
 
 
 <div class="viewcode-block" id="FiniteSet"><a class="viewcode-back" href="../../attribute_sets.html#regraph.attribute_sets.FiniteSet">[docs]</a><span class="k">class</span> <span class="nc">FiniteSet</span><span class="p">(</span><span class="n">AttributeSet</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;Wrapper for finite sets as attribute sets.&quot;&quot;&quot;</span>
+    <span class="sd">&quot;&quot;&quot;Wrapper for finite sets as attribute sets.</span>
+
+<span class="sd">    Attributes</span>
+<span class="sd">    ----------</span>
+<span class="sd">    fset : set</span>
+<span class="sd">        Python finite set that is being wrapped by the object</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fset</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Initialize finite set object.&quot;&quot;&quot;</span>
@@ -206,7 +211,16 @@
         <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fset</span><span class="p">)</span>
 
 <div class="viewcode-block" id="FiniteSet.issubset"><a class="viewcode-back" href="../../attribute_sets.html#regraph.attribute_sets.FiniteSet.issubset">[docs]</a>    <span class="k">def</span> <span class="nf">issubset</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Test if subset of another set.&quot;&quot;&quot;</span>
+        <span class="sd">&quot;&quot;&quot;Test if subset of another set.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        other : set, FiniteSet, RegexSet, IntegerSet, EmptySet or UniversalSet</span>
+
+<span class="sd">         Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        `True` is `self` defines a subset of `other`, `False` otherwise</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">other</span><span class="p">)</span> <span class="o">==</span> <span class="nb">set</span><span class="p">:</span>
             <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">fset</span><span class="o">.</span><span class="n">issubset</span><span class="p">(</span><span class="n">other</span><span class="p">)</span>
         <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">FiniteSet</span><span class="p">):</span>
@@ -228,7 +242,7 @@
                                 <span class="s2">&quot;integer (</span><span class="si">%s</span><span class="s2">)&quot;</span> <span class="o">%</span>
                                 <span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">element</span><span class="p">),</span> <span class="nb">str</span><span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="n">element</span><span class="p">)))</span>
                             <span class="p">)</span>
-                    <span class="k">if</span> <span class="ow">not</span> <span class="n">other</span><span class="o">.</span><span class="n">in_range</span><span class="p">(</span><span class="n">element</span><span class="p">):</span>
+                    <span class="k">if</span> <span class="ow">not</span> <span class="n">other</span><span class="o">.</span><span class="n">contains</span><span class="p">(</span><span class="n">element</span><span class="p">):</span>
                         <span class="k">return</span> <span class="kc">False</span>
         <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">EmptySet</span><span class="p">):</span>
             <span class="k">return</span> <span class="kc">False</span>
@@ -239,7 +253,16 @@
         <span class="k">return</span> <span class="kc">True</span></div>
 
 <div class="viewcode-block" id="FiniteSet.union"><a class="viewcode-back" href="../../attribute_sets.html#regraph.attribute_sets.FiniteSet.union">[docs]</a>    <span class="k">def</span> <span class="nf">union</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Union of a finite set with another set.&quot;&quot;&quot;</span>
+        <span class="sd">&quot;&quot;&quot;Find the union with another set.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        other : set, FiniteSet, RegexSet, IntegerSet, EmptySet or UniversalSet</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        The union set</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">other</span><span class="p">)</span> <span class="o">==</span> <span class="nb">set</span><span class="p">:</span>
             <span class="k">return</span> <span class="n">FiniteSet</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fset</span><span class="o">.</span><span class="n">union</span><span class="p">(</span><span class="n">other</span><span class="p">))</span>
         <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">FiniteSet</span><span class="p">):</span>
@@ -266,7 +289,16 @@
             <span class="k">raise</span> <span class="n">AttributeSetError</span><span class="p">(</span><span class="s2">&quot;Invalid type of attribute set!&quot;</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="FiniteSet.intersection"><a class="viewcode-back" href="../../attribute_sets.html#regraph.attribute_sets.FiniteSet.intersection">[docs]</a>    <span class="k">def</span> <span class="nf">intersection</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Intesection of a finite set with another set.&quot;&quot;&quot;</span>
+        <span class="sd">&quot;&quot;&quot;Find the intersection set with another set.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        other : set, FiniteSet, RegexSet, IntegerSet, EmptySet or UniversalSet</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        The intersection set</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">other</span><span class="p">)</span> <span class="o">==</span> <span class="nb">set</span><span class="p">:</span>
             <span class="k">return</span> <span class="n">FiniteSet</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fset</span><span class="o">.</span><span class="n">intersection</span><span class="p">(</span><span class="n">other</span><span class="p">))</span>
         <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">FiniteSet</span><span class="p">):</span>
@@ -297,7 +329,18 @@
             <span class="k">raise</span> <span class="n">AttributeSetError</span><span class="p">(</span><span class="s2">&quot;Invalid type of attribute set!&quot;</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="FiniteSet.difference"><a class="viewcode-back" href="../../attribute_sets.html#regraph.attribute_sets.FiniteSet.difference">[docs]</a>    <span class="k">def</span> <span class="nf">difference</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Difference of self with other finite set.&quot;&quot;&quot;</span>
+        <span class="sd">&quot;&quot;&quot;Find the difference set with another set.</span>
+
+<span class="sd">        Finds a `self` - `other` set.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        other : set, FiniteSet, RegexSet, IntegerSet, EmptySet or UniversalSet</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        The difference set</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">other</span><span class="p">)</span> <span class="o">==</span> <span class="nb">set</span><span class="p">:</span>
             <span class="k">return</span> <span class="n">FiniteSet</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fset</span><span class="o">.</span><span class="n">difference</span><span class="p">(</span><span class="n">other</span><span class="p">))</span>
         <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">FiniteSet</span><span class="p">):</span>
@@ -332,11 +375,16 @@
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">fset</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fset</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span></div>
 
 <div class="viewcode-block" id="FiniteSet.is_universal"><a class="viewcode-back" href="../../attribute_sets.html#regraph.attribute_sets.FiniteSet.is_universal">[docs]</a>    <span class="k">def</span> <span class="nf">is_universal</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Test if finite set is universal.&quot;&quot;&quot;</span>
+        <span class="sd">&quot;&quot;&quot;Test if finite set is universal.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        False, as finite set is never a universal set</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="kc">False</span></div>
 
 <div class="viewcode-block" id="FiniteSet.to_json"><a class="viewcode-back" href="../../attribute_sets.html#regraph.attribute_sets.FiniteSet.to_json">[docs]</a>    <span class="k">def</span> <span class="nf">to_json</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;JSON represenation of finite set.&quot;&quot;&quot;</span>
+        <span class="sd">&quot;&quot;&quot;JSON represenation.&quot;&quot;&quot;</span>
         <span class="n">json_data</span> <span class="o">=</span> <span class="p">{}</span>
         <span class="n">json_data</span><span class="p">[</span><span class="s2">&quot;type&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;FiniteSet&quot;</span>
         <span class="n">json_data</span><span class="p">[</span><span class="s2">&quot;data&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fset</span><span class="p">)</span>
@@ -352,10 +400,26 @@
 
 
 <div class="viewcode-block" id="RegexSet"><a class="viewcode-back" href="../../attribute_sets.html#regraph.attribute_sets.RegexSet">[docs]</a><span class="k">class</span> <span class="nc">RegexSet</span><span class="p">(</span><span class="n">AttributeSet</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;A set of strings defined by regular expression.&quot;&quot;&quot;</span>
+    <span class="sd">&quot;&quot;&quot;Class defining a set of strings recognized by a regular expression.</span>
+
+<span class="sd">    RegexSet is defined by a regular expression, and</span>
+<span class="sd">    is morally associated to a set of strings that</span>
+<span class="sd">    the regular expression recognizes.</span>
+
+<span class="sd">    Attributes</span>
+<span class="sd">    ----------</span>
+<span class="sd">    pattern : str</span>
+<span class="sd">        Regular expression pattern</span>
+<span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">regexp</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Initialize a set of strings defined by a regexp.&quot;&quot;&quot;</span>
+        <span class="sd">&quot;&quot;&quot;Initialize a set of strings defined by a regexp pattern.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        regexp : str</span>
+<span class="sd">            Regular expression pattern</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="n">regexp</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">regexp</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">str</span><span class="p">:</span>
                 <span class="n">strings</span> <span class="o">=</span> <span class="p">[]</span>
@@ -378,7 +442,25 @@
             <span class="k">return</span> <span class="s2">&quot;&lt;EmptyRegexSet&gt;&quot;</span>
 
 <div class="viewcode-block" id="RegexSet.issubset"><a class="viewcode-back" href="../../attribute_sets.html#regraph.attribute_sets.RegexSet.issubset">[docs]</a>    <span class="k">def</span> <span class="nf">issubset</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Test for regexp inclusion.&quot;&quot;&quot;</span>
+        <span class="sd">&quot;&quot;&quot;Test regexp inclusion relation.</span>
+
+<span class="sd">        Tests if a set defined by `self` is a included</span>
+<span class="sd">        in a set defined by `other`.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        other : set, str, re._pattern_type, RegexSet</span>
+<span class="sd">            Another regex to test inclusion.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        `True` is `self` defines a subset of `other`, `False` otherwise</span>
+
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        AttributeSetError</span>
+<span class="sd">            If the type `other` is not recognized.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">pattern</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">return</span> <span class="kc">True</span>
         <span class="k">else</span><span class="p">:</span>
@@ -396,7 +478,7 @@
                         <span class="k">return</span> <span class="kc">False</span>
                 <span class="k">else</span><span class="p">:</span>
                     <span class="k">raise</span> <span class="n">AttributeSetError</span><span class="p">(</span>
-                        <span class="s2">&quot;Regexp object should be `str` or `re._pattern_type`!&quot;</span>
+                        <span class="s2">&quot;Regexp object should be of type `str` or `re._pattern_type`!&quot;</span>
                     <span class="p">)</span>
                 <span class="k">return</span> <span class="p">(</span><span class="n">self_exp</span> <span class="o">&amp;</span> <span class="n">other_exp</span><span class="o">.</span><span class="n">everythingbut</span><span class="p">())</span><span class="o">.</span><span class="n">empty</span><span class="p">()</span>
 
@@ -412,7 +494,30 @@
             <span class="k">return</span> <span class="n">res</span></div>
 
 <div class="viewcode-block" id="RegexSet.union"><a class="viewcode-back" href="../../attribute_sets.html#regraph.attribute_sets.RegexSet.union">[docs]</a>    <span class="k">def</span> <span class="nf">union</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Union of two regexps.&quot;&quot;&quot;</span>
+        <span class="sd">&quot;&quot;&quot;Find the union with another set.</span>
+
+<span class="sd">        The union is found in the following ways:</span>
+
+<span class="sd">        * If `other` is a string, a Python dict or a FiniteSet</span>
+<span class="sd">          the result of the union is a simple concatenation of the</span>
+<span class="sd">          string representations of the elements of `other`</span>
+<span class="sd">          with the pattern of `self`.</span>
+
+<span class="sd">        * If `other` is an instance of `UniversalSet`, the union</span>
+<span class="sd">          is a `UniversalSet` object.</span>
+
+<span class="sd">        * If `other` is an instance of `EmptySet`, the union is</span>
+<span class="sd">          a copy of `self`.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        other : set, str, re._pattern_type, RegexSet</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        result : RegexSet</span>
+<span class="sd">            The union set</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">pattern</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">other_str</span> <span class="o">=</span> <span class="n">_regex_to_string</span><span class="p">(</span><span class="n">other</span><span class="p">)</span>
             <span class="k">if</span> <span class="n">other_str</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
@@ -428,6 +533,10 @@
                 <span class="n">element_str</span> <span class="o">=</span> <span class="n">_regex_to_string</span><span class="p">(</span><span class="n">element</span><span class="p">)</span>
                 <span class="k">if</span> <span class="n">element_str</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
                     <span class="n">patterns</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">element_str</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">UniversalSet</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">UniversalSet</span><span class="p">()</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">EmptySet</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">other_str</span> <span class="o">=</span> <span class="n">_regex_to_string</span><span class="p">(</span><span class="n">other</span><span class="p">)</span>
             <span class="k">if</span> <span class="n">other_str</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
@@ -440,9 +549,35 @@
         <span class="k">return</span> <span class="n">result</span></div>
 
 <div class="viewcode-block" id="RegexSet.intersection"><a class="viewcode-back" href="../../attribute_sets.html#regraph.attribute_sets.RegexSet.intersection">[docs]</a>    <span class="k">def</span> <span class="nf">intersection</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Smart intersection of two regexps.</span>
+        <span class="sd">&quot;&quot;&quot;Find the intersection of two regexps.</span>
 
-<span class="sd">        Uses greenery library to find and reduce intersection.</span>
+<span class="sd">        This method uses greenery library to find and</span>
+<span class="sd">        reduce the intersection pattern.</span>
+
+<span class="sd">        * If `other` is a string, a Python dict or a FiniteSet,</span>
+<span class="sd">          it is converted to a regex pattern, after which it</span>
+<span class="sd">          is parsed by `greenery.lego.parse` method and its</span>
+<span class="sd">          intersection with the pattern of the `self` is found.</span>
+<span class="sd">          The library `greenery` finds the intersection between two</span>
+<span class="sd">          regex&#39;s by constructing corresponding FSM&#39;s (finite state</span>
+<span class="sd">          machines) and finding their intersection, after which it</span>
+<span class="sd">          is converted back to a regex. See more details here:</span>
+<span class="sd">          https://github.com/qntm/greenery</span>
+
+<span class="sd">        * If `other` is an instance of `EmpySet`, the intersection</span>
+<span class="sd">          is a `EmpySet` object.</span>
+
+<span class="sd">        * If `other` is an instance of `UniversalSet`, the intersection</span>
+<span class="sd">          is a copy of `self`.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        other : set, str, re._pattern_type, RegexSet</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        result : RegexSet</span>
+<span class="sd">            The union set</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">pattern</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">return</span> <span class="n">RegexSet</span><span class="o">.</span><span class="n">empty</span><span class="p">()</span>
@@ -479,6 +614,10 @@
                 <span class="k">if</span> <span class="n">exp_str</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
                     <span class="k">return</span> <span class="n">RegexSet</span><span class="o">.</span><span class="n">empty</span><span class="p">()</span>
                 <span class="n">other_exp</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">parse</span><span class="p">(</span><span class="n">exp_str</span><span class="p">))</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">UniversalSet</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">EmptySet</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">EmptySet</span><span class="p">()</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">other_str</span> <span class="o">=</span> <span class="n">_regex_to_string</span><span class="p">(</span><span class="n">other</span><span class="p">)</span>
             <span class="k">if</span> <span class="n">other_str</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
@@ -492,7 +631,33 @@
         <span class="k">return</span> <span class="n">RegexSet</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">intersect_exp</span><span class="p">))</span></div>
 
 <div class="viewcode-block" id="RegexSet.difference"><a class="viewcode-back" href="../../attribute_sets.html#regraph.attribute_sets.RegexSet.difference">[docs]</a>    <span class="k">def</span> <span class="nf">difference</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Difference of self with other regex.&quot;&quot;&quot;</span>
+        <span class="sd">&quot;&quot;&quot;Find the difference of two regexps.</span>
+
+<span class="sd">        This method uses greenery library to find and</span>
+<span class="sd">        reduce the difference pattern between two regex&#39;s.</span>
+
+<span class="sd">        * If `other` is a string, a Python dict or a FiniteSet,</span>
+<span class="sd">          it is converted to a regex pattern, after which it</span>
+<span class="sd">          is parsed by `greenery.lego.parse` method and its</span>
+<span class="sd">          difference with the pattern of the `self` is found.</span>
+<span class="sd">          See more details here:</span>
+<span class="sd">          https://github.com/qntm/greenery</span>
+
+<span class="sd">        * If `other` is an instance of `EmpySet`, the difference</span>
+<span class="sd">          is a copy of `self`.</span>
+
+<span class="sd">        * If `other` is an instance of `UniversalSet`, the difference</span>
+<span class="sd">          is an instance of `EmptySet`.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        other : set, str, re._pattern_type, RegexSet</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        result : RegexSet</span>
+<span class="sd">            The union set</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">pattern</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">return</span> <span class="n">RegexSet</span><span class="o">.</span><span class="n">empty</span><span class="p">()</span>
 
@@ -559,7 +724,13 @@
 
 
 <div class="viewcode-block" id="IntegerSet"><a class="viewcode-back" href="../../attribute_sets.html#regraph.attribute_sets.IntegerSet">[docs]</a><span class="k">class</span> <span class="nc">IntegerSet</span><span class="p">(</span><span class="n">AttributeSet</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;Set of integers (possible infinite) defined by a set of intervals.&quot;&quot;&quot;</span>
+    <span class="sd">&quot;&quot;&quot;Set of integers defined by a list of disjoint intervals.</span>
+
+<span class="sd">    Attributes</span>
+<span class="sd">    ----------</span>
+<span class="sd">    intervals : list</span>
+<span class="sd">        List of sorted intervals defining an integer set.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">interval_list</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Initialize IntegerSet object.</span>
@@ -645,7 +816,40 @@
 
 <div class="viewcode-block" id="IntegerSet.union"><a class="viewcode-back" href="../../attribute_sets.html#regraph.attribute_sets.IntegerSet.union">[docs]</a>    <span class="k">def</span> <span class="nf">union</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Union of two integer sets.&quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="n">IntegerSet</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">intervals</span> <span class="o">+</span> <span class="n">other</span><span class="o">.</span><span class="n">intervals</span><span class="p">)</span></div>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">IntegerSet</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">IntegerSet</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">intervals</span> <span class="o">+</span> <span class="n">other</span><span class="o">.</span><span class="n">intervals</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="nb">set</span><span class="p">):</span>
+            <span class="n">other_intervals</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">element</span> <span class="ow">in</span> <span class="n">other</span><span class="p">:</span>
+                    <span class="n">int_element</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">element</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">contains</span><span class="p">(</span><span class="n">int_element</span><span class="p">):</span>
+                        <span class="n">other_intervals</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">int_element</span><span class="p">,</span> <span class="n">int_element</span><span class="p">))</span>
+                <span class="k">return</span> <span class="n">IntegerSet</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">intervals</span> <span class="o">+</span> <span class="n">other_intervals</span><span class="p">)</span>
+            <span class="k">except</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">AttributeSetError</span><span class="p">(</span>
+                    <span class="s2">&quot;Set &#39;</span><span class="si">%s</span><span class="s2">&#39; contains non-integer elements!&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">other</span><span class="p">)</span>
+                <span class="p">)</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">FiniteSet</span><span class="p">):</span>
+            <span class="n">other_intervals</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">element</span> <span class="ow">in</span> <span class="n">other</span><span class="o">.</span><span class="n">fset</span><span class="p">:</span>
+                    <span class="n">int_element</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">element</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">contains</span><span class="p">(</span><span class="n">int_element</span><span class="p">):</span>
+                        <span class="n">other_intervals</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">int_element</span><span class="p">,</span> <span class="n">int_element</span><span class="p">))</span>
+                <span class="k">return</span> <span class="n">IntegerSet</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">intervals</span> <span class="o">+</span> <span class="n">other_intervals</span><span class="p">)</span>
+            <span class="k">except</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">AttributeSetError</span><span class="p">(</span>
+                    <span class="s2">&quot;Set &#39;</span><span class="si">%s</span><span class="s2">&#39; contains non-integer elements!&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">other</span><span class="p">)</span>
+                <span class="p">)</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">UniversalSet</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">UniversalSet</span><span class="p">()</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">EmptySet</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">AttributeSetError</span><span class="p">(</span>
+                <span class="s2">&quot;Cannot intersect &#39;</span><span class="si">%s</span><span class="s2">&#39; with an integer set!&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">other</span><span class="p">)</span>
+            <span class="p">)</span></div>
 
 <div class="viewcode-block" id="IntegerSet.intersection"><a class="viewcode-back" href="../../attribute_sets.html#regraph.attribute_sets.IntegerSet.intersection">[docs]</a>    <span class="k">def</span> <span class="nf">intersection</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Intersection of two integer sets.&quot;&quot;&quot;</span>
@@ -659,12 +863,43 @@
             <span class="k">return</span> <span class="kc">None</span>
 
         <span class="n">new_intervals</span> <span class="o">=</span> <span class="p">[]</span>
-        <span class="k">for</span> <span class="n">interval1</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">intervals</span><span class="p">:</span>
-            <span class="k">for</span> <span class="n">interval2</span> <span class="ow">in</span> <span class="n">other</span><span class="o">.</span><span class="n">intervals</span><span class="p">:</span>
-                <span class="n">common</span> <span class="o">=</span> <span class="n">interval_intersect</span><span class="p">(</span><span class="n">interval1</span><span class="p">,</span> <span class="n">interval2</span><span class="p">)</span>
-                <span class="k">if</span> <span class="n">common</span><span class="p">:</span>
-                    <span class="n">new_intervals</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">common</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">IntegerSet</span><span class="p">(</span><span class="n">new_intervals</span><span class="p">)</span></div>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">IntegerSet</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">interval1</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">intervals</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">interval2</span> <span class="ow">in</span> <span class="n">other</span><span class="o">.</span><span class="n">intervals</span><span class="p">:</span>
+                    <span class="n">common</span> <span class="o">=</span> <span class="n">interval_intersect</span><span class="p">(</span><span class="n">interval1</span><span class="p">,</span> <span class="n">interval2</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="n">common</span><span class="p">:</span>
+                        <span class="n">new_intervals</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">common</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">IntegerSet</span><span class="p">(</span><span class="n">new_intervals</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="nb">set</span><span class="p">):</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">element</span> <span class="ow">in</span> <span class="n">other</span><span class="p">:</span>
+                    <span class="n">int_element</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">element</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">contains</span><span class="p">(</span><span class="n">int_element</span><span class="p">):</span>
+                        <span class="n">new_intervals</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">int_element</span><span class="p">,</span> <span class="n">int_element</span><span class="p">))</span>
+                <span class="k">return</span> <span class="n">IntegerSet</span><span class="p">(</span><span class="n">new_intervals</span><span class="p">)</span>
+            <span class="k">except</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">AttributeSetError</span><span class="p">(</span>
+                    <span class="s2">&quot;Set &#39;</span><span class="si">%s</span><span class="s2">&#39; contains non-integer elements!&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">other</span><span class="p">)</span>
+                <span class="p">)</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">FiniteSet</span><span class="p">):</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">element</span> <span class="ow">in</span> <span class="n">other</span><span class="o">.</span><span class="n">fset</span><span class="p">:</span>
+                    <span class="n">int_element</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">element</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">contains</span><span class="p">(</span><span class="n">int_element</span><span class="p">):</span>
+                        <span class="n">new_intervals</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">int_element</span><span class="p">,</span> <span class="n">int_element</span><span class="p">))</span>
+                <span class="k">return</span> <span class="n">IntegerSet</span><span class="p">(</span><span class="n">new_intervals</span><span class="p">)</span>
+            <span class="k">except</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">AttributeSetError</span><span class="p">(</span>
+                    <span class="s2">&quot;Set &#39;</span><span class="si">%s</span><span class="s2">&#39; contains non-integer elements!&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">other</span><span class="p">)</span>
+                <span class="p">)</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">UniversalSet</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">EmptySet</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">EmptySet</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">AttributeSetError</span><span class="p">(</span>
+                <span class="s2">&quot;Cannot intersect &#39;</span><span class="si">%s</span><span class="s2">&#39; with an integer set!&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">other</span><span class="p">)</span>
+            <span class="p">)</span></div>
 
 <div class="viewcode-block" id="IntegerSet.difference"><a class="viewcode-back" href="../../attribute_sets.html#regraph.attribute_sets.IntegerSet.difference">[docs]</a>    <span class="k">def</span> <span class="nf">difference</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Difference of self with the other.&quot;&quot;&quot;</span>
@@ -738,8 +973,8 @@
             <span class="n">intervals</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">val</span><span class="p">)</span>
         <span class="k">return</span> <span class="bp">cls</span><span class="p">(</span><span class="n">intervals</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="IntegerSet.in_range"><a class="viewcode-back" href="../../attribute_sets.html#regraph.attribute_sets.IntegerSet.in_range">[docs]</a>    <span class="k">def</span> <span class="nf">in_range</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">num</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Test if probided integer is in integer set.&quot;&quot;&quot;</span>
+<div class="viewcode-block" id="IntegerSet.contains"><a class="viewcode-back" href="../../attribute_sets.html#regraph.attribute_sets.IntegerSet.contains">[docs]</a>    <span class="k">def</span> <span class="nf">contains</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">num</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Test if provided integer is in integer set.&quot;&quot;&quot;</span>
         <span class="n">found</span> <span class="o">=</span> <span class="kc">False</span>
         <span class="k">for</span> <span class="n">start</span><span class="p">,</span> <span class="n">end</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">intervals</span><span class="p">:</span>
             <span class="k">if</span> <span class="n">num</span> <span class="o">&gt;=</span> <span class="n">start</span> <span class="ow">and</span> <span class="n">num</span> <span class="o">&lt;=</span> <span class="n">end</span><span class="p">:</span>

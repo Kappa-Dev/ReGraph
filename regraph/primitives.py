@@ -1285,22 +1285,29 @@ def equal(graph1, graph2):
         if graph1.node[node] != graph2.node[node]:
             return False
     for s, t in graph1.edges():
-        # normalize_attrs(get_edge(graph1, s, t))
-        # normalize_attrs(get_edge(graph2, s, t))
         if get_edge(graph1, s, t) != get_edge(graph2, s, t):
             return False
     return True
 
 
-def find_match(graph, pattern, graph_typings, pattern_typings, typing_graphs,
-               decr_types=False):
-    """
-    graph_typings = dictionnary of typings of the graph
-    pattern_typings = dictionnary of typings of the pattern
-    typing_graph = dictionnary of the graphs typing the pattern
+def find_matching_with_types(graph, pattern, graph_typings,
+                             pattern_typings, typing_graphs,
+                             decr_types=False):
+    """Find matching of a typed pattern in a typed graph.
+
+    Parameters
+    ----------
+    graph : networkx.(Di)Graph
+    pattern : networkx.(Di)Graph
+    graph_typings : dict
+        Dictionnary of typings of the graph
+    pattern_typings : dict
+        Dictionnary of typings of the pattern
+    typing_graph : dict
+        Dictionnary of the graphs typing the pattern
 
     networkX can only look at nodes attributes to compare them
-    so we put the typings inside during matching
+    so we put the typings inside the nodes' attrs during matching
     we assume that no key is named:
     regraph_tmp_typings_key_that_you_should_not_use
     """

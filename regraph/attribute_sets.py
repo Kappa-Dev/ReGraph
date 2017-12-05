@@ -1,22 +1,27 @@
-"""A collection of data structures for attributes on the nodes of graphs.
+"""A collection of data structures for values of attributes on nodes/edges of graphs.
 
 Implements the following data structures:
-    - `AttributeSet` -- abstract class for attribute sets in `ReGraph`
-    (provides interface, implements some common behaviour);
-    - `FiniteSet` -- wrapper for Python finite sets, inherits `AttributeSet`;
-    - `RegexSet` -- a class for possibly infinite sets of strings given by
-    regular expressions. It uses the `greenery` library for finding
-    inclusion and intersection of regular expressions, its method `match` can
-    be used to test if a given string is in a set of strings defined by
-    regular expressions;
-    - `IntegerSet` -- a class for possibly infinite sets of integers
-    defined by a set of disjoint intervals, inherits `AttributeSet`,
-    provides the method `in_range` for testing if a given integer is in
-    the set of integers.
+
+* `AttributeSet` -- a base class for attribute sets in `ReGraph`,
+  provides an interface, implements some common behaviour;
+* `FiniteSet` -- wrapper for Python finite sets, inherits `AttributeSet`;
+* `RegexSet` -- a class for possibly infinite sets of strings given by
+  regular expressions. It uses the `greenery` library for finding
+  inclusion and intersection of regular expressions, its method `match` can
+  be used to test if a given string is in a set of strings defined by
+  regular expressions;
+
+* `IntegerSet` -- a class for possibly infinite sets of integers
+  defined by a set of disjoint intervals, inherits `AttributeSet`,
+  provides the method `contains` for testing if a given integer is in
+  the set of integers.
 
 TODO:
 
-    - `RealSet`
+* `RealSet` -- a class for possibly infinite sets of reals
+  defined by a set of open/closed intervals, inherits `AttributeSet`,
+  provides the method `contains` for testing if a given real is in
+  the set of reals.
 """
 
 import copy
@@ -56,7 +61,7 @@ def _regex_to_string(a):
 
 
 class AttributeSet(object):
-    """Parent class for attribute sets."""
+    """Base class for ReGraph attribute sets."""
 
     def __bool__(self):
         """Bool representation of attribute set."""
@@ -69,22 +74,6 @@ class AttributeSet(object):
     def __len__(self):
         """Length of attribute set."""
         return len(self)
-
-    def union(self, other):
-        """Find union attribute set."""
-        pass
-
-    def intersect(self, other):
-        """Find intersection attribute set."""
-        pass
-
-    def difference(self, other):
-        """Find difference."""
-        pass
-
-    def issubset(self, other):
-        """Test if subset of another set."""
-        pass
 
     def __eq__(self, other):
         """Test equality with another set."""
@@ -103,8 +92,24 @@ class AttributeSet(object):
         return self.issubset(other) and not other.issubset(self)
 
     def __le__(self, other):
-        """Less or equal."""
+        """Test if  less or equal than another set."""
         return self.issubset(other)
+
+    def union(self, other):
+        """Find union attribute set."""
+        pass
+
+    def intersect(self, other):
+        """Find intersection attribute set."""
+        pass
+
+    def difference(self, other):
+        """Find difference attribute set."""
+        pass
+
+    def issubset(self, other):
+        """Test if subset of another set."""
+        pass
 
     @classmethod
     def from_json(cls, json_data):
@@ -124,17 +129,17 @@ class AttributeSet(object):
                     if type(element) == list:
                         init_args[i] = tuple(element)
             return getattr(sys.modules[__name__], json_data["type"])(init_args)
-        # else:
-        #     if "strSet" in json_data.keys() and "numSet" in json_data.keys():
-        #         if "neg_list" in json_data["strSet"].keys() and\
-        #            len(json_data["strSet"]["neg_list"]) == 0:
-        #             return UniversalSet()
-
-            return FiniteSet(json_data)
 
 
 class FiniteSet(AttributeSet):
-    """Wrapper for finite sets as attribute sets."""
+    """Wrapper for finite sets as attribute sets.
+
+    Attributes
+    ----------
+    fset : set
+        Python finite set that is being wrapped by the object
+
+    """
 
     def __init__(self, fset=None):
         """Initialize finite set object."""
@@ -164,7 +169,16 @@ class FiniteSet(AttributeSet):
         return len(self.fset)
 
     def issubset(self, other):
-        """Test if subset of another set."""
+        """Test if subset of another set.
+
+        Parameters
+        ----------
+        other : set, FiniteSet, RegexSet, IntegerSet, EmptySet or UniversalSet
+
+         Returns
+        -------
+        `True` is `self` defines a subset of `other`, `False` otherwise
+        """
         if type(other) == set:
             return self.fset.issubset(other)
         elif isinstance(other, FiniteSet):
@@ -186,7 +200,7 @@ class FiniteSet(AttributeSet):
                                 "integer (%s)" %
                                 (str(element), str(type(element)))
                             )
-                    if not other.in_range(element):
+                    if not other.contains(element):
                         return False
         elif isinstance(other, EmptySet):
             return False
@@ -197,7 +211,16 @@ class FiniteSet(AttributeSet):
         return True
 
     def union(self, other):
-        """Union of a finite set with another set."""
+        """Find the union with another set.
+
+        Parameters
+        ----------
+        other : set, FiniteSet, RegexSet, IntegerSet, EmptySet or UniversalSet
+
+        Returns
+        -------
+        The union set
+        """
         if type(other) == set:
             return FiniteSet(self.fset.union(other))
         elif isinstance(other, FiniteSet):
@@ -224,7 +247,16 @@ class FiniteSet(AttributeSet):
             raise AttributeSetError("Invalid type of attribute set!")
 
     def intersection(self, other):
-        """Intesection of a finite set with another set."""
+        """Find the intersection set with another set.
+
+        Parameters
+        ----------
+        other : set, FiniteSet, RegexSet, IntegerSet, EmptySet or UniversalSet
+
+        Returns
+        -------
+        The intersection set
+        """
         if type(other) == set:
             return FiniteSet(self.fset.intersection(other))
         elif isinstance(other, FiniteSet):
@@ -255,7 +287,18 @@ class FiniteSet(AttributeSet):
             raise AttributeSetError("Invalid type of attribute set!")
 
     def difference(self, other):
-        """Difference of self with other finite set."""
+        """Find the difference set with another set.
+
+        Finds a `self` - `other` set.
+
+        Parameters
+        ----------
+        other : set, FiniteSet, RegexSet, IntegerSet, EmptySet or UniversalSet
+
+        Returns
+        -------
+        The difference set
+        """
         if type(other) == set:
             return FiniteSet(self.fset.difference(other))
         elif isinstance(other, FiniteSet):
@@ -290,11 +333,16 @@ class FiniteSet(AttributeSet):
         return self.fset is None or len(self.fset) == 0
 
     def is_universal(self):
-        """Test if finite set is universal."""
+        """Test if finite set is universal.
+
+        Returns
+        -------
+        False, as finite set is never a universal set
+        """
         return False
 
     def to_json(self):
-        """JSON represenation of finite set."""
+        """JSON represenation."""
         json_data = {}
         json_data["type"] = "FiniteSet"
         json_data["data"] = list(self.fset)
@@ -310,10 +358,26 @@ class FiniteSet(AttributeSet):
 
 
 class RegexSet(AttributeSet):
-    """A set of strings defined by regular expression."""
+    """Class defining a set of strings recognized by a regular expression.
+
+    RegexSet is defined by a regular expression, and
+    is morally associated to a set of strings that
+    the regular expression recognizes.
+
+    Attributes
+    ----------
+    pattern : str
+        Regular expression pattern
+    """
 
     def __init__(self, regexp):
-        """Initialize a set of strings defined by a regexp."""
+        """Initialize a set of strings defined by a regexp pattern.
+
+        Parameters
+        ----------
+        regexp : str
+            Regular expression pattern
+        """
         if regexp is not None:
             if type(regexp) != str:
                 strings = []
@@ -336,7 +400,25 @@ class RegexSet(AttributeSet):
             return "<EmptyRegexSet>"
 
     def issubset(self, other):
-        """Test for regexp inclusion."""
+        """Test regexp inclusion relation.
+
+        Tests if a set defined by `self` is a included
+        in a set defined by `other`.
+
+        Parameters
+        ----------
+        other : set, str, re._pattern_type, RegexSet
+            Another regex to test inclusion.
+
+        Returns
+        -------
+        `True` is `self` defines a subset of `other`, `False` otherwise
+
+        Raises
+        ------
+        AttributeSetError
+            If the type `other` is not recognized.
+        """
         if self.pattern is None:
             return True
         else:
@@ -354,7 +436,7 @@ class RegexSet(AttributeSet):
                         return False
                 else:
                     raise AttributeSetError(
-                        "Regexp object should be `str` or `re._pattern_type`!"
+                        "Regexp object should be of type `str` or `re._pattern_type`!"
                     )
                 return (self_exp & other_exp.everythingbut()).empty()
 
@@ -370,7 +452,30 @@ class RegexSet(AttributeSet):
             return res
 
     def union(self, other):
-        """Union of two regexps."""
+        """Find the union with another set.
+
+        The union is found in the following ways:
+
+        * If `other` is a string, a Python dict or a FiniteSet
+          the result of the union is a simple concatenation of the
+          string representations of the elements of `other`
+          with the pattern of `self`.
+
+        * If `other` is an instance of `UniversalSet`, the union
+          is a `UniversalSet` object.
+
+        * If `other` is an instance of `EmptySet`, the union is
+          a copy of `self`.
+
+        Parameters
+        ----------
+        other : set, str, re._pattern_type, RegexSet
+
+        Returns
+        -------
+        result : RegexSet
+            The union set
+        """
         if self.pattern is None:
             other_str = _regex_to_string(other)
             if other_str is None:
@@ -386,6 +491,10 @@ class RegexSet(AttributeSet):
                 element_str = _regex_to_string(element)
                 if element_str is not None:
                     patterns.append(element_str)
+        elif isinstance(other, UniversalSet):
+            return UniversalSet()
+        elif isinstance(other, EmptySet):
+            return copy.deepcopy(self)
         else:
             other_str = _regex_to_string(other)
             if other_str is None:
@@ -398,9 +507,35 @@ class RegexSet(AttributeSet):
         return result
 
     def intersection(self, other):
-        """Smart intersection of two regexps.
+        """Find the intersection of two regexps.
 
-        Uses greenery library to find and reduce intersection.
+        This method uses greenery library to find and
+        reduce the intersection pattern.
+
+        * If `other` is a string, a Python dict or a FiniteSet,
+          it is converted to a regex pattern, after which it
+          is parsed by `greenery.lego.parse` method and its
+          intersection with the pattern of the `self` is found.
+          The library `greenery` finds the intersection between two
+          regex's by constructing corresponding FSM's (finite state
+          machines) and finding their intersection, after which it
+          is converted back to a regex. See more details here:
+          https://github.com/qntm/greenery
+
+        * If `other` is an instance of `EmpySet`, the intersection
+          is a `EmpySet` object.
+
+        * If `other` is an instance of `UniversalSet`, the intersection
+          is a copy of `self`.
+
+        Parameters
+        ----------
+        other : set, str, re._pattern_type, RegexSet
+
+        Returns
+        -------
+        result : RegexSet
+            The union set
         """
         if self.pattern is None:
             return RegexSet.empty()
@@ -437,6 +572,10 @@ class RegexSet(AttributeSet):
                 if exp_str is None:
                     return RegexSet.empty()
                 other_exp.append(parse(exp_str))
+        elif isinstance(other, UniversalSet):
+            return copy.deepcopy(self)
+        elif isinstance(other, EmptySet):
+            return EmptySet()
         else:
             other_str = _regex_to_string(other)
             if other_str is None:
@@ -450,7 +589,33 @@ class RegexSet(AttributeSet):
         return RegexSet(str(intersect_exp))
 
     def difference(self, other):
-        """Difference of self with other regex."""
+        """Find the difference of two regexps.
+
+        This method uses greenery library to find and
+        reduce the difference pattern between two regex's.
+
+        * If `other` is a string, a Python dict or a FiniteSet,
+          it is converted to a regex pattern, after which it
+          is parsed by `greenery.lego.parse` method and its
+          difference with the pattern of the `self` is found.
+          See more details here:
+          https://github.com/qntm/greenery
+
+        * If `other` is an instance of `EmpySet`, the difference
+          is a copy of `self`.
+
+        * If `other` is an instance of `UniversalSet`, the difference
+          is an instance of `EmptySet`.
+
+        Parameters
+        ----------
+        other : set, str, re._pattern_type, RegexSet
+
+        Returns
+        -------
+        result : RegexSet
+            The union set
+        """
         if self.pattern is None:
             return RegexSet.empty()
 
@@ -517,7 +682,13 @@ class RegexSet(AttributeSet):
 
 
 class IntegerSet(AttributeSet):
-    """Set of integers (possible infinite) defined by a set of intervals."""
+    """Set of integers defined by a list of disjoint intervals.
+
+    Attributes
+    ----------
+    intervals : list
+        List of sorted intervals defining an integer set.
+    """
 
     def __init__(self, interval_list):
         """Initialize IntegerSet object.
@@ -603,7 +774,40 @@ class IntegerSet(AttributeSet):
 
     def union(self, other):
         """Union of two integer sets."""
-        return IntegerSet(self.intervals + other.intervals)
+        if isinstance(other, IntegerSet):
+            return IntegerSet(self.intervals + other.intervals)
+        elif isinstance(other, set):
+            other_intervals = []
+            try:
+                for element in other:
+                    int_element = int(element)
+                    if self.contains(int_element):
+                        other_intervals.append((int_element, int_element))
+                return IntegerSet(self.intervals + other_intervals)
+            except:
+                raise AttributeSetError(
+                    "Set '%s' contains non-integer elements!" % str(other)
+                )
+        elif isinstance(other, FiniteSet):
+            other_intervals = []
+            try:
+                for element in other.fset:
+                    int_element = int(element)
+                    if self.contains(int_element):
+                        other_intervals.append((int_element, int_element))
+                return IntegerSet(self.intervals + other_intervals)
+            except:
+                raise AttributeSetError(
+                    "Set '%s' contains non-integer elements!" % str(other)
+                )
+        elif isinstance(other, UniversalSet):
+            return UniversalSet()
+        elif isinstance(other, EmptySet):
+            return copy.deepcopy(self)
+        else:
+            raise AttributeSetError(
+                "Cannot intersect '%s' with an integer set!" % str(other)
+            )
 
     def intersection(self, other):
         """Intersection of two integer sets."""
@@ -617,12 +821,43 @@ class IntegerSet(AttributeSet):
             return None
 
         new_intervals = []
-        for interval1 in self.intervals:
-            for interval2 in other.intervals:
-                common = interval_intersect(interval1, interval2)
-                if common:
-                    new_intervals.append(common)
-        return IntegerSet(new_intervals)
+        if isinstance(other, IntegerSet):
+            for interval1 in self.intervals:
+                for interval2 in other.intervals:
+                    common = interval_intersect(interval1, interval2)
+                    if common:
+                        new_intervals.append(common)
+            return IntegerSet(new_intervals)
+        elif isinstance(other, set):
+            try:
+                for element in other:
+                    int_element = int(element)
+                    if self.contains(int_element):
+                        new_intervals.append((int_element, int_element))
+                return IntegerSet(new_intervals)
+            except:
+                raise AttributeSetError(
+                    "Set '%s' contains non-integer elements!" % str(other)
+                )
+        elif isinstance(other, FiniteSet):
+            try:
+                for element in other.fset:
+                    int_element = int(element)
+                    if self.contains(int_element):
+                        new_intervals.append((int_element, int_element))
+                return IntegerSet(new_intervals)
+            except:
+                raise AttributeSetError(
+                    "Set '%s' contains non-integer elements!" % str(other)
+                )
+        elif isinstance(other, UniversalSet):
+            return copy.deepcopy(self)
+        elif isinstance(other, EmptySet):
+            return EmptySet()
+        else:
+            raise AttributeSetError(
+                "Cannot intersect '%s' with an integer set!" % str(other)
+            )
 
     def difference(self, other):
         """Difference of self with the other."""
@@ -696,8 +931,8 @@ class IntegerSet(AttributeSet):
             intervals.append(val)
         return cls(intervals)
 
-    def in_range(self, num):
-        """Test if probided integer is in integer set."""
+    def contains(self, num):
+        """Test if provided integer is in integer set."""
         found = False
         for start, end in self.intervals:
             if num >= start and num <= end:
@@ -781,7 +1016,7 @@ class UniversalSet(AttributeSet):
         """Test if empty."""
         return False
 
-    def intersect(self, other):
+    def intersection(self, other):
         """Intersect with another set."""
         return copy.deepcopy(other)
 
