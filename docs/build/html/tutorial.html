@@ -21,6 +21,7 @@
     <script type="text/javascript" src="_static/jquery.js"></script>
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
    
@@ -40,6 +41,102 @@
             
   <div class="section" id="tutorial">
 <span id="id1"></span><h1>Tutorial<a class="headerlink" href="#tutorial" title="Permalink to this headline">¶</a></h1>
+<ul class="simple">
+<li><a class="reference internal" href="#installation"><span class="std std-ref">Installation</span></a></li>
+<li><dl class="first docutils">
+<dt><a class="reference internal" href="#simple-rewriting"><span class="std std-ref">Simple graph rewriting</span></a></dt>
+<dd><ul class="first last">
+<li><a class="reference internal" href="#graph-creation"><span class="std std-ref">Applying primitive graph transformations</span></a></li>
+<li><a class="reference internal" href="#advanced-attributes"><span class="std std-ref">Advanced attributes</span></a></li>
+<li><a class="reference internal" href="#rewiting-rules"><span class="std std-ref">Rewriting rules</span></a></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt><a class="reference internal" href="hierarchy.html#hierarchy"><span class="std std-ref">Hierarchy</span></a></dt>
+<dd><ul class="first last">
+<li><a class="reference internal" href="#hierarchy-creation"><span class="std std-ref">Hierarchy creation</span></a></li>
+<li><a class="reference internal" href="#rewriting-in-hierarchy"><span class="std std-ref">Rewriting in the hierarchy</span></a></li>
+<li><a class="reference internal" href="#propagation-in-hierarchy"><span class="std std-ref">Propagation in the hierarchy</span></a></li>
+</ul>
+</dd>
+</dl>
+</li>
+</ul>
+<div class="section" id="installation">
+<span id="id2"></span><h2>Installation<a class="headerlink" href="#installation" title="Permalink to this headline">¶</a></h2>
+<blockquote>
+<div><p>In order to install the ReGraph library you have to clone this repository using SSH</p>
+<div class="highlight-console"><div class="highlight"><pre><span></span><span class="go">git clone git@github.com:Kappa-Dev/ReGraph.git</span>
+</pre></div>
+</div>
+<p>or using HTTPS</p>
+<div class="highlight-console"><div class="highlight"><pre><span></span><span class="go">git clone https://github.com/Kappa-Dev/ReGraph.git</span>
+</pre></div>
+</div>
+<p>Install the library and its dependencies with <cite>setup.py</cite></p>
+<div class="highlight-console"><div class="highlight"><pre><span></span><span class="go">cd ReGraph</span>
+<span class="go">python setup.py install</span>
+</pre></div>
+</div>
+</div></blockquote>
+</div>
+<div class="section" id="simple-graph-rewriting">
+<span id="simple-rewriting"></span><h2>Simple graph rewriting<a class="headerlink" href="#simple-graph-rewriting" title="Permalink to this headline">¶</a></h2>
+<p>ReGraph works with NetworkX v1 graph objects, both undirected graphs (<cite>networkx.Graph</cite>) and directed ones (<cite>networkx.DiGraph</cite>). The workflow of the graph initialization in NetworkX can be found <a class="reference external" href="https://networkx.github.io/documentation/networkx-1.9.1/tutorial/tutorial.html">here</a>.</p>
+<div class="section" id="applying-primitive-graph-transformations">
+<span id="graph-creation"></span><h3>Applying primitive graph transformations<a class="headerlink" href="#applying-primitive-graph-transformations" title="Permalink to this headline">¶</a></h3>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">graph</span> <span class="o">=</span> <span class="n">nx</span><span class="o">.</span><span class="n">DiGraph</span><span class="p">()</span>
+<span class="n">add_nodes_from</span><span class="p">(</span><span class="n">graph</span><span class="p">,</span>
+    <span class="p">[</span>
+        <span class="p">(</span><span class="s1">&#39;1&#39;</span><span class="p">,</span> <span class="p">{</span><span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;EGFR&#39;</span><span class="p">,</span> <span class="s1">&#39;state&#39;</span><span class="p">:</span> <span class="s1">&#39;p&#39;</span><span class="p">}),</span>
+        <span class="p">(</span><span class="s1">&#39;2&#39;</span><span class="p">,</span> <span class="p">{</span><span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;BND&#39;</span><span class="p">}),</span>
+        <span class="p">(</span><span class="s1">&#39;3&#39;</span><span class="p">,</span> <span class="p">{</span><span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;Grb2&#39;</span><span class="p">,</span> <span class="s1">&#39;aa&#39;</span><span class="p">:</span> <span class="s1">&#39;S&#39;</span><span class="p">,</span> <span class="s1">&#39;loc&#39;</span><span class="p">:</span> <span class="mi">90</span><span class="p">}),</span>
+        <span class="p">(</span><span class="s1">&#39;4&#39;</span><span class="p">,</span> <span class="p">{</span><span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;SH2&#39;</span><span class="p">}),</span>
+        <span class="p">(</span><span class="s1">&#39;5&#39;</span><span class="p">,</span> <span class="p">{</span><span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;EGFR&#39;</span><span class="p">}),</span>
+        <span class="p">(</span><span class="s1">&#39;6&#39;</span><span class="p">,</span> <span class="p">{</span><span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;BND&#39;</span><span class="p">}),</span>
+        <span class="p">(</span><span class="s1">&#39;7&#39;</span><span class="p">,</span> <span class="p">{</span><span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;Grb2&#39;</span><span class="p">}),</span>
+        <span class="p">(</span><span class="s1">&#39;8&#39;</span><span class="p">,</span> <span class="p">{</span><span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;WAF1&#39;</span><span class="p">}),</span>
+        <span class="p">(</span><span class="s1">&#39;9&#39;</span><span class="p">,</span> <span class="p">{</span><span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;BND&#39;</span><span class="p">}),</span>
+        <span class="p">(</span><span class="s1">&#39;10&#39;</span><span class="p">,</span> <span class="p">{</span><span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;G1-S/CDK&#39;</span><span class="p">,</span> <span class="s1">&#39;state&#39;</span><span class="p">:</span> <span class="s1">&#39;p&#39;</span><span class="p">}),</span>
+<span class="p">])</span>
+<span class="n">edges</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="p">(</span><span class="s1">&#39;1&#39;</span><span class="p">,</span> <span class="s1">&#39;2&#39;</span><span class="p">,</span> <span class="p">{</span><span class="s1">&#39;s&#39;</span><span class="p">:</span> <span class="s1">&#39;p&#39;</span><span class="p">}),</span>
+    <span class="p">(</span><span class="s1">&#39;4&#39;</span><span class="p">,</span> <span class="s1">&#39;2&#39;</span><span class="p">,</span> <span class="p">{</span><span class="s1">&#39;s&#39;</span><span class="p">:</span> <span class="s1">&#39;u&#39;</span><span class="p">}),</span>
+    <span class="p">(</span><span class="s1">&#39;4&#39;</span><span class="p">,</span> <span class="s1">&#39;3&#39;</span><span class="p">),</span>
+    <span class="p">(</span><span class="s1">&#39;5&#39;</span><span class="p">,</span> <span class="s1">&#39;6&#39;</span><span class="p">,</span> <span class="p">{</span><span class="s1">&#39;s&#39;</span><span class="p">:</span> <span class="s1">&#39;p&#39;</span><span class="p">}),</span>
+    <span class="p">(</span><span class="s1">&#39;7&#39;</span><span class="p">,</span> <span class="s1">&#39;6&#39;</span><span class="p">,</span> <span class="p">{</span><span class="s1">&#39;s&#39;</span><span class="p">:</span> <span class="s1">&#39;u&#39;</span><span class="p">}),</span>
+    <span class="p">(</span><span class="s1">&#39;8&#39;</span><span class="p">,</span> <span class="s1">&#39;9&#39;</span><span class="p">),</span>
+    <span class="p">(</span><span class="s1">&#39;9&#39;</span><span class="p">,</span> <span class="s1">&#39;8&#39;</span><span class="p">),</span>
+    <span class="p">(</span><span class="s1">&#39;10&#39;</span><span class="p">,</span> <span class="s1">&#39;8&#39;</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;a&quot;</span><span class="p">:</span> <span class="p">{</span><span class="mi">1</span><span class="p">}}),</span>
+    <span class="p">(</span><span class="s1">&#39;10&#39;</span><span class="p">,</span> <span class="s1">&#39;9&#39;</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;a&quot;</span><span class="p">:</span> <span class="p">{</span><span class="mi">2</span><span class="p">}}),</span>
+    <span class="p">(</span><span class="s1">&#39;5&#39;</span><span class="p">,</span> <span class="s1">&#39;2&#39;</span><span class="p">,</span> <span class="p">{</span><span class="s1">&#39;s&#39;</span><span class="p">:</span> <span class="s1">&#39;u&#39;</span><span class="p">})</span>
+<span class="p">]</span>
+
+<span class="n">add_edges_from</span><span class="p">(</span><span class="n">graph</span><span class="p">,</span> <span class="n">edges</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="advanced-attributes">
+<span id="id3"></span><h3>Advanced attributes<a class="headerlink" href="#advanced-attributes" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="rewriting-rules">
+<span id="rewiting-rules"></span><h3>Rewriting rules<a class="headerlink" href="#rewriting-rules" title="Permalink to this headline">¶</a></h3>
+</div>
+</div>
+<div class="section" id="hierarchy">
+<span id="hierarchy-tutorial"></span><h2>Hierarchy<a class="headerlink" href="#hierarchy" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="hierarchy-creation">
+<span id="id4"></span><h3>Hierarchy creation<a class="headerlink" href="#hierarchy-creation" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="rewriting-in-the-hierarchy">
+<span id="rewriting-in-hierarchy"></span><h3>Rewriting in the hierarchy<a class="headerlink" href="#rewriting-in-the-hierarchy" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="propagation-in-the-hierarchy">
+<span id="propagation-in-hierarchy"></span><h3>Propagation in the hierarchy<a class="headerlink" href="#propagation-in-the-hierarchy" title="Permalink to this headline">¶</a></h3>
+</div>
+</div>
 </div>
 
 

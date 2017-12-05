@@ -1,0 +1,691 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Attribute Sets &#8212; ReGraph 1.0 documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="module-regraph.attribute_sets">
+<span id="id1"></span><span id="attribute-sets"></span><h1>Attribute Sets<a class="headerlink" href="#module-regraph.attribute_sets" title="Permalink to this headline">¶</a></h1>
+<p>A collection of data structures for attributes on the nodes of graphs.</p>
+<dl class="docutils">
+<dt>Implements the following data structures:</dt>
+<dd><ul class="first simple">
+<li><cite>AttributeSet</cite> – abstract class for attribute sets in <cite>ReGraph</cite></li>
+</ul>
+<p class="last">(provides interface, implements some common behaviour);
+- <cite>FiniteSet</cite> – wrapper for Python finite sets, inherits <cite>AttributeSet</cite>;
+- <cite>RegexSet</cite> – a class for possibly infinite sets of strings given by
+regular expressions. It uses the <cite>greenery</cite> library for finding
+inclusion and intersection of regular expressions, its method <cite>match</cite> can
+be used to test if a given string is in a set of strings defined by
+regular expressions;
+- <cite>IntegerSet</cite> – a class for possibly infinite sets of integers
+defined by a set of disjoint intervals, inherits <cite>AttributeSet</cite>,
+provides the method <cite>in_range</cite> for testing if a given integer is in
+the set of integers.</p>
+</dd>
+</dl>
+<p>TODO:</p>
+<blockquote>
+<div><ul class="simple">
+<li><cite>RealSet</cite></li>
+</ul>
+</div></blockquote>
+<dl class="class">
+<dt id="regraph.attribute_sets.AttributeSet">
+<em class="property">class </em><code class="descclassname">regraph.attribute_sets.</code><code class="descname">AttributeSet</code><a class="reference internal" href="_modules/regraph/attribute_sets.html#AttributeSet"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.attribute_sets.AttributeSet" title="Permalink to this definition">¶</a></dt>
+<dd><p>Parent class for attribute sets.</p>
+<p class="rubric">Methods</p>
+<table border="1" class="longtable docutils">
+<colgroup>
+<col width="10%" />
+<col width="90%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td><a class="reference internal" href="#regraph.attribute_sets.AttributeSet.difference" title="regraph.attribute_sets.AttributeSet.difference"><code class="xref py py-obj docutils literal"><span class="pre">difference</span></code></a>(other)</td>
+<td>Find difference.</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#regraph.attribute_sets.AttributeSet.from_json" title="regraph.attribute_sets.AttributeSet.from_json"><code class="xref py py-obj docutils literal"><span class="pre">from_json</span></code></a>(json_data)</td>
+<td>Create attribute set object from json-like dictionary.</td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#regraph.attribute_sets.AttributeSet.intersect" title="regraph.attribute_sets.AttributeSet.intersect"><code class="xref py py-obj docutils literal"><span class="pre">intersect</span></code></a>(other)</td>
+<td>Find intersection attribute set.</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#regraph.attribute_sets.AttributeSet.issubset" title="regraph.attribute_sets.AttributeSet.issubset"><code class="xref py py-obj docutils literal"><span class="pre">issubset</span></code></a>(other)</td>
+<td>Test if subset of another set.</td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#regraph.attribute_sets.AttributeSet.union" title="regraph.attribute_sets.AttributeSet.union"><code class="xref py py-obj docutils literal"><span class="pre">union</span></code></a>(other)</td>
+<td>Find union attribute set.</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="regraph.attribute_sets.AttributeSet.difference">
+<code class="descname">difference</code><span class="sig-paren">(</span><em>other</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/attribute_sets.html#AttributeSet.difference"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.attribute_sets.AttributeSet.difference" title="Permalink to this definition">¶</a></dt>
+<dd><p>Find difference.</p>
+</dd></dl>
+
+<dl class="classmethod">
+<dt id="regraph.attribute_sets.AttributeSet.from_json">
+<em class="property">classmethod </em><code class="descname">from_json</code><span class="sig-paren">(</span><em>json_data</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/attribute_sets.html#AttributeSet.from_json"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.attribute_sets.AttributeSet.from_json" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create attribute set object from json-like dictionary.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.attribute_sets.AttributeSet.intersect">
+<code class="descname">intersect</code><span class="sig-paren">(</span><em>other</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/attribute_sets.html#AttributeSet.intersect"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.attribute_sets.AttributeSet.intersect" title="Permalink to this definition">¶</a></dt>
+<dd><p>Find intersection attribute set.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.attribute_sets.AttributeSet.issubset">
+<code class="descname">issubset</code><span class="sig-paren">(</span><em>other</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/attribute_sets.html#AttributeSet.issubset"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.attribute_sets.AttributeSet.issubset" title="Permalink to this definition">¶</a></dt>
+<dd><p>Test if subset of another set.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.attribute_sets.AttributeSet.union">
+<code class="descname">union</code><span class="sig-paren">(</span><em>other</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/attribute_sets.html#AttributeSet.union"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.attribute_sets.AttributeSet.union" title="Permalink to this definition">¶</a></dt>
+<dd><p>Find union attribute set.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="regraph.attribute_sets.EmptySet">
+<em class="property">class </em><code class="descclassname">regraph.attribute_sets.</code><code class="descname">EmptySet</code><a class="reference internal" href="_modules/regraph/attribute_sets.html#EmptySet"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.attribute_sets.EmptySet" title="Permalink to this definition">¶</a></dt>
+<dd><p>Empty attribute set.</p>
+<p class="rubric">Methods</p>
+<table border="1" class="longtable docutils">
+<colgroup>
+<col width="10%" />
+<col width="90%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td><a class="reference internal" href="#regraph.attribute_sets.EmptySet.difference" title="regraph.attribute_sets.EmptySet.difference"><code class="xref py py-obj docutils literal"><span class="pre">difference</span></code></a>(other)</td>
+<td>Find difference with another.</td>
+</tr>
+<tr class="row-even"><td><code class="xref py py-obj docutils literal"><span class="pre">from_json</span></code>(json_data)</td>
+<td>Create attribute set object from json-like dictionary.</td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#regraph.attribute_sets.EmptySet.intersect" title="regraph.attribute_sets.EmptySet.intersect"><code class="xref py py-obj docutils literal"><span class="pre">intersect</span></code></a>(other)</td>
+<td>Intersect with another set.</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#regraph.attribute_sets.EmptySet.is_empty" title="regraph.attribute_sets.EmptySet.is_empty"><code class="xref py py-obj docutils literal"><span class="pre">is_empty</span></code></a>()</td>
+<td>Test if empty.</td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#regraph.attribute_sets.EmptySet.is_universal" title="regraph.attribute_sets.EmptySet.is_universal"><code class="xref py py-obj docutils literal"><span class="pre">is_universal</span></code></a>()</td>
+<td>Test if universal.</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#regraph.attribute_sets.EmptySet.issubset" title="regraph.attribute_sets.EmptySet.issubset"><code class="xref py py-obj docutils literal"><span class="pre">issubset</span></code></a>(other)</td>
+<td>Test if subset of another set.</td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#regraph.attribute_sets.EmptySet.to_json" title="regraph.attribute_sets.EmptySet.to_json"><code class="xref py py-obj docutils literal"><span class="pre">to_json</span></code></a>()</td>
+<td>JSON represenation of EmptySet.</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#regraph.attribute_sets.EmptySet.union" title="regraph.attribute_sets.EmptySet.union"><code class="xref py py-obj docutils literal"><span class="pre">union</span></code></a>(other)</td>
+<td>Find union with another set.</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="regraph.attribute_sets.EmptySet.difference">
+<code class="descname">difference</code><span class="sig-paren">(</span><em>other</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/attribute_sets.html#EmptySet.difference"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.attribute_sets.EmptySet.difference" title="Permalink to this definition">¶</a></dt>
+<dd><p>Find difference with another.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.attribute_sets.EmptySet.intersect">
+<code class="descname">intersect</code><span class="sig-paren">(</span><em>other</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/attribute_sets.html#EmptySet.intersect"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.attribute_sets.EmptySet.intersect" title="Permalink to this definition">¶</a></dt>
+<dd><p>Intersect with another set.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.attribute_sets.EmptySet.is_empty">
+<code class="descname">is_empty</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/attribute_sets.html#EmptySet.is_empty"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.attribute_sets.EmptySet.is_empty" title="Permalink to this definition">¶</a></dt>
+<dd><p>Test if empty.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.attribute_sets.EmptySet.is_universal">
+<code class="descname">is_universal</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/attribute_sets.html#EmptySet.is_universal"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.attribute_sets.EmptySet.is_universal" title="Permalink to this definition">¶</a></dt>
+<dd><p>Test if universal.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.attribute_sets.EmptySet.issubset">
+<code class="descname">issubset</code><span class="sig-paren">(</span><em>other</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/attribute_sets.html#EmptySet.issubset"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.attribute_sets.EmptySet.issubset" title="Permalink to this definition">¶</a></dt>
+<dd><p>Test if subset of another set.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.attribute_sets.EmptySet.to_json">
+<code class="descname">to_json</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/attribute_sets.html#EmptySet.to_json"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.attribute_sets.EmptySet.to_json" title="Permalink to this definition">¶</a></dt>
+<dd><p>JSON represenation of EmptySet.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.attribute_sets.EmptySet.union">
+<code class="descname">union</code><span class="sig-paren">(</span><em>other</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/attribute_sets.html#EmptySet.union"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.attribute_sets.EmptySet.union" title="Permalink to this definition">¶</a></dt>
+<dd><p>Find union with another set.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="regraph.attribute_sets.FiniteSet">
+<em class="property">class </em><code class="descclassname">regraph.attribute_sets.</code><code class="descname">FiniteSet</code><span class="sig-paren">(</span><em>fset=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/attribute_sets.html#FiniteSet"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.attribute_sets.FiniteSet" title="Permalink to this definition">¶</a></dt>
+<dd><p>Wrapper for finite sets as attribute sets.</p>
+<p class="rubric">Methods</p>
+<table border="1" class="longtable docutils">
+<colgroup>
+<col width="10%" />
+<col width="90%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td><a class="reference internal" href="#regraph.attribute_sets.FiniteSet.add" title="regraph.attribute_sets.FiniteSet.add"><code class="xref py py-obj docutils literal"><span class="pre">add</span></code></a>(element)</td>
+<td>Add an element.</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#regraph.attribute_sets.FiniteSet.difference" title="regraph.attribute_sets.FiniteSet.difference"><code class="xref py py-obj docutils literal"><span class="pre">difference</span></code></a>(other)</td>
+<td>Difference of self with other finite set.</td>
+</tr>
+<tr class="row-odd"><td><code class="xref py py-obj docutils literal"><span class="pre">from_json</span></code>(json_data)</td>
+<td>Create attribute set object from json-like dictionary.</td>
+</tr>
+<tr class="row-even"><td><code class="xref py py-obj docutils literal"><span class="pre">intersect</span></code>(other)</td>
+<td>Find intersection attribute set.</td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#regraph.attribute_sets.FiniteSet.intersection" title="regraph.attribute_sets.FiniteSet.intersection"><code class="xref py py-obj docutils literal"><span class="pre">intersection</span></code></a>(other)</td>
+<td>Intesection of a finite set with another set.</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#regraph.attribute_sets.FiniteSet.is_empty" title="regraph.attribute_sets.FiniteSet.is_empty"><code class="xref py py-obj docutils literal"><span class="pre">is_empty</span></code></a>()</td>
+<td>Test if finite set is empty.</td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#regraph.attribute_sets.FiniteSet.is_universal" title="regraph.attribute_sets.FiniteSet.is_universal"><code class="xref py py-obj docutils literal"><span class="pre">is_universal</span></code></a>()</td>
+<td>Test if finite set is universal.</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#regraph.attribute_sets.FiniteSet.issubset" title="regraph.attribute_sets.FiniteSet.issubset"><code class="xref py py-obj docutils literal"><span class="pre">issubset</span></code></a>(other)</td>
+<td>Test if subset of another set.</td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#regraph.attribute_sets.FiniteSet.to_json" title="regraph.attribute_sets.FiniteSet.to_json"><code class="xref py py-obj docutils literal"><span class="pre">to_json</span></code></a>()</td>
+<td>JSON represenation of finite set.</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#regraph.attribute_sets.FiniteSet.union" title="regraph.attribute_sets.FiniteSet.union"><code class="xref py py-obj docutils literal"><span class="pre">union</span></code></a>(other)</td>
+<td>Union of a finite set with another set.</td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#regraph.attribute_sets.FiniteSet.update" title="regraph.attribute_sets.FiniteSet.update"><code class="xref py py-obj docutils literal"><span class="pre">update</span></code></a>(element)</td>
+<td>Update finite set.</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="regraph.attribute_sets.FiniteSet.add">
+<code class="descname">add</code><span class="sig-paren">(</span><em>element</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/attribute_sets.html#FiniteSet.add"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.attribute_sets.FiniteSet.add" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add an element.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.attribute_sets.FiniteSet.difference">
+<code class="descname">difference</code><span class="sig-paren">(</span><em>other</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/attribute_sets.html#FiniteSet.difference"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.attribute_sets.FiniteSet.difference" title="Permalink to this definition">¶</a></dt>
+<dd><p>Difference of self with other finite set.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.attribute_sets.FiniteSet.intersection">
+<code class="descname">intersection</code><span class="sig-paren">(</span><em>other</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/attribute_sets.html#FiniteSet.intersection"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.attribute_sets.FiniteSet.intersection" title="Permalink to this definition">¶</a></dt>
+<dd><p>Intesection of a finite set with another set.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.attribute_sets.FiniteSet.is_empty">
+<code class="descname">is_empty</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/attribute_sets.html#FiniteSet.is_empty"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.attribute_sets.FiniteSet.is_empty" title="Permalink to this definition">¶</a></dt>
+<dd><p>Test if finite set is empty.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.attribute_sets.FiniteSet.is_universal">
+<code class="descname">is_universal</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/attribute_sets.html#FiniteSet.is_universal"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.attribute_sets.FiniteSet.is_universal" title="Permalink to this definition">¶</a></dt>
+<dd><p>Test if finite set is universal.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.attribute_sets.FiniteSet.issubset">
+<code class="descname">issubset</code><span class="sig-paren">(</span><em>other</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/attribute_sets.html#FiniteSet.issubset"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.attribute_sets.FiniteSet.issubset" title="Permalink to this definition">¶</a></dt>
+<dd><p>Test if subset of another set.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.attribute_sets.FiniteSet.to_json">
+<code class="descname">to_json</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/attribute_sets.html#FiniteSet.to_json"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.attribute_sets.FiniteSet.to_json" title="Permalink to this definition">¶</a></dt>
+<dd><p>JSON represenation of finite set.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.attribute_sets.FiniteSet.union">
+<code class="descname">union</code><span class="sig-paren">(</span><em>other</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/attribute_sets.html#FiniteSet.union"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.attribute_sets.FiniteSet.union" title="Permalink to this definition">¶</a></dt>
+<dd><p>Union of a finite set with another set.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.attribute_sets.FiniteSet.update">
+<code class="descname">update</code><span class="sig-paren">(</span><em>element</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/attribute_sets.html#FiniteSet.update"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.attribute_sets.FiniteSet.update" title="Permalink to this definition">¶</a></dt>
+<dd><p>Update finite set.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="regraph.attribute_sets.IntegerSet">
+<em class="property">class </em><code class="descclassname">regraph.attribute_sets.</code><code class="descname">IntegerSet</code><span class="sig-paren">(</span><em>interval_list</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/attribute_sets.html#IntegerSet"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.attribute_sets.IntegerSet" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set of integers (possible infinite) defined by a set of intervals.</p>
+<p class="rubric">Methods</p>
+<table border="1" class="longtable docutils">
+<colgroup>
+<col width="10%" />
+<col width="90%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td><a class="reference internal" href="#regraph.attribute_sets.IntegerSet.difference" title="regraph.attribute_sets.IntegerSet.difference"><code class="xref py py-obj docutils literal"><span class="pre">difference</span></code></a>(other)</td>
+<td>Difference of self with the other.</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#regraph.attribute_sets.IntegerSet.empty" title="regraph.attribute_sets.IntegerSet.empty"><code class="xref py py-obj docutils literal"><span class="pre">empty</span></code></a>()</td>
+<td>Empty integer set.</td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#regraph.attribute_sets.IntegerSet.from_finite_set" title="regraph.attribute_sets.IntegerSet.from_finite_set"><code class="xref py py-obj docutils literal"><span class="pre">from_finite_set</span></code></a>(s)</td>
+<td>Create Integer set object from a finite set.</td>
+</tr>
+<tr class="row-even"><td><code class="xref py py-obj docutils literal"><span class="pre">from_json</span></code>(json_data)</td>
+<td>Create attribute set object from json-like dictionary.</td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#regraph.attribute_sets.IntegerSet.in_range" title="regraph.attribute_sets.IntegerSet.in_range"><code class="xref py py-obj docutils literal"><span class="pre">in_range</span></code></a>(num)</td>
+<td>Test if probided integer is in integer set.</td>
+</tr>
+<tr class="row-even"><td><code class="xref py py-obj docutils literal"><span class="pre">intersect</span></code>(other)</td>
+<td>Find intersection attribute set.</td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#regraph.attribute_sets.IntegerSet.intersection" title="regraph.attribute_sets.IntegerSet.intersection"><code class="xref py py-obj docutils literal"><span class="pre">intersection</span></code></a>(other)</td>
+<td>Intersection of two integer sets.</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#regraph.attribute_sets.IntegerSet.is_empty" title="regraph.attribute_sets.IntegerSet.is_empty"><code class="xref py py-obj docutils literal"><span class="pre">is_empty</span></code></a>()</td>
+<td>Test if empty.</td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#regraph.attribute_sets.IntegerSet.is_universal" title="regraph.attribute_sets.IntegerSet.is_universal"><code class="xref py py-obj docutils literal"><span class="pre">is_universal</span></code></a>()</td>
+<td>Test universality.</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#regraph.attribute_sets.IntegerSet.issubset" title="regraph.attribute_sets.IntegerSet.issubset"><code class="xref py py-obj docutils literal"><span class="pre">issubset</span></code></a>(other)</td>
+<td>Test set inclusion for intervals of ints.</td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#regraph.attribute_sets.IntegerSet.to_json" title="regraph.attribute_sets.IntegerSet.to_json"><code class="xref py py-obj docutils literal"><span class="pre">to_json</span></code></a>()</td>
+<td>JSON represenation of IntegerSet.</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#regraph.attribute_sets.IntegerSet.union" title="regraph.attribute_sets.IntegerSet.union"><code class="xref py py-obj docutils literal"><span class="pre">union</span></code></a>(other)</td>
+<td>Union of two integer sets.</td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#regraph.attribute_sets.IntegerSet.universal" title="regraph.attribute_sets.IntegerSet.universal"><code class="xref py py-obj docutils literal"><span class="pre">universal</span></code></a>()</td>
+<td>Universal integer set.</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="regraph.attribute_sets.IntegerSet.difference">
+<code class="descname">difference</code><span class="sig-paren">(</span><em>other</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/attribute_sets.html#IntegerSet.difference"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.attribute_sets.IntegerSet.difference" title="Permalink to this definition">¶</a></dt>
+<dd><p>Difference of self with the other.</p>
+</dd></dl>
+
+<dl class="classmethod">
+<dt id="regraph.attribute_sets.IntegerSet.empty">
+<em class="property">classmethod </em><code class="descname">empty</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/attribute_sets.html#IntegerSet.empty"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.attribute_sets.IntegerSet.empty" title="Permalink to this definition">¶</a></dt>
+<dd><p>Empty integer set.</p>
+</dd></dl>
+
+<dl class="classmethod">
+<dt id="regraph.attribute_sets.IntegerSet.from_finite_set">
+<em class="property">classmethod </em><code class="descname">from_finite_set</code><span class="sig-paren">(</span><em>s</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/attribute_sets.html#IntegerSet.from_finite_set"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.attribute_sets.IntegerSet.from_finite_set" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create Integer set object from a finite set.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.attribute_sets.IntegerSet.in_range">
+<code class="descname">in_range</code><span class="sig-paren">(</span><em>num</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/attribute_sets.html#IntegerSet.in_range"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.attribute_sets.IntegerSet.in_range" title="Permalink to this definition">¶</a></dt>
+<dd><p>Test if probided integer is in integer set.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.attribute_sets.IntegerSet.intersection">
+<code class="descname">intersection</code><span class="sig-paren">(</span><em>other</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/attribute_sets.html#IntegerSet.intersection"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.attribute_sets.IntegerSet.intersection" title="Permalink to this definition">¶</a></dt>
+<dd><p>Intersection of two integer sets.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.attribute_sets.IntegerSet.is_empty">
+<code class="descname">is_empty</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/attribute_sets.html#IntegerSet.is_empty"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.attribute_sets.IntegerSet.is_empty" title="Permalink to this definition">¶</a></dt>
+<dd><p>Test if empty.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.attribute_sets.IntegerSet.is_universal">
+<code class="descname">is_universal</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/attribute_sets.html#IntegerSet.is_universal"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.attribute_sets.IntegerSet.is_universal" title="Permalink to this definition">¶</a></dt>
+<dd><p>Test universality.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.attribute_sets.IntegerSet.issubset">
+<code class="descname">issubset</code><span class="sig-paren">(</span><em>other</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/attribute_sets.html#IntegerSet.issubset"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.attribute_sets.IntegerSet.issubset" title="Permalink to this definition">¶</a></dt>
+<dd><p>Test set inclusion for intervals of ints.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.attribute_sets.IntegerSet.to_json">
+<code class="descname">to_json</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/attribute_sets.html#IntegerSet.to_json"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.attribute_sets.IntegerSet.to_json" title="Permalink to this definition">¶</a></dt>
+<dd><p>JSON represenation of IntegerSet.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.attribute_sets.IntegerSet.union">
+<code class="descname">union</code><span class="sig-paren">(</span><em>other</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/attribute_sets.html#IntegerSet.union"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.attribute_sets.IntegerSet.union" title="Permalink to this definition">¶</a></dt>
+<dd><p>Union of two integer sets.</p>
+</dd></dl>
+
+<dl class="classmethod">
+<dt id="regraph.attribute_sets.IntegerSet.universal">
+<em class="property">classmethod </em><code class="descname">universal</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/attribute_sets.html#IntegerSet.universal"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.attribute_sets.IntegerSet.universal" title="Permalink to this definition">¶</a></dt>
+<dd><p>Universal integer set.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="regraph.attribute_sets.RegexSet">
+<em class="property">class </em><code class="descclassname">regraph.attribute_sets.</code><code class="descname">RegexSet</code><span class="sig-paren">(</span><em>regexp</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/attribute_sets.html#RegexSet"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.attribute_sets.RegexSet" title="Permalink to this definition">¶</a></dt>
+<dd><p>A set of strings defined by regular expression.</p>
+<p class="rubric">Methods</p>
+<table border="1" class="longtable docutils">
+<colgroup>
+<col width="10%" />
+<col width="90%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td><a class="reference internal" href="#regraph.attribute_sets.RegexSet.difference" title="regraph.attribute_sets.RegexSet.difference"><code class="xref py py-obj docutils literal"><span class="pre">difference</span></code></a>(other)</td>
+<td>Difference of self with other regex.</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#regraph.attribute_sets.RegexSet.empty" title="regraph.attribute_sets.RegexSet.empty"><code class="xref py py-obj docutils literal"><span class="pre">empty</span></code></a>()</td>
+<td>Create a RegexSet object not matching any string.</td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#regraph.attribute_sets.RegexSet.from_finite_set" title="regraph.attribute_sets.RegexSet.from_finite_set"><code class="xref py py-obj docutils literal"><span class="pre">from_finite_set</span></code></a>(fset)</td>
+<td>Create a regexp from ordinary finite set.</td>
+</tr>
+<tr class="row-even"><td><code class="xref py py-obj docutils literal"><span class="pre">from_json</span></code>(json_data)</td>
+<td>Create attribute set object from json-like dictionary.</td>
+</tr>
+<tr class="row-odd"><td><code class="xref py py-obj docutils literal"><span class="pre">intersect</span></code>(other)</td>
+<td>Find intersection attribute set.</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#regraph.attribute_sets.RegexSet.intersection" title="regraph.attribute_sets.RegexSet.intersection"><code class="xref py py-obj docutils literal"><span class="pre">intersection</span></code></a>(other)</td>
+<td>Smart intersection of two regexps.</td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#regraph.attribute_sets.RegexSet.is_empty" title="regraph.attribute_sets.RegexSet.is_empty"><code class="xref py py-obj docutils literal"><span class="pre">is_empty</span></code></a>()</td>
+<td>Test if an object is an empty RegexSet.</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#regraph.attribute_sets.RegexSet.is_universal" title="regraph.attribute_sets.RegexSet.is_universal"><code class="xref py py-obj docutils literal"><span class="pre">is_universal</span></code></a>()</td>
+<td>Test if an object is a universal RegexSet.</td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#regraph.attribute_sets.RegexSet.issubset" title="regraph.attribute_sets.RegexSet.issubset"><code class="xref py py-obj docutils literal"><span class="pre">issubset</span></code></a>(other)</td>
+<td>Test for regexp inclusion.</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#regraph.attribute_sets.RegexSet.match" title="regraph.attribute_sets.RegexSet.match"><code class="xref py py-obj docutils literal"><span class="pre">match</span></code></a>(string)</td>
+<td>Check if a string is in RegexSet.</td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#regraph.attribute_sets.RegexSet.to_json" title="regraph.attribute_sets.RegexSet.to_json"><code class="xref py py-obj docutils literal"><span class="pre">to_json</span></code></a>()</td>
+<td>JSON represenation of RegexSet.</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#regraph.attribute_sets.RegexSet.union" title="regraph.attribute_sets.RegexSet.union"><code class="xref py py-obj docutils literal"><span class="pre">union</span></code></a>(other)</td>
+<td>Union of two regexps.</td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#regraph.attribute_sets.RegexSet.universal" title="regraph.attribute_sets.RegexSet.universal"><code class="xref py py-obj docutils literal"><span class="pre">universal</span></code></a>()</td>
+<td>Create a RegexSet object matching any string.</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="regraph.attribute_sets.RegexSet.difference">
+<code class="descname">difference</code><span class="sig-paren">(</span><em>other</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/attribute_sets.html#RegexSet.difference"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.attribute_sets.RegexSet.difference" title="Permalink to this definition">¶</a></dt>
+<dd><p>Difference of self with other regex.</p>
+</dd></dl>
+
+<dl class="classmethod">
+<dt id="regraph.attribute_sets.RegexSet.empty">
+<em class="property">classmethod </em><code class="descname">empty</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/attribute_sets.html#RegexSet.empty"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.attribute_sets.RegexSet.empty" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a RegexSet object not matching any string.</p>
+</dd></dl>
+
+<dl class="classmethod">
+<dt id="regraph.attribute_sets.RegexSet.from_finite_set">
+<em class="property">classmethod </em><code class="descname">from_finite_set</code><span class="sig-paren">(</span><em>fset</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/attribute_sets.html#RegexSet.from_finite_set"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.attribute_sets.RegexSet.from_finite_set" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a regexp from ordinary finite set.</p>
+<p>All the elements of the set will be cast to str.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.attribute_sets.RegexSet.intersection">
+<code class="descname">intersection</code><span class="sig-paren">(</span><em>other</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/attribute_sets.html#RegexSet.intersection"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.attribute_sets.RegexSet.intersection" title="Permalink to this definition">¶</a></dt>
+<dd><p>Smart intersection of two regexps.</p>
+<p>Uses greenery library to find and reduce intersection.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.attribute_sets.RegexSet.is_empty">
+<code class="descname">is_empty</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/attribute_sets.html#RegexSet.is_empty"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.attribute_sets.RegexSet.is_empty" title="Permalink to this definition">¶</a></dt>
+<dd><p>Test if an object is an empty RegexSet.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.attribute_sets.RegexSet.is_universal">
+<code class="descname">is_universal</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/attribute_sets.html#RegexSet.is_universal"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.attribute_sets.RegexSet.is_universal" title="Permalink to this definition">¶</a></dt>
+<dd><p>Test if an object is a universal RegexSet.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.attribute_sets.RegexSet.issubset">
+<code class="descname">issubset</code><span class="sig-paren">(</span><em>other</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/attribute_sets.html#RegexSet.issubset"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.attribute_sets.RegexSet.issubset" title="Permalink to this definition">¶</a></dt>
+<dd><p>Test for regexp inclusion.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.attribute_sets.RegexSet.match">
+<code class="descname">match</code><span class="sig-paren">(</span><em>string</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/attribute_sets.html#RegexSet.match"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.attribute_sets.RegexSet.match" title="Permalink to this definition">¶</a></dt>
+<dd><p>Check if a string is in RegexSet.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.attribute_sets.RegexSet.to_json">
+<code class="descname">to_json</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/attribute_sets.html#RegexSet.to_json"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.attribute_sets.RegexSet.to_json" title="Permalink to this definition">¶</a></dt>
+<dd><p>JSON represenation of RegexSet.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.attribute_sets.RegexSet.union">
+<code class="descname">union</code><span class="sig-paren">(</span><em>other</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/attribute_sets.html#RegexSet.union"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.attribute_sets.RegexSet.union" title="Permalink to this definition">¶</a></dt>
+<dd><p>Union of two regexps.</p>
+</dd></dl>
+
+<dl class="classmethod">
+<dt id="regraph.attribute_sets.RegexSet.universal">
+<em class="property">classmethod </em><code class="descname">universal</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/attribute_sets.html#RegexSet.universal"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.attribute_sets.RegexSet.universal" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a RegexSet object matching any string.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="regraph.attribute_sets.UniversalSet">
+<em class="property">class </em><code class="descclassname">regraph.attribute_sets.</code><code class="descname">UniversalSet</code><span class="sig-paren">(</span><em>*arg</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/attribute_sets.html#UniversalSet"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.attribute_sets.UniversalSet" title="Permalink to this definition">¶</a></dt>
+<dd><p>Universal attribute set.</p>
+<p class="rubric">Methods</p>
+<table border="1" class="longtable docutils">
+<colgroup>
+<col width="10%" />
+<col width="90%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td><a class="reference internal" href="#regraph.attribute_sets.UniversalSet.difference" title="regraph.attribute_sets.UniversalSet.difference"><code class="xref py py-obj docutils literal"><span class="pre">difference</span></code></a>(other)</td>
+<td>Difference with another set.</td>
+</tr>
+<tr class="row-even"><td><code class="xref py py-obj docutils literal"><span class="pre">from_json</span></code>(json_data)</td>
+<td>Create attribute set object from json-like dictionary.</td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#regraph.attribute_sets.UniversalSet.intersect" title="regraph.attribute_sets.UniversalSet.intersect"><code class="xref py py-obj docutils literal"><span class="pre">intersect</span></code></a>(other)</td>
+<td>Intersect with another set.</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#regraph.attribute_sets.UniversalSet.is_empty" title="regraph.attribute_sets.UniversalSet.is_empty"><code class="xref py py-obj docutils literal"><span class="pre">is_empty</span></code></a>()</td>
+<td>Test if empty.</td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#regraph.attribute_sets.UniversalSet.is_universal" title="regraph.attribute_sets.UniversalSet.is_universal"><code class="xref py py-obj docutils literal"><span class="pre">is_universal</span></code></a>()</td>
+<td>Test if universal.</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#regraph.attribute_sets.UniversalSet.issubset" title="regraph.attribute_sets.UniversalSet.issubset"><code class="xref py py-obj docutils literal"><span class="pre">issubset</span></code></a>(other)</td>
+<td>Test if subset of other set.</td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#regraph.attribute_sets.UniversalSet.to_json" title="regraph.attribute_sets.UniversalSet.to_json"><code class="xref py py-obj docutils literal"><span class="pre">to_json</span></code></a>()</td>
+<td>JSON represenation of UniversalSet.</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#regraph.attribute_sets.UniversalSet.union" title="regraph.attribute_sets.UniversalSet.union"><code class="xref py py-obj docutils literal"><span class="pre">union</span></code></a>(other)</td>
+<td>Find union with another set.</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="regraph.attribute_sets.UniversalSet.difference">
+<code class="descname">difference</code><span class="sig-paren">(</span><em>other</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/attribute_sets.html#UniversalSet.difference"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.attribute_sets.UniversalSet.difference" title="Permalink to this definition">¶</a></dt>
+<dd><p>Difference with another set.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.attribute_sets.UniversalSet.intersect">
+<code class="descname">intersect</code><span class="sig-paren">(</span><em>other</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/attribute_sets.html#UniversalSet.intersect"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.attribute_sets.UniversalSet.intersect" title="Permalink to this definition">¶</a></dt>
+<dd><p>Intersect with another set.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.attribute_sets.UniversalSet.is_empty">
+<code class="descname">is_empty</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/attribute_sets.html#UniversalSet.is_empty"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.attribute_sets.UniversalSet.is_empty" title="Permalink to this definition">¶</a></dt>
+<dd><p>Test if empty.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.attribute_sets.UniversalSet.is_universal">
+<code class="descname">is_universal</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/attribute_sets.html#UniversalSet.is_universal"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.attribute_sets.UniversalSet.is_universal" title="Permalink to this definition">¶</a></dt>
+<dd><p>Test if universal.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.attribute_sets.UniversalSet.issubset">
+<code class="descname">issubset</code><span class="sig-paren">(</span><em>other</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/attribute_sets.html#UniversalSet.issubset"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.attribute_sets.UniversalSet.issubset" title="Permalink to this definition">¶</a></dt>
+<dd><p>Test if subset of other set.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.attribute_sets.UniversalSet.to_json">
+<code class="descname">to_json</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/attribute_sets.html#UniversalSet.to_json"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.attribute_sets.UniversalSet.to_json" title="Permalink to this definition">¶</a></dt>
+<dd><p>JSON represenation of UniversalSet.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.attribute_sets.UniversalSet.union">
+<code class="descname">union</code><span class="sig-paren">(</span><em>other</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/attribute_sets.html#UniversalSet.union"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.attribute_sets.UniversalSet.union" title="Permalink to this definition">¶</a></dt>
+<dd><p>Find union with another set.</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">ReGraph</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, Eugenia Oshurko, Yves-Stan Le Cornec.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.3</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+      |
+      <a href="_sources/attribute_sets.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

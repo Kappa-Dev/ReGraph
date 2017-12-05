@@ -21,6 +21,7 @@
     <script type="text/javascript" src="../../_static/jquery.js"></script>
     <script type="text/javascript" src="../../_static/underscore.js"></script>
     <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
    
@@ -39,7 +40,13 @@
           <div class="body" role="main">
             
   <h1>Source code for regraph.primitives</h1><div class="highlight"><pre>
-<span></span><span class="kn">import</span> <span class="nn">warnings</span>
+<span></span><span class="sd">&quot;&quot;&quot;Graph transformation primitives.</span>
+
+<span class="sd">This package contains a collection of utils for various transformations on</span>
+<span class="sd">`networkx.(Di)Graph` objects. Attributes: `regraph.attribute_sets`</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">warnings</span>
 <span class="kn">import</span> <span class="nn">os</span>
 <span class="kn">import</span> <span class="nn">json</span>
 <span class="kn">import</span> <span class="nn">itertools</span>
@@ -52,15 +59,12 @@
 <span class="kn">from</span> <span class="nn">regraph.utils</span> <span class="k">import</span> <span class="p">(</span><span class="n">merge_attributes</span><span class="p">,</span>
                            <span class="n">normalize_attrs</span><span class="p">,</span>
                            <span class="n">valid_attributes</span><span class="p">,</span>
-                           <span class="n">to_set</span><span class="p">,</span>
                            <span class="n">keys_by_value</span><span class="p">,</span>
-                           <span class="n">is_subdict</span><span class="p">,</span>
-                           <span class="n">dict_sub</span><span class="p">)</span>
+                           <span class="n">json_dict_to_attrs</span><span class="p">)</span>
 <span class="kn">from</span> <span class="nn">regraph.exceptions</span> <span class="k">import</span> <span class="p">(</span><span class="n">ReGraphError</span><span class="p">,</span>
                                 <span class="n">GraphError</span><span class="p">,</span>
                                 <span class="n">GraphAttrsWarning</span><span class="p">)</span>
-<span class="kn">from</span> <span class="nn">regraph.attribute_sets</span> <span class="k">import</span> <span class="p">(</span><span class="n">FiniteSet</span><span class="p">,</span>
-                                    <span class="n">AttributeSet</span><span class="p">)</span>
+<span class="kn">from</span> <span class="nn">regraph.attribute_sets</span> <span class="k">import</span> <span class="n">FiniteSet</span>
 
 
 <div class="viewcode-block" id="add_node"><a class="viewcode-back" href="../../primitives.html#regraph.primitives.add_node">[docs]</a><span class="k">def</span> <span class="nf">add_node</span><span class="p">(</span><span class="n">graph</span><span class="p">,</span> <span class="n">node_id</span><span class="p">,</span> <span class="n">attrs</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
@@ -102,11 +106,11 @@
 
 
 <span class="sd">    Examples</span>
-<span class="sd">        --------</span>
-<span class="sd">        &gt;&gt;&gt; import networkx as nx</span>
-<span class="sd">        &gt;&gt;&gt; from regraph.primitives import add_nodes_from</span>
-<span class="sd">        &gt;&gt;&gt; G = nx.Graph()</span>
-<span class="sd">        &gt;&gt;&gt; add_nodes_from(G, [1, (2, {&quot;a&quot;: 1}), 3])</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; import networkx as nx</span>
+<span class="sd">    &gt;&gt;&gt; from regraph.primitives import add_nodes_from</span>
+<span class="sd">    &gt;&gt;&gt; G = nx.Graph()</span>
+<span class="sd">    &gt;&gt;&gt; add_nodes_from(G, [1, (2, {&quot;a&quot;: 1}), 3])</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">node_list</span><span class="p">:</span>
         <span class="k">try</span><span class="p">:</span>
@@ -244,11 +248,11 @@
 
 <span class="sd">    Examples</span>
 <span class="sd">    --------</span>
-<span class="sd">        &gt;&gt;&gt; import networkx as nx</span>
-<span class="sd">        &gt;&gt;&gt; from regraph.primitives import add_nodes_from, add_edges_from</span>
-<span class="sd">        &gt;&gt;&gt; G = nx.Graph()</span>
-<span class="sd">        &gt;&gt;&gt; add_nodes_from(G, [1, 2, 3])</span>
-<span class="sd">        &gt;&gt;&gt; add_edges_from(G, [(1, 2), (2, 3, {&quot;a&quot;: 1})])</span>
+<span class="sd">    &gt;&gt;&gt; import networkx as nx</span>
+<span class="sd">    &gt;&gt;&gt; from regraph.primitives import add_nodes_from, add_edges_from</span>
+<span class="sd">    &gt;&gt;&gt; G = nx.Graph()</span>
+<span class="sd">    &gt;&gt;&gt; add_nodes_from(G, [1, 2, 3])</span>
+<span class="sd">    &gt;&gt;&gt; add_edges_from(G, [(1, 2), (2, 3, {&quot;a&quot;: 1})])</span>
 
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">edge_list</span><span class="p">:</span>
@@ -267,7 +271,7 @@
     <span class="sd">&quot;&quot;&quot;Copy node.</span>
 
 <span class="sd">    Create a copy of a node in a graph. A new id for the copy is</span>
-<span class="sd">    generated by unique_node_id_.</span>
+<span class="sd">    generated by regraph.primitives.unique_node_id.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
@@ -449,7 +453,7 @@
         <span class="n">normalize_attrs</span><span class="p">(</span><span class="n">new_attrs</span><span class="p">)</span>
         <span class="n">graph</span><span class="o">.</span><span class="n">edge</span><span class="p">[</span><span class="n">s</span><span class="p">][</span><span class="n">t</span><span class="p">]</span> <span class="o">=</span> <span class="n">new_attrs</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">graph</span><span class="o">.</span><span class="n">is_directed</span><span class="p">():</span>
-            <span class="n">graph</span><span class="o">.</span><span class="n">edge</span><span class="p">[</span><span class="n">s</span><span class="p">][</span><span class="n">t</span><span class="p">]</span> <span class="o">=</span> <span class="n">new_attrs</span></div>
+            <span class="n">graph</span><span class="o">.</span><span class="n">edge</span><span class="p">[</span><span class="n">t</span><span class="p">][</span><span class="n">s</span><span class="p">]</span> <span class="o">=</span> <span class="n">new_attrs</span></div>
 
 
 <div class="viewcode-block" id="remove_edge_attrs"><a class="viewcode-back" href="../../primitives.html#regraph.primitives.remove_edge_attrs">[docs]</a><span class="k">def</span> <span class="nf">remove_edge_attrs</span><span class="p">(</span><span class="n">graph</span><span class="p">,</span> <span class="n">s</span><span class="p">,</span> <span class="n">t</span><span class="p">,</span> <span class="n">attrs</span><span class="p">):</span>
@@ -586,6 +590,17 @@
 <span class="sd">    GraphError</span>
 <span class="sd">        If node wiht `node_id` does not exists or a node with</span>
 <span class="sd">        `name` (clone&#39;s name) already exists.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; g = nx.DiGraph()</span>
+<span class="sd">    &gt;&gt;&gt; add_nodes_from(g, [1, 2, 3])</span>
+<span class="sd">    &gt;&gt;&gt; add_edges_from(g, [(1, 2), (3, 2)])</span>
+<span class="sd">    &gt;&gt;&gt; clone_node(g, 2, &quot;2_clone&quot;)</span>
+<span class="sd">    &gt;&gt;&gt; g.nodes()</span>
+<span class="sd">    [1, 2, &quot;2_clone&quot;, 3]</span>
+<span class="sd">    &gt;&gt;&gt; g.edges()</span>
+<span class="sd">    [(1, 2), (1, &quot;2_clone&quot;), (3, 2), (3, &quot;2_clone&quot;)]</span>
 
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">if</span> <span class="n">node_id</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">graph</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
@@ -788,6 +803,20 @@
 <span class="sd">    GraphError</span>
 <span class="sd">        If some nodes from `nodes` do not exist in the graph.</span>
 
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+
+<span class="sd">    &gt;&gt;&gt; g = nx.DiGraph()</span>
+<span class="sd">    &gt;&gt;&gt; add_nodes_from(g, [(1, {&quot;a&quot;: 1, &quot;b&quot;: 1}), 2, (3, {&quot;a&quot;: 3, &quot;c&quot;: 3})])</span>
+<span class="sd">    &gt;&gt;&gt; add_edges_from(g, [(1, 3), (1, 2), (2, 3)])</span>
+<span class="sd">    &gt;&gt;&gt; merge_nodes(g, [1, 3], &quot;merged_node&quot;)</span>
+<span class="sd">    &gt;&gt;&gt; g.nodes()</span>
+<span class="sd">    [&quot;merged_node&quot;, 2]</span>
+<span class="sd">    &gt;&gt;&gt; g.edges()</span>
+<span class="sd">    [(&quot;merged_node&quot;, &quot;merged_node&quot;), (&quot;merged_node&quot;, 2), (2, &quot;merged_node&quot;)]</span>
+<span class="sd">    &gt;&gt;&gt; g.node[&quot;merged_node&quot;]</span>
+<span class="sd">    {&quot;a&quot;: {1, 3}, &quot;b&quot;: {1}, &quot;c&quot;: {3}}</span>
+
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">nodes</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
         <span class="k">if</span> <span class="n">node_id</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
@@ -929,9 +958,12 @@
             <span class="k">if</span> <span class="n">self_loop</span><span class="p">:</span>
                 <span class="n">add_edges_from</span><span class="p">(</span><span class="n">graph</span><span class="p">,</span> <span class="p">[(</span><span class="n">node_id</span><span class="p">,</span> <span class="n">node_id</span><span class="p">)])</span>
                 <span class="n">graph</span><span class="o">.</span><span class="n">edge</span><span class="p">[</span><span class="n">node_id</span><span class="p">][</span><span class="n">node_id</span><span class="p">]</span> <span class="o">=</span> <span class="n">self_loop_attrs</span>
-
-            <span class="n">add_edges_from</span><span class="p">(</span><span class="n">graph</span><span class="p">,</span> <span class="p">[(</span><span class="n">n</span><span class="p">,</span> <span class="n">node_id</span><span class="p">)</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">source_nodes</span><span class="p">])</span>
-            <span class="n">add_edges_from</span><span class="p">(</span><span class="n">graph</span><span class="p">,</span> <span class="p">[(</span><span class="n">node_id</span><span class="p">,</span> <span class="n">n</span><span class="p">)</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">target_nodes</span><span class="p">])</span>
+            <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">source_nodes</span><span class="p">:</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">exists_edge</span><span class="p">(</span><span class="n">graph</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="n">node_id</span><span class="p">):</span>
+                    <span class="n">add_edge</span><span class="p">(</span><span class="n">graph</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="n">node_id</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">target_nodes</span><span class="p">:</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">exists_edge</span><span class="p">(</span><span class="n">graph</span><span class="p">,</span> <span class="n">node_id</span><span class="p">,</span> <span class="n">n</span><span class="p">):</span>
+                    <span class="n">add_edge</span><span class="p">(</span><span class="n">graph</span><span class="p">,</span> <span class="n">node_id</span><span class="p">,</span> <span class="n">n</span><span class="p">)</span>
 
             <span class="c1"># Attach accumulated attributes to edges</span>
             <span class="k">for</span> <span class="n">node</span><span class="p">,</span> <span class="n">attrs</span> <span class="ow">in</span> <span class="n">source_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
@@ -957,7 +989,35 @@
 
 
 <div class="viewcode-block" id="subtract"><a class="viewcode-back" href="../../primitives.html#regraph.primitives.subtract">[docs]</a><span class="k">def</span> <span class="nf">subtract</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">ba_mapping</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;Return a graph difference between A and B having B-&gt; A mapping.&quot;&quot;&quot;</span>
+    <span class="sd">&quot;&quot;&quot;Subtract graphs provided node mapping.</span>
+
+<span class="sd">    Subtract graph B from A having mapping of nodes from B to</span>
+<span class="sd">    nodes from A specified.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    a : networkx.(Di)Graph</span>
+<span class="sd">    b : networkx.(Di)Graph</span>
+<span class="sd">    ba_mapping : dict</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    Graph representing the difference a - b.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; a = nx.DiGraph()</span>
+<span class="sd">    &gt;&gt;&gt; add_nodes_from(a, [1, 2, 3])</span>
+<span class="sd">    &gt;&gt;&gt; add_edges_from(a, [(1, 2), (2, 2), (2, 3)])</span>
+<span class="sd">    &gt;&gt;&gt; b = nx.DiGraph()</span>
+<span class="sd">    &gt;&gt;&gt; add_nodes_from(b, [&#39;x&#39;, &#39;y&#39;])</span>
+<span class="sd">    &gt;&gt;&gt; ba_mapping = {&#39;x&#39;: 1, &#39;y&#39;: 3}</span>
+<span class="sd">    &gt;&gt;&gt; diff = subtract(a, b, ba_mapping)</span>
+<span class="sd">    &gt;&gt;&gt; diff.nodes()</span>
+<span class="sd">    [2]</span>
+<span class="sd">    &gt;&gt;&gt; diff.edges()</span>
+<span class="sd">    [(2, 2)]</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">res</span> <span class="o">=</span> <span class="nb">type</span><span class="p">(</span><span class="n">a</span><span class="p">)()</span>
     <span class="n">f</span> <span class="o">=</span> <span class="n">ba_mapping</span>
 
@@ -1025,11 +1085,6 @@
                     <span class="s2">&quot;Error loading graph: edge target is not specified!&quot;</span><span class="p">)</span>
             <span class="k">if</span> <span class="s2">&quot;attrs&quot;</span> <span class="ow">in</span> <span class="n">edge</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
                 <span class="n">attrs</span> <span class="o">=</span> <span class="n">json_dict_to_attrs</span><span class="p">(</span><span class="n">edge</span><span class="p">[</span><span class="s2">&quot;attrs&quot;</span><span class="p">])</span>
-                <span class="c1"># attrs = edge[&quot;attrs&quot;]</span>
-                <span class="c1"># if isinstance(attrs, list):</span>
-                <span class="c1">#     attrs = set(attrs)</span>
-                <span class="c1"># elif isinstance(attrs, str):</span>
-                <span class="c1">#     attrs = set(attrs)</span>
                 <span class="n">loaded_edges</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">s_node</span><span class="p">,</span> <span class="n">t_node</span><span class="p">,</span> <span class="n">attrs</span><span class="p">))</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="n">loaded_edges</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">s_node</span><span class="p">,</span> <span class="n">t_node</span><span class="p">))</span>
@@ -1043,7 +1098,29 @@
 
 
 <div class="viewcode-block" id="load_graph"><a class="viewcode-back" href="../../primitives.html#regraph.primitives.load_graph">[docs]</a><span class="k">def</span> <span class="nf">load_graph</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">directed</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;Create graph from JSON or XML file.&quot;&quot;&quot;</span>
+    <span class="sd">&quot;&quot;&quot;Load a graph from a JSON file.</span>
+
+<span class="sd">    Create a `networkx.(Di)Graph` object from</span>
+<span class="sd">    a JSON representation stored in a file.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    filename : str</span>
+<span class="sd">        Name of the file to load the json serialization of the graph</span>
+<span class="sd">    directed : bool, optional</span>
+<span class="sd">        `True` if the graph to load is directed, `False` otherwise.</span>
+<span class="sd">        Default value `True`.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    nx.(Di)Graph object</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    ReGraphError</span>
+<span class="sd">        If was not able to load the file</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">filename</span><span class="p">):</span>
         <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="s2">&quot;r+&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
             <span class="n">j_data</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">())</span>
@@ -1056,7 +1133,7 @@
 
 
 <div class="viewcode-block" id="graph_to_json"><a class="viewcode-back" href="../../primitives.html#regraph.primitives.graph_to_json">[docs]</a><span class="k">def</span> <span class="nf">graph_to_json</span><span class="p">(</span><span class="n">graph</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;Create Python dict from a graph.&quot;&quot;&quot;</span>
+    <span class="sd">&quot;&quot;&quot;Create a JSON representation of a graph.&quot;&quot;&quot;</span>
     <span class="n">j_data</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;edges&quot;</span><span class="p">:</span> <span class="p">[],</span> <span class="s2">&quot;nodes&quot;</span><span class="p">:</span> <span class="p">[]}</span>
     <span class="c1"># dump nodes</span>
     <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">graph</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
@@ -1084,7 +1161,16 @@
 
 
 <div class="viewcode-block" id="export_graph"><a class="viewcode-back" href="../../primitives.html#regraph.primitives.export_graph">[docs]</a><span class="k">def</span> <span class="nf">export_graph</span><span class="p">(</span><span class="n">graph</span><span class="p">,</span> <span class="n">filename</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;Export graph to JSON or XML file.&quot;&quot;&quot;</span>
+    <span class="sd">&quot;&quot;&quot;Export graph to JSON file.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    graph : networkx.(Di)Graph</span>
+<span class="sd">    filename : str</span>
+<span class="sd">        Name of the file to save the json serialization of the graph</span>
+
+
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
         <span class="n">j_data</span> <span class="o">=</span> <span class="n">graph_to_json</span><span class="p">(</span><span class="n">graph</span><span class="p">)</span>
         <span class="n">json</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">j_data</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span>
@@ -1092,7 +1178,58 @@
 
 
 <div class="viewcode-block" id="find_matching"><a class="viewcode-back" href="../../primitives.html#regraph.primitives.find_matching">[docs]</a><span class="k">def</span> <span class="nf">find_matching</span><span class="p">(</span><span class="n">graph</span><span class="p">,</span> <span class="n">pattern</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;Find matching of a pattern in a graph.&quot;&quot;&quot;</span>
+    <span class="sd">&quot;&quot;&quot;Find matching of a pattern in a graph.</span>
+
+<span class="sd">    This function takes as an input a graph and a pattern graph, it</span>
+<span class="sd">    searches for a matching of the pattern inside of the graph</span>
+<span class="sd">    (corresponds to subgraph matching problem). The matching is defined by</span>
+<span class="sd">    a map from the nodes of the pattern to the nodes of the graph such that:</span>
+
+<span class="sd">    * edges are preserved, i.e. if there is an edge between nodes `n1` and `n2`</span>
+<span class="sd">      in the pattern, there is an edge between the nodes of the graph that</span>
+<span class="sd">      correspond to the image of `n1` and `n2`, moreover, the attribute</span>
+<span class="sd">      dictionary of the edge between `n1` and `n2` is the subdictiotary of</span>
+<span class="sd">      the edge it corresponds to in the graph;</span>
+<span class="sd">    * the attribute dictionary of a pattern node is a subdictionary of</span>
+<span class="sd">      its image in the graph;</span>
+
+<span class="sd">    Uses `networkx.isomorphism.(Di)GraphMatcher` class, which implements</span>
+<span class="sd">    subgraph matching algorithm.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    graph : nx.(Di)Graph</span>
+<span class="sd">    pattern : nx.(Di)Graph</span>
+<span class="sd">        Pattern graph to search for</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    instances : list of dict&#39;s</span>
+<span class="sd">        List of instances of matching found in the graph, every instance</span>
+<span class="sd">        is represented with a dictionary where keys are nodes of the</span>
+<span class="sd">        pattern, and values are corresponding nodes of the graph.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    Suppose you are given the following graph:</span>
+
+<span class="sd">    &gt;&gt;&gt; g = networkx.DiGraph()</span>
+<span class="sd">    &gt;&gt;&gt; add_nodes_from(g, [(1, {&quot;color&quot;: {&quot;red&quot;}}), 2, (3, {&quot;color&quot;: {&quot;blue&quot;}})])</span>
+<span class="sd">    &gt;&gt;&gt; add_edges_from(g, [(1, 1), (1, 2), (3, 3), (3, 2)])</span>
+
+<span class="sd">    And you would like to match the following pattern:</span>
+
+<span class="sd">    &gt;&gt;&gt; pattern = networkx.DiGraph()</span>
+<span class="sd">    &gt;&gt;&gt; add_nodes_from(pattern, [(&quot;x&quot;, {&quot;color&quot;: &quot;blue&quot;}), &quot;y&quot;])</span>
+<span class="sd">    &gt;&gt;&gt; add_edges_from(pattern, [(&quot;x&quot;, &quot;x&quot;), (&quot;x&quot;, &quot;y&quot;)])</span>
+
+<span class="sd">    Matching instances can be found as follows:</span>
+
+<span class="sd">    &gt;&gt;&gt; instances = find_matching(g, pattern)</span>
+<span class="sd">    &gt;&gt;&gt; instances</span>
+<span class="sd">    [{&quot;x&quot;: 3, &quot;y&quot;: 2}]</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">labels_mapping</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">([(</span><span class="n">n</span><span class="p">,</span> <span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">n</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">graph</span><span class="o">.</span><span class="n">nodes</span><span class="p">())])</span>
     <span class="n">g</span> <span class="o">=</span> <span class="n">get_relabeled_graph</span><span class="p">(</span><span class="n">graph</span><span class="p">,</span> <span class="n">labels_mapping</span><span class="p">)</span>
     <span class="n">matching_nodes</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
@@ -1156,7 +1293,7 @@
 
 
 <div class="viewcode-block" id="print_graph"><a class="viewcode-back" href="../../primitives.html#regraph.primitives.print_graph">[docs]</a><span class="k">def</span> <span class="nf">print_graph</span><span class="p">(</span><span class="n">graph</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;Util for nx graphs printing.&quot;&quot;&quot;</span>
+    <span class="sd">&quot;&quot;&quot;Util for pretty graph printing.&quot;&quot;&quot;</span>
     <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Nodes:</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
     <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">graph</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
         <span class="nb">print</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="s2">&quot; : &quot;</span><span class="p">,</span> <span class="n">graph</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">n</span><span class="p">])</span>
@@ -1167,7 +1304,19 @@
 
 
 <div class="viewcode-block" id="equal"><a class="viewcode-back" href="../../primitives.html#regraph.primitives.equal">[docs]</a><span class="k">def</span> <span class="nf">equal</span><span class="p">(</span><span class="n">graph1</span><span class="p">,</span> <span class="n">graph2</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;Eqaulity of two graphs.&quot;&quot;&quot;</span>
+    <span class="sd">&quot;&quot;&quot;Eqaulity of two graphs.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    graph1 : nx.(Di)Graph</span>
+<span class="sd">    graph2 : nx.(Di)Graph</span>
+
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    bool</span>
+<span class="sd">        True if two graphs are equal, False otherwise.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">if</span> <span class="nb">set</span><span class="p">(</span><span class="n">graph1</span><span class="o">.</span><span class="n">nodes</span><span class="p">())</span> <span class="o">!=</span> <span class="nb">set</span><span class="p">(</span><span class="n">graph2</span><span class="o">.</span><span class="n">nodes</span><span class="p">()):</span>
         <span class="k">return</span> <span class="kc">False</span>
     <span class="k">if</span> <span class="nb">set</span><span class="p">(</span><span class="n">graph1</span><span class="o">.</span><span class="n">edges</span><span class="p">())</span> <span class="o">!=</span> <span class="nb">set</span><span class="p">(</span><span class="n">graph2</span><span class="o">.</span><span class="n">edges</span><span class="p">()):</span>
@@ -1185,107 +1334,85 @@
     <span class="k">return</span> <span class="kc">True</span></div>
 
 
-<div class="viewcode-block" id="find_match"><a class="viewcode-back" href="../../primitives.html#regraph.primitives.find_match">[docs]</a><span class="k">def</span> <span class="nf">find_match</span><span class="p">(</span><span class="n">graph</span><span class="p">,</span> <span class="n">pattern</span><span class="p">,</span> <span class="n">graph_typings</span><span class="p">,</span> <span class="n">pattern_typings</span><span class="p">,</span> <span class="n">typing_graphs</span><span class="p">,</span>
-               <span class="n">decr_types</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    graph_typings = dictionnary of typings of the graph</span>
-<span class="sd">    pattern_typings = dictionnary of typings of the pattern</span>
-<span class="sd">    typing_graph = dictionnary of the graphs typing the pattern</span>
+<span class="c1"># def find_match(graph, pattern, graph_typings, pattern_typings, typing_graphs,</span>
+<span class="c1">#                decr_types=False):</span>
+<span class="c1">#     &quot;&quot;&quot;</span>
+<span class="c1">#     graph_typings = dictionnary of typings of the graph</span>
+<span class="c1">#     pattern_typings = dictionnary of typings of the pattern</span>
+<span class="c1">#     typing_graph = dictionnary of the graphs typing the pattern</span>
 
-<span class="sd">    networkX can only look at nodes attributes to compare them</span>
-<span class="sd">    so we put the typings inside during matching</span>
-<span class="sd">    we assume that no key is named:</span>
-<span class="sd">    regraph_tmp_typings_key_that_you_should_not_use</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">typing_key</span> <span class="o">=</span> <span class="s2">&quot;regraph_tmp_typings_key_that_you_should_not_use&quot;</span>
+<span class="c1">#     networkX can only look at nodes attributes to compare them</span>
+<span class="c1">#     so we put the typings inside during matching</span>
+<span class="c1">#     we assume that no key is named:</span>
+<span class="c1">#     regraph_tmp_typings_key_that_you_should_not_use</span>
+<span class="c1">#     &quot;&quot;&quot;</span>
+<span class="c1">#     typing_key = &quot;regraph_tmp_typings_key_that_you_should_not_use&quot;</span>
 
-    <span class="k">def</span> <span class="nf">_allowed_edge</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="n">target</span><span class="p">,</span> <span class="n">typings</span><span class="p">):</span>
-        <span class="k">for</span> <span class="p">(</span><span class="n">typ_id</span><span class="p">,</span> <span class="n">typ_map</span><span class="p">)</span> <span class="ow">in</span> <span class="n">typings</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-            <span class="k">if</span> <span class="n">typ_id</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">typing_graphs</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
-                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                    <span class="s2">&quot;typing graph or pattern not in typing_graphs&quot;</span><span class="p">)</span>
-            <span class="n">typ_gr</span> <span class="o">=</span> <span class="n">typing_graphs</span><span class="p">[</span><span class="n">typ_id</span><span class="p">]</span>
-            <span class="k">if</span> <span class="p">(</span><span class="n">source</span> <span class="ow">in</span> <span class="n">typ_map</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span> <span class="ow">and</span>
-                    <span class="n">target</span> <span class="ow">in</span> <span class="n">typ_map</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span> <span class="ow">and</span>
-                    <span class="n">typ_map</span><span class="p">[</span><span class="n">target</span><span class="p">]</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">typ_gr</span><span class="o">.</span><span class="n">successors</span><span class="p">(</span><span class="n">typ_map</span><span class="p">[</span><span class="n">source</span><span class="p">])):</span>
-                <span class="k">return</span> <span class="kc">False</span>
-        <span class="k">return</span> <span class="kc">True</span>
+<span class="c1">#     def _allowed_edge(source, target, typings):</span>
+<span class="c1">#         for (typ_id, typ_map) in typings.items():</span>
+<span class="c1">#             if typ_id not in typing_graphs.keys():</span>
+<span class="c1">#                 raise ValueError(</span>
+<span class="c1">#                     &quot;typing graph or pattern not in typing_graphs&quot;)</span>
+<span class="c1">#             typ_gr = typing_graphs[typ_id]</span>
+<span class="c1">#             if (source in typ_map.keys() and</span>
+<span class="c1">#                     target in typ_map.keys() and</span>
+<span class="c1">#                     typ_map[target] not in typ_gr.successors(typ_map[source])):</span>
+<span class="c1">#                 return False</span>
+<span class="c1">#         return True</span>
 
-    <span class="n">may_edges</span> <span class="o">=</span> <span class="p">[</span><span class="n">edge</span> <span class="k">for</span> <span class="n">edge</span> <span class="ow">in</span> <span class="n">itertools</span><span class="o">.</span><span class="n">product</span><span class="p">(</span><span class="n">pattern</span><span class="o">.</span><span class="n">nodes</span><span class="p">(),</span>
-                                                    <span class="n">pattern</span><span class="o">.</span><span class="n">nodes</span><span class="p">())</span>
-                 <span class="k">if</span> <span class="p">(</span><span class="n">_allowed_edge</span><span class="p">(</span><span class="o">*</span><span class="n">edge</span><span class="p">,</span> <span class="n">typings</span><span class="o">=</span><span class="n">pattern_typings</span><span class="p">)</span> <span class="ow">and</span>
-                     <span class="n">edge</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">pattern</span><span class="o">.</span><span class="n">edges</span><span class="p">())]</span>
-    <span class="n">may_edges_subsets</span> <span class="o">=</span> <span class="n">itertools</span><span class="o">.</span><span class="n">chain</span><span class="o">.</span><span class="n">from_iterable</span><span class="p">(</span>
-        <span class="n">itertools</span><span class="o">.</span><span class="n">combinations</span><span class="p">(</span><span class="n">may_edges</span><span class="p">,</span> <span class="n">r</span><span class="p">)</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">may_edges</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span><span class="p">))</span>
+<span class="c1">#     may_edges = [edge for edge in itertools.product(pattern.nodes(),</span>
+<span class="c1">#                                                     pattern.nodes())</span>
+<span class="c1">#                  if (_allowed_edge(*edge, typings=pattern_typings) and</span>
+<span class="c1">#                      edge not in pattern.edges())]</span>
+<span class="c1">#     may_edges_subsets = itertools.chain.from_iterable(</span>
+<span class="c1">#         itertools.combinations(may_edges, r) for r in range(len(may_edges) + 1))</span>
 
-    <span class="k">def</span> <span class="nf">_put_typings_in_attrs</span><span class="p">(</span><span class="n">gr</span><span class="p">,</span> <span class="n">typings</span><span class="p">):</span>
-        <span class="k">for</span> <span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="p">(</span><span class="n">typ_id</span><span class="p">,</span> <span class="n">typ_map</span><span class="p">))</span> <span class="ow">in</span>\
-                <span class="n">itertools</span><span class="o">.</span><span class="n">product</span><span class="p">(</span><span class="n">gr</span><span class="o">.</span><span class="n">nodes</span><span class="p">(),</span> <span class="n">typings</span><span class="o">.</span><span class="n">items</span><span class="p">()):</span>
-            <span class="k">if</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">typ_map</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
-                <span class="n">add_node_attrs</span><span class="p">(</span>
-                    <span class="n">gr</span><span class="p">,</span> <span class="n">node</span><span class="p">,</span> <span class="p">{</span><span class="n">typing_key</span><span class="p">:</span> <span class="n">FiniteSet</span><span class="p">([(</span><span class="n">typ_id</span><span class="p">,</span> <span class="n">typ_map</span><span class="p">[</span><span class="n">node</span><span class="p">])])})</span>
+<span class="c1">#     def _put_typings_in_attrs(gr, typings):</span>
+<span class="c1">#         for (node, (typ_id, typ_map)) in\</span>
+<span class="c1">#                 itertools.product(gr.nodes(), typings.items()):</span>
+<span class="c1">#             if node in typ_map.keys():</span>
+<span class="c1">#                 add_node_attrs(</span>
+<span class="c1">#                     gr, node, {typing_key: FiniteSet([(typ_id, typ_map[node])])})</span>
 
-    <span class="n">_put_typings_in_attrs</span><span class="p">(</span><span class="n">pattern</span><span class="p">,</span> <span class="n">pattern_typings</span><span class="p">)</span>
-    <span class="n">_put_typings_in_attrs</span><span class="p">(</span><span class="n">graph</span><span class="p">,</span> <span class="n">graph_typings</span><span class="p">)</span>
+<span class="c1">#     _put_typings_in_attrs(pattern, pattern_typings)</span>
+<span class="c1">#     _put_typings_in_attrs(graph, graph_typings)</span>
 
-    <span class="k">if</span> <span class="n">decr_types</span><span class="p">:</span>
-        <span class="k">def</span> <span class="nf">_compare_dicts</span><span class="p">(</span><span class="n">d1</span><span class="p">,</span> <span class="n">d2</span><span class="p">):</span>
-            <span class="n">types1</span> <span class="o">=</span> <span class="n">d1</span><span class="p">[</span><span class="n">typing_key</span><span class="p">]</span>
-            <span class="n">types2</span> <span class="o">=</span> <span class="n">d2</span><span class="p">[</span><span class="n">typing_key</span><span class="p">]</span>
-            <span class="n">d1_without_types</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">d1</span><span class="p">)</span>
-            <span class="n">d2_without_types</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">d1</span><span class="p">)</span>
-            <span class="k">del</span> <span class="n">d1_without_types</span><span class="p">[</span><span class="n">typing_key</span><span class="p">]</span>
-            <span class="k">del</span> <span class="n">d2_without_types</span><span class="p">[</span><span class="n">typing_key</span><span class="p">]</span>
-            <span class="k">return</span> <span class="p">(</span><span class="n">valid_attributes</span><span class="p">(</span><span class="n">types2</span><span class="p">,</span> <span class="n">types1</span><span class="p">)</span> <span class="ow">and</span>
-                    <span class="n">valid_attributes</span><span class="p">(</span><span class="n">d1_without_types</span><span class="p">,</span> <span class="n">d2_without_types</span><span class="p">))</span>
+<span class="c1">#     if decr_types:</span>
+<span class="c1">#         def _compare_dicts(d1, d2):</span>
+<span class="c1">#             types1 = d1[typing_key]</span>
+<span class="c1">#             types2 = d2[typing_key]</span>
+<span class="c1">#             d1_without_types = copy.copy(d1)</span>
+<span class="c1">#             d2_without_types = copy.copy(d1)</span>
+<span class="c1">#             del d1_without_types[typing_key]</span>
+<span class="c1">#             del d2_without_types[typing_key]</span>
+<span class="c1">#             return (valid_attributes(types2, types1) and</span>
+<span class="c1">#                     valid_attributes(d1_without_types, d2_without_types))</span>
 
-    <span class="k">else</span><span class="p">:</span>
-        <span class="k">def</span> <span class="nf">_compare_dicts</span><span class="p">(</span><span class="n">d1</span><span class="p">,</span> <span class="n">d2</span><span class="p">):</span>
-            <span class="k">return</span> <span class="n">valid_attributes</span><span class="p">(</span><span class="n">d2</span><span class="p">,</span> <span class="n">d1</span><span class="p">)</span>
+<span class="c1">#     else:</span>
+<span class="c1">#         def _compare_dicts(d1, d2):</span>
+<span class="c1">#             return valid_attributes(d2, d1)</span>
 
-    <span class="n">matchings</span> <span class="o">=</span> <span class="p">[]</span>
-    <span class="k">for</span> <span class="n">added_edges</span> <span class="ow">in</span> <span class="n">may_edges_subsets</span><span class="p">:</span>
-        <span class="n">pat</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">pattern</span><span class="p">)</span>
-        <span class="n">pat</span><span class="o">.</span><span class="n">add_edges_from</span><span class="p">(</span><span class="n">added_edges</span><span class="p">)</span>
-        <span class="k">if</span> <span class="n">graph</span><span class="o">.</span><span class="n">is_directed</span><span class="p">():</span>
-            <span class="n">matcher</span> <span class="o">=</span> <span class="n">isomorphism</span><span class="o">.</span><span class="n">DiGraphMatcher</span><span class="p">(</span><span class="n">graph</span><span class="p">,</span> <span class="n">pat</span><span class="p">,</span> <span class="n">_compare_dicts</span><span class="p">,</span>
-                                                 <span class="n">_compare_dicts</span><span class="p">)</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="n">matcher</span> <span class="o">=</span> <span class="n">isomorphism</span><span class="o">.</span><span class="n">GraphMatcher</span><span class="p">(</span><span class="n">graph</span><span class="p">,</span> <span class="n">pat</span><span class="p">,</span> <span class="n">_compare_dicts</span><span class="p">,</span>
-                                               <span class="n">_compare_dicts</span><span class="p">)</span>
-        <span class="k">for</span> <span class="n">sub</span> <span class="ow">in</span> <span class="n">matcher</span><span class="o">.</span><span class="n">subgraph_isomorphisms_iter</span><span class="p">():</span>
-            <span class="n">matchings</span><span class="o">.</span><span class="n">append</span><span class="p">({</span><span class="n">v</span><span class="p">:</span> <span class="n">k</span> <span class="k">for</span> <span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span> <span class="ow">in</span> <span class="n">sub</span><span class="o">.</span><span class="n">items</span><span class="p">()})</span>
+<span class="c1">#     matchings = []</span>
+<span class="c1">#     for added_edges in may_edges_subsets:</span>
+<span class="c1">#         pat = copy.deepcopy(pattern)</span>
+<span class="c1">#         pat.add_edges_from(added_edges)</span>
+<span class="c1">#         if graph.is_directed():</span>
+<span class="c1">#             matcher = isomorphism.DiGraphMatcher(graph, pat, _compare_dicts,</span>
+<span class="c1">#                                                  _compare_dicts)</span>
+<span class="c1">#         else:</span>
+<span class="c1">#             matcher = isomorphism.GraphMatcher(graph, pat, _compare_dicts,</span>
+<span class="c1">#                                                _compare_dicts)</span>
+<span class="c1">#         for sub in matcher.subgraph_isomorphisms_iter():</span>
+<span class="c1">#             matchings.append({v: k for (k, v) in sub.items()})</span>
 
-    <span class="k">def</span> <span class="nf">_remove_typings_in_attrs</span><span class="p">(</span><span class="n">gr</span><span class="p">):</span>
-        <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">gr</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
-            <span class="k">if</span> <span class="n">typing_key</span> <span class="ow">in</span> <span class="n">gr</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">node</span><span class="p">]</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
-                <span class="k">del</span> <span class="n">gr</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">node</span><span class="p">][</span><span class="n">typing_key</span><span class="p">]</span>
+<span class="c1">#     def _remove_typings_in_attrs(gr):</span>
+<span class="c1">#         for node in gr.nodes():</span>
+<span class="c1">#             if typing_key in gr.node[node].keys():</span>
+<span class="c1">#                 del gr.node[node][typing_key]</span>
 
-    <span class="n">_remove_typings_in_attrs</span><span class="p">(</span><span class="n">graph</span><span class="p">)</span>
-    <span class="n">_remove_typings_in_attrs</span><span class="p">(</span><span class="n">pattern</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">matchings</span></div>
-
-
-<span class="k">def</span> <span class="nf">_check_input</span><span class="p">(</span><span class="n">input_set</span><span class="p">):</span>
-    <span class="k">pass</span>
-
-
-<div class="viewcode-block" id="json_dict_to_attrs"><a class="viewcode-back" href="../../primitives.html#regraph.primitives.json_dict_to_attrs">[docs]</a><span class="k">def</span> <span class="nf">json_dict_to_attrs</span><span class="p">(</span><span class="n">d</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;Convert json dictionary to attributes.&quot;&quot;&quot;</span>
-    <span class="n">attrs</span> <span class="o">=</span> <span class="p">{}</span>
-    <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">d</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-        <span class="k">if</span> <span class="s2">&quot;strSet&quot;</span> <span class="ow">in</span> <span class="n">v</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span> <span class="ow">or</span> <span class="s2">&quot;numSet&quot;</span> <span class="ow">in</span> <span class="n">v</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
-            <span class="n">new_v</span> <span class="o">=</span> <span class="p">{</span>
-                <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;FiniteSet&quot;</span><span class="p">,</span>
-                <span class="s2">&quot;data&quot;</span><span class="p">:</span> <span class="p">[]</span>
-            <span class="p">}</span>
-            <span class="k">if</span> <span class="s2">&quot;pos_list&quot;</span> <span class="ow">in</span> <span class="n">v</span><span class="p">[</span><span class="s2">&quot;strSet&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
-                <span class="n">new_v</span><span class="p">[</span><span class="s2">&quot;data&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">v</span><span class="p">[</span><span class="s2">&quot;strSet&quot;</span><span class="p">][</span><span class="s2">&quot;pos_list&quot;</span><span class="p">])</span>
-            <span class="k">if</span> <span class="s2">&quot;pos_list&quot;</span> <span class="ow">in</span> <span class="n">v</span><span class="p">[</span><span class="s2">&quot;numSet&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
-                <span class="n">new_v</span><span class="p">[</span><span class="s2">&quot;data&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">v</span><span class="p">[</span><span class="s2">&quot;numSet&quot;</span><span class="p">][</span><span class="s2">&quot;pos_list&quot;</span><span class="p">])</span>
-            <span class="n">v</span> <span class="o">=</span> <span class="n">new_v</span>
-        <span class="n">attrs</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">AttributeSet</span><span class="o">.</span><span class="n">from_json</span><span class="p">(</span><span class="n">v</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">attrs</span></div>
+<span class="c1">#     _remove_typings_in_attrs(graph)</span>
+<span class="c1">#     _remove_typings_in_attrs(pattern)</span>
+<span class="c1">#     return matchings</span>
 
 
 <div class="viewcode-block" id="unique_node_id"><a class="viewcode-back" href="../../primitives.html#regraph.primitives.unique_node_id">[docs]</a><span class="k">def</span> <span class="nf">unique_node_id</span><span class="p">(</span><span class="n">graph</span><span class="p">,</span> <span class="n">prefix</span><span class="p">):</span>

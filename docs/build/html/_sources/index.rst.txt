@@ -16,19 +16,28 @@ ReGraph contains a collection of utilities for graph rewriting on `NetworkX (ver
    :maxdepth: 2
    :caption: Contents:
 
-User's Guide
-============
+:ref:`tutorial`
+==============
 
 * :ref:`installation`
-* :ref:`tutorial`
+* :ref:`simple_rewriting`
+	* :ref:`graph_creation`
+	* :ref:`advanced_attributes`
+	* :ref:`rewiting_rules`
+* :ref:`hierarchy_tutorial`
+	* :ref:`hierarchy_creation`
+	* :ref:`rewriting_in_hierarchy`
+	* :ref:`propagation_in_hierarchy`
 
 
-Reference
-=========
+:ref:`modules`
+================
 
 * :ref:`primitives`
+* :ref:`attribute_sets`
 * :ref:`rules`
-* :ref:`attributes`
+* :ref:`hierarchy`
+* :ref:`exceptions`
 
 
 Indices and tables
