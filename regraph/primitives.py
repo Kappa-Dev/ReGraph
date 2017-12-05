@@ -1292,85 +1292,85 @@ def equal(graph1, graph2):
     return True
 
 
-# def find_match(graph, pattern, graph_typings, pattern_typings, typing_graphs,
-#                decr_types=False):
-#     """
-#     graph_typings = dictionnary of typings of the graph
-#     pattern_typings = dictionnary of typings of the pattern
-#     typing_graph = dictionnary of the graphs typing the pattern
+def find_match(graph, pattern, graph_typings, pattern_typings, typing_graphs,
+               decr_types=False):
+    """
+    graph_typings = dictionnary of typings of the graph
+    pattern_typings = dictionnary of typings of the pattern
+    typing_graph = dictionnary of the graphs typing the pattern
 
-#     networkX can only look at nodes attributes to compare them
-#     so we put the typings inside during matching
-#     we assume that no key is named:
-#     regraph_tmp_typings_key_that_you_should_not_use
-#     """
-#     typing_key = "regraph_tmp_typings_key_that_you_should_not_use"
+    networkX can only look at nodes attributes to compare them
+    so we put the typings inside during matching
+    we assume that no key is named:
+    regraph_tmp_typings_key_that_you_should_not_use
+    """
+    typing_key = "regraph_tmp_typings_key_that_you_should_not_use"
 
-#     def _allowed_edge(source, target, typings):
-#         for (typ_id, typ_map) in typings.items():
-#             if typ_id not in typing_graphs.keys():
-#                 raise ValueError(
-#                     "typing graph or pattern not in typing_graphs")
-#             typ_gr = typing_graphs[typ_id]
-#             if (source in typ_map.keys() and
-#                     target in typ_map.keys() and
-#                     typ_map[target] not in typ_gr.successors(typ_map[source])):
-#                 return False
-#         return True
+    def _allowed_edge(source, target, typings):
+        for (typ_id, typ_map) in typings.items():
+            if typ_id not in typing_graphs.keys():
+                raise ValueError(
+                    "typing graph or pattern not in typing_graphs")
+            typ_gr = typing_graphs[typ_id]
+            if (source in typ_map.keys() and
+                    target in typ_map.keys() and
+                    typ_map[target] not in typ_gr.successors(typ_map[source])):
+                return False
+        return True
 
-#     may_edges = [edge for edge in itertools.product(pattern.nodes(),
-#                                                     pattern.nodes())
-#                  if (_allowed_edge(*edge, typings=pattern_typings) and
-#                      edge not in pattern.edges())]
-#     may_edges_subsets = itertools.chain.from_iterable(
-#         itertools.combinations(may_edges, r) for r in range(len(may_edges) + 1))
+    may_edges = [edge for edge in itertools.product(pattern.nodes(),
+                                                    pattern.nodes())
+                 if (_allowed_edge(*edge, typings=pattern_typings) and
+                     edge not in pattern.edges())]
+    may_edges_subsets = itertools.chain.from_iterable(
+        itertools.combinations(may_edges, r) for r in range(len(may_edges) + 1))
 
-#     def _put_typings_in_attrs(gr, typings):
-#         for (node, (typ_id, typ_map)) in\
-#                 itertools.product(gr.nodes(), typings.items()):
-#             if node in typ_map.keys():
-#                 add_node_attrs(
-#                     gr, node, {typing_key: FiniteSet([(typ_id, typ_map[node])])})
+    def _put_typings_in_attrs(gr, typings):
+        for (node, (typ_id, typ_map)) in\
+                itertools.product(gr.nodes(), typings.items()):
+            if node in typ_map.keys():
+                add_node_attrs(
+                    gr, node, {typing_key: FiniteSet([(typ_id, typ_map[node])])})
 
-#     _put_typings_in_attrs(pattern, pattern_typings)
-#     _put_typings_in_attrs(graph, graph_typings)
+    _put_typings_in_attrs(pattern, pattern_typings)
+    _put_typings_in_attrs(graph, graph_typings)
 
-#     if decr_types:
-#         def _compare_dicts(d1, d2):
-#             types1 = d1[typing_key]
-#             types2 = d2[typing_key]
-#             d1_without_types = copy.copy(d1)
-#             d2_without_types = copy.copy(d1)
-#             del d1_without_types[typing_key]
-#             del d2_without_types[typing_key]
-#             return (valid_attributes(types2, types1) and
-#                     valid_attributes(d1_without_types, d2_without_types))
+    if decr_types:
+        def _compare_dicts(d1, d2):
+            types1 = d1[typing_key]
+            types2 = d2[typing_key]
+            d1_without_types = copy.copy(d1)
+            d2_without_types = copy.copy(d1)
+            del d1_without_types[typing_key]
+            del d2_without_types[typing_key]
+            return (valid_attributes(types2, types1) and
+                    valid_attributes(d1_without_types, d2_without_types))
 
-#     else:
-#         def _compare_dicts(d1, d2):
-#             return valid_attributes(d2, d1)
+    else:
+        def _compare_dicts(d1, d2):
+            return valid_attributes(d2, d1)
 
-#     matchings = []
-#     for added_edges in may_edges_subsets:
-#         pat = copy.deepcopy(pattern)
-#         pat.add_edges_from(added_edges)
-#         if graph.is_directed():
-#             matcher = isomorphism.DiGraphMatcher(graph, pat, _compare_dicts,
-#                                                  _compare_dicts)
-#         else:
-#             matcher = isomorphism.GraphMatcher(graph, pat, _compare_dicts,
-#                                                _compare_dicts)
-#         for sub in matcher.subgraph_isomorphisms_iter():
-#             matchings.append({v: k for (k, v) in sub.items()})
+    matchings = []
+    for added_edges in may_edges_subsets:
+        pat = copy.deepcopy(pattern)
+        pat.add_edges_from(added_edges)
+        if graph.is_directed():
+            matcher = isomorphism.DiGraphMatcher(graph, pat, _compare_dicts,
+                                                 _compare_dicts)
+        else:
+            matcher = isomorphism.GraphMatcher(graph, pat, _compare_dicts,
+                                               _compare_dicts)
+        for sub in matcher.subgraph_isomorphisms_iter():
+            matchings.append({v: k for (k, v) in sub.items()})
 
-#     def _remove_typings_in_attrs(gr):
-#         for node in gr.nodes():
-#             if typing_key in gr.node[node].keys():
-#                 del gr.node[node][typing_key]
+    def _remove_typings_in_attrs(gr):
+        for node in gr.nodes():
+            if typing_key in gr.node[node].keys():
+                del gr.node[node][typing_key]
 
-#     _remove_typings_in_attrs(graph)
-#     _remove_typings_in_attrs(pattern)
-#     return matchings
+    _remove_typings_in_attrs(graph)
+    _remove_typings_in_attrs(pattern)
+    return matchings
 
 
 def unique_node_id(graph, prefix):

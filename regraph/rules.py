@@ -367,12 +367,12 @@ class Rule(object):
             raise RuleError("Node '%s' is not a node of the rhs" % n1)
         if n2 not in self.rhs.nodes():
             raise RuleError("Node '%s' is not a node of the rhs" % n2)
-        primitives.merge_nodes(self.rhs, [n1, n2], node_name=new_name)
+        primitives.merge_nodes(self.rhs, [n1, n2], node_id=new_name)
         for (source, target) in self.p_rhs.items():
             if target == n1 or target == n2:
                 self.p_rhs[source] = new_name
 
-    def merge_nodes(self, n1, n2, node_name=None):
+    def merge_nodes(self, n1, n2, node_id=None):
         """Merge two nodes of the graph."""
         # Update graphs
         new_name = None
@@ -397,7 +397,7 @@ class Rule(object):
         new_name = primitives.merge_nodes(
             self.rhs,
             list(nodes_to_merge),
-            node_id=node_name
+            node_id=node_id
         )
         # Update mappings
         keys = p_keys_1 + p_keys_2
