@@ -6,10 +6,10 @@ Implements the following data structures:
   provides an interface, implements some common behaviour;
 * `FiniteSet` -- wrapper for Python finite sets, inherits `AttributeSet`;
 * `RegexSet` -- a class for possibly infinite sets of strings given by
-  regular expressions. It uses the `greenery` library for finding
-  inclusion and intersection of regular expressions, its method `match` can
-  be used to test if a given string is in a set of strings defined by
-  regular expressions;
+  regular expressions. It uses the `greenery <https://github.com/qntm/greenery>`_
+  library for finding inclusion and intersection of regular expressions,
+  its method `match` can be used to test if a given string is in
+  a set of strings defined by regular expressions;
 
 * `IntegerSet` -- a class for possibly infinite sets of integers
   defined by a set of disjoint intervals, inherits `AttributeSet`,

@@ -48,10 +48,10 @@
 provides an interface, implements some common behaviour;</li>
 <li><cite>FiniteSet</cite> – wrapper for Python finite sets, inherits <cite>AttributeSet</cite>;</li>
 <li><cite>RegexSet</cite> – a class for possibly infinite sets of strings given by
-regular expressions. It uses the <cite>greenery</cite> library for finding
-inclusion and intersection of regular expressions, its method <cite>match</cite> can
-be used to test if a given string is in a set of strings defined by
-regular expressions;</li>
+regular expressions. It uses the <a class="reference external" href="https://github.com/qntm/greenery">greenery</a>
+library for finding inclusion and intersection of regular expressions,
+its method <cite>match</cite> can be used to test if a given string is in
+a set of strings defined by regular expressions;</li>
 <li><cite>IntegerSet</cite> – a class for possibly infinite sets of integers
 defined by a set of disjoint intervals, inherits <cite>AttributeSet</cite>,
 provides the method <cite>contains</cite> for testing if a given integer is in
@@ -763,22 +763,25 @@ a copy of <cite>self</cite>.</li>
 <tr class="row-even"><td><code class="xref py py-obj docutils literal"><span class="pre">from_json</span></code>(json_data)</td>
 <td>Create attribute set object from json-like dictionary.</td>
 </tr>
-<tr class="row-odd"><td><a class="reference internal" href="#regraph.attribute_sets.UniversalSet.intersect" title="regraph.attribute_sets.UniversalSet.intersect"><code class="xref py py-obj docutils literal"><span class="pre">intersect</span></code></a>(other)</td>
+<tr class="row-odd"><td><code class="xref py py-obj docutils literal"><span class="pre">intersect</span></code>(other)</td>
+<td>Find intersection attribute set.</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#regraph.attribute_sets.UniversalSet.intersection" title="regraph.attribute_sets.UniversalSet.intersection"><code class="xref py py-obj docutils literal"><span class="pre">intersection</span></code></a>(other)</td>
 <td>Intersect with another set.</td>
 </tr>
-<tr class="row-even"><td><a class="reference internal" href="#regraph.attribute_sets.UniversalSet.is_empty" title="regraph.attribute_sets.UniversalSet.is_empty"><code class="xref py py-obj docutils literal"><span class="pre">is_empty</span></code></a>()</td>
+<tr class="row-odd"><td><a class="reference internal" href="#regraph.attribute_sets.UniversalSet.is_empty" title="regraph.attribute_sets.UniversalSet.is_empty"><code class="xref py py-obj docutils literal"><span class="pre">is_empty</span></code></a>()</td>
 <td>Test if empty.</td>
 </tr>
-<tr class="row-odd"><td><a class="reference internal" href="#regraph.attribute_sets.UniversalSet.is_universal" title="regraph.attribute_sets.UniversalSet.is_universal"><code class="xref py py-obj docutils literal"><span class="pre">is_universal</span></code></a>()</td>
+<tr class="row-even"><td><a class="reference internal" href="#regraph.attribute_sets.UniversalSet.is_universal" title="regraph.attribute_sets.UniversalSet.is_universal"><code class="xref py py-obj docutils literal"><span class="pre">is_universal</span></code></a>()</td>
 <td>Test if universal.</td>
 </tr>
-<tr class="row-even"><td><a class="reference internal" href="#regraph.attribute_sets.UniversalSet.issubset" title="regraph.attribute_sets.UniversalSet.issubset"><code class="xref py py-obj docutils literal"><span class="pre">issubset</span></code></a>(other)</td>
+<tr class="row-odd"><td><a class="reference internal" href="#regraph.attribute_sets.UniversalSet.issubset" title="regraph.attribute_sets.UniversalSet.issubset"><code class="xref py py-obj docutils literal"><span class="pre">issubset</span></code></a>(other)</td>
 <td>Test if subset of other set.</td>
 </tr>
-<tr class="row-odd"><td><a class="reference internal" href="#regraph.attribute_sets.UniversalSet.to_json" title="regraph.attribute_sets.UniversalSet.to_json"><code class="xref py py-obj docutils literal"><span class="pre">to_json</span></code></a>()</td>
+<tr class="row-even"><td><a class="reference internal" href="#regraph.attribute_sets.UniversalSet.to_json" title="regraph.attribute_sets.UniversalSet.to_json"><code class="xref py py-obj docutils literal"><span class="pre">to_json</span></code></a>()</td>
 <td>JSON represenation of UniversalSet.</td>
 </tr>
-<tr class="row-even"><td><a class="reference internal" href="#regraph.attribute_sets.UniversalSet.union" title="regraph.attribute_sets.UniversalSet.union"><code class="xref py py-obj docutils literal"><span class="pre">union</span></code></a>(other)</td>
+<tr class="row-odd"><td><a class="reference internal" href="#regraph.attribute_sets.UniversalSet.union" title="regraph.attribute_sets.UniversalSet.union"><code class="xref py py-obj docutils literal"><span class="pre">union</span></code></a>(other)</td>
 <td>Find union with another set.</td>
 </tr>
 </tbody>
@@ -790,8 +793,8 @@ a copy of <cite>self</cite>.</li>
 </dd></dl>
 
 <dl class="method">
-<dt id="regraph.attribute_sets.UniversalSet.intersect">
-<code class="descname">intersect</code><span class="sig-paren">(</span><em>other</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/attribute_sets.html#UniversalSet.intersect"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.attribute_sets.UniversalSet.intersect" title="Permalink to this definition">¶</a></dt>
+<dt id="regraph.attribute_sets.UniversalSet.intersection">
+<code class="descname">intersection</code><span class="sig-paren">(</span><em>other</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/attribute_sets.html#UniversalSet.intersection"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.attribute_sets.UniversalSet.intersection" title="Permalink to this definition">¶</a></dt>
 <dd><p>Intersect with another set.</p>
 </dd></dl>
 
