@@ -10,7 +10,7 @@ class ReGraphError(ReGraphException):
 
 
 class GraphError(ReGraphException):
-    """."""
+    """Class for errors in graph transformation with primitives."""
 
 
 class ReGraphWarning(UserWarning):

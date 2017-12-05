@@ -6,6 +6,24 @@ from regraph.exceptions import ReGraphError, ParsingError
 from regraph.attribute_sets import AttributeSet, FiniteSet
 
 
+def json_dict_to_attrs(d):
+    """Convert json dictionary to attributes."""
+    attrs = {}
+    for k, v in d.items():
+        if "strSet" in v.keys() or "numSet" in v.keys():
+            new_v = {
+                "type": "FiniteSet",
+                "data": []
+            }
+            if "pos_list" in v["strSet"].keys():
+                new_v["data"].append(v["strSet"]["pos_list"])
+            if "pos_list" in v["numSet"].keys():
+                new_v["data"].append(v["numSet"]["pos_list"])
+            v = new_v
+        attrs[k] = AttributeSet.from_json(v)
+    return attrs
+
+
 def valid_attributes(source, target):
     """Test the validity of attributes."""
     for key, value in source.items():
