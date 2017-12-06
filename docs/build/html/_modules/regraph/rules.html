@@ -306,14 +306,19 @@
                 <span class="n">node_id</span>
             <span class="p">)</span></div>
 
-<div class="viewcode-block" id="Rule.remove_node_rhs"><a class="viewcode-back" href="../../rules.html#regraph.rules.Rule.remove_node_rhs">[docs]</a>    <span class="k">def</span> <span class="nf">remove_node_rhs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Remove a node from a rhs.&quot;&quot;&quot;</span>
-        <span class="n">p_keys</span> <span class="o">=</span> <span class="n">keys_by_value</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">p_rhs</span><span class="p">,</span> <span class="n">n</span><span class="p">)</span>
+<div class="viewcode-block" id="Rule.remove_node_rhs"><a class="viewcode-back" href="../../rules.html#regraph.rules.Rule.remove_node_rhs">[docs]</a>    <span class="k">def</span> <span class="nf">remove_node_rhs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node_id</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Remove a node from the `rhs`.</span>
+
+<span class="sd">        This method removes a given node from the `rhs`,</span>
+<span class="sd">        if there exist nodes from `p` that map to this node</span>
+<span class="sd">        they are removed as well.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">p_keys</span> <span class="o">=</span> <span class="n">keys_by_value</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">p_rhs</span><span class="p">,</span> <span class="n">node_id</span><span class="p">)</span>
         <span class="k">for</span> <span class="n">p_node</span> <span class="ow">in</span> <span class="n">p_keys</span><span class="p">:</span>
             <span class="n">primitives</span><span class="o">.</span><span class="n">remove_node</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">p</span><span class="p">,</span> <span class="n">p_node</span><span class="p">)</span>
             <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">p_rhs</span><span class="p">[</span><span class="n">p_node</span><span class="p">]</span>
             <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">p_lhs</span><span class="p">[</span><span class="n">p_node</span><span class="p">]</span>
-        <span class="n">primitives</span><span class="o">.</span><span class="n">remove_node</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rhs</span><span class="p">,</span> <span class="n">n</span><span class="p">)</span></div>
+        <span class="n">primitives</span><span class="o">.</span><span class="n">remove_node</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rhs</span><span class="p">,</span> <span class="n">node_id</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="Rule.remove_node"><a class="viewcode-back" href="../../rules.html#regraph.rules.Rule.remove_node">[docs]</a>    <span class="k">def</span> <span class="nf">remove_node</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Remove a node in the graph.&quot;&quot;&quot;</span>
@@ -902,7 +907,13 @@
         <span class="k">return</span> <span class="p">(</span><span class="n">g_prime</span><span class="p">,</span> <span class="n">rhs_g_prime</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="Rule.added_nodes"><a class="viewcode-back" href="../../rules.html#regraph.rules.Rule.added_nodes">[docs]</a>    <span class="k">def</span> <span class="nf">added_nodes</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;A set of nodes from rhs which are added by a rule.&quot;&quot;&quot;</span>
+        <span class="sd">&quot;&quot;&quot;Get nodes added by the rule.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        nodes : set</span>
+<span class="sd">            Set of nodes from `rhs` added by the rule.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">nodes</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
         <span class="k">for</span> <span class="n">r_node</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">rhs</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
             <span class="n">p_nodes</span> <span class="o">=</span> <span class="n">keys_by_value</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">p_rhs</span><span class="p">,</span> <span class="n">r_node</span><span class="p">)</span>
@@ -911,7 +922,13 @@
         <span class="k">return</span> <span class="n">nodes</span></div>
 
 <div class="viewcode-block" id="Rule.added_edges"><a class="viewcode-back" href="../../rules.html#regraph.rules.Rule.added_edges">[docs]</a>    <span class="k">def</span> <span class="nf">added_edges</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;.&quot;&quot;&quot;</span>
+        <span class="sd">&quot;&quot;&quot;Get edges added by the rule.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        edges : set</span>
+<span class="sd">            Set of edges from `rhs` added by the rule.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">edges</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
         <span class="k">for</span> <span class="n">s</span><span class="p">,</span> <span class="n">t</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">rhs</span><span class="o">.</span><span class="n">edges</span><span class="p">():</span>
             <span class="n">s_p_nodes</span> <span class="o">=</span> <span class="n">keys_by_value</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">p_rhs</span><span class="p">,</span> <span class="n">s</span><span class="p">)</span>
@@ -929,7 +946,14 @@
         <span class="k">return</span> <span class="n">edges</span></div>
 
 <div class="viewcode-block" id="Rule.added_node_attrs"><a class="viewcode-back" href="../../rules.html#regraph.rules.Rule.added_node_attrs">[docs]</a>    <span class="k">def</span> <span class="nf">added_node_attrs</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;.&quot;&quot;&quot;</span>
+        <span class="sd">&quot;&quot;&quot;Get node attributes added by the rule.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        attrs : dict</span>
+<span class="sd">            Dictionary where keys are nodes from `rhs`</span>
+<span class="sd">            and values are attribute dictionaries to add.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">attrs</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
         <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">rhs</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
             <span class="n">p_nodes</span> <span class="o">=</span> <span class="n">keys_by_value</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">p_rhs</span><span class="p">,</span> <span class="n">node</span><span class="p">)</span>
@@ -944,7 +968,14 @@
         <span class="k">return</span> <span class="n">attrs</span></div>
 
 <div class="viewcode-block" id="Rule.added_edge_attrs"><a class="viewcode-back" href="../../rules.html#regraph.rules.Rule.added_edge_attrs">[docs]</a>    <span class="k">def</span> <span class="nf">added_edge_attrs</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;.&quot;&quot;&quot;</span>
+        <span class="sd">&quot;&quot;&quot;Get edge attributes added by the rule.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        attrs : dict</span>
+<span class="sd">            Dictionary where keys are edges from `rhs`</span>
+<span class="sd">            and values are attribute dictionaries to add.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">attrs</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
         <span class="k">for</span> <span class="n">s</span><span class="p">,</span> <span class="n">t</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">rhs</span><span class="o">.</span><span class="n">edges</span><span class="p">():</span>
             <span class="n">s_p_nodes</span> <span class="o">=</span> <span class="n">keys_by_value</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">p_rhs</span><span class="p">,</span> <span class="n">s</span><span class="p">)</span>
@@ -963,7 +994,14 @@
         <span class="k">return</span> <span class="n">attrs</span></div>
 
 <div class="viewcode-block" id="Rule.merged_nodes"><a class="viewcode-back" href="../../rules.html#regraph.rules.Rule.merged_nodes">[docs]</a>    <span class="k">def</span> <span class="nf">merged_nodes</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;.&quot;&quot;&quot;</span>
+        <span class="sd">&quot;&quot;&quot;Get nodes merged by the rule.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        nodes : dict</span>
+<span class="sd">            Dictionary where keys are nodes from `rhs` and</span>
+<span class="sd">            values are sets of nodes from `p` that are merged.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">nodes</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
         <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">rhs</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
             <span class="n">p_nodes</span> <span class="o">=</span> <span class="n">keys_by_value</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">p_rhs</span><span class="p">,</span> <span class="n">node</span><span class="p">)</span>
@@ -972,7 +1010,13 @@
         <span class="k">return</span> <span class="n">nodes</span></div>
 
 <div class="viewcode-block" id="Rule.removed_nodes"><a class="viewcode-back" href="../../rules.html#regraph.rules.Rule.removed_nodes">[docs]</a>    <span class="k">def</span> <span class="nf">removed_nodes</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;.&quot;&quot;&quot;</span>
+        <span class="sd">&quot;&quot;&quot;Get nodes removed by the rule.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        nodes : set</span>
+<span class="sd">            Set of nodes from `lhs` removed by the rule.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">nodes</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
         <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">lhs</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
             <span class="n">p_nodes</span> <span class="o">=</span> <span class="n">keys_by_value</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">p_lhs</span><span class="p">,</span> <span class="n">node</span><span class="p">)</span>
@@ -981,7 +1025,13 @@
         <span class="k">return</span> <span class="n">nodes</span></div>
 
 <div class="viewcode-block" id="Rule.removed_edges"><a class="viewcode-back" href="../../rules.html#regraph.rules.Rule.removed_edges">[docs]</a>    <span class="k">def</span> <span class="nf">removed_edges</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;.&quot;&quot;&quot;</span>
+        <span class="sd">&quot;&quot;&quot;Get edges removed by the rule.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        edges : set</span>
+<span class="sd">            Set of edges from `lhs` removed by the rule.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">edges</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
         <span class="k">for</span> <span class="n">s</span><span class="p">,</span> <span class="n">t</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">lhs</span><span class="o">.</span><span class="n">edges</span><span class="p">():</span>
             <span class="n">s_p_nodes</span> <span class="o">=</span> <span class="n">keys_by_value</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">p_lhs</span><span class="p">,</span> <span class="n">s</span><span class="p">)</span>
@@ -994,7 +1044,14 @@
         <span class="k">return</span> <span class="n">edges</span></div>
 
 <div class="viewcode-block" id="Rule.removed_node_attrs"><a class="viewcode-back" href="../../rules.html#regraph.rules.Rule.removed_node_attrs">[docs]</a>    <span class="k">def</span> <span class="nf">removed_node_attrs</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;.&quot;&quot;&quot;</span>
+        <span class="sd">&quot;&quot;&quot;Get node attributes removed by the rule.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        attrs : dict</span>
+<span class="sd">            Dictionary where keys are nodes from `lhs`</span>
+<span class="sd">            and values are attribute dictionaries to remove.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">attrs</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
         <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">lhs</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
             <span class="n">p_nodes</span> <span class="o">=</span> <span class="n">keys_by_value</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">p_lhs</span><span class="p">,</span> <span class="n">node</span><span class="p">)</span>
@@ -1007,7 +1064,14 @@
         <span class="k">return</span> <span class="n">attrs</span></div>
 
 <div class="viewcode-block" id="Rule.removed_edge_attrs"><a class="viewcode-back" href="../../rules.html#regraph.rules.Rule.removed_edge_attrs">[docs]</a>    <span class="k">def</span> <span class="nf">removed_edge_attrs</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;.&quot;&quot;&quot;</span>
+        <span class="sd">&quot;&quot;&quot;Get edge attributes removed by the rule.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        attrs : dict</span>
+<span class="sd">            Dictionary where keys are edges from `lhs`</span>
+<span class="sd">            and values are attribute dictionaries to remove.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">attrs</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
         <span class="k">for</span> <span class="n">s</span><span class="p">,</span> <span class="n">t</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">lhs</span><span class="o">.</span><span class="n">edges</span><span class="p">():</span>
             <span class="n">s_p_nodes</span> <span class="o">=</span> <span class="n">keys_by_value</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">p_lhs</span><span class="p">,</span> <span class="n">s</span><span class="p">)</span>
@@ -1028,7 +1092,14 @@
         <span class="k">return</span> <span class="n">attrs</span></div>
 
 <div class="viewcode-block" id="Rule.cloned_nodes"><a class="viewcode-back" href="../../rules.html#regraph.rules.Rule.cloned_nodes">[docs]</a>    <span class="k">def</span> <span class="nf">cloned_nodes</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;.&quot;&quot;&quot;</span>
+        <span class="sd">&quot;&quot;&quot;Get nodes cloned by the rule.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        nodes : dict</span>
+<span class="sd">            Dictionary where keys are nodes from `lhs` and</span>
+<span class="sd">            values are sets of corresponding nodes from `p`.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">nodes</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
         <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">lhs</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
             <span class="n">p_nodes</span> <span class="o">=</span> <span class="n">keys_by_value</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">p_lhs</span><span class="p">,</span> <span class="n">node</span><span class="p">)</span>
@@ -1037,10 +1108,16 @@
         <span class="k">return</span> <span class="n">nodes</span></div>
 
 <div class="viewcode-block" id="Rule.is_restrictive"><a class="viewcode-back" href="../../rules.html#regraph.rules.Rule.is_restrictive">[docs]</a>    <span class="k">def</span> <span class="nf">is_restrictive</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Return True if the rule is restrictive.</span>
+        <span class="sd">&quot;&quot;&quot;Check if the rule is  restrictive.</span>
 
 <span class="sd">        Rule is restictive if it removes</span>
 <span class="sd">        nodes/edges/attributes or clones nodes.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        `True` if the rule is restrictive, `False`</span>
+<span class="sd">        otherwise</span>
+
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">removed_nodes</span><span class="p">())</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="ow">or</span>\
             <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cloned_nodes</span><span class="p">())</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="ow">or</span>\
@@ -1049,10 +1126,15 @@
             <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">removed_edge_attrs</span><span class="p">())</span> <span class="o">&gt;</span> <span class="mi">0</span></div>
 
 <div class="viewcode-block" id="Rule.is_relaxing"><a class="viewcode-back" href="../../rules.html#regraph.rules.Rule.is_relaxing">[docs]</a>    <span class="k">def</span> <span class="nf">is_relaxing</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Return True if the rule is relaxing.</span>
+        <span class="sd">&quot;&quot;&quot;Check if the rule is relaxing.</span>
 
 <span class="sd">        Rule is relaxing if it adds</span>
 <span class="sd">        nodes/edges/attributes or merges nodes.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        `True` if the rule is relaxing, `False` otherwise</span>
+
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">added_nodes</span><span class="p">())</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="ow">or</span>\
             <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">merged_nodes</span><span class="p">())</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="ow">or</span>\
@@ -1061,7 +1143,20 @@
             <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">added_edge_attrs</span><span class="p">())</span> <span class="o">&gt;</span> <span class="mi">0</span></div>
 
 <div class="viewcode-block" id="Rule.to_commands"><a class="viewcode-back" href="../../rules.html#regraph.rules.Rule.to_commands">[docs]</a>    <span class="k">def</span> <span class="nf">to_commands</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Convert the rule to a list of commands.&quot;&quot;&quot;</span>
+        <span class="sd">&quot;&quot;&quot;Convert the rule to a list of commands.</span>
+
+<span class="sd">        This method produces a list of commands</span>
+<span class="sd">        corresponding to the rule. These commands</span>
+<span class="sd">        follow a simple grammar of transformations</span>
+<span class="sd">        that can be recognized by `regraph.parser` module.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        commands : str</span>
+<span class="sd">            Commands representing primitive transformations on the</span>
+<span class="sd">            the `lhs` that are preformed in the rule.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">commands</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
         <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">removed_nodes</span><span class="p">():</span>
             <span class="n">commands</span> <span class="o">+=</span> <span class="s2">&quot;DELETE_NODE </span><span class="si">%s</span><span class="s2">.</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">node</span>
@@ -1135,7 +1230,7 @@
       &copy;2017, Eugenia Oshurko, Yves-Stan Le Cornec.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.5</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.3</a>
       &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
       
     </div>
