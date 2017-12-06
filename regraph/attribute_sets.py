@@ -36,7 +36,7 @@ from regraph.exceptions import AttributeSetError
 
 
 def _hashify(d):
-    """."""
+    """Hashify a dictionary to a list of tuples."""
     result = []
     for key, value in d.items():
         if type(value) is dict:

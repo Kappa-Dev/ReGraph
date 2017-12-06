@@ -1,8 +1,12 @@
-"""Docs here."""
+"""Graph rewriting rules.
+
+This package contains the `Rule` data structure for representation
+of graph rewriting rules (for more on sesqui-pushout rewriting see:
+https://link.springer.com/chapter/10.1007/11841883_4).
+"""
 import copy
 import warnings
 
-from regraph.attribute_sets import EmptySet
 from regraph.parser import parser
 from regraph.utils import (keys_by_value,
                            normalize_attrs,
@@ -19,22 +23,71 @@ from regraph.exceptions import (ReGraphWarning, ParsingError, RuleError,
 
 
 class Rule(object):
-    """
-    Class implements a rewriting rule.
+    """Class representing rewriting rules.
 
     A rewriting rule consists of the three graphs:
-    `p` - preserved part, `lhs` - left hand side,
-    `rhs` - right hand side, and two mappings
-    p -> lhs, p -> rhs. The rule can be type preserving or not,
-    which is set by the attribute `ignore_types`
+    `p` -- preserved part, `lhs` -- left hand side,
+    `rhs` -- right hand side, and two mappings:
+    from `p` to `lhs` and from `p` to `rhs`.
+    Informally, `lhs` represents a pattern to match
+    in a graph, subject to rewriting. `p` together with
+    `p` -> `lhs` mapping specifies a part of
+    the pattern which stays preseved during rewriting,
+    i.e. all the nodes/edges/attributes present
+    in `lhs` but not `p` will be removed.
+    `rhs` and `p` -> `rhs` specify nodes/edges/attributes
+    to add to the `p`. In addition, rules defined
+    is such a way allow to clone and merge nodes.
+    If two nodes from `p` map to the same node in `lhs`,
+    the node corresponding to this node of the
+    pattern will be cloned. Symmetrically, if two nodes
+    from `p` map to the same node in `rhs`,
+    the corresponding two nodes will be merged.
+
+    Attributes
+    ----------
+    p : networkx.(Di)Graph
+        Preserved part of the rule
+    lhs : networkx.(Di)Graph
+        Left-hand side (pattern) of the rule
+    rhs : networkx.(Di)Graph
+        Right-hand side of the rule
+    p_lhs : dict
+        Homomorphism between `p` and `lhs` given by
+        a dictionary with keys -- nodes of `p`,
+        values -- nodes of `lhs`.
+    p_rhs : dict
+        Homomorphism between `p` and `rhs` given by
+        a dictionary with keys -- nodes of `p`,
+        values -- nodes of `rhs`.
     """
 
     def __init__(self, p, lhs, rhs, p_lhs=None, p_rhs=None):
-        """Initialize a rule by p, lhs and rhs and two homomorphisms.
+        """Rule initialization.
 
-        p -> lhs & p -> rhs. By default the homomorphisms are None, and
-        they are created as Homomorphism.identity(p, lhs) etc with the
-        correspondance according to the node names.
+        A rule is initialized with p, lhs, rhs graphs, and
+        p -> lhs & p -> rhs homomorphisms, these homomorphisms
+        are checked to be valid ones (edge and attribute preserving).
+        By default the homomorphisms p -> lhs & p -> rhs are None,
+        in this case they are initialized as the identity homomorphism
+        (id(p)).
+
+        Parameters
+        ----------
+        p : networkx.(Di)Graph
+            Preserved part of the rule
+        lhs : networkx.(Di)Graph
+            Left-hand side (pattern) of the rule
+        rhs : networkx.(Di)Graph
+            Right-hand side of the rule
+        p_lhs : dict
+            Homomorphism between `p` and `lhs` given by
+            a dictionary with keys -- nodes of `p`,
+            values -- nodes of `lhs`
+        p_rhs : dict
+            Homomorphism between `p` and `rhs` given by
+            a dictionary with keys -- nodes of `p`,
+            values -- nodes of `rhs`
         """
         if not p_lhs:
             self.p_lhs = identity(p, lhs)
@@ -58,13 +111,22 @@ class Rule(object):
     def from_transform(cls, pattern, commands=None):
         """Initialize a rule from the transformation.
 
-        On input takes a pattern which is used as LHS of the rule,
+        On input takes a pattern which is used as `lhs` of the rule,
         as an optional argument transformation commands can be provided,
-        by default the list of commands is empty and all P, LHS and RHS
+        by default the list of commands is empty and all `p`, `lhs` and `rhs`
         are initialized to be the same graph (pattern), later on
-        when transformations are applied P and RHS are being updated.
+        when transformations are applied `p` and `rhs` are being updated.
         If list of commands is specified, these commands are simplified,
-        transformed to the canonical order, and applied to P, LHS & RHS.
+        transformed to the canonical order, and applied to `p`, `lhs` and `rhs`.
+
+        Parameters
+        ----------
+        pattern : networkx.(Di)Graph
+            Pattern graph to initialize and the lhs of the rule.
+        commands : str, optional
+            Script containing transformation commands, which
+            can be parsed by `regraph.parser.parse`.
+
         """
         p = copy.deepcopy(pattern)
         lhs = copy.deepcopy(pattern)
@@ -161,23 +223,28 @@ class Rule(object):
         )
 
     def __str__(self):
-        """String repr of a rule."""
+        """String representation of a rule."""
         return "Preserved part\n%s\n%s\n" % (self.p.node, self.p.edges()) +\
             "Left hand side\n%s\n%s\n" % (self.lhs.node, self.lhs.edges()) +\
             "P->L Homomorphism : %s\n" % self.p_lhs +\
             "Right hand side\n%s\n%s\n" % (self.rhs.node, self.rhs.edges()) +\
             "P->R Homomorphism : %s\n" % self.p_rhs
 
-    def __doc__(self):
-        """Doc for a Rule class."""
-        return(
-            "An instance of rule is an instance of `p` (preserved part), "
-            "`lhs` (lef-hand side of the rule) and `rhs` (right-hand side) "
-            " graphs together with two mappings p -> lhs & p -> rhs."
-        )
-
     def add_node(self, node_id, attrs=None):
-        """Add node to the graph."""
+        """Add node to the graph.
+
+        Parameters
+        ----------
+        node_id : hashable
+            Id of a node to add
+        attrs : dict, optional
+            Attributes of the node.
+
+        Raises
+        ------
+        RuleError
+            If node with this id already exists in the `rhs`.
+        """
         if node_id not in self.rhs.nodes():
             p_keys = keys_by_value(self.p_rhs, node_id)
             # here we check for the nodes with the same name in the lhs
@@ -734,7 +801,7 @@ class Rule(object):
             )
 
     def to_json(self):
-        """Convert the rule to json repr."""
+        """Convert the rule to JSON repr."""
         json_data = {}
         json_data["lhs"] = primitives.graph_to_json(self.lhs)
         json_data["p"] = primitives.graph_to_json(self.p)
@@ -745,7 +812,7 @@ class Rule(object):
 
     @classmethod
     def from_json(cls, json_data):
-        """Create a rule obj from json repr."""
+        """Create a rule obj from JSON repr."""
         lhs = primitives.graph_from_json(json_data["lhs"])
         p = primitives.graph_from_json(json_data["p"])
         rhs = primitives.graph_from_json(json_data["rhs"])
@@ -755,7 +822,35 @@ class Rule(object):
         return rule
 
     def apply_to(self, graph, instance, inplace=False):
-        """Perform graph rewriting with returning new G'."""
+        """Perform graph rewriting with the rule.
+
+        Parameters
+        ----------
+        graph : nx.(Di)Graph
+            Graph to rewrite with the rule.
+        instance : dict
+            Instance of the `lhs` pattern in the graph
+            defined by a dictionary where keys are nodes
+            of `lhs` and values are nodes of the graph.
+        inplace : bool, optional
+            If `True`, the rewriting will be performed
+            in-place by applying primitve transformations
+            to the graph object, otherwise the result of
+            the rewriting is a new graph object.
+            Default value is `False`.
+
+        Returns
+        -------
+        g_prime : nx.(Di)Graph
+            Result of the rewriting. If parameter
+            `inplace` was `True`, `g_prime` is exactly
+            the (transformed) input graph object `graph`.
+        rhs_g_prime : dict
+            Matching of the `rhs` in `g_prime`, a dictionary,
+            where keys are nodes of `rhs` and values are
+            nodes of `g_prime`.
+
+        """
         g_m, p_g_m, g_m_g = pullback_complement(
             self.p, self.lhs, graph, self.p_lhs, instance,
             inplace
@@ -774,6 +869,7 @@ class Rule(object):
         return nodes
 
     def added_edges(self):
+        """."""
         edges = set()
         for s, t in self.rhs.edges():
             s_p_nodes = keys_by_value(self.p_rhs, s)
@@ -791,6 +887,7 @@ class Rule(object):
         return edges
 
     def added_node_attrs(self):
+        """."""
         attrs = dict()
         for node in self.rhs.nodes():
             p_nodes = keys_by_value(self.p_rhs, node)
@@ -805,6 +902,7 @@ class Rule(object):
         return attrs
 
     def added_edge_attrs(self):
+        """."""
         attrs = dict()
         for s, t in self.rhs.edges():
             s_p_nodes = keys_by_value(self.p_rhs, s)
@@ -823,6 +921,7 @@ class Rule(object):
         return attrs
 
     def merged_nodes(self):
+        """."""
         nodes = dict()
         for node in self.rhs.nodes():
             p_nodes = keys_by_value(self.p_rhs, node)
@@ -831,6 +930,7 @@ class Rule(object):
         return nodes
 
     def removed_nodes(self):
+        """."""
         nodes = set()
         for node in self.lhs.nodes():
             p_nodes = keys_by_value(self.p_lhs, node)
@@ -839,6 +939,7 @@ class Rule(object):
         return nodes
 
     def removed_edges(self):
+        """."""
         edges = set()
         for s, t in self.lhs.edges():
             s_p_nodes = keys_by_value(self.p_lhs, s)
@@ -851,6 +952,7 @@ class Rule(object):
         return edges
 
     def removed_node_attrs(self):
+        """."""
         attrs = dict()
         for node in self.lhs.nodes():
             p_nodes = keys_by_value(self.p_lhs, node)
@@ -863,6 +965,7 @@ class Rule(object):
         return attrs
 
     def removed_edge_attrs(self):
+        """."""
         attrs = dict()
         for s, t in self.lhs.edges():
             s_p_nodes = keys_by_value(self.p_lhs, s)
@@ -883,6 +986,7 @@ class Rule(object):
         return attrs
 
     def cloned_nodes(self):
+        """."""
         nodes = dict()
         for node in self.lhs.nodes():
             p_nodes = keys_by_value(self.p_lhs, node)
