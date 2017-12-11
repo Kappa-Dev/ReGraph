@@ -779,7 +779,6 @@ def merge_nodes(graph, nodes, node_id=None, method="union", edge_method="union")
     if len(nodes) == 1:
         if node_id is not None:
             relabel_node(graph, nodes[0], node_id)
-
     elif len(nodes) > 1:
 
         if method is None:
@@ -944,6 +943,8 @@ def merge_nodes(graph, nodes, node_id=None, method="union", edge_method="union")
                     graph.edge[node_id][node] = attrs
 
         return node_id
+    else:
+        raise ReGraphError("Cannot merge an empty set of nodes!")
 
 
 def subtract(a, b, ba_mapping):
