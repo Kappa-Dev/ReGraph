@@ -6,7 +6,7 @@ SPHINXOPTS    =
 SPHINXBUILD   = python -msphinx
 SPHINXPROJ    = ReGraph
 SOURCEDIR     = source
-BUILDDIR      = build
+BUILDDIR      = ../../ReGraph-docs
 
 # Put it first so that "make" without argument is like "make help".
 help:
