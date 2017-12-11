@@ -821,7 +821,6 @@
     <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">nodes</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
         <span class="k">if</span> <span class="n">node_id</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">relabel_node</span><span class="p">(</span><span class="n">graph</span><span class="p">,</span> <span class="n">nodes</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">node_id</span><span class="p">)</span>
-
     <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">nodes</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
 
         <span class="k">if</span> <span class="n">method</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
@@ -985,7 +984,9 @@
                     <span class="n">graph</span><span class="o">.</span><span class="n">edge</span><span class="p">[</span><span class="n">node</span><span class="p">][</span><span class="n">node_id</span><span class="p">]</span> <span class="o">=</span> <span class="n">attrs</span>
                     <span class="n">graph</span><span class="o">.</span><span class="n">edge</span><span class="p">[</span><span class="n">node_id</span><span class="p">][</span><span class="n">node</span><span class="p">]</span> <span class="o">=</span> <span class="n">attrs</span>
 
-        <span class="k">return</span> <span class="n">node_id</span></div>
+        <span class="k">return</span> <span class="n">node_id</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">ReGraphError</span><span class="p">(</span><span class="s2">&quot;Cannot merge an empty set of nodes!&quot;</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="subtract"><a class="viewcode-back" href="../../primitives.html#regraph.primitives.subtract">[docs]</a><span class="k">def</span> <span class="nf">subtract</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">ba_mapping</span><span class="p">):</span>

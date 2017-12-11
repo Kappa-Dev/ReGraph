@@ -201,12 +201,12 @@
                     <span class="n">node_name</span> <span class="o">=</span> <span class="kc">None</span>
                     <span class="k">if</span> <span class="s2">&quot;node_name&quot;</span> <span class="ow">in</span> <span class="n">action</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
                         <span class="n">node_name</span> <span class="o">=</span> <span class="n">action</span><span class="p">[</span><span class="s2">&quot;node_name&quot;</span><span class="p">]</span>
-                    <span class="n">rule</span><span class="o">.</span><span class="n">clone_node</span><span class="p">(</span><span class="n">action</span><span class="p">[</span><span class="s2">&quot;node&quot;</span><span class="p">],</span> <span class="n">node_name</span><span class="p">)</span>
+                    <span class="n">rule</span><span class="o">.</span><span class="n">inject_clone_node</span><span class="p">(</span><span class="n">action</span><span class="p">[</span><span class="s2">&quot;node&quot;</span><span class="p">],</span> <span class="n">node_name</span><span class="p">)</span>
                 <span class="k">elif</span> <span class="n">action</span><span class="p">[</span><span class="s2">&quot;keyword&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;merge&quot;</span><span class="p">:</span>
                     <span class="n">node_name</span> <span class="o">=</span> <span class="kc">None</span>
                     <span class="k">if</span> <span class="s2">&quot;node_name&quot;</span> <span class="ow">in</span> <span class="n">action</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
                         <span class="n">node_name</span> <span class="o">=</span> <span class="n">action</span><span class="p">[</span><span class="s2">&quot;node_name&quot;</span><span class="p">]</span>
-                    <span class="n">merged_node</span> <span class="o">=</span> <span class="n">rule</span><span class="o">.</span><span class="n">merge_node_list</span><span class="p">(</span>
+                    <span class="n">rule</span><span class="o">.</span><span class="n">inject_merge_nodes</span><span class="p">(</span>
                         <span class="n">action</span><span class="p">[</span><span class="s2">&quot;nodes&quot;</span><span class="p">],</span>
                         <span class="n">node_name</span><span class="p">)</span>
                 <span class="k">elif</span> <span class="n">action</span><span class="p">[</span><span class="s2">&quot;keyword&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;add_node&quot;</span><span class="p">:</span>
@@ -216,36 +216,36 @@
                         <span class="n">name</span> <span class="o">=</span> <span class="n">action</span><span class="p">[</span><span class="s2">&quot;node&quot;</span><span class="p">]</span>
                     <span class="k">if</span> <span class="s2">&quot;attributes&quot;</span> <span class="ow">in</span> <span class="n">action</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
                         <span class="n">attrs</span> <span class="o">=</span> <span class="n">action</span><span class="p">[</span><span class="s2">&quot;attributes&quot;</span><span class="p">]</span>
-                    <span class="n">rule</span><span class="o">.</span><span class="n">add_node</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">attrs</span><span class="p">)</span>
+                    <span class="n">rule</span><span class="o">.</span><span class="n">inject_add_node</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">attrs</span><span class="p">)</span>
                 <span class="k">elif</span> <span class="n">action</span><span class="p">[</span><span class="s2">&quot;keyword&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;delete_node&quot;</span><span class="p">:</span>
-                    <span class="n">rule</span><span class="o">.</span><span class="n">remove_node</span><span class="p">(</span><span class="n">action</span><span class="p">[</span><span class="s2">&quot;node&quot;</span><span class="p">])</span>
+                    <span class="n">rule</span><span class="o">.</span><span class="n">inject_remove_node</span><span class="p">(</span><span class="n">action</span><span class="p">[</span><span class="s2">&quot;node&quot;</span><span class="p">])</span>
                 <span class="k">elif</span> <span class="n">action</span><span class="p">[</span><span class="s2">&quot;keyword&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;add_edge&quot;</span><span class="p">:</span>
                     <span class="n">attrs</span> <span class="o">=</span> <span class="p">{}</span>
                     <span class="k">if</span> <span class="s2">&quot;attributes&quot;</span> <span class="ow">in</span> <span class="n">action</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
                         <span class="n">attrs</span> <span class="o">=</span> <span class="n">action</span><span class="p">[</span><span class="s2">&quot;attributes&quot;</span><span class="p">]</span>
-                    <span class="n">rule</span><span class="o">.</span><span class="n">add_edge_rhs</span><span class="p">(</span>
+                    <span class="n">rule</span><span class="o">.</span><span class="n">inject_add_edge</span><span class="p">(</span>
                         <span class="n">action</span><span class="p">[</span><span class="s2">&quot;node_1&quot;</span><span class="p">],</span>
                         <span class="n">action</span><span class="p">[</span><span class="s2">&quot;node_2&quot;</span><span class="p">],</span>
                         <span class="n">attrs</span><span class="p">)</span>
                 <span class="k">elif</span> <span class="n">action</span><span class="p">[</span><span class="s2">&quot;keyword&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;delete_edge&quot;</span><span class="p">:</span>
-                    <span class="n">rule</span><span class="o">.</span><span class="n">remove_edge</span><span class="p">(</span>
+                    <span class="n">rule</span><span class="o">.</span><span class="n">inject_remove_edge</span><span class="p">(</span>
                         <span class="n">action</span><span class="p">[</span><span class="s2">&quot;node_1&quot;</span><span class="p">],</span>
                         <span class="n">action</span><span class="p">[</span><span class="s2">&quot;node_2&quot;</span><span class="p">])</span>
                 <span class="k">elif</span> <span class="n">action</span><span class="p">[</span><span class="s2">&quot;keyword&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;add_node_attrs&quot;</span><span class="p">:</span>
-                    <span class="n">rule</span><span class="o">.</span><span class="n">add_node_attrs</span><span class="p">(</span>
+                    <span class="n">rule</span><span class="o">.</span><span class="n">inject_add_node_attrs</span><span class="p">(</span>
                         <span class="n">action</span><span class="p">[</span><span class="s2">&quot;node&quot;</span><span class="p">],</span>
                         <span class="n">action</span><span class="p">[</span><span class="s2">&quot;attributes&quot;</span><span class="p">])</span>
                 <span class="k">elif</span> <span class="n">action</span><span class="p">[</span><span class="s2">&quot;keyword&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;add_edge_attrs&quot;</span><span class="p">:</span>
-                    <span class="n">rule</span><span class="o">.</span><span class="n">add_edge_attrs</span><span class="p">(</span>
+                    <span class="n">rule</span><span class="o">.</span><span class="n">inject_add_edge_attrs</span><span class="p">(</span>
                         <span class="n">action</span><span class="p">[</span><span class="s2">&quot;node_1&quot;</span><span class="p">],</span>
                         <span class="n">action</span><span class="p">[</span><span class="s2">&quot;node_2&quot;</span><span class="p">],</span>
                         <span class="n">action</span><span class="p">[</span><span class="s2">&quot;attributes&quot;</span><span class="p">])</span>
                 <span class="k">elif</span> <span class="n">action</span><span class="p">[</span><span class="s2">&quot;keyword&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;delete_node_attrs&quot;</span><span class="p">:</span>
-                    <span class="n">rule</span><span class="o">.</span><span class="n">remove_node_attrs</span><span class="p">(</span>
+                    <span class="n">rule</span><span class="o">.</span><span class="n">inject_remove_node_attrs</span><span class="p">(</span>
                         <span class="n">action</span><span class="p">[</span><span class="s2">&quot;node&quot;</span><span class="p">],</span>
                         <span class="n">action</span><span class="p">[</span><span class="s2">&quot;attributes&quot;</span><span class="p">])</span>
                 <span class="k">elif</span> <span class="n">action</span><span class="p">[</span><span class="s2">&quot;keyword&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;delete_edge_attrs&quot;</span><span class="p">:</span>
-                    <span class="n">rule</span><span class="o">.</span><span class="n">remove_edge_attrs</span><span class="p">(</span>
+                    <span class="n">rule</span><span class="o">.</span><span class="n">inject_remove_edge_attrs</span><span class="p">(</span>
                         <span class="n">action</span><span class="p">[</span><span class="s2">&quot;node_1&quot;</span><span class="p">],</span>
                         <span class="n">action</span><span class="p">[</span><span class="s2">&quot;node_2&quot;</span><span class="p">],</span>
                         <span class="n">action</span><span class="p">[</span><span class="s2">&quot;attributes&quot;</span><span class="p">])</span>
@@ -272,8 +272,276 @@
             <span class="s2">&quot;Right hand side</span><span class="se">\n</span><span class="si">%s</span><span class="se">\n</span><span class="si">%s</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rhs</span><span class="o">.</span><span class="n">node</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">rhs</span><span class="o">.</span><span class="n">edges</span><span class="p">())</span> <span class="o">+</span>\
             <span class="s2">&quot;P-&gt;R Homomorphism : </span><span class="si">%s</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">p_rhs</span>
 
-<div class="viewcode-block" id="Rule.add_node"><a class="viewcode-back" href="../../rules.html#regraph.rules.Rule.add_node">[docs]</a>    <span class="k">def</span> <span class="nf">add_node</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node_id</span><span class="p">,</span> <span class="n">attrs</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Add node to the graph.</span>
+<div class="viewcode-block" id="Rule.inject_clone_node"><a class="viewcode-back" href="../../rules.html#regraph.rules.Rule.inject_clone_node">[docs]</a>    <span class="k">def</span> <span class="nf">inject_clone_node</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="n">new_node_id</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Inject cloning of a node by the rule.</span>
+
+<span class="sd">        This procedure clones `n` in the preserved part</span>
+<span class="sd">        and the right-hand side.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        n : hashable</span>
+<span class="sd">            Node from `lhs` to clone</span>
+<span class="sd">        new_node_id : hashable</span>
+<span class="sd">            Id for the clone</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        p_new_node_id : hashable</span>
+<span class="sd">            Id of the new clone node in the preserved part</span>
+<span class="sd">        rhs_new_node_id : hashable</span>
+<span class="sd">            Id of the new clone node in the right-hand side</span>
+
+
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        RuleError</span>
+<span class="sd">            If the node to clone is already being removed by the rule</span>
+<span class="sd">            or if node with the specified clone id already exists in p.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">p_nodes</span> <span class="o">=</span> <span class="n">keys_by_value</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">p_lhs</span><span class="p">,</span> <span class="n">n</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">p_nodes</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">RuleError</span><span class="p">(</span>
+                <span class="s2">&quot;Cannot inject cloning: node &#39;</span><span class="si">%s</span><span class="s2">&#39; is already &quot;</span>
+                <span class="s2">&quot;being removed by the rule, revert its removal &quot;</span>
+                <span class="s2">&quot;first&quot;</span> <span class="o">%</span> <span class="n">n</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">new_node_id</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">new_node_id</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">p</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
+                <span class="k">raise</span> <span class="n">RuleError</span><span class="p">(</span>
+                    <span class="s2">&quot;Node with id &#39;</span><span class="si">%s</span><span class="s2">&#39; already exists in the &quot;</span>
+                    <span class="s2">&quot;preserved part!&quot;</span><span class="p">)</span>
+            <span class="n">some_p_node</span> <span class="o">=</span> <span class="n">p_nodes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">p_new_node_id</span> <span class="o">=</span> <span class="n">primitives</span><span class="o">.</span><span class="n">clone_node</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">p</span><span class="p">,</span> <span class="n">some_p_node</span><span class="p">,</span> <span class="n">new_node_id</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">p_lhs</span><span class="p">[</span><span class="n">p_new_node_id</span><span class="p">]</span> <span class="o">=</span> <span class="n">n</span>
+            <span class="c1"># add it to the rhs</span>
+            <span class="c1"># generate a new id for rhs</span>
+            <span class="n">rhs_new_node_id</span> <span class="o">=</span> <span class="n">p_new_node_id</span>
+            <span class="k">if</span> <span class="n">rhs_new_node_id</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">rhs</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
+                <span class="n">rhs_new_node_id</span> <span class="o">=</span> <span class="n">primitives</span><span class="o">.</span><span class="n">unique_node_id</span><span class="p">(</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">rhs</span><span class="p">,</span> <span class="n">rhs_new_node_id</span><span class="p">)</span>
+            <span class="n">primitives</span><span class="o">.</span><span class="n">add_node</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">rhs</span><span class="p">,</span> <span class="n">rhs_new_node_id</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">p</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">p_new_node_id</span><span class="p">])</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">p_rhs</span><span class="p">[</span><span class="n">p_new_node_id</span><span class="p">]</span> <span class="o">=</span> <span class="n">rhs_new_node_id</span>
+            <span class="c1"># reconnect the new rhs node with necessary edges</span>
+            <span class="k">for</span> <span class="n">pred</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">p</span><span class="o">.</span><span class="n">predecessors</span><span class="p">(</span><span class="n">p_new_node_id</span><span class="p">):</span>
+                <span class="n">primitives</span><span class="o">.</span><span class="n">add_edge</span><span class="p">(</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">rhs</span><span class="p">,</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">p_rhs</span><span class="p">[</span><span class="n">pred</span><span class="p">],</span> <span class="n">rhs_new_node_id</span><span class="p">,</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">p</span><span class="o">.</span><span class="n">edge</span><span class="p">[</span><span class="n">pred</span><span class="p">][</span><span class="n">p_new_node_id</span><span class="p">])</span>
+            <span class="k">for</span> <span class="n">suc</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">p</span><span class="o">.</span><span class="n">successors</span><span class="p">(</span><span class="n">p_new_node_id</span><span class="p">):</span>
+                <span class="n">primitives</span><span class="o">.</span><span class="n">add_edge</span><span class="p">(</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">rhs</span><span class="p">,</span>
+                    <span class="n">rhs_new_node_id</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">p_rhs</span><span class="p">[</span><span class="n">suc</span><span class="p">],</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">p</span><span class="o">.</span><span class="n">edge</span><span class="p">[</span><span class="n">p_new_node_id</span><span class="p">][</span><span class="n">suc</span><span class="p">])</span>
+
+        <span class="k">return</span> <span class="p">(</span><span class="n">p_new_node_id</span><span class="p">,</span> <span class="n">rhs_new_node_id</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Rule.inject_remove_node"><a class="viewcode-back" href="../../rules.html#regraph.rules.Rule.inject_remove_node">[docs]</a>    <span class="k">def</span> <span class="nf">inject_remove_node</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">lhs_node_id</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Inject a new node removal to the rule.</span>
+
+<span class="sd">        This method removes from `p` all the nodes that map</span>
+<span class="sd">        to the node with the id `lhs_node_id`. In addition,</span>
+<span class="sd">        all the nodes from `rhs` that are mapped by the nodes</span>
+<span class="sd">        removed in `p` are also removed.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        lhs_node_id</span>
+<span class="sd">            Id of the node in `lhs` that should be removed</span>
+<span class="sd">            by the rule.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># remove corresponding nodes from p and rhs</span>
+        <span class="n">p_keys</span> <span class="o">=</span> <span class="n">keys_by_value</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">p_lhs</span><span class="p">,</span> <span class="n">lhs_node_id</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">p_keys</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">k</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">p</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
+                <span class="n">primitives</span><span class="o">.</span><span class="n">remove_node</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">p</span><span class="p">,</span> <span class="n">k</span><span class="p">)</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">p_rhs</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">rhs</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
+                <span class="n">primitives</span><span class="o">.</span><span class="n">remove_node</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rhs</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">p_rhs</span><span class="p">[</span><span class="n">k</span><span class="p">])</span>
+                <span class="n">affected_nodes</span> <span class="o">=</span> <span class="n">keys_by_value</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">p_rhs</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">p_rhs</span><span class="p">[</span><span class="n">k</span><span class="p">])</span>
+                <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">affected_nodes</span><span class="p">:</span>
+                    <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">p_rhs</span><span class="p">[</span><span class="n">node</span><span class="p">]</span>
+            <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">p_lhs</span><span class="p">[</span><span class="n">k</span><span class="p">]</span>
+        <span class="k">return</span></div>
+
+<div class="viewcode-block" id="Rule.inject_remove_edge"><a class="viewcode-back" href="../../rules.html#regraph.rules.Rule.inject_remove_edge">[docs]</a>    <span class="k">def</span> <span class="nf">inject_remove_edge</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n1</span><span class="p">,</span> <span class="n">n2</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Inject removal of an edge by the rule.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        n1 : hashable</span>
+<span class="sd">            Id of an edge&#39;s source node in `lhs`.</span>
+<span class="sd">        n2 : hashable</span>
+<span class="sd">            Id of an edge&#39;s target node in `lhs`.</span>
+
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        RuleError</span>
+<span class="sd">            If some of the nodes are not found in neither</span>
+<span class="sd">            `lhs` nor `p`, or if a corresponding edge in</span>
+<span class="sd">            `p` does not exist.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Find nodes in p mapping to n1 &amp; n2</span>
+        <span class="n">p_keys_1</span> <span class="o">=</span> <span class="n">keys_by_value</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">p_lhs</span><span class="p">,</span> <span class="n">n1</span><span class="p">)</span>
+        <span class="n">p_keys_2</span> <span class="o">=</span> <span class="n">keys_by_value</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">p_lhs</span><span class="p">,</span> <span class="n">n2</span><span class="p">)</span>
+
+        <span class="c1"># n1 is actually a node from `p`</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">p_keys_1</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">n1</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">p</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
+                <span class="n">p_keys_1</span> <span class="o">=</span> <span class="p">[</span><span class="n">n1</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">RuleError</span><span class="p">(</span>
+                    <span class="s2">&quot;Node &#39;</span><span class="si">%s</span><span class="s2">&#39; is not found in neither left-hand &quot;</span>
+                    <span class="s2">&quot;side nor preserved part&quot;</span> <span class="o">%</span> <span class="n">n2</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">p_keys_2</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">n2</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">p</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
+                <span class="n">p_keys_2</span> <span class="o">=</span> <span class="p">[</span><span class="n">n2</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">RuleError</span><span class="p">(</span>
+                    <span class="s2">&quot;Node &#39;</span><span class="si">%s</span><span class="s2">&#39; is not found in neither left-hand &quot;</span>
+                    <span class="s2">&quot;side nor preserved part&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">n2</span><span class="p">))</span>
+
+        <span class="k">for</span> <span class="n">k1</span> <span class="ow">in</span> <span class="n">p_keys_1</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">k2</span> <span class="ow">in</span> <span class="n">p_keys_2</span><span class="p">:</span>
+                <span class="k">if</span> <span class="p">(</span><span class="n">k1</span><span class="p">,</span> <span class="n">k2</span><span class="p">)</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">p</span><span class="o">.</span><span class="n">edges</span><span class="p">():</span>
+                    <span class="n">primitives</span><span class="o">.</span><span class="n">remove_edge</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">p</span><span class="p">,</span> <span class="n">k1</span><span class="p">,</span> <span class="n">k2</span><span class="p">)</span>
+                    <span class="n">primitives</span><span class="o">.</span><span class="n">remove_edge</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rhs</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">p_rhs</span><span class="p">[</span><span class="n">k1</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">p_rhs</span><span class="p">[</span><span class="n">k2</span><span class="p">])</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="n">RuleError</span><span class="p">(</span>
+                        <span class="s2">&quot;Edge &#39;</span><span class="si">%s</span><span class="s2">-&gt;</span><span class="si">%s</span><span class="s2">&#39; does not exist in the preserved part&quot;</span>
+                        <span class="o">%</span> <span class="p">(</span><span class="n">k1</span><span class="p">,</span> <span class="n">k2</span><span class="p">))</span>
+
+        <span class="k">return</span></div>
+
+<div class="viewcode-block" id="Rule.inject_remove_node_attrs"><a class="viewcode-back" href="../../rules.html#regraph.rules.Rule.inject_remove_node_attrs">[docs]</a>    <span class="k">def</span> <span class="nf">inject_remove_node_attrs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="n">attrs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Inject a removal of node attrs by the rule.</span>
+
+<span class="sd">        First, tries to find a node with the id `n` in the</span>
+<span class="sd">        left-hand side, injects its attrs removal if found,</span>
+<span class="sd">        otherwise, tries to find the corresponding node in</span>
+<span class="sd">        the preserved part (it helps us to implement injection</span>
+<span class="sd">        of the node attrs removal to only one of the clone nodes).</span>
+
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        n : hashable</span>
+<span class="sd">            Id of a node whose attrs to remove (node from the</span>
+<span class="sd">            left-hand side or the preserved part).</span>
+<span class="sd">        attrs : dict</span>
+<span class="sd">            Dictionary with attributes to remove.</span>
+
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        RuleError</span>
+<span class="sd">            If `n` does not exist in neither the left-hand side</span>
+<span class="sd">            nor the preserved part of the rule, or when the node</span>
+<span class="sd">            whose attrs should be removed is itself is being removed</span>
+<span class="sd">            by the rule.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">n</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">lhs</span><span class="o">.</span><span class="n">nodes</span><span class="p">()</span> <span class="ow">and</span> <span class="n">n</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">p</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
+            <span class="k">raise</span> <span class="n">RuleError</span><span class="p">(</span>
+                <span class="s2">&quot;Node &#39;</span><span class="si">%s</span><span class="s2">&#39; exists in neither the left &quot;</span>
+                <span class="s2">&quot;hand side of the rule nor the preserved part&quot;</span> <span class="o">%</span> <span class="n">n</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">n</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">lhs</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
+            <span class="n">p_keys</span> <span class="o">=</span> <span class="n">keys_by_value</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">p_lhs</span><span class="p">,</span> <span class="n">n</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">p_keys</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">RuleError</span><span class="p">(</span>
+                    <span class="s2">&quot;Node &#39;</span><span class="si">%s</span><span class="s2">&#39; is being removed by the rule, &quot;</span>
+                    <span class="s2">&quot;cannot remove attributes&quot;</span> <span class="o">%</span> <span class="n">n</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">p_keys</span> <span class="o">=</span> <span class="p">[</span><span class="n">n</span><span class="p">]</span>
+
+        <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">p_keys</span><span class="p">:</span>
+            <span class="n">primitives</span><span class="o">.</span><span class="n">remove_node_attrs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">p</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">attrs</span><span class="p">)</span>
+            <span class="n">primitives</span><span class="o">.</span><span class="n">remove_node_attrs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rhs</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">p_rhs</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> <span class="n">attrs</span><span class="p">)</span>
+        <span class="k">return</span></div>
+
+<div class="viewcode-block" id="Rule.inject_remove_edge_attrs"><a class="viewcode-back" href="../../rules.html#regraph.rules.Rule.inject_remove_edge_attrs">[docs]</a>    <span class="k">def</span> <span class="nf">inject_remove_edge_attrs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n1</span><span class="p">,</span> <span class="n">n2</span><span class="p">,</span> <span class="n">attrs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Inject a removal of edge attrs by the rule.</span>
+
+<span class="sd">        For both `n1` and `n2`, first, tries to find</span>
+<span class="sd">        a node with this id in the left-hand side,</span>
+<span class="sd">        injects the removal of the respective edge attrs if found,</span>
+<span class="sd">        otherwise, tries to find the corresponding node in</span>
+<span class="sd">        the preserved part (it helps us to implement injection</span>
+<span class="sd">        of the edge attrs removal to only one of the edges</span>
+<span class="sd">        incident to the clone).</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        n1 : hashable</span>
+<span class="sd">            Id of an edge&#39;s source node in `lhs` or `p`.</span>
+<span class="sd">        n2 : hashable</span>
+<span class="sd">            Id of an edge&#39;s target node in `lhs` or `p`.</span>
+<span class="sd">        attrs : dict</span>
+<span class="sd">            Dictionary with attributes to remove.</span>
+
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        RuleError</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">n1</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">lhs</span><span class="o">.</span><span class="n">nodes</span><span class="p">()</span> <span class="ow">and</span> <span class="n">n1</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">p</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
+            <span class="k">raise</span> <span class="n">RuleError</span><span class="p">(</span>
+                <span class="s2">&quot;Node &#39;</span><span class="si">%s</span><span class="s2">&#39; exists in neither the left &quot;</span>
+                <span class="s2">&quot;hand side of the rule nor the preserved part&quot;</span> <span class="o">%</span> <span class="n">n1</span>
+            <span class="p">)</span>
+        <span class="k">if</span> <span class="n">n2</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">lhs</span><span class="o">.</span><span class="n">nodes</span><span class="p">()</span> <span class="ow">and</span> <span class="n">n2</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">p</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
+            <span class="k">raise</span> <span class="n">RuleError</span><span class="p">(</span>
+                <span class="s2">&quot;Node &#39;</span><span class="si">%s</span><span class="s2">&#39; exists in neither the left &quot;</span>
+                <span class="s2">&quot;hand side of the rule nor the preserved part&quot;</span> <span class="o">%</span> <span class="n">n2</span>
+            <span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">n1</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">lhs</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
+            <span class="n">p_keys_1</span> <span class="o">=</span> <span class="n">keys_by_value</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">p_lhs</span><span class="p">,</span> <span class="n">n1</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">p_keys_1</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">RuleError</span><span class="p">(</span>
+                    <span class="s2">&quot;Node &#39;</span><span class="si">%s</span><span class="s2">&#39; is being removed by the rule, cannot remove &quot;</span>
+                    <span class="s2">&quot;attributes from the incident edge&quot;</span> <span class="o">%</span>
+                    <span class="n">n1</span>
+                <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">p_keys_1</span> <span class="o">=</span> <span class="p">[</span><span class="n">n1</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">n2</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">lhs</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
+            <span class="n">p_keys_2</span> <span class="o">=</span> <span class="n">keys_by_value</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">p_lhs</span><span class="p">,</span> <span class="n">n2</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">p_keys_2</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">RuleError</span><span class="p">(</span>
+                    <span class="s2">&quot;Node &#39;</span><span class="si">%s</span><span class="s2">&#39; is being removed by the rule, cannot remove &quot;</span>
+                    <span class="s2">&quot;attributes from the incident edge&quot;</span> <span class="o">%</span>
+                    <span class="n">n2</span>
+                <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">p_keys_2</span> <span class="o">=</span> <span class="p">[</span><span class="n">n2</span><span class="p">]</span>
+
+        <span class="k">for</span> <span class="n">k1</span> <span class="ow">in</span> <span class="n">p_keys_1</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">k2</span> <span class="ow">in</span> <span class="n">p_keys_2</span><span class="p">:</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">p</span><span class="o">.</span><span class="n">is_directed</span><span class="p">():</span>
+                    <span class="k">if</span> <span class="p">(</span><span class="n">k1</span><span class="p">,</span> <span class="n">k2</span><span class="p">)</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">p</span><span class="o">.</span><span class="n">edges</span><span class="p">():</span>
+                        <span class="k">raise</span> <span class="n">RuleError</span><span class="p">(</span>
+                            <span class="s2">&quot;Edge &#39;</span><span class="si">%s</span><span class="s2">-&gt;</span><span class="si">%s</span><span class="s2">&#39; does not exist in the preserved &quot;</span>
+                            <span class="s2">&quot;part of the rule&quot;</span> <span class="o">%</span>
+                            <span class="p">(</span><span class="n">k1</span><span class="p">,</span> <span class="n">k2</span><span class="p">)</span>
+                        <span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="p">(</span><span class="n">k1</span><span class="p">,</span> <span class="n">k2</span><span class="p">)</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">p</span><span class="o">.</span><span class="n">edges</span><span class="p">()</span> <span class="ow">and</span>\
+                       <span class="p">(</span><span class="n">k2</span><span class="p">,</span> <span class="n">k1</span><span class="p">)</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">p</span><span class="o">.</span><span class="n">edges</span><span class="p">():</span>
+                        <span class="k">raise</span> <span class="n">RuleError</span><span class="p">(</span>
+                            <span class="s2">&quot;Edge &#39;</span><span class="si">%s</span><span class="s2">-&gt;</span><span class="si">%s</span><span class="s2">&#39; does not exist in the preserved &quot;</span>
+                            <span class="s2">&quot;part of the rule&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">k1</span><span class="p">,</span> <span class="n">k2</span><span class="p">)</span>
+                        <span class="p">)</span>
+                <span class="n">primitives</span><span class="o">.</span><span class="n">remove_edge_attrs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">p</span><span class="p">,</span> <span class="n">k1</span><span class="p">,</span> <span class="n">k2</span><span class="p">,</span> <span class="n">attrs</span><span class="p">)</span>
+                <span class="n">primitives</span><span class="o">.</span><span class="n">remove_edge_attrs</span><span class="p">(</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">rhs</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">p_rhs</span><span class="p">[</span><span class="n">k1</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">p_rhs</span><span class="p">[</span><span class="n">k2</span><span class="p">],</span> <span class="n">attrs</span><span class="p">)</span>
+        <span class="k">return</span></div>
+
+<div class="viewcode-block" id="Rule.inject_add_node"><a class="viewcode-back" href="../../rules.html#regraph.rules.Rule.inject_add_node">[docs]</a>    <span class="k">def</span> <span class="nf">inject_add_node</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node_id</span><span class="p">,</span> <span class="n">attrs</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Inject an addition of a new node by the rule.</span>
+
+<span class="sd">        This method adds a node with `node_id` (and the specified</span>
+<span class="sd">        attributes `attrs`) to `rhs`.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
@@ -288,16 +556,6 @@
 <span class="sd">            If node with this id already exists in the `rhs`.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="n">node_id</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">rhs</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
-            <span class="n">p_keys</span> <span class="o">=</span> <span class="n">keys_by_value</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">p_rhs</span><span class="p">,</span> <span class="n">node_id</span><span class="p">)</span>
-            <span class="c1"># here we check for the nodes with the same name in the lhs</span>
-            <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">p_keys</span><span class="p">:</span>
-                <span class="n">lhs_key</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">p_lhs</span><span class="p">[</span><span class="n">k</span><span class="p">]</span>
-                <span class="k">if</span> <span class="n">lhs_key</span> <span class="o">==</span> <span class="n">node_id</span><span class="p">:</span>
-                    <span class="k">raise</span> <span class="n">RuleError</span><span class="p">(</span>
-                        <span class="s2">&quot;Node with the id &#39;</span><span class="si">%s</span><span class="s2">&#39; already exists in the &quot;</span>
-                        <span class="s2">&quot;left hand side of the rule&quot;</span> <span class="o">%</span>
-                        <span class="n">node_id</span>
-                    <span class="p">)</span>
             <span class="n">primitives</span><span class="o">.</span><span class="n">add_node</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rhs</span><span class="p">,</span> <span class="n">node_id</span><span class="p">,</span> <span class="n">attrs</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="k">raise</span> <span class="n">RuleError</span><span class="p">(</span>
@@ -306,282 +564,236 @@
                 <span class="n">node_id</span>
             <span class="p">)</span></div>
 
-<div class="viewcode-block" id="Rule.remove_node_rhs"><a class="viewcode-back" href="../../rules.html#regraph.rules.Rule.remove_node_rhs">[docs]</a>    <span class="k">def</span> <span class="nf">remove_node_rhs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node_id</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Remove a node from the `rhs`.</span>
+<div class="viewcode-block" id="Rule.inject_add_edge"><a class="viewcode-back" href="../../rules.html#regraph.rules.Rule.inject_add_edge">[docs]</a>    <span class="k">def</span> <span class="nf">inject_add_edge</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n1</span><span class="p">,</span> <span class="n">n2</span><span class="p">,</span> <span class="n">attrs</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Inject addition of a new edge to the rule.</span>
 
-<span class="sd">        This method removes a given node from the `rhs`,</span>
-<span class="sd">        if there exist nodes from `p` that map to this node</span>
-<span class="sd">        they are removed as well.</span>
+<span class="sd">        This method adds an edge between two nodes of the</span>
+<span class="sd">        `rhs`.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        n1 : hashable</span>
+<span class="sd">            Id of an edge&#39;s source node in `rhs`.</span>
+<span class="sd">        n2 : hashable</span>
+<span class="sd">            Id of an edge&#39;s target node in `rhs`.</span>
+
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        RuleError</span>
+<span class="sd">            If some of the nodes (`n1` or `n2`) do not exist</span>
+<span class="sd">            or if there is already an edge between them in `rhs`.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">p_keys</span> <span class="o">=</span> <span class="n">keys_by_value</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">p_rhs</span><span class="p">,</span> <span class="n">node_id</span><span class="p">)</span>
-        <span class="k">for</span> <span class="n">p_node</span> <span class="ow">in</span> <span class="n">p_keys</span><span class="p">:</span>
-            <span class="n">primitives</span><span class="o">.</span><span class="n">remove_node</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">p</span><span class="p">,</span> <span class="n">p_node</span><span class="p">)</span>
-            <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">p_rhs</span><span class="p">[</span><span class="n">p_node</span><span class="p">]</span>
-            <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">p_lhs</span><span class="p">[</span><span class="n">p_node</span><span class="p">]</span>
-        <span class="n">primitives</span><span class="o">.</span><span class="n">remove_node</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rhs</span><span class="p">,</span> <span class="n">node_id</span><span class="p">)</span></div>
-
-<div class="viewcode-block" id="Rule.remove_node"><a class="viewcode-back" href="../../rules.html#regraph.rules.Rule.remove_node">[docs]</a>    <span class="k">def</span> <span class="nf">remove_node</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Remove a node in the graph.&quot;&quot;&quot;</span>
-        <span class="c1"># remove corresponding nodes from p and rhs</span>
-        <span class="n">p_keys</span> <span class="o">=</span> <span class="n">keys_by_value</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">p_lhs</span><span class="p">,</span> <span class="n">n</span><span class="p">)</span>
-        <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">p_keys</span><span class="p">:</span>
-            <span class="k">if</span> <span class="n">k</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">p</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
-                <span class="n">primitives</span><span class="o">.</span><span class="n">remove_node</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">p</span><span class="p">,</span> <span class="n">k</span><span class="p">)</span>
-            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">p_rhs</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">rhs</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
-                <span class="n">primitives</span><span class="o">.</span><span class="n">remove_node</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rhs</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">p_rhs</span><span class="p">[</span><span class="n">k</span><span class="p">])</span>
-                <span class="n">affected_nodes</span> <span class="o">=</span> <span class="n">keys_by_value</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">p_rhs</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">p_rhs</span><span class="p">[</span><span class="n">k</span><span class="p">])</span>
-                <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">affected_nodes</span><span class="p">:</span>
-                    <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">p_rhs</span><span class="p">[</span><span class="n">node</span><span class="p">]</span>
-            <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">p_lhs</span><span class="p">[</span><span class="n">k</span><span class="p">]</span>
-        <span class="k">return</span></div>
-
-<div class="viewcode-block" id="Rule.add_edge_rhs"><a class="viewcode-back" href="../../rules.html#regraph.rules.Rule.add_edge_rhs">[docs]</a>    <span class="k">def</span> <span class="nf">add_edge_rhs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n1</span><span class="p">,</span> <span class="n">n2</span><span class="p">,</span> <span class="n">attrs</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Add an edge in the rhs.&quot;&quot;&quot;</span>
-        <span class="n">primitives</span><span class="o">.</span><span class="n">add_edge</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rhs</span><span class="p">,</span> <span class="n">n1</span><span class="p">,</span> <span class="n">n2</span><span class="p">,</span> <span class="n">attrs</span><span class="p">)</span></div>
-
-<div class="viewcode-block" id="Rule.add_edge"><a class="viewcode-back" href="../../rules.html#regraph.rules.Rule.add_edge">[docs]</a>    <span class="k">def</span> <span class="nf">add_edge</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n1</span><span class="p">,</span> <span class="n">n2</span><span class="p">,</span> <span class="n">attrs</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Add an edge in the graph.&quot;&quot;&quot;</span>
-        <span class="c1"># Find nodes in p mapping to n1 &amp; n2</span>
-        <span class="n">p_keys_1</span> <span class="o">=</span> <span class="n">keys_by_value</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">p_lhs</span><span class="p">,</span> <span class="n">n1</span><span class="p">)</span>
-        <span class="n">p_keys_2</span> <span class="o">=</span> <span class="n">keys_by_value</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">p_lhs</span><span class="p">,</span> <span class="n">n2</span><span class="p">)</span>
-        <span class="k">for</span> <span class="n">k1</span> <span class="ow">in</span> <span class="n">p_keys_1</span><span class="p">:</span>
-            <span class="k">if</span> <span class="n">k1</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">p</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
-                <span class="k">raise</span> <span class="n">RuleError</span><span class="p">(</span>
-                    <span class="s2">&quot;Node with the id &#39;</span><span class="si">%s</span><span class="s2">&#39; does not exist in the &quot;</span>
-                    <span class="s2">&quot;preserved part of the rule&quot;</span> <span class="o">%</span> <span class="n">k1</span>
-                <span class="p">)</span>
-            <span class="k">for</span> <span class="n">k2</span> <span class="ow">in</span> <span class="n">p_keys_2</span><span class="p">:</span>
-                <span class="k">if</span> <span class="n">k2</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">p</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
-                    <span class="k">raise</span> <span class="n">RuleError</span><span class="p">(</span>
-                        <span class="s2">&quot;Node with the id &#39;</span><span class="si">%s</span><span class="s2">&#39; does not exist in the &quot;</span>
-                        <span class="s2">&quot;preserved part of the rule&quot;</span> <span class="o">%</span> <span class="n">k2</span>
-                    <span class="p">)</span>
-                <span class="n">rhs_key_1</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">p_rhs</span><span class="p">[</span><span class="n">k1</span><span class="p">]</span>
-                <span class="n">rhs_key_2</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">p_rhs</span><span class="p">[</span><span class="n">k2</span><span class="p">]</span>
-                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">rhs</span><span class="o">.</span><span class="n">is_directed</span><span class="p">():</span>
-                    <span class="k">if</span> <span class="p">(</span><span class="n">rhs_key_1</span><span class="p">,</span> <span class="n">rhs_key_2</span><span class="p">)</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">rhs</span><span class="o">.</span><span class="n">edges</span><span class="p">():</span>
-                        <span class="k">raise</span> <span class="n">RuleError</span><span class="p">(</span>
-                            <span class="s2">&quot;Edge &#39;</span><span class="si">%s</span><span class="s2">-&gt;</span><span class="si">%s</span><span class="s2">&#39; already exists in the right &quot;</span>
-                            <span class="s2">&quot;hand side of the rule&quot;</span> <span class="o">%</span>
-                            <span class="p">(</span><span class="n">rhs_key_1</span><span class="p">,</span> <span class="n">rhs_key_2</span><span class="p">)</span>
-                        <span class="p">)</span>
-                    <span class="n">primitives</span><span class="o">.</span><span class="n">add_edge</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rhs</span><span class="p">,</span> <span class="n">rhs_key_1</span><span class="p">,</span> <span class="n">rhs_key_2</span><span class="p">,</span> <span class="n">attrs</span><span class="p">)</span>
-                <span class="k">else</span><span class="p">:</span>
-                    <span class="k">if</span> <span class="p">(</span><span class="n">rhs_key_1</span><span class="p">,</span> <span class="n">rhs_key_2</span><span class="p">)</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">rhs</span><span class="o">.</span><span class="n">edges</span><span class="p">()</span> <span class="ow">or</span>\
-                       <span class="p">(</span><span class="n">rhs_key_2</span><span class="p">,</span> <span class="n">rhs_key_1</span><span class="p">)</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">rhs</span><span class="o">.</span><span class="n">edges</span><span class="p">():</span>
-                        <span class="k">raise</span> <span class="n">RuleError</span><span class="p">(</span>
-                            <span class="s2">&quot;Edge &#39;</span><span class="si">%s</span><span class="s2">-&gt;</span><span class="si">%s</span><span class="s2">&#39; already exists in the right &quot;</span>
-                            <span class="s2">&quot;hand side of the rule&quot;</span> <span class="o">%</span>
-                            <span class="p">(</span><span class="n">rhs_key_1</span><span class="p">,</span> <span class="n">rhs_key_2</span><span class="p">)</span>
-                        <span class="p">)</span>
-                    <span class="n">primitives</span><span class="o">.</span><span class="n">add_edge</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rhs</span><span class="p">,</span> <span class="n">rhs_key_1</span><span class="p">,</span> <span class="n">rhs_key_2</span><span class="p">,</span> <span class="n">attrs</span><span class="p">)</span>
-        <span class="k">return</span></div>
-
-<div class="viewcode-block" id="Rule.remove_edge_p"><a class="viewcode-back" href="../../rules.html#regraph.rules.Rule.remove_edge_p">[docs]</a>    <span class="k">def</span> <span class="nf">remove_edge_p</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node1</span><span class="p">,</span> <span class="n">node2</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Remove edge from the p of the graph.&quot;&quot;&quot;</span>
-        <span class="n">primitives</span><span class="o">.</span><span class="n">remove_edge</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">p</span><span class="p">,</span> <span class="n">node1</span><span class="p">,</span> <span class="n">node2</span><span class="p">)</span></div>
-
-<div class="viewcode-block" id="Rule.remove_edge_rhs"><a class="viewcode-back" href="../../rules.html#regraph.rules.Rule.remove_edge_rhs">[docs]</a>    <span class="k">def</span> <span class="nf">remove_edge_rhs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node1</span><span class="p">,</span> <span class="n">node2</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Remove edge from the rhs of the graph.&quot;&quot;&quot;</span>
-        <span class="n">primitives</span><span class="o">.</span><span class="n">remove_edge</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rhs</span><span class="p">,</span> <span class="n">node1</span><span class="p">,</span> <span class="n">node2</span><span class="p">)</span>
-        <span class="k">for</span> <span class="n">pn1</span> <span class="ow">in</span> <span class="n">keys_by_value</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">p_rhs</span><span class="p">,</span> <span class="n">node1</span><span class="p">):</span>
-            <span class="k">for</span> <span class="n">pn2</span> <span class="ow">in</span> <span class="n">keys_by_value</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">p_rhs</span><span class="p">,</span> <span class="n">node2</span><span class="p">):</span>
-                <span class="nb">print</span><span class="p">(</span><span class="n">pn1</span><span class="p">,</span> <span class="n">pn2</span><span class="p">)</span>
-                <span class="k">try</span><span class="p">:</span>
-                    <span class="n">primitives</span><span class="o">.</span><span class="n">remove_edge</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">p</span><span class="p">,</span> <span class="n">pn1</span><span class="p">,</span> <span class="n">pn2</span><span class="p">)</span>
-                <span class="k">except</span> <span class="n">GraphError</span><span class="p">:</span>
-                    <span class="k">continue</span></div>
-
-<div class="viewcode-block" id="Rule.remove_edge"><a class="viewcode-back" href="../../rules.html#regraph.rules.Rule.remove_edge">[docs]</a>    <span class="k">def</span> <span class="nf">remove_edge</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n1</span><span class="p">,</span> <span class="n">n2</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Remove edge from the graph.&quot;&quot;&quot;</span>
-        <span class="c1"># Find nodes in p mapping to n1 &amp; n2</span>
-        <span class="n">p_keys_1</span> <span class="o">=</span> <span class="n">keys_by_value</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">p_lhs</span><span class="p">,</span> <span class="n">n1</span><span class="p">)</span>
-        <span class="n">p_keys_2</span> <span class="o">=</span> <span class="n">keys_by_value</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">p_lhs</span><span class="p">,</span> <span class="n">n2</span><span class="p">)</span>
-
-        <span class="c1"># Remove edge from the preserved part &amp; rhs of the rule</span>
-        <span class="k">for</span> <span class="n">k1</span> <span class="ow">in</span> <span class="n">p_keys_1</span><span class="p">:</span>
-            <span class="k">if</span> <span class="n">k1</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">p</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
-                <span class="k">raise</span> <span class="n">RuleError</span><span class="p">(</span>
-                    <span class="s2">&quot;Node with the id &#39;</span><span class="si">%s</span><span class="s2">&#39; does not exist in &quot;</span>
-                    <span class="s2">&quot;the preserved part&quot;</span> <span class="o">%</span> <span class="n">k1</span>
-                <span class="p">)</span>
-            <span class="k">for</span> <span class="n">k2</span> <span class="ow">in</span> <span class="n">p_keys_2</span><span class="p">:</span>
-                <span class="k">if</span> <span class="n">k2</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">p</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
-                    <span class="k">raise</span> <span class="n">RuleError</span><span class="p">(</span>
-                        <span class="s2">&quot;Node with the id &#39;</span><span class="si">%s</span><span class="s2">&#39; does not exist in &quot;</span>
-                        <span class="s2">&quot;the preserved part&quot;</span> <span class="o">%</span> <span class="n">k2</span>
-                    <span class="p">)</span>
-                <span class="n">rhs_key_1</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">p_rhs</span><span class="p">[</span><span class="n">k1</span><span class="p">]</span>
-                <span class="n">rhs_key_2</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">p_rhs</span><span class="p">[</span><span class="n">k2</span><span class="p">]</span>
-                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">p</span><span class="o">.</span><span class="n">is_directed</span><span class="p">():</span>
-                    <span class="k">if</span> <span class="p">(</span><span class="n">k1</span><span class="p">,</span> <span class="n">k2</span><span class="p">)</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">p</span><span class="o">.</span><span class="n">edges</span><span class="p">():</span>
-                        <span class="k">raise</span> <span class="n">RuleError</span><span class="p">(</span>
-                            <span class="s2">&quot;Edge &#39;</span><span class="si">%s</span><span class="s2">-&gt;</span><span class="si">%s</span><span class="s2">&#39; does not exist in the preserved &quot;</span>
-                            <span class="s2">&quot;part of the rule &quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">k1</span><span class="p">,</span> <span class="n">k2</span><span class="p">)</span>
-                        <span class="p">)</span>
-                    <span class="k">if</span> <span class="p">(</span><span class="n">rhs_key_1</span><span class="p">,</span> <span class="n">rhs_key_2</span><span class="p">)</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">rhs</span><span class="o">.</span><span class="n">edges</span><span class="p">():</span>
-                        <span class="k">raise</span> <span class="n">RuleError</span><span class="p">(</span>
-                            <span class="s2">&quot;Edge &#39;</span><span class="si">%s</span><span class="s2">-&gt;</span><span class="si">%s</span><span class="s2">&#39; does not exist in the right hand &quot;</span>
-                            <span class="s2">&quot;side of the rule &quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">rhs_key_1</span><span class="p">,</span> <span class="n">rhs_key_2</span><span class="p">)</span>
-                        <span class="p">)</span>
-                    <span class="n">primitives</span><span class="o">.</span><span class="n">remove_edge</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">p</span><span class="p">,</span> <span class="n">k1</span><span class="p">,</span> <span class="n">k2</span><span class="p">)</span>
-                    <span class="n">primitives</span><span class="o">.</span><span class="n">remove_edge</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rhs</span><span class="p">,</span> <span class="n">rhs_key_1</span><span class="p">,</span> <span class="n">rhs_key_2</span><span class="p">)</span>
-                <span class="k">else</span><span class="p">:</span>
-                    <span class="k">if</span> <span class="p">(</span><span class="n">k1</span><span class="p">,</span> <span class="n">k2</span><span class="p">)</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">p</span><span class="o">.</span><span class="n">edges</span><span class="p">()</span> <span class="ow">and</span>\
-                       <span class="p">(</span><span class="n">k2</span><span class="p">,</span> <span class="n">k1</span><span class="p">)</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">p</span><span class="o">.</span><span class="n">edges</span><span class="p">():</span>
-                        <span class="k">raise</span> <span class="n">RuleError</span><span class="p">(</span>
-                            <span class="s2">&quot;Edge &#39;</span><span class="si">%s</span><span class="s2">-&gt;</span><span class="si">%s</span><span class="s2">&#39; does not exist in the &quot;</span>
-                            <span class="s2">&quot;preserved part of the rule &quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">k1</span><span class="p">,</span> <span class="n">k2</span><span class="p">)</span>
-                        <span class="p">)</span>
-                    <span class="k">if</span> <span class="p">(</span><span class="n">rhs_key_1</span><span class="p">,</span> <span class="n">rhs_key_2</span><span class="p">)</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">rhs</span><span class="o">.</span><span class="n">edges</span><span class="p">()</span> <span class="ow">and</span>\
-                       <span class="p">(</span><span class="n">rhs_key_2</span><span class="p">,</span> <span class="n">rhs_key_1</span><span class="p">)</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">rhs</span><span class="o">.</span><span class="n">edges</span><span class="p">():</span>
-                        <span class="k">raise</span> <span class="n">RuleError</span><span class="p">(</span>
-                            <span class="s2">&quot;Edge &#39;</span><span class="si">%s</span><span class="s2">-&gt;</span><span class="si">%s</span><span class="s2">&#39; does not exist in the right &quot;</span>
-                            <span class="s2">&quot;hand side of the rule &quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">rhs_key_1</span><span class="p">,</span> <span class="n">rhs_key_2</span><span class="p">)</span>
-                        <span class="p">)</span>
-                    <span class="n">primitives</span><span class="o">.</span><span class="n">remove_edge</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">p</span><span class="p">,</span> <span class="n">k1</span><span class="p">,</span> <span class="n">k2</span><span class="p">)</span>
-        <span class="k">return</span></div>
-
-<div class="viewcode-block" id="Rule.clone_rhs_node"><a class="viewcode-back" href="../../rules.html#regraph.rules.Rule.clone_rhs_node">[docs]</a>    <span class="k">def</span> <span class="nf">clone_rhs_node</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">,</span> <span class="n">new_name</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Clone an rhs node.&quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="n">node</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">rhs</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
-            <span class="k">raise</span> <span class="n">RuleError</span><span class="p">(</span>
-                <span class="s2">&quot;Node &#39;</span><span class="si">%s</span><span class="s2">&#39; is not a node of right hand side&quot;</span> <span class="o">%</span>
-                <span class="n">node</span>
-            <span class="p">)</span>
-        <span class="n">p_keys</span> <span class="o">=</span> <span class="n">keys_by_value</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">p_rhs</span><span class="p">,</span> <span class="n">node</span><span class="p">)</span>
-        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">p_keys</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-            <span class="n">primitives</span><span class="o">.</span><span class="n">clone_node</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rhs</span><span class="p">,</span> <span class="n">node</span><span class="p">,</span> <span class="n">new_name</span><span class="p">)</span>
-        <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">p_keys</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
-            <span class="n">primitives</span><span class="o">.</span><span class="n">clone_node</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rhs</span><span class="p">,</span> <span class="n">node</span><span class="p">,</span> <span class="n">new_name</span><span class="p">)</span>
-            <span class="n">new_p_node</span> <span class="o">=</span> <span class="n">primitives</span><span class="o">.</span><span class="n">clone_node</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">p</span><span class="p">,</span> <span class="n">p_keys</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">p_rhs</span><span class="p">[</span><span class="n">new_p_node</span><span class="p">]</span> <span class="o">=</span> <span class="n">new_name</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">p_lhs</span><span class="p">[</span><span class="n">new_p_node</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">p_lhs</span><span class="p">[</span><span class="n">p_keys</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="n">RuleError</span><span class="p">(</span><span class="s2">&quot;Cannot clone node that is result of merge!&quot;</span><span class="p">)</span></div>
-
-<div class="viewcode-block" id="Rule.clone_node"><a class="viewcode-back" href="../../rules.html#regraph.rules.Rule.clone_node">[docs]</a>    <span class="k">def</span> <span class="nf">clone_node</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="n">node_name</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Clone a node of the graph.&quot;&quot;&quot;</span>
-        <span class="n">p_new_nodes</span> <span class="o">=</span> <span class="p">[]</span>
-        <span class="n">rhs_new_nodes</span> <span class="o">=</span> <span class="p">[]</span>
-        <span class="n">p_keys</span> <span class="o">=</span> <span class="n">keys_by_value</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">p_lhs</span><span class="p">,</span> <span class="n">n</span><span class="p">)</span>
-        <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">p_keys</span><span class="p">:</span>
-            <span class="n">p_new_node</span> <span class="o">=</span> <span class="n">primitives</span><span class="o">.</span><span class="n">clone_node</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">p</span><span class="p">,</span> <span class="n">k</span><span class="p">)</span>
-            <span class="n">p_new_nodes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">p_new_node</span><span class="p">)</span>
-            <span class="n">rhs_new_node</span> <span class="o">=</span> <span class="n">primitives</span><span class="o">.</span><span class="n">clone_node</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rhs</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">p_rhs</span><span class="p">[</span><span class="n">k</span><span class="p">])</span>
-            <span class="n">rhs_new_nodes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">rhs_new_node</span><span class="p">)</span>
-            <span class="c1"># self.p_lhs[k] = n</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">p_lhs</span><span class="p">[</span><span class="n">p_new_node</span><span class="p">]</span> <span class="o">=</span> <span class="n">n</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">p_rhs</span><span class="p">[</span><span class="n">p_new_node</span><span class="p">]</span> <span class="o">=</span> <span class="n">rhs_new_node</span>
-        <span class="k">return</span> <span class="p">(</span><span class="n">p_new_nodes</span><span class="p">,</span> <span class="n">rhs_new_nodes</span><span class="p">)</span></div>
-
-<div class="viewcode-block" id="Rule.merge_nodes_rhs"><a class="viewcode-back" href="../../rules.html#regraph.rules.Rule.merge_nodes_rhs">[docs]</a>    <span class="k">def</span> <span class="nf">merge_nodes_rhs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n1</span><span class="p">,</span> <span class="n">n2</span><span class="p">,</span> <span class="n">new_name</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Merge3 nodes in rhs.&quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="n">n1</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">rhs</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
-            <span class="k">raise</span> <span class="n">RuleError</span><span class="p">(</span><span class="s2">&quot;Node &#39;</span><span class="si">%s</span><span class="s2">&#39; is not a node of the rhs&quot;</span> <span class="o">%</span> <span class="n">n1</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="n">RuleError</span><span class="p">(</span>
+                <span class="s2">&quot;Node with the id &#39;</span><span class="si">%s</span><span class="s2">&#39; does not exist in the &quot;</span>
+                <span class="s2">&quot;right-hand side of the rule&quot;</span> <span class="o">%</span> <span class="n">n1</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">n2</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">rhs</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
-            <span class="k">raise</span> <span class="n">RuleError</span><span class="p">(</span><span class="s2">&quot;Node &#39;</span><span class="si">%s</span><span class="s2">&#39; is not a node of the rhs&quot;</span> <span class="o">%</span> <span class="n">n2</span><span class="p">)</span>
-        <span class="n">primitives</span><span class="o">.</span><span class="n">merge_nodes</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rhs</span><span class="p">,</span> <span class="p">[</span><span class="n">n1</span><span class="p">,</span> <span class="n">n2</span><span class="p">],</span> <span class="n">node_id</span><span class="o">=</span><span class="n">new_name</span><span class="p">)</span>
-        <span class="k">for</span> <span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="n">target</span><span class="p">)</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">p_rhs</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-            <span class="k">if</span> <span class="n">target</span> <span class="o">==</span> <span class="n">n1</span> <span class="ow">or</span> <span class="n">target</span> <span class="o">==</span> <span class="n">n2</span><span class="p">:</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">p_rhs</span><span class="p">[</span><span class="n">source</span><span class="p">]</span> <span class="o">=</span> <span class="n">new_name</span></div>
+            <span class="k">raise</span> <span class="n">RuleError</span><span class="p">(</span>
+                <span class="s2">&quot;Node with the id &#39;</span><span class="si">%s</span><span class="s2">&#39; does not exist in the &quot;</span>
+                <span class="s2">&quot;right-hand side of the rule&quot;</span> <span class="o">%</span> <span class="n">n2</span><span class="p">)</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">n1</span><span class="p">,</span> <span class="n">n2</span><span class="p">)</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">rhs</span><span class="o">.</span><span class="n">edges</span><span class="p">():</span>
+            <span class="k">raise</span> <span class="n">RuleError</span><span class="p">(</span>
+                <span class="s2">&quot;Edge &#39;</span><span class="si">%s</span><span class="s2">-&gt;</span><span class="si">%s</span><span class="s2">&#39; already exists in the right-&quot;</span>
+                <span class="s2">&quot;hand side of the rule&quot;</span> <span class="o">%</span>
+                <span class="p">(</span><span class="n">n1</span><span class="p">,</span> <span class="n">n2</span><span class="p">)</span>
+            <span class="p">)</span>
+        <span class="n">primitives</span><span class="o">.</span><span class="n">add_edge</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rhs</span><span class="p">,</span> <span class="n">n1</span><span class="p">,</span> <span class="n">n2</span><span class="p">,</span> <span class="n">attrs</span><span class="p">)</span>
+        <span class="k">return</span></div>
 
-<div class="viewcode-block" id="Rule.merge_nodes"><a class="viewcode-back" href="../../rules.html#regraph.rules.Rule.merge_nodes">[docs]</a>    <span class="k">def</span> <span class="nf">merge_nodes</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n1</span><span class="p">,</span> <span class="n">n2</span><span class="p">,</span> <span class="n">node_id</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Merge two nodes of the graph.&quot;&quot;&quot;</span>
+<div class="viewcode-block" id="Rule.inject_merge_nodes"><a class="viewcode-back" href="../../rules.html#regraph.rules.Rule.inject_merge_nodes">[docs]</a>    <span class="k">def</span> <span class="nf">inject_merge_nodes</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node_list</span><span class="p">,</span> <span class="n">node_id</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Inject merge of a collection of nodes by the rule.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        node_list : iterable</span>
+<span class="sd">            Collection of ids of nodes from the preserved part to merge.</span>
+<span class="sd">        node_id : hashable</span>
+<span class="sd">            Id of the new node corresponding to the result of merge.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        new_name : hashable</span>
+<span class="sd">            Id of the new node corresponding to the result of merge.</span>
+
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        RuleError</span>
+<span class="sd">            If a node with some id specified in `node_lust` does not</span>
+<span class="sd">            exist in the preserved part of the rule.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># Update graphs</span>
         <span class="n">new_name</span> <span class="o">=</span> <span class="kc">None</span>
-        <span class="n">p_keys_1</span> <span class="o">=</span> <span class="n">keys_by_value</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">p_lhs</span><span class="p">,</span> <span class="n">n1</span><span class="p">)</span>
-        <span class="n">p_keys_2</span> <span class="o">=</span> <span class="n">keys_by_value</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">p_lhs</span><span class="p">,</span> <span class="n">n2</span><span class="p">)</span>
 
         <span class="n">nodes_to_merge</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
-        <span class="k">for</span> <span class="n">k1</span> <span class="ow">in</span> <span class="n">p_keys_1</span><span class="p">:</span>
-            <span class="k">if</span> <span class="n">k1</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">p</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
+        <span class="n">rhs_merged_nodes</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">node_list</span><span class="p">:</span>
+            <span class="n">rhs_merged_nodes</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">p_rhs</span><span class="p">[</span><span class="n">n</span><span class="p">])</span>
+            <span class="k">if</span> <span class="n">n</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">p</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
                 <span class="k">raise</span> <span class="n">RuleError</span><span class="p">(</span>
                     <span class="s2">&quot;Node with the id &#39;</span><span class="si">%s</span><span class="s2">&#39; does not exist in the &quot;</span>
-                    <span class="s2">&quot;preserved part of the rule&quot;</span> <span class="o">%</span> <span class="n">k1</span>
+                    <span class="s2">&quot;preserved part of the rule&quot;</span> <span class="o">%</span> <span class="n">n</span>
                 <span class="p">)</span>
-            <span class="k">for</span> <span class="n">k2</span> <span class="ow">in</span> <span class="n">p_keys_2</span><span class="p">:</span>
-                <span class="k">if</span> <span class="n">k2</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">p</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
-                    <span class="k">raise</span> <span class="n">RuleError</span><span class="p">(</span>
-                        <span class="s2">&quot;Node with the id &#39;</span><span class="si">%s</span><span class="s2">&#39; does not exist in &quot;</span>
-                        <span class="s2">&quot;the preserved part of the rule&quot;</span> <span class="o">%</span> <span class="n">k2</span>
-                    <span class="p">)</span>
-                <span class="n">nodes_to_merge</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">p_rhs</span><span class="p">[</span><span class="n">k1</span><span class="p">])</span>
-                <span class="n">nodes_to_merge</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">p_rhs</span><span class="p">[</span><span class="n">k2</span><span class="p">])</span>
+            <span class="n">nodes_to_merge</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">p_rhs</span><span class="p">[</span><span class="n">n</span><span class="p">])</span>
         <span class="n">new_name</span> <span class="o">=</span> <span class="n">primitives</span><span class="o">.</span><span class="n">merge_nodes</span><span class="p">(</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">rhs</span><span class="p">,</span>
             <span class="nb">list</span><span class="p">(</span><span class="n">nodes_to_merge</span><span class="p">),</span>
             <span class="n">node_id</span><span class="o">=</span><span class="n">node_id</span>
         <span class="p">)</span>
         <span class="c1"># Update mappings</span>
-        <span class="n">keys</span> <span class="o">=</span> <span class="n">p_keys_1</span> <span class="o">+</span> <span class="n">p_keys_2</span>
-        <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">keys</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">p_rhs</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">new_name</span>
+        <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">node_list</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">p_rhs</span><span class="p">[</span><span class="n">n</span><span class="p">]</span> <span class="o">=</span> <span class="n">new_name</span>
+        <span class="k">for</span> <span class="n">r_node</span> <span class="ow">in</span> <span class="n">rhs_merged_nodes</span><span class="p">:</span>
+            <span class="n">merged_ps</span> <span class="o">=</span> <span class="n">keys_by_value</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">p_rhs</span><span class="p">,</span> <span class="n">r_node</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">merged_ps</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">p_rhs</span><span class="p">[</span><span class="n">p</span><span class="p">]</span> <span class="o">=</span> <span class="n">new_name</span>
         <span class="k">return</span> <span class="n">new_name</span></div>
 
-<div class="viewcode-block" id="Rule.add_node_attrs_rhs"><a class="viewcode-back" href="../../rules.html#regraph.rules.Rule.add_node_attrs_rhs">[docs]</a>    <span class="k">def</span> <span class="nf">add_node_attrs_rhs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="n">attrs</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Add attrs to a node in the rhs.&quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="n">n</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">rhs</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
-            <span class="k">raise</span> <span class="n">RuleError</span><span class="p">(</span>
-                <span class="s2">&quot;Node </span><span class="si">%s</span><span class="s2"> does not exist in the right &quot;</span>
-                <span class="s2">&quot;hand side of the rule&quot;</span> <span class="o">%</span> <span class="n">n</span><span class="p">)</span>
-        <span class="n">primitives</span><span class="o">.</span><span class="n">add_node_attrs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rhs</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="n">attrs</span><span class="p">)</span></div>
+<div class="viewcode-block" id="Rule.inject_add_node_attrs"><a class="viewcode-back" href="../../rules.html#regraph.rules.Rule.inject_add_node_attrs">[docs]</a>    <span class="k">def</span> <span class="nf">inject_add_node_attrs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="n">attrs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Inject addition of  node attributes by the rule.</span>
 
-<div class="viewcode-block" id="Rule.add_node_attrs"><a class="viewcode-back" href="../../rules.html#regraph.rules.Rule.add_node_attrs">[docs]</a>    <span class="k">def</span> <span class="nf">add_node_attrs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="n">attrs</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Add node attributes to a node in the graph.&quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="n">n</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">lhs</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
+<span class="sd">        First, tries to find a node with the id `n` in the</span>
+<span class="sd">        left-hand side, injects its attrs add to all the `rhs` nodes</span>
+<span class="sd">        related to it through l&lt;-p-&gt;r, if found,</span>
+<span class="sd">        otherwise, tries to find the corresponding node in</span>
+<span class="sd">        the preserved part and adds attrs to the node to which `n`</span>
+<span class="sd">        maps in p-&gt;r, if it is not found in `p`, tries to find it in</span>
+<span class="sd">        the `rhs` (it helps us to implement injection</span>
+<span class="sd">        of the node attrs add to only one of the clone nodes, or to new nodes,</span>
+<span class="sd">        or to merged nodes).</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        n1 : hashable</span>
+<span class="sd">            Id of an edge&#39;s source node in `lhs`, `p` or `rhs`.</span>
+<span class="sd">        n2 : hashable</span>
+<span class="sd">            Id of an edge&#39;s target node in `lhs`, `p` or `rhs`.</span>
+<span class="sd">        attrs : dict</span>
+<span class="sd">            Dictionary with attrs to add</span>
+
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        RuleError</span>
+<span class="sd">            If node `n` does not exist in the rhs of the rule</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">n</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">lhs</span><span class="o">.</span><span class="n">nodes</span><span class="p">()</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">p</span><span class="o">.</span><span class="n">nodes</span><span class="p">()</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">rhs</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
             <span class="k">raise</span> <span class="n">RuleError</span><span class="p">(</span>
-                <span class="s2">&quot;Node &#39;</span><span class="si">%s</span><span class="s2">&#39; does not exist in the left &quot;</span>
-                <span class="s2">&quot;hand side of the rule&quot;</span> <span class="o">%</span> <span class="n">n</span><span class="p">)</span>
-        <span class="n">p_keys</span> <span class="o">=</span> <span class="n">keys_by_value</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">p_lhs</span><span class="p">,</span> <span class="n">n</span><span class="p">)</span>
-        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">p_keys</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="n">RuleError</span><span class="p">(</span>
-                <span class="s2">&quot;Node &#39;</span><span class="si">%s</span><span class="s2">&#39; is being removed by the rule, &quot;</span>
-                <span class="s2">&quot;cannot add attributes&quot;</span> <span class="o">%</span> <span class="n">n</span><span class="p">)</span>
-        <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">p_keys</span><span class="p">:</span>
-            <span class="n">primitives</span><span class="o">.</span><span class="n">add_node_attrs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rhs</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">p_rhs</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> <span class="n">attrs</span><span class="p">)</span>
+                <span class="s2">&quot;Node &#39;</span><span class="si">%s</span><span class="s2">&#39; exists in neither lhs, nor p, nor rhs of the rule&quot;</span> <span class="o">%</span>
+                <span class="n">n</span><span class="p">)</span>
+        <span class="n">r_nodes</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">n</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">lhs</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
+            <span class="n">p_keys</span> <span class="o">=</span> <span class="n">keys_by_value</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">p_lhs</span><span class="p">,</span> <span class="n">n</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">p_keys</span><span class="p">:</span>
+                <span class="n">r_nodes</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">p_rhs</span><span class="p">[</span><span class="n">p</span><span class="p">])</span>
+        <span class="k">elif</span> <span class="n">n</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">p</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
+            <span class="n">r_nodes</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">p_rhs</span><span class="p">[</span><span class="n">n</span><span class="p">])</span>
+        <span class="k">elif</span> <span class="n">n</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">rhs</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
+            <span class="n">r_nodes</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">r_nodes</span><span class="p">:</span>
+            <span class="n">primitives</span><span class="o">.</span><span class="n">add_node_attrs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rhs</span><span class="p">,</span> <span class="n">r</span><span class="p">,</span> <span class="n">attrs</span><span class="p">)</span>
         <span class="k">return</span></div>
 
-<div class="viewcode-block" id="Rule.remove_node_attrs_rhs"><a class="viewcode-back" href="../../rules.html#regraph.rules.Rule.remove_node_attrs_rhs">[docs]</a>    <span class="k">def</span> <span class="nf">remove_node_attrs_rhs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="n">attrs</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Remove attrs of a node in the rhs.&quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="n">n</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">rhs</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
+<div class="viewcode-block" id="Rule.inject_add_edge_attrs"><a class="viewcode-back" href="../../rules.html#regraph.rules.Rule.inject_add_edge_attrs">[docs]</a>    <span class="k">def</span> <span class="nf">inject_add_edge_attrs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n1</span><span class="p">,</span> <span class="n">n2</span><span class="p">,</span> <span class="n">attrs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Inject addition of edge attributes by the rule.</span>
+
+<span class="sd">        For `n1` and `n2`, first, tries to find a node with this id in the</span>
+<span class="sd">        left-hand side, finds a node from `rhs` related to it through</span>
+<span class="sd">        l&lt;-p-&gt;r, if found, otherwise, tries to find the corresponding node in</span>
+<span class="sd">        the preserved part and finds the node to which `n` maps in p-&gt;r,</span>
+<span class="sd">        if it is not found in `p`, tries to find it in</span>
+<span class="sd">        the `rhs` (it helps us to implement injection</span>
+<span class="sd">        of the edge attrs add to only one of the edges incident to clones,</span>
+<span class="sd">        or to new edges, or to edges produced by merges).</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        n1 : hashable</span>
+<span class="sd">        n2 : hashable</span>
+<span class="sd">        attrs : dict</span>
+<span class="sd">            Dictionary with attrs to add</span>
+
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        RuleError</span>
+<span class="sd">            If some of the nodes defining an edge are not found in neither</span>
+<span class="sd">            `lhs`, nor `p` nor `rhs`, or if an edge is incident to smth thats</span>
+<span class="sd">            is going to be removed by the rule.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">n1</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">lhs</span><span class="o">.</span><span class="n">nodes</span><span class="p">()</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">rhs</span><span class="o">.</span><span class="n">nodes</span><span class="p">()</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">p</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
             <span class="k">raise</span> <span class="n">RuleError</span><span class="p">(</span>
-                <span class="s2">&quot;Node &#39;</span><span class="si">%s</span><span class="s2">&#39; does not exist in the right hand &quot;</span>
-                <span class="s2">&quot;side of the rule&quot;</span> <span class="o">%</span> <span class="n">n</span><span class="p">)</span>
+                <span class="s2">&quot;Node &#39;</span><span class="si">%s</span><span class="s2">&#39; exists in neither lhs, nor p, nor rhs &quot;</span>
+                <span class="s2">&quot;of the rule&quot;</span> <span class="o">%</span> <span class="n">n1</span>
+            <span class="p">)</span>
 
-        <span class="n">p_keys</span> <span class="o">=</span> <span class="n">keys_by_value</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">p_rhs</span><span class="p">,</span> <span class="n">n</span><span class="p">)</span>
-        <span class="k">for</span> <span class="n">p_node</span> <span class="ow">in</span> <span class="n">p_keys</span><span class="p">:</span>
-            <span class="n">primitives</span><span class="o">.</span><span class="n">remove_node_attrs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">p</span><span class="p">,</span> <span class="n">p_node</span><span class="p">,</span> <span class="n">attrs</span><span class="p">)</span>
-        <span class="n">primitives</span><span class="o">.</span><span class="n">remove_node_attrs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rhs</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="n">attrs</span><span class="p">)</span></div>
-
-<div class="viewcode-block" id="Rule.remove_node_attrs_p"><a class="viewcode-back" href="../../rules.html#regraph.rules.Rule.remove_node_attrs_p">[docs]</a>    <span class="k">def</span> <span class="nf">remove_node_attrs_p</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="n">attrs</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Remove attrs of a node in the p.&quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="n">n</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">p</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
+        <span class="k">if</span> <span class="n">n2</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">lhs</span><span class="o">.</span><span class="n">nodes</span><span class="p">()</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">rhs</span><span class="o">.</span><span class="n">nodes</span><span class="p">()</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">p</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
             <span class="k">raise</span> <span class="n">RuleError</span><span class="p">(</span>
-                <span class="s2">&quot;Node &#39;</span><span class="si">%s</span><span class="s2">&#39; does not exist in the preserved &quot;</span>
-                <span class="s2">&quot;part of the rule&quot;</span> <span class="o">%</span> <span class="n">n</span><span class="p">)</span>
-        <span class="n">primitives</span><span class="o">.</span><span class="n">remove_node_attrs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">p</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="n">attrs</span><span class="p">)</span></div>
+                <span class="s2">&quot;Node &#39;</span><span class="si">%s</span><span class="s2">&#39; exists in neither lhs, nor p, nor rhs &quot;</span>
+                <span class="s2">&quot;of the rule&quot;</span> <span class="o">%</span> <span class="n">n2</span>
+            <span class="p">)</span>
 
-<div class="viewcode-block" id="Rule.remove_node_attrs"><a class="viewcode-back" href="../../rules.html#regraph.rules.Rule.remove_node_attrs">[docs]</a>    <span class="k">def</span> <span class="nf">remove_node_attrs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="n">attrs</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Remove nodes attributes from a node in the graph.&quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="n">n</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">lhs</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
-            <span class="k">raise</span> <span class="n">RuleError</span><span class="p">(</span>
-                <span class="s2">&quot;Node &#39;</span><span class="si">%s</span><span class="s2">&#39; does not exist in the left &quot;</span>
-                <span class="s2">&quot;hand side of the rule&quot;</span> <span class="o">%</span> <span class="n">n</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">n1</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">lhs</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
+            <span class="n">p_keys</span> <span class="o">=</span> <span class="n">keys_by_value</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">p_lhs</span><span class="p">,</span> <span class="n">n1</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">p_keys</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">RuleError</span><span class="p">(</span>
+                    <span class="s2">&quot;Node &#39;</span><span class="si">%s</span><span class="s2">&#39; is being removed by the rule, cannot add &quot;</span>
+                    <span class="s2">&quot;attributes to the incident edge&quot;</span> <span class="o">%</span>
+                    <span class="n">n1</span>
+                <span class="p">)</span>
+            <span class="n">rhs_keys_1</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">p_rhs</span><span class="p">[</span><span class="n">p</span><span class="p">]</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">p_keys</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="n">n1</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">p</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
+            <span class="n">rhs_keys_1</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">p_rhs</span><span class="p">[</span><span class="n">n1</span><span class="p">]]</span>
+        <span class="k">elif</span> <span class="n">n1</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">rhs</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
+            <span class="n">rhs_keys_1</span> <span class="o">=</span> <span class="p">[</span><span class="n">n1</span><span class="p">]</span>
 
-        <span class="n">p_keys</span> <span class="o">=</span> <span class="n">keys_by_value</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">p_lhs</span><span class="p">,</span> <span class="n">n</span><span class="p">)</span>
-        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">p_keys</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="n">RuleError</span><span class="p">(</span>
-                <span class="s2">&quot;Node &#39;</span><span class="si">%s</span><span class="s2">&#39; is being removed by the rule, &quot;</span>
-                <span class="s2">&quot;cannot remove attributes&quot;</span> <span class="o">%</span> <span class="n">n</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">n2</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">lhs</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
+            <span class="n">p_keys</span> <span class="o">=</span> <span class="n">keys_by_value</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">p_lhs</span><span class="p">,</span> <span class="n">n2</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">p_keys</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">RuleError</span><span class="p">(</span>
+                    <span class="s2">&quot;Node &#39;</span><span class="si">%s</span><span class="s2">&#39; is being removed by the rule, cannot add &quot;</span>
+                    <span class="s2">&quot;attributes to the incident edge&quot;</span> <span class="o">%</span>
+                    <span class="n">n2</span>
+                <span class="p">)</span>
+            <span class="n">rhs_keys_2</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">p_rhs</span><span class="p">[</span><span class="n">p</span><span class="p">]</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">p_keys</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="n">n2</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">p</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
+            <span class="n">rhs_keys_2</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">p_rhs</span><span class="p">[</span><span class="n">n2</span><span class="p">]]</span>
+        <span class="k">elif</span> <span class="n">n2</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">rhs</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
+            <span class="n">rhs_keys_2</span> <span class="o">=</span> <span class="p">[</span><span class="n">n2</span><span class="p">]</span>
 
-        <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">p_keys</span><span class="p">:</span>
-            <span class="n">primitives</span><span class="o">.</span><span class="n">remove_node_attrs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">p</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">attrs</span><span class="p">)</span>
-            <span class="n">primitives</span><span class="o">.</span><span class="n">remove_node_attrs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rhs</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">p_rhs</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> <span class="n">attrs</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">r1</span> <span class="ow">in</span> <span class="n">rhs_keys_1</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">r2</span> <span class="ow">in</span> <span class="n">rhs_keys_2</span><span class="p">:</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">rhs</span><span class="o">.</span><span class="n">is_directed</span><span class="p">()</span> <span class="ow">and</span> <span class="p">(</span><span class="n">r1</span><span class="p">,</span> <span class="n">r2</span><span class="p">)</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">rhs</span><span class="o">.</span><span class="n">edges</span><span class="p">():</span>
+                        <span class="k">raise</span> <span class="n">RuleError</span><span class="p">(</span>
+                            <span class="s2">&quot;Edge &#39;</span><span class="si">%s</span><span class="s2">-&gt;</span><span class="si">%s</span><span class="s2">&#39; does not exist in the right &quot;</span>
+                            <span class="s2">&quot;hand side of the rule&quot;</span> <span class="o">%</span>
+                            <span class="p">(</span><span class="n">r1</span><span class="p">,</span> <span class="n">r2</span><span class="p">))</span>
+                <span class="k">elif</span> <span class="p">(</span><span class="n">r1</span><span class="p">,</span> <span class="n">r2</span><span class="p">)</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">rhs</span><span class="o">.</span><span class="n">edges</span><span class="p">()</span> <span class="ow">and</span>\
+                     <span class="p">(</span><span class="n">r2</span><span class="p">,</span> <span class="n">r1</span><span class="p">)</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">rhs</span><span class="o">.</span><span class="n">edges</span><span class="p">():</span>
+                    <span class="k">raise</span> <span class="n">RuleError</span><span class="p">(</span>
+                        <span class="s2">&quot;Edge &#39;</span><span class="si">%s</span><span class="s2">-&gt;</span><span class="si">%s</span><span class="s2">&#39; does not exist in the right &quot;</span>
+                        <span class="s2">&quot;hand side of the rule&quot;</span> <span class="o">%</span>
+                        <span class="p">(</span><span class="n">r1</span><span class="p">,</span> <span class="n">r2</span><span class="p">)</span>
+                    <span class="p">)</span>
+                <span class="n">primitives</span><span class="o">.</span><span class="n">add_edge_attrs</span><span class="p">(</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">rhs</span><span class="p">,</span> <span class="n">r1</span><span class="p">,</span> <span class="n">r2</span><span class="p">,</span> <span class="n">attrs</span><span class="p">)</span>
         <span class="k">return</span></div>
 
-<div class="viewcode-block" id="Rule.update_node_attrs"><a class="viewcode-back" href="../../rules.html#regraph.rules.Rule.update_node_attrs">[docs]</a>    <span class="k">def</span> <span class="nf">update_node_attrs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="n">attrs</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Update attributes of a node.&quot;&quot;&quot;</span>
+<div class="viewcode-block" id="Rule.inject_update_node_attrs"><a class="viewcode-back" href="../../rules.html#regraph.rules.Rule.inject_update_node_attrs">[docs]</a>    <span class="k">def</span> <span class="nf">inject_update_node_attrs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="n">attrs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Inject an update of node attrs by the rule.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        n : hashable</span>
+<span class="sd">            Id of a node from the left-hand side whose attrs</span>
+<span class="sd">            should be updated</span>
+<span class="sd">        attrs : dict</span>
+<span class="sd">            Dictionary of new attrs that will replace the old ones</span>
+
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        RuleError</span>
+<span class="sd">            If node `n` does not exist in the left-hand side or</span>
+<span class="sd">            is being removed by the rule.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="n">n</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">lhs</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
             <span class="k">raise</span> <span class="n">RuleError</span><span class="p">(</span>
                 <span class="s2">&quot;Node &#39;</span><span class="si">%s</span><span class="s2">&#39; does not exist in the left hand &quot;</span>
@@ -597,165 +809,8 @@
             <span class="n">primitives</span><span class="o">.</span><span class="n">update_node_attrs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rhs</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">p_rhs</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> <span class="n">attrs</span><span class="p">)</span>
         <span class="k">return</span></div>
 
-<div class="viewcode-block" id="Rule.add_edge_attrs"><a class="viewcode-back" href="../../rules.html#regraph.rules.Rule.add_edge_attrs">[docs]</a>    <span class="k">def</span> <span class="nf">add_edge_attrs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n1</span><span class="p">,</span> <span class="n">n2</span><span class="p">,</span> <span class="n">attrs</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Add attributes to an edge.&quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="n">n1</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">lhs</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
-            <span class="k">raise</span> <span class="n">RuleError</span><span class="p">(</span>
-                <span class="s2">&quot;Node &#39;</span><span class="si">%s</span><span class="s2">&#39; does not exist in the left hand &quot;</span>
-                <span class="s2">&quot;side of the rule&quot;</span> <span class="o">%</span> <span class="n">n1</span>
-            <span class="p">)</span>
-
-        <span class="k">if</span> <span class="n">n2</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">lhs</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
-            <span class="k">raise</span> <span class="n">RuleError</span><span class="p">(</span>
-                <span class="s2">&quot;Node &#39;</span><span class="si">%s</span><span class="s2">&#39; does not exist in the left hand &quot;</span>
-                <span class="s2">&quot;side of the rule&quot;</span> <span class="o">%</span> <span class="n">n2</span>
-            <span class="p">)</span>
-        <span class="n">normalize_attrs</span><span class="p">(</span><span class="n">attrs</span><span class="p">)</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">lhs</span><span class="o">.</span><span class="n">is_directed</span><span class="p">():</span>
-            <span class="k">if</span> <span class="p">(</span><span class="n">n1</span><span class="p">,</span> <span class="n">n2</span><span class="p">)</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">lhs</span><span class="o">.</span><span class="n">edges</span><span class="p">():</span>
-                <span class="k">raise</span> <span class="n">RuleError</span><span class="p">(</span>
-                    <span class="s2">&quot;Edge &#39;</span><span class="si">%s</span><span class="s2">-&gt;</span><span class="si">%s</span><span class="s2">&#39; does not exist in the left &quot;</span>
-                    <span class="s2">&quot;hand side of the rule&quot;</span> <span class="o">%</span>
-                    <span class="p">(</span><span class="n">n1</span><span class="p">,</span> <span class="n">n2</span><span class="p">)</span>
-                <span class="p">)</span>
-            <span class="n">p_keys_1</span> <span class="o">=</span> <span class="n">keys_by_value</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">p_lhs</span><span class="p">,</span> <span class="n">n1</span><span class="p">)</span>
-            <span class="n">p_keys_2</span> <span class="o">=</span> <span class="n">keys_by_value</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">p_lhs</span><span class="p">,</span> <span class="n">n2</span><span class="p">)</span>
-            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">p_keys_1</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-                <span class="k">raise</span> <span class="n">RuleError</span><span class="p">(</span>
-                    <span class="s2">&quot;Node &#39;</span><span class="si">%s</span><span class="s2">&#39; is being removed by the rule, cannot add &quot;</span>
-                    <span class="s2">&quot;attributes to the incident edge&quot;</span> <span class="o">%</span>
-                    <span class="n">n1</span>
-                <span class="p">)</span>
-            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">p_keys_2</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-                <span class="k">raise</span> <span class="n">RuleError</span><span class="p">(</span>
-                    <span class="s2">&quot;Node &#39;</span><span class="si">%s</span><span class="s2">&#39; is being removed by the rule, cannot add &quot;</span>
-                    <span class="s2">&quot;attributes to the incident edge&quot;</span> <span class="o">%</span>
-                    <span class="n">n2</span>
-                <span class="p">)</span>
-            <span class="k">for</span> <span class="n">k1</span> <span class="ow">in</span> <span class="n">p_keys_1</span><span class="p">:</span>
-                <span class="k">for</span> <span class="n">k2</span> <span class="ow">in</span> <span class="n">p_keys_2</span><span class="p">:</span>
-                    <span class="n">primitives</span><span class="o">.</span><span class="n">add_edge_attrs</span><span class="p">(</span>
-                        <span class="bp">self</span><span class="o">.</span><span class="n">rhs</span><span class="p">,</span>
-                        <span class="bp">self</span><span class="o">.</span><span class="n">p_rhs</span><span class="p">[</span><span class="n">k1</span><span class="p">],</span>
-                        <span class="bp">self</span><span class="o">.</span><span class="n">p_rhs</span><span class="p">[</span><span class="n">k2</span><span class="p">],</span>
-                        <span class="n">attrs</span>
-                    <span class="p">)</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="k">if</span> <span class="p">(</span><span class="n">n1</span><span class="p">,</span> <span class="n">n2</span><span class="p">)</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">lhs</span><span class="o">.</span><span class="n">edges</span><span class="p">()</span> <span class="ow">and</span>\
-               <span class="p">(</span><span class="n">n2</span><span class="p">,</span> <span class="n">n1</span><span class="p">)</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">lhs</span><span class="o">.</span><span class="n">edges</span><span class="p">():</span>
-                <span class="k">raise</span> <span class="n">RuleError</span><span class="p">(</span>
-                    <span class="s2">&quot;Edge &#39;</span><span class="si">%s</span><span class="s2">-&gt;</span><span class="si">%s</span><span class="s2">&#39; does not exist in the left &quot;</span>
-                    <span class="s2">&quot;hand side of the rule&quot;</span> <span class="o">%</span>
-                    <span class="p">(</span><span class="n">n1</span><span class="p">,</span> <span class="n">n2</span><span class="p">)</span>
-                <span class="p">)</span>
-
-            <span class="n">p_keys_1</span> <span class="o">=</span> <span class="n">keys_by_value</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">p_lhs</span><span class="p">,</span> <span class="n">n1</span><span class="p">)</span>
-            <span class="n">p_keys_2</span> <span class="o">=</span> <span class="n">keys_by_value</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">p_lhs</span><span class="p">,</span> <span class="n">n2</span><span class="p">)</span>
-            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">p_keys_1</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-                <span class="k">raise</span> <span class="n">RuleError</span><span class="p">(</span>
-                    <span class="s2">&quot;Node &#39;</span><span class="si">%s</span><span class="s2">&#39; is being removed by the rule, cannot add &quot;</span>
-                    <span class="s2">&quot;attributes to the incident edge&quot;</span> <span class="o">%</span>
-                    <span class="n">n1</span>
-                <span class="p">)</span>
-            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">p_keys_2</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-                <span class="k">raise</span> <span class="n">RuleError</span><span class="p">(</span>
-                    <span class="s2">&quot;Node &#39;</span><span class="si">%s</span><span class="s2">&#39; is being removed by the rule, cannot add &quot;</span>
-                    <span class="s2">&quot;attributes to the incident edge&quot;</span> <span class="o">%</span>
-                    <span class="n">n2</span>
-                <span class="p">)</span>
-            <span class="k">for</span> <span class="n">k1</span> <span class="ow">in</span> <span class="n">p_keys_1</span><span class="p">:</span>
-                <span class="k">for</span> <span class="n">k2</span> <span class="ow">in</span> <span class="n">p_keys_2</span><span class="p">:</span>
-                    <span class="n">primitives</span><span class="o">.</span><span class="n">add_edge_attrs</span><span class="p">(</span>
-                        <span class="bp">self</span><span class="o">.</span><span class="n">rhs</span><span class="p">,</span>
-                        <span class="bp">self</span><span class="o">.</span><span class="n">p_rhs</span><span class="p">[</span><span class="n">k1</span><span class="p">],</span>
-                        <span class="bp">self</span><span class="o">.</span><span class="n">p_rhs</span><span class="p">[</span><span class="n">k2</span><span class="p">],</span>
-                        <span class="n">attrs</span>
-                    <span class="p">)</span>
-        <span class="k">return</span></div>
-
-<div class="viewcode-block" id="Rule.remove_edge_attrs"><a class="viewcode-back" href="../../rules.html#regraph.rules.Rule.remove_edge_attrs">[docs]</a>    <span class="k">def</span> <span class="nf">remove_edge_attrs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n1</span><span class="p">,</span> <span class="n">n2</span><span class="p">,</span> <span class="n">attrs</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Remove edge attributes from an edge in the graph.&quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="n">n1</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">lhs</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
-            <span class="k">raise</span> <span class="n">RuleError</span><span class="p">(</span>
-                <span class="s2">&quot;Node &#39;</span><span class="si">%s</span><span class="s2">&#39; does not exist in the left &quot;</span>
-                <span class="s2">&quot;hand side of the rule&quot;</span> <span class="o">%</span> <span class="n">n1</span>
-            <span class="p">)</span>
-        <span class="k">if</span> <span class="n">n2</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">lhs</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
-            <span class="k">raise</span> <span class="n">RuleError</span><span class="p">(</span>
-                <span class="s2">&quot;Node &#39;</span><span class="si">%s</span><span class="s2">&#39; does not exist in the left &quot;</span>
-                <span class="s2">&quot;hand side of the rule&quot;</span> <span class="o">%</span> <span class="n">n2</span>
-            <span class="p">)</span>
-        <span class="n">normalize_attrs</span><span class="p">(</span><span class="n">attrs</span><span class="p">)</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">lhs</span><span class="o">.</span><span class="n">is_directed</span><span class="p">():</span>
-            <span class="k">if</span> <span class="p">(</span><span class="n">n1</span><span class="p">,</span> <span class="n">n2</span><span class="p">)</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">lhs</span><span class="o">.</span><span class="n">edges</span><span class="p">():</span>
-                <span class="k">raise</span> <span class="n">RuleError</span><span class="p">(</span>
-                    <span class="s2">&quot;Edge &#39;</span><span class="si">%s</span><span class="s2">-&gt;</span><span class="si">%s</span><span class="s2">&#39; does not exist in the left &quot;</span>
-                    <span class="s2">&quot;hand side of the rule&quot;</span> <span class="o">%</span>
-                    <span class="p">(</span><span class="n">n1</span><span class="p">,</span> <span class="n">n2</span><span class="p">)</span>
-                <span class="p">)</span>
-
-            <span class="n">p_keys_1</span> <span class="o">=</span> <span class="n">keys_by_value</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">p_lhs</span><span class="p">,</span> <span class="n">n1</span><span class="p">)</span>
-            <span class="n">p_keys_2</span> <span class="o">=</span> <span class="n">keys_by_value</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">p_lhs</span><span class="p">,</span> <span class="n">n2</span><span class="p">)</span>
-            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">p_keys_1</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-                <span class="k">raise</span> <span class="n">RuleError</span><span class="p">(</span>
-                    <span class="s2">&quot;Node &#39;</span><span class="si">%s</span><span class="s2">&#39; is being removed by the rule, cannot remove &quot;</span>
-                    <span class="s2">&quot;attributes from the incident edge&quot;</span> <span class="o">%</span>
-                    <span class="n">n1</span>
-                <span class="p">)</span>
-            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">p_keys_2</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-                <span class="k">raise</span> <span class="n">RuleError</span><span class="p">(</span>
-                    <span class="s2">&quot;Node &#39;</span><span class="si">%s</span><span class="s2">&#39; is being removed by the rule, cannot remove &quot;</span>
-                    <span class="s2">&quot;attributes from the incident edge&quot;</span> <span class="o">%</span>
-                    <span class="n">n2</span>
-                <span class="p">)</span>
-            <span class="k">for</span> <span class="n">k1</span> <span class="ow">in</span> <span class="n">p_keys_1</span><span class="p">:</span>
-                <span class="k">for</span> <span class="n">k2</span> <span class="ow">in</span> <span class="n">p_keys_2</span><span class="p">:</span>
-                    <span class="n">primitives</span><span class="o">.</span><span class="n">remove_edge_attrs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">p</span><span class="p">,</span> <span class="n">k1</span><span class="p">,</span> <span class="n">k2</span><span class="p">,</span> <span class="n">attrs</span><span class="p">)</span>
-                    <span class="n">primitives</span><span class="o">.</span><span class="n">remove_edge_attrs</span><span class="p">(</span>
-                        <span class="bp">self</span><span class="o">.</span><span class="n">rhs</span><span class="p">,</span>
-                        <span class="bp">self</span><span class="o">.</span><span class="n">p_rhs</span><span class="p">[</span><span class="n">k1</span><span class="p">],</span>
-                        <span class="bp">self</span><span class="o">.</span><span class="n">p_rhs</span><span class="p">[</span><span class="n">k2</span><span class="p">],</span>
-                        <span class="n">attrs</span>
-                    <span class="p">)</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="k">if</span> <span class="p">(</span><span class="n">n1</span><span class="p">,</span> <span class="n">n2</span><span class="p">)</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">lhs</span><span class="o">.</span><span class="n">edges</span><span class="p">()</span> <span class="ow">and</span>\
-               <span class="p">(</span><span class="n">n2</span><span class="p">,</span> <span class="n">n1</span><span class="p">)</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">lhs</span><span class="o">.</span><span class="n">edges</span><span class="p">():</span>
-                <span class="k">raise</span> <span class="n">RuleError</span><span class="p">(</span>
-                    <span class="s2">&quot;Edge &#39;</span><span class="si">%s</span><span class="s2">-&gt;</span><span class="si">%s</span><span class="s2">&#39; does not exist in the left hand &quot;</span>
-                    <span class="s2">&quot;side of the rule&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">n1</span><span class="p">,</span> <span class="n">n2</span><span class="p">)</span>
-                <span class="p">)</span>
-            <span class="n">p_keys_1</span> <span class="o">=</span> <span class="n">keys_by_value</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">p_lhs</span><span class="p">,</span> <span class="n">n1</span><span class="p">)</span>
-            <span class="n">p_keys_2</span> <span class="o">=</span> <span class="n">keys_by_value</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">p_lhs</span><span class="p">,</span> <span class="n">n2</span><span class="p">)</span>
-            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">p_keys_1</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-                <span class="k">raise</span> <span class="n">RuleError</span><span class="p">(</span>
-                    <span class="s2">&quot;Node &#39;</span><span class="si">%s</span><span class="s2">&#39; is being removed by the rule, cannot remove &quot;</span>
-                    <span class="s2">&quot;attributes from the incident edge&quot;</span> <span class="o">%</span>
-                    <span class="n">n1</span>
-                <span class="p">)</span>
-            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">p_keys_2</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-                <span class="k">raise</span> <span class="n">RuleError</span><span class="p">(</span>
-                    <span class="s2">&quot;Node &#39;</span><span class="si">%s</span><span class="s2">&#39; is being removed by the rule, cannot remove &quot;</span>
-                    <span class="s2">&quot;attributes from the incident edge&quot;</span> <span class="o">%</span>
-                    <span class="n">n2</span>
-                <span class="p">)</span>
-            <span class="k">for</span> <span class="n">k1</span> <span class="ow">in</span> <span class="n">p_keys_1</span><span class="p">:</span>
-                <span class="k">for</span> <span class="n">k2</span> <span class="ow">in</span> <span class="n">p_keys_2</span><span class="p">:</span>
-                    <span class="n">primitives</span><span class="o">.</span><span class="n">remove_edge_attrs</span><span class="p">(</span>
-                        <span class="bp">self</span><span class="o">.</span><span class="n">p</span><span class="p">,</span>
-                        <span class="n">k1</span><span class="p">,</span>
-                        <span class="n">k2</span><span class="p">,</span>
-                        <span class="n">attrs</span>
-                    <span class="p">)</span>
-                    <span class="n">primitives</span><span class="o">.</span><span class="n">remove_edge_attrs</span><span class="p">(</span>
-                        <span class="bp">self</span><span class="o">.</span><span class="n">rhs</span><span class="p">,</span>
-                        <span class="bp">self</span><span class="o">.</span><span class="n">p_rhs</span><span class="p">[</span><span class="n">k1</span><span class="p">],</span>
-                        <span class="bp">self</span><span class="o">.</span><span class="n">p_rhs</span><span class="p">[</span><span class="n">k2</span><span class="p">],</span>
-                        <span class="n">attrs</span>
-                    <span class="p">)</span>
-        <span class="k">return</span></div>
-
-<div class="viewcode-block" id="Rule.update_edge_attrs"><a class="viewcode-back" href="../../rules.html#regraph.rules.Rule.update_edge_attrs">[docs]</a>    <span class="k">def</span> <span class="nf">update_edge_attrs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n1</span><span class="p">,</span> <span class="n">n2</span><span class="p">,</span> <span class="n">attrs</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Update the attributes of an edge with a new set `attrs`.&quot;&quot;&quot;</span>
+<div class="viewcode-block" id="Rule.inject_update_edge_attrs"><a class="viewcode-back" href="../../rules.html#regraph.rules.Rule.inject_update_edge_attrs">[docs]</a>    <span class="k">def</span> <span class="nf">inject_update_edge_attrs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n1</span><span class="p">,</span> <span class="n">n2</span><span class="p">,</span> <span class="n">attrs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Inject an update of edge attrs by the rule.&quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="n">n1</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">lhs</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
             <span class="k">raise</span> <span class="n">RuleError</span><span class="p">(</span>
                 <span class="s2">&quot;Node &#39;</span><span class="si">%s</span><span class="s2">&#39; does not exist in the left hand side of the rule&quot;</span> <span class="o">%</span>
@@ -766,7 +821,6 @@
                 <span class="s2">&quot;Node &#39;</span><span class="si">%s</span><span class="s2">&#39; does not exist in the left hand side of the rule&quot;</span> <span class="o">%</span>
                 <span class="n">n2</span>
             <span class="p">)</span>
-        <span class="n">normalize_attrs</span><span class="p">(</span><span class="n">attrs</span><span class="p">)</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">lhs</span><span class="o">.</span><span class="n">is_directed</span><span class="p">():</span>
             <span class="k">if</span> <span class="p">(</span><span class="n">n1</span><span class="p">,</span> <span class="n">n2</span><span class="p">)</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">lhs</span><span class="o">.</span><span class="n">edges</span><span class="p">():</span>
                 <span class="k">raise</span> <span class="n">RuleError</span><span class="p">(</span>
@@ -831,21 +885,6 @@
                         <span class="n">attrs</span>
                     <span class="p">)</span>
         <span class="k">return</span></div>
-
-<div class="viewcode-block" id="Rule.merge_node_list"><a class="viewcode-back" href="../../rules.html#regraph.rules.Rule.merge_node_list">[docs]</a>    <span class="k">def</span> <span class="nf">merge_node_list</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node_list</span><span class="p">,</span> <span class="n">node_name</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Merge a list of nodes.&quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">node_list</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
-            <span class="n">node_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">merge_nodes</span><span class="p">(</span>
-                <span class="n">node_list</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
-                <span class="n">node_list</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
-                <span class="n">node_name</span><span class="p">)</span>
-            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">node_list</span><span class="p">)):</span>
-                <span class="n">node_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">merge_nodes</span><span class="p">(</span>
-                    <span class="n">node_list</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">node_name</span><span class="p">,</span> <span class="n">node_name</span><span class="p">)</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
-                <span class="s2">&quot;Cannot merge less than two nodes!&quot;</span><span class="p">,</span> <span class="n">ReGraphWarning</span>
-            <span class="p">)</span></div>
 
 <div class="viewcode-block" id="Rule.to_json"><a class="viewcode-back" href="../../rules.html#regraph.rules.Rule.to_json">[docs]</a>    <span class="k">def</span> <span class="nf">to_json</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Convert the rule to JSON repr.&quot;&quot;&quot;</span>
@@ -1184,7 +1223,113 @@
             <span class="n">commands</span> <span class="o">+=</span> <span class="s2">&quot;ADD_NODE_ATTRS </span><span class="si">%s</span><span class="s2"> </span><span class="si">%s</span><span class="s2">.</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="n">attrs</span><span class="p">)</span>
         <span class="k">for</span> <span class="p">(</span><span class="n">u</span><span class="p">,</span> <span class="n">v</span><span class="p">),</span> <span class="n">attrs</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">added_edge_attrs</span><span class="p">()</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
             <span class="n">commands</span> <span class="o">+=</span> <span class="s2">&quot;ADD_EDGE_ATTRS </span><span class="si">%s</span><span class="s2"> </span><span class="si">%s</span><span class="s2"> </span><span class="si">%s</span><span class="s2">.</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">u</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">attrs</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">commands</span></div></div>
+        <span class="k">return</span> <span class="n">commands</span></div>
+
+    <span class="k">def</span> <span class="nf">_add_node_lhs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node_id</span><span class="p">,</span> <span class="n">attrs</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">node_id</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">lhs</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
+            <span class="n">primitives</span><span class="o">.</span><span class="n">add_node</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">lhs</span><span class="p">,</span> <span class="n">node_id</span><span class="p">,</span> <span class="n">attrs</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_remove_node_rhs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node_id</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Remove a node from the `rhs`.</span>
+
+<span class="sd">        This method removes a given node from the `rhs`,</span>
+<span class="sd">        if there exist nodes from `p` that map to this node</span>
+<span class="sd">        they are removed as well.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">p_keys</span> <span class="o">=</span> <span class="n">keys_by_value</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">p_rhs</span><span class="p">,</span> <span class="n">node_id</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">p_node</span> <span class="ow">in</span> <span class="n">p_keys</span><span class="p">:</span>
+            <span class="n">primitives</span><span class="o">.</span><span class="n">remove_node</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">p</span><span class="p">,</span> <span class="n">p_node</span><span class="p">)</span>
+            <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">p_rhs</span><span class="p">[</span><span class="n">p_node</span><span class="p">]</span>
+            <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">p_lhs</span><span class="p">[</span><span class="n">p_node</span><span class="p">]</span>
+        <span class="n">primitives</span><span class="o">.</span><span class="n">remove_node</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rhs</span><span class="p">,</span> <span class="n">node_id</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_add_edge_rhs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n1</span><span class="p">,</span> <span class="n">n2</span><span class="p">,</span> <span class="n">attrs</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Add an edge in the rhs.&quot;&quot;&quot;</span>
+        <span class="n">primitives</span><span class="o">.</span><span class="n">add_edge</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rhs</span><span class="p">,</span> <span class="n">n1</span><span class="p">,</span> <span class="n">n2</span><span class="p">,</span> <span class="n">attrs</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_remove_edge_p</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node1</span><span class="p">,</span> <span class="n">node2</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Remove edge from the p of the graph.&quot;&quot;&quot;</span>
+        <span class="n">primitives</span><span class="o">.</span><span class="n">remove_edge</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">p</span><span class="p">,</span> <span class="n">node1</span><span class="p">,</span> <span class="n">node2</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_remove_edge_rhs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node1</span><span class="p">,</span> <span class="n">node2</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Remove edge from the rhs of the graph.&quot;&quot;&quot;</span>
+        <span class="n">primitives</span><span class="o">.</span><span class="n">remove_edge</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rhs</span><span class="p">,</span> <span class="n">node1</span><span class="p">,</span> <span class="n">node2</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">pn1</span> <span class="ow">in</span> <span class="n">keys_by_value</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">p_rhs</span><span class="p">,</span> <span class="n">node1</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">pn2</span> <span class="ow">in</span> <span class="n">keys_by_value</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">p_rhs</span><span class="p">,</span> <span class="n">node2</span><span class="p">):</span>
+                <span class="k">if</span> <span class="p">(</span><span class="n">pn1</span><span class="p">,</span> <span class="n">pn2</span><span class="p">)</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">p</span><span class="o">.</span><span class="n">edges</span><span class="p">():</span>
+                    <span class="n">primitives</span><span class="o">.</span><span class="n">remove_edge</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">p</span><span class="p">,</span> <span class="n">pn1</span><span class="p">,</span> <span class="n">pn2</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_clone_rhs_node</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">,</span> <span class="n">new_name</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Clone an rhs node.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">node</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">rhs</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
+            <span class="k">raise</span> <span class="n">RuleError</span><span class="p">(</span>
+                <span class="s2">&quot;Node &#39;</span><span class="si">%s</span><span class="s2">&#39; is not a node of right hand side&quot;</span> <span class="o">%</span>
+                <span class="n">node</span>
+            <span class="p">)</span>
+        <span class="n">p_keys</span> <span class="o">=</span> <span class="n">keys_by_value</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">p_rhs</span><span class="p">,</span> <span class="n">node</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">p_keys</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">primitives</span><span class="o">.</span><span class="n">clone_node</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rhs</span><span class="p">,</span> <span class="n">node</span><span class="p">,</span> <span class="n">new_name</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">p_keys</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">primitives</span><span class="o">.</span><span class="n">clone_node</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rhs</span><span class="p">,</span> <span class="n">node</span><span class="p">,</span> <span class="n">new_name</span><span class="p">)</span>
+            <span class="n">new_p_node</span> <span class="o">=</span> <span class="n">primitives</span><span class="o">.</span><span class="n">clone_node</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">p</span><span class="p">,</span> <span class="n">p_keys</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">p_rhs</span><span class="p">[</span><span class="n">new_p_node</span><span class="p">]</span> <span class="o">=</span> <span class="n">new_name</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">p_lhs</span><span class="p">[</span><span class="n">new_p_node</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">p_lhs</span><span class="p">[</span><span class="n">p_keys</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">RuleError</span><span class="p">(</span><span class="s2">&quot;Cannot clone node that is result of merge!&quot;</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_merge_nodes_rhs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n1</span><span class="p">,</span> <span class="n">n2</span><span class="p">,</span> <span class="n">new_name</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Merge nodes in rhs.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">n1</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">rhs</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
+            <span class="k">raise</span> <span class="n">RuleError</span><span class="p">(</span><span class="s2">&quot;Node &#39;</span><span class="si">%s</span><span class="s2">&#39; is not a node of the rhs&quot;</span> <span class="o">%</span> <span class="n">n1</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">n2</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">rhs</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
+            <span class="k">raise</span> <span class="n">RuleError</span><span class="p">(</span><span class="s2">&quot;Node &#39;</span><span class="si">%s</span><span class="s2">&#39; is not a node of the rhs&quot;</span> <span class="o">%</span> <span class="n">n2</span><span class="p">)</span>
+        <span class="n">primitives</span><span class="o">.</span><span class="n">merge_nodes</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rhs</span><span class="p">,</span> <span class="p">[</span><span class="n">n1</span><span class="p">,</span> <span class="n">n2</span><span class="p">],</span> <span class="n">node_id</span><span class="o">=</span><span class="n">new_name</span><span class="p">)</span>
+        <span class="k">for</span> <span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="n">target</span><span class="p">)</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">p_rhs</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">target</span> <span class="o">==</span> <span class="n">n1</span> <span class="ow">or</span> <span class="n">target</span> <span class="o">==</span> <span class="n">n2</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">p_rhs</span><span class="p">[</span><span class="n">source</span><span class="p">]</span> <span class="o">=</span> <span class="n">new_name</span>
+
+    <span class="k">def</span> <span class="nf">_add_node_attrs_rhs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="n">attrs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Add attrs to a node in the rhs.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">n</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">rhs</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
+            <span class="k">raise</span> <span class="n">RuleError</span><span class="p">(</span>
+                <span class="s2">&quot;Node </span><span class="si">%s</span><span class="s2"> does not exist in the right &quot;</span>
+                <span class="s2">&quot;hand side of the rule&quot;</span> <span class="o">%</span> <span class="n">n</span><span class="p">)</span>
+        <span class="n">primitives</span><span class="o">.</span><span class="n">add_node_attrs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rhs</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="n">attrs</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_remove_node_attrs_rhs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="n">attrs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Remove attrs of a node in the rhs.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">n</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">rhs</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
+            <span class="k">raise</span> <span class="n">RuleError</span><span class="p">(</span>
+                <span class="s2">&quot;Node &#39;</span><span class="si">%s</span><span class="s2">&#39; does not exist in the right hand &quot;</span>
+                <span class="s2">&quot;side of the rule&quot;</span> <span class="o">%</span> <span class="n">n</span><span class="p">)</span>
+
+        <span class="n">p_keys</span> <span class="o">=</span> <span class="n">keys_by_value</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">p_rhs</span><span class="p">,</span> <span class="n">n</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">p_node</span> <span class="ow">in</span> <span class="n">p_keys</span><span class="p">:</span>
+            <span class="n">primitives</span><span class="o">.</span><span class="n">remove_node_attrs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">p</span><span class="p">,</span> <span class="n">p_node</span><span class="p">,</span> <span class="n">attrs</span><span class="p">)</span>
+        <span class="n">primitives</span><span class="o">.</span><span class="n">remove_node_attrs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rhs</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="n">attrs</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_remove_node_attrs_p</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="n">attrs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Remove attrs of a node in the p.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">n</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">p</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
+            <span class="k">raise</span> <span class="n">RuleError</span><span class="p">(</span>
+                <span class="s2">&quot;Node &#39;</span><span class="si">%s</span><span class="s2">&#39; does not exist in the preserved &quot;</span>
+                <span class="s2">&quot;part of the rule&quot;</span> <span class="o">%</span> <span class="n">n</span><span class="p">)</span>
+        <span class="n">primitives</span><span class="o">.</span><span class="n">remove_node_attrs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">p</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="n">attrs</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_merge_node_list</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node_list</span><span class="p">,</span> <span class="n">node_name</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Merge a list of nodes.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">node_list</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">node_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">merge_nodes</span><span class="p">(</span>
+                <span class="n">node_list</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+                <span class="n">node_list</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+                <span class="n">node_name</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">node_list</span><span class="p">)):</span>
+                <span class="n">node_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">merge_nodes</span><span class="p">(</span>
+                    <span class="n">node_list</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">node_name</span><span class="p">,</span> <span class="n">node_name</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+                <span class="s2">&quot;Cannot merge less than two nodes!&quot;</span><span class="p">,</span> <span class="n">ReGraphWarning</span>
+            <span class="p">)</span></div>
 </pre></div>
 
           </div>
