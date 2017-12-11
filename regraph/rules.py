@@ -164,7 +164,7 @@ class Rule(object):
                     node_name = None
                     if "node_name" in action.keys():
                         node_name = action["node_name"]
-                    rule.merge_node_list(
+                    rule.inject_merge_nodes(
                         action["nodes"],
                         node_name)
                 elif action["keyword"] == "add_node":
@@ -181,7 +181,7 @@ class Rule(object):
                     attrs = {}
                     if "attributes" in action.keys():
                         attrs = action["attributes"]
-                    rule._add_edge_rhs(
+                    rule.inject_add_edge(
                         action["node_1"],
                         action["node_2"],
                         attrs)
@@ -364,6 +364,7 @@ class Rule(object):
             for k2 in p_keys_2:
                 if (k1, k2) in self.p.edges():
                     primitives.remove_edge(self.p, k1, k2)
+                    primitives.remove_edge(self.rhs, self.p_rhs[k1], self.p_rhs[k2])
                 else:
                     raise RuleError(
                         "Edge '%s->%s' does not exist in the preserved part"
@@ -765,7 +766,6 @@ class Rule(object):
             self.p.node[k] = None
             primitives.update_node_attrs(self.rhs, self.p_rhs[k], attrs)
         return
-
 
     def inject_update_edge_attrs(self, n1, n2, attrs):
         """Inject an update of edge attrs by the rule."""
