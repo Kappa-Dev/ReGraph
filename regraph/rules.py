@@ -159,7 +159,7 @@ class Rule(object):
                     node_name = None
                     if "node_name" in action.keys():
                         node_name = action["node_name"]
-                    rule.clone_node(action["node"], node_name)
+                    rule.inject_clone_node(action["node"], node_name)
                 elif action["keyword"] == "merge":
                     node_name = None
                     if "node_name" in action.keys():
@@ -174,36 +174,36 @@ class Rule(object):
                         name = action["node"]
                     if "attributes" in action.keys():
                         attrs = action["attributes"]
-                    rule.add_node(name, attrs)
+                    rule.inject_add_node(name, attrs)
                 elif action["keyword"] == "delete_node":
-                    rule.remove_node(action["node"])
+                    rule.inject_remove_node(action["node"])
                 elif action["keyword"] == "add_edge":
                     attrs = {}
                     if "attributes" in action.keys():
                         attrs = action["attributes"]
-                    rule.add_edge_rhs(
+                    rule._add_edge_rhs(
                         action["node_1"],
                         action["node_2"],
                         attrs)
                 elif action["keyword"] == "delete_edge":
-                    rule.remove_edge(
+                    rule.inject_remove_edge(
                         action["node_1"],
                         action["node_2"])
                 elif action["keyword"] == "add_node_attrs":
-                    rule.add_node_attrs(
+                    rule.inject_add_node_attrs(
                         action["node"],
                         action["attributes"])
                 elif action["keyword"] == "add_edge_attrs":
-                    rule.add_edge_attrs(
+                    rule.inject_add_edge_attrs(
                         action["node_1"],
                         action["node_2"],
                         action["attributes"])
                 elif action["keyword"] == "delete_node_attrs":
-                    rule.remove_node_attrs(
+                    rule.inject_remove_node_attrs(
                         action["node"],
                         action["attributes"])
                 elif action["keyword"] == "delete_edge_attrs":
-                    rule.remove_edge_attrs(
+                    rule.inject_remove_edge_attrs(
                         action["node_1"],
                         action["node_2"],
                         action["attributes"])
@@ -380,13 +380,13 @@ class Rule(object):
             Node from `lhs` to clone
         new_node_id : hashable
             Id for the clone
-        
+
         Raises
         ------
         RuleError
 
         """
-        p_nodes = keys_by_value(rule.p_lhs, n)
+        p_nodes = keys_by_value(self.p_lhs, n)
         if len(p_nodes) == 0:
             raise RuleError(
                 "Cannot inject cloning: node '%s' is already "
@@ -398,10 +398,19 @@ class Rule(object):
                     "Node with id '%s' already exists in the "
                     "preserved part!")
             some_p_node = p_nodes[0]
-            new_node_id = primitives.clone_node(some_p_node, new_node_id)
-            self.p_lhs[new_node_id] = n
-            # TODO
-        return (p_new_nodes, rhs_new_nodes)
+            p_new_node_id = primitives.clone_node(
+                self.p, some_p_node, new_node_id)
+            self.p_lhs[p_new_node_id] = n
+            # add it to the rhs
+            # generate a new id for rhs
+            rhs_new_node_id = p_new_node_id
+            if rhs_new_node_id in self.rhs.nodes():
+                rhs_new_node_id = primitives.unique_node_id(
+                    self.rhs, rhs_new_node_id)
+            primitives.add_node(
+                self.rhs, rhs_new_node_id, self.p.node[p_new_node_id])
+            self.p_rhs[p_new_node_id] = rhs_new_node_id
+        return (p_new_node_id, rhs_new_node_id)
 
     def inject_merge_nodes(self, n1, n2, node_id=None):
         """Inject merge of two nodes by the rule."""
@@ -451,7 +460,7 @@ class Rule(object):
             primitives.add_node_attrs(self.rhs, self.p_rhs[k], attrs)
         return
 
-    def remove_node_attrs(self, n, attrs):
+    def inject_remove_node_attrs(self, n, attrs):
         """Inject a removal of node attrs by the rule."""
         if n not in self.lhs.nodes():
             raise RuleError(
@@ -721,7 +730,7 @@ class Rule(object):
                     )
         return
 
-        def to_json(self):
+    def to_json(self):
         """Convert the rule to JSON repr."""
         json_data = {}
         json_data["lhs"] = primitives.graph_to_json(self.lhs)
@@ -1059,6 +1068,10 @@ class Rule(object):
         for (u, v), attrs in self.added_edge_attrs().items():
             commands += "ADD_EDGE_ATTRS %s %s %s.\n" % (u, v, attrs)
         return commands
+
+    def _add_node_lhs(self, node_id, attrs=None):
+        if node_id not in self.lhs.nodes():
+            primitives.add_node(self.lhs, node_id, attrs)
 
     def _remove_node_rhs(self, node_id):
         """Remove a node from the `rhs`.

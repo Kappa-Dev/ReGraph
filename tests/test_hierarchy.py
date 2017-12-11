@@ -801,8 +801,8 @@ class TestHierarchy(object):
             1, 2
         ])
         rule = Rule.from_transform(pattern)
-        rule.remove_node(1)
-        rule.clone_node(2)
+        rule.inject_remove_node(1)
+        rule.inject_clone_node(2)
 
         instances = h.find_matching("g1", pattern)
         new_h, _ = h.rewrite("g1", rule, instances[0], inplace=False)

@@ -104,7 +104,7 @@ class TestRelations(object):
         lhs.add_nodes_from(["s", "c"])
 
         rule = Rule.from_transform(lhs)
-        rule.clone_node("s")
+        rule.inject_clone_node("s")
 
         # instances = self.hierarchy.find_matching(
         #     "base",
