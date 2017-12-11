@@ -87,6 +87,13 @@ using ReGraph primitives `regraph.primitives.add_nodes_from` and
     primitives.add_nodes_from(graph, nodes)
     primitives.add_edges_from(graph, edges)
 
+We can plot this graph:
+
+>>> from regraph.plotting import plot_graph
+>>> plot_graph(graph)
+
+.. image:: _static/graph1.png
+
 Add attributes to the the nodes/edges of the graph:
 
 >>> primitives.add_node_attrs(graph, 1, {"age": 20})
@@ -114,7 +121,9 @@ Clone a node of the graph:
 [(1, 2), (1, "2_clone"), (3, 2), (3, "2_clone")]
 
 The new node corresponding to the clone is created in the hierarchy, and 
-all the nodes adjacent to the original node become connected to the clone as well.
+all the nodes adjacent to the original node become connected to the clone as well:
+
+.. image:: _static/graph1_clone.png
 
 Merge two nodes of the graph.
 
@@ -134,6 +143,8 @@ The original nodes are removed, instead a new node corresponding
 to the result of merge is created. All the edges incident to the original nodes
 stay incident to the result of merge, and all the attribute dictionaries of nodes/edges
 are merged.
+
+.. image:: _static/graph1_merge.png
 
 Dump your graph object to its JSON representation (Python dict):
 
@@ -431,6 +442,109 @@ Module reference: :ref:`attribute_sets`
 ^^^^^^^^^^^^^^^
 Rewriting rules
 ^^^^^^^^^^^^^^^
+
+In the contex of ReGraph, by rewriting rules we mean the rules of
+*sesqui-pushout rewriting* (see more details `here <https://link.springer.com/chapter/10.1007/11841883_4>`_).
+A rewriting rule consists of the three graphs: `p` -- preserved part, `lhs` -- left hand side, `rhs` -- right hand side, and two mappings: from `p` to `lhs` and from `p` to `rhs`.
+    
+Informally, `lhs` represents a pattern to match in a graph, subject to rewriting. `p` together with `p` -> `lhs` mapping specifies a part of the pattern which stays preseved during rewriting, i.e. all the nodes/edges/attributes present in `lhs` but not `p` will be removed. `rhs` and `p` -> `rhs` specify
+nodes/edges/attributes to add to the `p`. In addition, rules defined is such a way allow to clone and merge nodes.
+If two nodes from `p` map to the same node in `lhs`, the node corresponding to this node of the
+pattern will be cloned. Symmetrically, if two nodes from `p` map to the same node in `rhs`,
+the corresponding two nodes will be merged.
+
+The following examples will hopefully illustrate the idea behind the sesqui-pushout rewriting rules more clearly:
+
+Create a rewriting rule: 
+::
+
+    from regraph.rules import Rule
+    from regraph.plotting import plot_rule
+
+
+    # Define the left-hand side of the rule
+    lhs = nx.DiGraph()
+    primitives.add_nodes_from(lhs, [1, 2, 3])
+    primitives.add_edges_from(lhs, [(1, 2), (2, 3)])
+
+    # Define the preserved part of the rule
+    p = nx.DiGraph()
+    primitives.add_nodes_from(p, [1, "1_clone", 2, 3])
+    primitives.add_edges_from(p, [(1, 2), ("1_clone", 2)])
+
+    # Define the right-hand side of the rule
+    rhs = nx.DiGraph()
+    primitives.add_nodes_from(rhs, [1, "1_clone", 2, 3, "new_node"])
+    primitives.add_edges_from(rhs, [(1, 2), ("1_clone", 2), ("new_node", 1)])
+
+    p_lhs = {1: 1, "1_clone": 1, 2: 2, 3: 3}
+    p_rhs = {1: 1, "1_clone": 1, 2: 2, 3: 3}
+
+    # Initialize a rule object
+    rule1 = Rule(p, lhs, rhs, p_lhs)
+
+    plot_rule(rule1)
+
+Invoking the `plot_rule` function on the last line produces the following plot of the rule:
+
+.. image:: _static/rule1.png
+
+From this plot we can see that the node `1` is cloned and its clone is represented with the node `1_clone`,
+then the edge between the nodes `2` and `3` is removed, and finally, the new node (with id `new_node`) is created and attached with an edge to the `1_clone` node.
+
+Now, let's try to apply this rule and rewrite some graph, for example the following one:
+
+::
+
+    graph = nx.DiGraph()
+    nodes = ["a", "b", "c", "d"]
+    edges = [("a", "b"), ("a, c"), ("c", "d")]
+    primitives.add_nodes_from(graph, nodes)
+    primitives.add_edges_from(graph, edges)
+    pos = plot_graph(graph)
+
+
+.. image:: _static/graph_to_rewrite.png
+
+First, we need to find instances of the `lhs` of the rule in this graph,
+which can be done by `regraph.primitives.find_matching` function presented above:
+
+>>> instances = primitives.find_matching(graph, rule1.lhs)
+>>> instances
+[{1: 'a', 2: 'c', 3: 'd'}]
+
+We can also plot the instance in the graph:
+
+>>> plot_instance(graph, rule1.lhs, instances[0], parent_pos=pos)
+
+.. image:: _static/graph_to_rewrite_instance.png
+
+Finally, perform graph rewriting on the instance that was found:
+
+>>> new_graph, rhs_instance = rule1.apply_to(graph, instances[0])
+
+The method `apply_to` retured two values: first, a new graph -- the result of 
+rewriting, second, a mapping from the `rhs` of the rule to the resulting graph.
+Plot the new graph and the `rhs` instance:
+
+>>> plot_instance(new_graph, rule1.rhs, rhs_instance, parent_pos=pos)
+
+.. image:: _static/graph_to_rewrite_result.png
+
+
+::
+
+    pattern = nx.DiGraph()
+    add_nodes_from(pattern, [1, 2, 3])
+    add_edges_from(pattern, [(1, 2), (2, 3)])
+
+    new_rule1 = Rule.from_transform(pattern)
+    new_rule1.inject_clone_node(1)
+    new_rule1.inject_remove_edge(2, 3)
+    new_rule1.inject_add_node("new_node")
+    new_rule1.inject_add_edge("new_node", 1)
+    plot_rule(new_rule1)
+
 
 
 Continue to :ref:`tutorial_part2` to learn about graph hierarchies.
