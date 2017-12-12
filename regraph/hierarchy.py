@@ -1453,7 +1453,6 @@ class Hierarchy(nx.DiGraph):
 
         downstream_changes = dict()
         if strict is False:
-            print("PROPAGATING DOOOWn")
             downstream_changes =\
                 rewriting_utils._propagate_down(
                     self, graph_id, graph_construct,

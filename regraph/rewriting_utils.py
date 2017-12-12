@@ -475,23 +475,23 @@ def _apply_changes(hierarchy, upstream_changes, downstream_changes):
        "graphs" in downstream_changes.keys():
         for g1, g2 in downstream_changes["relations"]:
             if (g1, g2) not in visited and (g2, g1) not in visited:
-                # # downstream changes in both related graphs
+                # downstream changes in both related graphs
                 new_pairs = set()
                 if (g2, g1) in downstream_changes["relations"]:
                     left_dict = left_relation_dict(hierarchy.relation[g1][g2])
                     for left_el, right_els in left_dict.items():
                         new_left_node =\
-                            downstream_changes["graphs"][1][left_el]
+                            downstream_changes["graphs"][g1][1][left_el]
                         for right_el in right_els:
                             new_right_node =\
-                                downstream_changes["graphs"][1][right_el]
+                                downstream_changes["graphs"][g2][1][right_el]
                             new_pairs.add((new_left_node, new_right_node))
                 else:
                     left_dict = left_relation_dict(
                         hierarchy.relation[g1][g2].rel)
                     for left_el, right_els in left_dict.items():
                         new_left_node =\
-                            downstream_changes["graphs"][1][left_el]
+                            downstream_changes["graphs"][g1][1][left_el]
                         for right_el in right_els:
                             new_pairs.add((new_left_node, right_el))
 
