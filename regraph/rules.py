@@ -564,7 +564,8 @@ class Rule(object):
         Parameters
         ----------
         node_list : iterable
-            Collection of ids of nodes from the preserved part to merge.
+            Collection of ids of nodes from the preserved part or
+            the rhs to merge.
         node_id : hashable
             Id of the new node corresponding to the result of merge.
 
@@ -583,15 +584,17 @@ class Rule(object):
         new_name = None
 
         nodes_to_merge = set()
-        rhs_merged_nodes = set()
         for n in node_list:
-            rhs_merged_nodes.add(self.p_rhs[n])
-            if n not in self.p.nodes():
+            if n in self.p.nodes():
+                rhs_node = self.p_rhs[n]
+            elif n in self.rhs.nodes():
+                rhs_node = n
+            else:
                 raise RuleError(
-                    "Node with the id '%s' does not exist in the "
-                    "preserved part of the rule" % n
+                    "Node with the id '%s' does not exist in neither the "
+                    "preserved part of the rule nor its rhs" % n
                 )
-            nodes_to_merge.add(self.p_rhs[n])
+            nodes_to_merge.add(rhs_node)
         new_name = primitives.merge_nodes(
             self.rhs,
             list(nodes_to_merge),
@@ -599,8 +602,9 @@ class Rule(object):
         )
         # Update mappings
         for n in node_list:
-            self.p_rhs[n] = new_name
-        for r_node in rhs_merged_nodes:
+            if n in self.p.nodes():
+                self.p_rhs[n] = new_name
+        for r_node in nodes_to_merge:
             merged_ps = keys_by_value(self.p_rhs, r_node)
             for p in merged_ps:
                 self.p_rhs[p] = new_name
@@ -1186,6 +1190,20 @@ class Rule(object):
     def _add_node_lhs(self, node_id, attrs=None):
         if node_id not in self.lhs.nodes():
             primitives.add_node(self.lhs, node_id, attrs)
+            new_p_node_id = node_id
+            if new_p_node_id in self.p.nodes():
+                new_p_node_id = primitives.unique_node_id(new_p_node_id)
+            primitives.add_node(self.p, new_p_node_id, attrs)
+            self.p_lhs[new_p_node_id] = node_id
+            new_rhs_node_id = node_id
+            if new_rhs_node_id in self.rhs.nodes():
+                new_rhs_node_id = primitives.unique_node_id(new_rhs_node_id)
+            primitives.add_node(self.rhs, new_rhs_node_id, attrs)
+            self.p_rhs[new_p_node_id] = new_rhs_node_id
+        else:
+            raise RuleError(
+                "Node '%s' already exists in the left-hand side "
+                "of the rule" % node_id)
 
     def _remove_node_rhs(self, node_id):
         """Remove a node from the `rhs`.
@@ -1288,3 +1306,13 @@ class Rule(object):
             warnings.warn(
                 "Cannot merge less than two nodes!", ReGraphWarning
             )
+
+    def _add_node_attrs_lhs(self, n, attrs):
+        if n not in self.lhs.nodes():
+            raise RuleError(
+                "Node '%s' does not exist in the lhs "
+                "of the rule" % n)
+        primitives.add_node_attrs(self.lhs, n, attrs)
+        p_nodes = keys_by_value(self.p_rhs, n)
+        for p_node in p_nodes:
+            primitives.add_node_attrs(self.p, p_node, attrs)
