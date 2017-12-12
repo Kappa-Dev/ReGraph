@@ -486,7 +486,7 @@ class RegexSet(AttributeSet):
             return RegexSet.universal()
 
         patterns = []
-        if isinstance(other, set):
+        if isinstance(other, set) or isinstance(other, FiniteSet):
             for element in other:
                 element_str = _regex_to_string(element)
                 if element_str is not None:
