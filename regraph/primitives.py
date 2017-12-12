@@ -1398,7 +1398,7 @@ def unique_node_id(graph, prefix):
     """
     if prefix not in graph.nodes():
         return prefix
-    idx = 0
+    idx = 1
     new_id = "{}_{}".format(prefix, idx)
     while new_id in graph.nodes():
         idx += 1

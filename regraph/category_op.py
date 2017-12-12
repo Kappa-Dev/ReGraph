@@ -2,22 +2,7 @@
 import networkx as nx
 import copy
 
-from regraph.primitives import (add_node,
-                                add_edge,
-                                set_edge,
-                                add_node_attrs,
-                                get_edge,
-                                add_edge_attrs,
-                                clone_node,
-                                merge_nodes,
-                                update_node_attrs,
-                                remove_node,
-                                remove_edge,
-                                remove_node_attrs,
-                                remove_edge_attrs,
-                                unique_node_id,
-                                subtract,
-                                print_graph)
+from regraph.primitives import *
 from regraph.utils import (keys_by_value,
                            merge_attributes,
                            restrict_mapping,
@@ -720,8 +705,11 @@ def pushout_from_relation(g1, g2, relation, inplace=False):
 
     for node in g2.nodes():
         if node not in right_dict.keys():
-            add_node(g12, node, g2.node[node])
-            g2_g12[node] = node
+            node_id = node
+            if node_id in g12.nodes():
+                node_id = unique_node_id(g12, node)
+            add_node(g12, node_id, g2.node[node])
+            g2_g12[node] = node_id
         elif len(right_dict[node]) == 1:
             node_attrs_diff = dict_sub(
                 g2.node[node],
