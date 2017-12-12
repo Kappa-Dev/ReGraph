@@ -1166,7 +1166,8 @@ class Hierarchy(nx.DiGraph):
     # return find_match(graph, pattern, graph_typings, pattern_typings,
     # typing_graphs)
 
-    def find_matching(self, graph_id, pattern, pattern_typing=None):
+    def find_matching(self, graph_id, pattern,
+                      pattern_typing=None, nodes=None):
         """Find an instance of a pattern in a specified graph.
 
         `graph_id` -- id of a graph in the hierarchy to search for matches;
@@ -1219,11 +1220,15 @@ class Hierarchy(nx.DiGraph):
                     )
             pattern_typing = new_pattern_typing
 
+        if nodes is not None:
+            g = self.node[graph_id].graph.subgraph(nodes)
+        else:
+            g = self.node[graph_id].graph
         labels_mapping = dict(
             [(n, i + 1) for i, n in
-             enumerate(self.node[graph_id].graph.nodes())]
+             enumerate(g.nodes())]
         )
-        g = get_relabeled_graph(self.node[graph_id].graph, labels_mapping)
+        g = get_relabeled_graph(g, labels_mapping)
 
         inverse_mapping = dict(
             [(value, key) for key, value in labels_mapping.items()]
@@ -1431,19 +1436,18 @@ class Hierarchy(nx.DiGraph):
             "relations": base_changes["relations"]
         }
 
-        if rule.is_restrictive():
-            # 4. Propagate rewriting up the hierarchy
-            new_upstream_changes =\
-                rewriting_utils._propagate_up(
-                    self, graph_id, rule, instance, p_g_m, g_m_g_prime, inplace)
+        # 4. Propagate rewriting up the hierarchy
+        new_upstream_changes =\
+            rewriting_utils._propagate_up(
+                self, graph_id, rule, instance, p_g_m, g_m_g_prime, inplace)
 
-            upstream_changes["graphs"].update(new_upstream_changes["graphs"])
-            upstream_changes["homomorphisms"].update(
-                new_upstream_changes["homomorphisms"])
-            upstream_changes["rules"].update(new_upstream_changes["rules"])
-            upstream_changes["rule_homomorphisms"].update(
-                new_upstream_changes["rule_homomorphisms"])
-            upstream_changes["relations"] += new_upstream_changes["relations"]
+        upstream_changes["graphs"].update(new_upstream_changes["graphs"])
+        upstream_changes["homomorphisms"].update(
+            new_upstream_changes["homomorphisms"])
+        upstream_changes["rules"].update(new_upstream_changes["rules"])
+        upstream_changes["rule_homomorphisms"].update(
+            new_upstream_changes["rule_homomorphisms"])
+        upstream_changes["relations"] += new_upstream_changes["relations"]
 
         graph_construct = (g_m, g_m_g, g_prime, g_m_g_prime, r_g_prime)
 

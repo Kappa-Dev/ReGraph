@@ -1136,13 +1136,16 @@ def export_graph(graph, filename):
     return
 
 
-def find_matching(graph, pattern):
+def find_matching(graph, pattern, nodes=None):
     """Find matching of a pattern in a graph.
 
-    This function takes as an input a graph and a pattern graph, it
-    searches for a matching of the pattern inside of the graph
-    (corresponds to subgraph matching problem). The matching is defined by
-    a map from the nodes of the pattern to the nodes of the graph such that:
+    This function takes as an input a graph and a pattern graph, optionally,
+    it also takes a collection of nodes specifying the subgraph of the
+    original graph, where the matching should be searched in, then it
+    searches for a matching of the pattern inside of the graph (or induced
+    subragh), which corresponds to solving subgraph matching problem.
+    The matching is defined by a map from the nodes of the pattern
+    to the nodes of the graph such that:
 
     * edges are preserved, i.e. if there is an edge between nodes `n1` and `n2`
       in the pattern, there is an edge between the nodes of the graph that
@@ -1160,6 +1163,8 @@ def find_matching(graph, pattern):
     graph : nx.(Di)Graph
     pattern : nx.(Di)Graph
         Pattern graph to search for
+    nodes : iterable, optional
+        Subset of nodes to search for matching
 
     Returns
     -------
@@ -1189,8 +1194,13 @@ def find_matching(graph, pattern):
     [{"x": 3, "y": 2}]
 
     """
-    labels_mapping = dict([(n, i + 1) for i, n in enumerate(graph.nodes())])
-    g = get_relabeled_graph(graph, labels_mapping)
+    if nodes is not None:
+        g = graph.subgraph(nodes)
+    else:
+        g = graph
+
+    labels_mapping = dict([(n, i + 1) for i, n in enumerate(g.nodes())])
+    g = get_relabeled_graph(g, labels_mapping)
     matching_nodes = set()
 
     # find all the nodes matching the nodes in pattern

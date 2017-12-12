@@ -461,11 +461,12 @@ def _apply_changes(hierarchy, upstream_changes, downstream_changes):
             else:
                 left_dict = left_relation_dict(hierarchy.relation[g1][g2].rel)
                 for node in upstream_changes["graphs"][g1][0].nodes():
-                    old_node = upstream_changes["graphs"][g1][1][node]
-                    if old_node in left_dict.keys():
-                        for el in left_dict[old_node]:
-                            new_pairs.add(
-                                (node, el))
+                    if node in upstream_changes["graphs"][g1][1].keys():
+                        old_node = upstream_changes["graphs"][g1][1][node]
+                        if old_node in left_dict.keys():
+                            for el in left_dict[old_node]:
+                                new_pairs.add(
+                                    (node, el))
 
             rels[(g1, g2)] = new_pairs
             visited.add((g1, g2))
