@@ -486,7 +486,8 @@ def _apply_changes(hierarchy, upstream_changes, downstream_changes):
                                 downstream_changes["graphs"][1][right_el]
                             new_pairs.add((new_left_node, new_right_node))
                 else:
-                    left_dict = left_relation_dict(hierarchy.relation[g1][g2])
+                    left_dict = left_relation_dict(
+                        hierarchy.relation[g1][g2].rel)
                     for left_el, right_els in left_dict.items():
                         new_left_node =\
                             downstream_changes["graphs"][1][left_el]

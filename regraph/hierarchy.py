@@ -1449,6 +1449,7 @@ class Hierarchy(nx.DiGraph):
 
         downstream_changes = dict()
         if strict is False:
+            print("PROPAGATING DOOOWn")
             downstream_changes =\
                 rewriting_utils._propagate_down(
                     self, graph_id, graph_construct,
@@ -1459,14 +1460,14 @@ class Hierarchy(nx.DiGraph):
             rewriting_utils._apply_changes(
                 self, upstream_changes, downstream_changes)
             updated_graphs = None
-            return (self, updated_graphs)
+            return (self, r_g_prime)
         else:
             # First, create a new hierarchy
             new_graph = copy.deepcopy(self)
             rewriting_utils._apply_changes(
                 new_graph, upstream_changes, downstream_changes)
             updated_graphs = None
-            return (new_graph, updated_graphs)
+            return (new_graph, r_g_prime)
 
     def apply_rule(self, graph_id, rule_id, instance,
                    strong_typing=True, total=False, inplace=True):
