@@ -1,0 +1,7 @@
+.. _hierarchy_components:
+
+Hierarchy components
+====================
+
+.. autoclass:: regraph.hierarchy.Hierarchy
+	:members:
