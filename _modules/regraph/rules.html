@@ -606,7 +606,8 @@
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
 <span class="sd">        node_list : iterable</span>
-<span class="sd">            Collection of ids of nodes from the preserved part to merge.</span>
+<span class="sd">            Collection of ids of nodes from the preserved part or</span>
+<span class="sd">            the rhs to merge.</span>
 <span class="sd">        node_id : hashable</span>
 <span class="sd">            Id of the new node corresponding to the result of merge.</span>
 
@@ -625,15 +626,17 @@
         <span class="n">new_name</span> <span class="o">=</span> <span class="kc">None</span>
 
         <span class="n">nodes_to_merge</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
-        <span class="n">rhs_merged_nodes</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
         <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">node_list</span><span class="p">:</span>
-            <span class="n">rhs_merged_nodes</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">p_rhs</span><span class="p">[</span><span class="n">n</span><span class="p">])</span>
-            <span class="k">if</span> <span class="n">n</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">p</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">n</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">p</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
+                <span class="n">rhs_node</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">p_rhs</span><span class="p">[</span><span class="n">n</span><span class="p">]</span>
+            <span class="k">elif</span> <span class="n">n</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">rhs</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
+                <span class="n">rhs_node</span> <span class="o">=</span> <span class="n">n</span>
+            <span class="k">else</span><span class="p">:</span>
                 <span class="k">raise</span> <span class="n">RuleError</span><span class="p">(</span>
-                    <span class="s2">&quot;Node with the id &#39;</span><span class="si">%s</span><span class="s2">&#39; does not exist in the &quot;</span>
-                    <span class="s2">&quot;preserved part of the rule&quot;</span> <span class="o">%</span> <span class="n">n</span>
+                    <span class="s2">&quot;Node with the id &#39;</span><span class="si">%s</span><span class="s2">&#39; does not exist in neither the &quot;</span>
+                    <span class="s2">&quot;preserved part of the rule nor its rhs&quot;</span> <span class="o">%</span> <span class="n">n</span>
                 <span class="p">)</span>
-            <span class="n">nodes_to_merge</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">p_rhs</span><span class="p">[</span><span class="n">n</span><span class="p">])</span>
+            <span class="n">nodes_to_merge</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">rhs_node</span><span class="p">)</span>
         <span class="n">new_name</span> <span class="o">=</span> <span class="n">primitives</span><span class="o">.</span><span class="n">merge_nodes</span><span class="p">(</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">rhs</span><span class="p">,</span>
             <span class="nb">list</span><span class="p">(</span><span class="n">nodes_to_merge</span><span class="p">),</span>
@@ -641,8 +644,9 @@
         <span class="p">)</span>
         <span class="c1"># Update mappings</span>
         <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">node_list</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">p_rhs</span><span class="p">[</span><span class="n">n</span><span class="p">]</span> <span class="o">=</span> <span class="n">new_name</span>
-        <span class="k">for</span> <span class="n">r_node</span> <span class="ow">in</span> <span class="n">rhs_merged_nodes</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">n</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">p</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">p_rhs</span><span class="p">[</span><span class="n">n</span><span class="p">]</span> <span class="o">=</span> <span class="n">new_name</span>
+        <span class="k">for</span> <span class="n">r_node</span> <span class="ow">in</span> <span class="n">nodes_to_merge</span><span class="p">:</span>
             <span class="n">merged_ps</span> <span class="o">=</span> <span class="n">keys_by_value</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">p_rhs</span><span class="p">,</span> <span class="n">r_node</span><span class="p">)</span>
             <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">merged_ps</span><span class="p">:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">p_rhs</span><span class="p">[</span><span class="n">p</span><span class="p">]</span> <span class="o">=</span> <span class="n">new_name</span>
@@ -1228,6 +1232,20 @@
     <span class="k">def</span> <span class="nf">_add_node_lhs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node_id</span><span class="p">,</span> <span class="n">attrs</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="k">if</span> <span class="n">node_id</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">lhs</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
             <span class="n">primitives</span><span class="o">.</span><span class="n">add_node</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">lhs</span><span class="p">,</span> <span class="n">node_id</span><span class="p">,</span> <span class="n">attrs</span><span class="p">)</span>
+            <span class="n">new_p_node_id</span> <span class="o">=</span> <span class="n">node_id</span>
+            <span class="k">if</span> <span class="n">new_p_node_id</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">p</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
+                <span class="n">new_p_node_id</span> <span class="o">=</span> <span class="n">primitives</span><span class="o">.</span><span class="n">unique_node_id</span><span class="p">(</span><span class="n">new_p_node_id</span><span class="p">)</span>
+            <span class="n">primitives</span><span class="o">.</span><span class="n">add_node</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">p</span><span class="p">,</span> <span class="n">new_p_node_id</span><span class="p">,</span> <span class="n">attrs</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">p_lhs</span><span class="p">[</span><span class="n">new_p_node_id</span><span class="p">]</span> <span class="o">=</span> <span class="n">node_id</span>
+            <span class="n">new_rhs_node_id</span> <span class="o">=</span> <span class="n">node_id</span>
+            <span class="k">if</span> <span class="n">new_rhs_node_id</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">rhs</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
+                <span class="n">new_rhs_node_id</span> <span class="o">=</span> <span class="n">primitives</span><span class="o">.</span><span class="n">unique_node_id</span><span class="p">(</span><span class="n">new_rhs_node_id</span><span class="p">)</span>
+            <span class="n">primitives</span><span class="o">.</span><span class="n">add_node</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rhs</span><span class="p">,</span> <span class="n">new_rhs_node_id</span><span class="p">,</span> <span class="n">attrs</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">p_rhs</span><span class="p">[</span><span class="n">new_p_node_id</span><span class="p">]</span> <span class="o">=</span> <span class="n">new_rhs_node_id</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">RuleError</span><span class="p">(</span>
+                <span class="s2">&quot;Node &#39;</span><span class="si">%s</span><span class="s2">&#39; already exists in the left-hand side &quot;</span>
+                <span class="s2">&quot;of the rule&quot;</span> <span class="o">%</span> <span class="n">node_id</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">_remove_node_rhs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node_id</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Remove a node from the `rhs`.</span>
@@ -1329,7 +1347,17 @@
         <span class="k">else</span><span class="p">:</span>
             <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
                 <span class="s2">&quot;Cannot merge less than two nodes!&quot;</span><span class="p">,</span> <span class="n">ReGraphWarning</span>
-            <span class="p">)</span></div>
+            <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_add_node_attrs_lhs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="n">attrs</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">n</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">lhs</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
+            <span class="k">raise</span> <span class="n">RuleError</span><span class="p">(</span>
+                <span class="s2">&quot;Node &#39;</span><span class="si">%s</span><span class="s2">&#39; does not exist in the lhs &quot;</span>
+                <span class="s2">&quot;of the rule&quot;</span> <span class="o">%</span> <span class="n">n</span><span class="p">)</span>
+        <span class="n">primitives</span><span class="o">.</span><span class="n">add_node_attrs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">lhs</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="n">attrs</span><span class="p">)</span>
+        <span class="n">p_nodes</span> <span class="o">=</span> <span class="n">keys_by_value</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">p_rhs</span><span class="p">,</span> <span class="n">n</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">p_node</span> <span class="ow">in</span> <span class="n">p_nodes</span><span class="p">:</span>
+            <span class="n">primitives</span><span class="o">.</span><span class="n">add_node_attrs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">p</span><span class="p">,</span> <span class="n">p_node</span><span class="p">,</span> <span class="n">attrs</span><span class="p">)</span></div>
 </pre></div>
 
           </div>

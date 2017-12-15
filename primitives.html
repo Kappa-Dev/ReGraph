@@ -387,12 +387,15 @@ satisfy <cite>attr_cond</cite>.</p>
 
 <dl class="function">
 <dt id="regraph.primitives.find_matching">
-<code class="descclassname">regraph.primitives.</code><code class="descname">find_matching</code><span class="sig-paren">(</span><em>graph</em>, <em>pattern</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/primitives.html#find_matching"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.primitives.find_matching" title="Permalink to this definition">¶</a></dt>
+<code class="descclassname">regraph.primitives.</code><code class="descname">find_matching</code><span class="sig-paren">(</span><em>graph</em>, <em>pattern</em>, <em>nodes=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/primitives.html#find_matching"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.primitives.find_matching" title="Permalink to this definition">¶</a></dt>
 <dd><p>Find matching of a pattern in a graph.</p>
-<p>This function takes as an input a graph and a pattern graph, it
-searches for a matching of the pattern inside of the graph
-(corresponds to subgraph matching problem). The matching is defined by
-a map from the nodes of the pattern to the nodes of the graph such that:</p>
+<p>This function takes as an input a graph and a pattern graph, optionally,
+it also takes a collection of nodes specifying the subgraph of the
+original graph, where the matching should be searched in, then it
+searches for a matching of the pattern inside of the graph (or induced
+subragh), which corresponds to solving subgraph matching problem.
+The matching is defined by a map from the nodes of the pattern
+to the nodes of the graph such that:</p>
 <ul class="simple">
 <li>edges are preserved, i.e. if there is an edge between nodes <cite>n1</cite> and <cite>n2</cite>
 in the pattern, there is an edge between the nodes of the graph that
@@ -412,6 +415,10 @@ subgraph matching algorithm.</p>
 <p><strong>pattern</strong> : nx.(Di)Graph</p>
 <blockquote>
 <div><p>Pattern graph to search for</p>
+</div></blockquote>
+<p><strong>nodes</strong> : iterable, optional</p>
+<blockquote>
+<div><p>Subset of nodes to search for matching</p>
 </div></blockquote>
 </td>
 </tr>

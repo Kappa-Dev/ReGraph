@@ -1178,13 +1178,16 @@
     <span class="k">return</span></div>
 
 
-<div class="viewcode-block" id="find_matching"><a class="viewcode-back" href="../../primitives.html#regraph.primitives.find_matching">[docs]</a><span class="k">def</span> <span class="nf">find_matching</span><span class="p">(</span><span class="n">graph</span><span class="p">,</span> <span class="n">pattern</span><span class="p">):</span>
+<div class="viewcode-block" id="find_matching"><a class="viewcode-back" href="../../primitives.html#regraph.primitives.find_matching">[docs]</a><span class="k">def</span> <span class="nf">find_matching</span><span class="p">(</span><span class="n">graph</span><span class="p">,</span> <span class="n">pattern</span><span class="p">,</span> <span class="n">nodes</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Find matching of a pattern in a graph.</span>
 
-<span class="sd">    This function takes as an input a graph and a pattern graph, it</span>
-<span class="sd">    searches for a matching of the pattern inside of the graph</span>
-<span class="sd">    (corresponds to subgraph matching problem). The matching is defined by</span>
-<span class="sd">    a map from the nodes of the pattern to the nodes of the graph such that:</span>
+<span class="sd">    This function takes as an input a graph and a pattern graph, optionally,</span>
+<span class="sd">    it also takes a collection of nodes specifying the subgraph of the</span>
+<span class="sd">    original graph, where the matching should be searched in, then it</span>
+<span class="sd">    searches for a matching of the pattern inside of the graph (or induced</span>
+<span class="sd">    subragh), which corresponds to solving subgraph matching problem.</span>
+<span class="sd">    The matching is defined by a map from the nodes of the pattern</span>
+<span class="sd">    to the nodes of the graph such that:</span>
 
 <span class="sd">    * edges are preserved, i.e. if there is an edge between nodes `n1` and `n2`</span>
 <span class="sd">      in the pattern, there is an edge between the nodes of the graph that</span>
@@ -1202,6 +1205,8 @@
 <span class="sd">    graph : nx.(Di)Graph</span>
 <span class="sd">    pattern : nx.(Di)Graph</span>
 <span class="sd">        Pattern graph to search for</span>
+<span class="sd">    nodes : iterable, optional</span>
+<span class="sd">        Subset of nodes to search for matching</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
@@ -1231,8 +1236,13 @@
 <span class="sd">    [{&quot;x&quot;: 3, &quot;y&quot;: 2}]</span>
 
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">labels_mapping</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">([(</span><span class="n">n</span><span class="p">,</span> <span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">n</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">graph</span><span class="o">.</span><span class="n">nodes</span><span class="p">())])</span>
-    <span class="n">g</span> <span class="o">=</span> <span class="n">get_relabeled_graph</span><span class="p">(</span><span class="n">graph</span><span class="p">,</span> <span class="n">labels_mapping</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">nodes</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">g</span> <span class="o">=</span> <span class="n">graph</span><span class="o">.</span><span class="n">subgraph</span><span class="p">(</span><span class="n">nodes</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">g</span> <span class="o">=</span> <span class="n">graph</span>
+
+    <span class="n">labels_mapping</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">([(</span><span class="n">n</span><span class="p">,</span> <span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">n</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">g</span><span class="o">.</span><span class="n">nodes</span><span class="p">())])</span>
+    <span class="n">g</span> <span class="o">=</span> <span class="n">get_relabeled_graph</span><span class="p">(</span><span class="n">g</span><span class="p">,</span> <span class="n">labels_mapping</span><span class="p">)</span>
     <span class="n">matching_nodes</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
 
     <span class="c1"># find all the nodes matching the nodes in pattern</span>
@@ -1440,7 +1450,7 @@
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">if</span> <span class="n">prefix</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">graph</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
         <span class="k">return</span> <span class="n">prefix</span>
-    <span class="n">idx</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">idx</span> <span class="o">=</span> <span class="mi">1</span>
     <span class="n">new_id</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">{}</span><span class="s2">_</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">prefix</span><span class="p">,</span> <span class="n">idx</span><span class="p">)</span>
     <span class="k">while</span> <span class="n">new_id</span> <span class="ow">in</span> <span class="n">graph</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
         <span class="n">idx</span> <span class="o">+=</span> <span class="mi">1</span>

@@ -52,7 +52,6 @@
 <span class="sd">  library for finding inclusion and intersection of regular expressions,</span>
 <span class="sd">  its method `match` can be used to test if a given string is in</span>
 <span class="sd">  a set of strings defined by regular expressions;</span>
-
 <span class="sd">* `IntegerSet` -- a class for possibly infinite sets of integers</span>
 <span class="sd">  defined by a set of disjoint intervals, inherits `AttributeSet`,</span>
 <span class="sd">  provides the method `contains` for testing if a given integer is in</span>
@@ -528,7 +527,7 @@
             <span class="k">return</span> <span class="n">RegexSet</span><span class="o">.</span><span class="n">universal</span><span class="p">()</span>
 
         <span class="n">patterns</span> <span class="o">=</span> <span class="p">[]</span>
-        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="nb">set</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="nb">set</span><span class="p">)</span> <span class="ow">or</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">FiniteSet</span><span class="p">):</span>
             <span class="k">for</span> <span class="n">element</span> <span class="ow">in</span> <span class="n">other</span><span class="p">:</span>
                 <span class="n">element_str</span> <span class="o">=</span> <span class="n">_regex_to_string</span><span class="p">(</span><span class="n">element</span><span class="p">)</span>
                 <span class="k">if</span> <span class="n">element_str</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>

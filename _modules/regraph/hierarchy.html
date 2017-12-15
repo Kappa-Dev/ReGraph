@@ -40,7 +40,43 @@
           <div class="body" role="main">
             
   <h1>Source code for regraph.hierarchy</h1><div class="highlight"><pre>
-<span></span><span class="sd">&quot;&quot;&quot;.&quot;&quot;&quot;</span>
+<span></span><span class="sd">&quot;&quot;&quot;Graph hierarchy related data structures.</span>
+
+<span class="sd">This module contains a collection of data structures implementing</span>
+<span class="sd">graph hierarchy and its various components.</span>
+<span class="sd">Graph hierarchy is a DAG, whose nodes can be graphs or rules of</span>
+<span class="sd">sesqui-pushout rewriting, and whose edges (directed) represent</span>
+<span class="sd">homomorphisms between graphs. In addition, hierarchies are</span>
+<span class="sd">equipped with relations on graphs (which can be thought of as</span>
+<span class="sd">undirected edges or, alternatively, spans).</span>
+
+<span class="sd">The following data structures are implemented in this module:</span>
+
+<span class="sd">* `AttributeContainter` -- base class for objects containing</span>
+<span class="sd">  attributes, provides an interface for different operations</span>
+<span class="sd">  on attributes;</span>
+<span class="sd">* `GraphNode` -- class for graph nodes of a hierarchy;</span>
+<span class="sd">* `RuleNode` -- class for rule nodes of a hierarchy;</span>
+<span class="sd">* `Typing` -- class for graph typing edges of a hierarchy,</span>
+<span class="sd">  encapsulates graph homomorphism from a source graph node</span>
+<span class="sd">  to a target graph node;</span>
+<span class="sd">* `RuleTyping` -- class for rule typing edges of a hierarchy</span>
+<span class="sd">  (its source node is assumed to be a rule and its target -- a graph),</span>
+<span class="sd">  encapsulated two homomorphisms: from the left-hand side of the rule</span>
+<span class="sd">  to the target and from the right-hand side of the rule to the target;</span>
+<span class="sd">* `Relation` -- base class for relations in the hierarchy;</span>
+<span class="sd">* `GraphRelation` -- class for binary symmetric relations between</span>
+<span class="sd">  two graphs.</span>
+<span class="sd">* `Hierarchy` -- class for graph hierarchies (nodes: graphs or rules, edges:</span>
+<span class="sd">  graph/rule homomorphisms + relations: separate from edges, act as undirected</span>
+<span class="sd">  edges), based on `networkx.DiGraph`,</span>
+<span class="sd">  additionally constrained to be acyclic and to respect the property of</span>
+<span class="sd">  commuting paths.</span>
+
+<span class="sd">TODO:</span>
+
+<span class="sd">* `RuleRelation`</span>
+<span class="sd">&quot;&quot;&quot;</span>
 <span class="kn">import</span> <span class="nn">copy</span>
 <span class="kn">import</span> <span class="nn">itertools</span>
 <span class="kn">import</span> <span class="nn">json</span>
@@ -58,7 +94,8 @@
 <span class="kn">from</span> <span class="nn">regraph.category_op</span> <span class="k">import</span> <span class="p">(</span><span class="n">compose</span><span class="p">,</span>
                                  <span class="n">check_homomorphism</span><span class="p">,</span>
                                  <span class="n">is_total_homomorphism</span><span class="p">,</span>
-                                 <span class="n">relation_to_span</span><span class="p">)</span>
+                                 <span class="n">relation_to_span</span><span class="p">,</span>
+                                 <span class="n">right_relation_dict</span><span class="p">)</span>
 <span class="kn">from</span> <span class="nn">regraph.primitives</span> <span class="k">import</span> <span class="p">(</span><span class="n">get_relabeled_graph</span><span class="p">,</span>
                                 <span class="n">relabel_node</span><span class="p">,</span>
                                 <span class="n">get_edge</span><span class="p">,</span>
@@ -81,7 +118,7 @@
 
 
 <div class="viewcode-block" id="AttributeContainter"><a class="viewcode-back" href="../../hierarchy.html#regraph.hierarchy.AttributeContainter">[docs]</a><span class="k">class</span> <span class="nc">AttributeContainter</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;Abstract class for a container with attributes.&quot;&quot;&quot;</span>
+    <span class="sd">&quot;&quot;&quot;Base class for containers of attributes.&quot;&quot;&quot;</span>
 
 <div class="viewcode-block" id="AttributeContainter.attrs_to_json"><a class="viewcode-back" href="../../hierarchy.html#regraph.hierarchy.AttributeContainter.attrs_to_json">[docs]</a>    <span class="k">def</span> <span class="nf">attrs_to_json</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Convert attributes to json.&quot;&quot;&quot;</span>
@@ -99,7 +136,7 @@
         <span class="k">return</span> <span class="n">attrs</span></div>
 
 <div class="viewcode-block" id="AttributeContainter.add_attrs"><a class="viewcode-back" href="../../hierarchy.html#regraph.hierarchy.AttributeContainter.add_attrs">[docs]</a>    <span class="k">def</span> <span class="nf">add_attrs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">attrs</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Add attrs to the graph node.&quot;&quot;&quot;</span>
+        <span class="sd">&quot;&quot;&quot;Add attrs to the container.&quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="n">attrs</span><span class="p">:</span>
             <span class="n">new_attrs</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">attrs</span><span class="p">)</span>
             <span class="n">normalize_attrs</span><span class="p">(</span><span class="n">new_attrs</span><span class="p">)</span>
@@ -145,7 +182,14 @@
 
 
 <div class="viewcode-block" id="GraphNode"><a class="viewcode-back" href="../../hierarchy.html#regraph.hierarchy.GraphNode">[docs]</a><span class="k">class</span> <span class="nc">GraphNode</span><span class="p">(</span><span class="n">AttributeContainter</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;Data structure incapsulating graph in the node of the hierarchy.&quot;&quot;&quot;</span>
+    <span class="sd">&quot;&quot;&quot;Data structure incapsulating graph in the node of the hierarchy.</span>
+
+<span class="sd">    Attributes</span>
+<span class="sd">    ----------</span>
+<span class="sd">    graph : nx.(Di)Graph</span>
+<span class="sd">    attrs : dict</span>
+<span class="sd">        Dictionary with attrs of the graph node</span>
+<span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">graph</span><span class="p">,</span> <span class="n">attrs</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Initialize graph node with graph object and attrs.&quot;&quot;&quot;</span>
@@ -162,7 +206,14 @@
 
 
 <div class="viewcode-block" id="RuleNode"><a class="viewcode-back" href="../../hierarchy.html#regraph.hierarchy.RuleNode">[docs]</a><span class="k">class</span> <span class="nc">RuleNode</span><span class="p">(</span><span class="n">AttributeContainter</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;Data structure incapsulating a rule in the node of the hierarchy.&quot;&quot;&quot;</span>
+    <span class="sd">&quot;&quot;&quot;Data structure incapsulating a rule in the node of the hierarchy.</span>
+
+<span class="sd">    Attributes</span>
+<span class="sd">    ----------</span>
+<span class="sd">    rule : regraph.rules.Rule</span>
+<span class="sd">    attrs : dict</span>
+<span class="sd">        Dictionary with attrs of the rule node</span>
+<span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">rule</span><span class="p">,</span> <span class="n">attrs</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Initialize rule with a Rule object.&quot;&quot;&quot;</span>
@@ -175,14 +226,26 @@
 
     <span class="k">def</span> <span class="nf">__eq__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Equality of rule nodes.&quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">RuleNode</span><span class="p">)</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">rule</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">rule</span></div>
+        <span class="k">return</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">RuleNode</span><span class="p">)</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">rule</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">rule</span>
 
-    <span class="c1"># def __ne__(self, other):</span>
-    <span class="c1">#     return not (self == other)</span>
+    <span class="k">def</span> <span class="nf">__ne__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Non-equality of the rule nodes.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="ow">not</span> <span class="p">(</span><span class="bp">self</span> <span class="o">==</span> <span class="n">other</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="Typing"><a class="viewcode-back" href="../../hierarchy.html#regraph.hierarchy.Typing">[docs]</a><span class="k">class</span> <span class="nc">Typing</span><span class="p">(</span><span class="n">AttributeContainter</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;Incapsulate homomorphism in the edge of the hierarchy.&quot;&quot;&quot;</span>
+    <span class="sd">&quot;&quot;&quot;Data structure incapsulating a homomorphism between graphs.</span>
+
+<span class="sd">    Attributes</span>
+<span class="sd">    ----------</span>
+<span class="sd">    mapping : dict</span>
+<span class="sd">        Dictionary containing a map from nodes of a source graph</span>
+<span class="sd">        to nodes of a target.</span>
+<span class="sd">    total : bool</span>
+<span class="sd">        Flag indication if the typing is forced to be total</span>
+<span class="sd">    attrs : dict</span>
+<span class="sd">        Dictionary with attrs of the typing</span>
+<span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mapping</span><span class="p">,</span> <span class="n">total</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">attrs</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Initialize homomorphism.&quot;&quot;&quot;</span>
@@ -234,7 +297,27 @@
 
 
 <div class="viewcode-block" id="RuleTyping"><a class="viewcode-back" href="../../hierarchy.html#regraph.hierarchy.RuleTyping">[docs]</a><span class="k">class</span> <span class="nc">RuleTyping</span><span class="p">(</span><span class="n">AttributeContainter</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;Incapsulates rule typing in the edge of the hierarchy.&quot;&quot;&quot;</span>
+    <span class="sd">&quot;&quot;&quot;Data structure incapsulating rule typing.</span>
+
+<span class="sd">    A rule typing by a graph is defined by two homomorphisms:</span>
+<span class="sd">    lhs -&gt; graph and rhs -&gt; graph, such that they commute</span>
+<span class="sd">    (p -&gt; lhs -&gt; graph and p -&gt; rhs -&gt; graph commute).</span>
+
+<span class="sd">    Attributes</span>
+<span class="sd">    ----------</span>
+<span class="sd">    lhs_mapping : dict</span>
+<span class="sd">        Dictionary containing a map from nodes of the lhs of</span>
+<span class="sd">        the rule to nodes of a target graph.</span>
+<span class="sd">    rhs_mapping : dict</span>
+<span class="sd">        Dictionary containing a map from nodes of the rhs of</span>
+<span class="sd">        the rule to nodes of a target graph.</span>
+<span class="sd">    lhs_total : bool</span>
+<span class="sd">        Flag indication if the typing of the lhs is forced to be total</span>
+<span class="sd">    rhs_total : bool</span>
+<span class="sd">        Flag indication if the typing of the rhs is forced to be total</span>
+<span class="sd">    attrs : dict</span>
+<span class="sd">        Dictionary with attrs of the rule typing</span>
+<span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">lhs_mapping</span><span class="p">,</span> <span class="n">rhs_mapping</span><span class="p">,</span>
                  <span class="n">lhs_total</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">rhs_total</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">attrs</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
@@ -277,15 +360,26 @@
 
 
 <div class="viewcode-block" id="Relation"><a class="viewcode-back" href="../../hierarchy.html#regraph.hierarchy.Relation">[docs]</a><span class="k">class</span> <span class="nc">Relation</span><span class="p">(</span><span class="n">AttributeContainter</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;Abstract class for relations in the hierarchy.&quot;&quot;&quot;</span></div>
+    <span class="sd">&quot;&quot;&quot;Base class for relations equipped with attrs.&quot;&quot;&quot;</span></div>
 
 
 <div class="viewcode-block" id="GraphRelation"><a class="viewcode-back" href="../../hierarchy.html#regraph.hierarchy.GraphRelation">[docs]</a><span class="k">class</span> <span class="nc">GraphRelation</span><span class="p">(</span><span class="n">Relation</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;Implements relations on graphs.&quot;&quot;&quot;</span>
+    <span class="sd">&quot;&quot;&quot;Data structure incapsulating relations on graphs.</span>
 
-    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">rel_pairs</span><span class="p">,</span> <span class="n">attrs</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="sd">    Attributes</span>
+<span class="sd">    ----------</span>
+<span class="sd">    rel : dict</span>
+<span class="sd">        Dictionary represeting a relation between two graphs,</span>
+<span class="sd">        keys represent nodes of the left graph and values are</span>
+<span class="sd">        collections of nodes from the right graph to which they</span>
+<span class="sd">        are related.</span>
+<span class="sd">    attrs : dict</span>
+<span class="sd">        Dictionary containing attrs of graph relation.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">relation_dict</span><span class="p">,</span> <span class="n">attrs</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Initialize graph relation.&quot;&quot;&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">rel</span> <span class="o">=</span> <span class="n">rel_pairs</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">rel</span> <span class="o">=</span> <span class="n">relation_dict</span>
         <span class="k">if</span> <span class="n">attrs</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">attrs</span> <span class="o">=</span> <span class="n">attrs</span>
         <span class="k">else</span><span class="p">:</span>
@@ -293,30 +387,53 @@
         <span class="k">return</span>
 
 <div class="viewcode-block" id="GraphRelation.left_domain"><a class="viewcode-back" href="../../hierarchy.html#regraph.hierarchy.GraphRelation.left_domain">[docs]</a>    <span class="k">def</span> <span class="nf">left_domain</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Return definition domain of the left member of relation.&quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="nb">set</span><span class="p">([</span><span class="n">a</span> <span class="k">for</span> <span class="n">a</span><span class="p">,</span> <span class="n">_</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">rel</span><span class="p">])</span></div>
+        <span class="sd">&quot;&quot;&quot;Return the definition domain of the left member of relation.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="nb">set</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rel</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span></div>
 
 <div class="viewcode-block" id="GraphRelation.right_domain"><a class="viewcode-back" href="../../hierarchy.html#regraph.hierarchy.GraphRelation.right_domain">[docs]</a>    <span class="k">def</span> <span class="nf">right_domain</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Return definition domain of the right member of relation.&quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="nb">set</span><span class="p">([</span><span class="n">b</span> <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">b</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">rel</span><span class="p">])</span></div></div>
+        <span class="sd">&quot;&quot;&quot;Return the definition domain of the right member of relation.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="nb">set</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rel</span><span class="o">.</span><span class="n">values</span><span class="p">())</span></div></div>
 
 
 <span class="c1"># class RuleGraphRelation(Relation):</span>
 <span class="c1">#     pass</span>
 
 
-<div class="viewcode-block" id="RuleRelation"><a class="viewcode-back" href="../../hierarchy.html#regraph.hierarchy.RuleRelation">[docs]</a><span class="k">class</span> <span class="nc">RuleRelation</span><span class="p">(</span><span class="n">Relation</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;Implements relations on rules.&quot;&quot;&quot;</span>
+<span class="c1"># class RuleRelation(Relation):</span>
+<span class="c1">#     &quot;&quot;&quot;Implements relations on rules.&quot;&quot;&quot;</span>
 
-    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">lhs_pairs</span><span class="p">,</span> <span class="n">p_pairs</span><span class="p">,</span> <span class="n">rhs_pairs</span><span class="p">,</span> <span class="n">attrs</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Initialize graph relation.&quot;&quot;&quot;</span>
-        <span class="k">pass</span></div>
+<span class="c1">#     def __init__(self, lhs_pairs, p_pairs, rhs_pairs, attrs=None):</span>
+<span class="c1">#         &quot;&quot;&quot;Initialize graph relation.&quot;&quot;&quot;</span>
+<span class="c1">#         pass</span>
 
 
-<div class="viewcode-block" id="Hierarchy"><a class="viewcode-back" href="../../hierarchy.html#regraph.hierarchy.Hierarchy">[docs]</a><span class="k">class</span> <span class="nc">Hierarchy</span><span class="p">(</span><span class="n">nx</span><span class="o">.</span><span class="n">DiGraph</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;Implements a hierarchy of graphs as a DAG.&quot;&quot;&quot;</span>
+<div class="viewcode-block" id="Hierarchy"><a class="viewcode-back" href="../../hierarchy.html#regraph.hierarchy.Hierarchy">[docs]</a><span class="k">class</span> <span class="nc">Hierarchy</span><span class="p">(</span><span class="n">nx</span><span class="o">.</span><span class="n">DiGraph</span><span class="p">,</span> <span class="n">AttributeContainter</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Class implementing graph hierarchy.</span>
 
-    <span class="c1"># Similar to NetworkX node_dict_factory</span>
+<span class="sd">    Base on `networkx.DiGraph`, acyclic, all paths commute</span>
+
+<span class="sd">    Attributes</span>
+<span class="sd">    ----------</span>
+<span class="sd">    graph</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; hierarchy = Hierarchy() # create empty hierarchy</span>
+<span class="sd">    &gt;&gt;&gt; t = nx.DiGraph([(&quot;red&quot;, &quot;blue&quot;), (&quot;blue&quot;, &quot;blue&quot;)])</span>
+<span class="sd">    &gt;&gt;&gt; hierarchy.add_graph(&quot;t&quot;, t)</span>
+<span class="sd">    &gt;&gt;&gt; g = nx.DiGraph([(&quot;a&quot;, &quot;b&quot;), (&quot;c&quot;, &quot;b&quot;), (&quot;b&quot;, &quot;d&quot;)])</span>
+<span class="sd">    &gt;&gt;&gt; hierarchy.add_graph(&quot;g&quot;, g)</span>
+<span class="sd">    &gt;&gt;&gt; g_t_typing = {&quot;a&quot;: &quot;red&quot;, &quot;b&quot;: &quot;blue&quot;, &quot;c&quot;: &quot;red&quot;, &quot;d&quot;: &quot;blue&quot;}</span>
+<span class="sd">    &gt;&gt;&gt; hierarchy.add_typing(&quot;g&quot;, &quot;t&quot;, g_t_typing)</span>
+<span class="sd">    &gt;&gt;&gt; hierarchy.graphs()</span>
+<span class="sd">    [&quot;t&quot;, &quot;g&quot;]</span>
+<span class="sd">    &gt;&gt;&gt; hierarchy.typings()</span>
+<span class="sd">    [(&quot;g&quot;, &quot;t&quot;)]</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c1"># Similar to NetworkX node_dict_factory:</span>
+    <span class="c1"># factories of node/edge dictionaries</span>
     <span class="n">graph_dict_factory</span> <span class="o">=</span> <span class="nb">dict</span>
     <span class="n">rule_dict_factory</span> <span class="o">=</span> <span class="nb">dict</span>
     <span class="n">typing_dict_factory</span> <span class="o">=</span> <span class="nb">dict</span>
@@ -325,14 +442,31 @@
     <span class="n">relation_dict_factory</span> <span class="o">=</span> <span class="nb">dict</span>
 
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">directed</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                 <span class="n">attrs</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
                  <span class="n">graph_node_cls</span><span class="o">=</span><span class="n">GraphNode</span><span class="p">,</span>
                  <span class="n">rule_node_cls</span><span class="o">=</span><span class="n">RuleNode</span><span class="p">,</span>
                  <span class="n">graph_typing_cls</span><span class="o">=</span><span class="n">Typing</span><span class="p">,</span>
                  <span class="n">rule_typing_cls</span><span class="o">=</span><span class="n">RuleTyping</span><span class="p">,</span>
-                 <span class="n">relation_cls</span><span class="o">=</span><span class="n">GraphRelation</span><span class="p">,</span>
-                 <span class="n">data</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Initialize an hierarchy of graphs.&quot;&quot;&quot;</span>
-        <span class="n">nx</span><span class="o">.</span><span class="n">DiGraph</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">)</span>
+                 <span class="n">relation_cls</span><span class="o">=</span><span class="n">GraphRelation</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Initialize an hierarchy of graphs.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        directed : bool, optional</span>
+<span class="sd">            Flag indicating if a new hierarchy consists of directed</span>
+<span class="sd">            or undirected graphs (by default is set to True.</span>
+<span class="sd">        attrs : dict</span>
+<span class="sd">            Dictionary with hierarchy attrs.</span>
+
+<span class="sd">        Advanced parameters</span>
+<span class="sd">        -------------------</span>
+<span class="sd">        graph_node_cls</span>
+<span class="sd">        rule_node_cls</span>
+<span class="sd">        graph_typing_cls</span>
+<span class="sd">        rule_typing_cls</span>
+<span class="sd">        relation_cls</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">nx</span><span class="o">.</span><span class="n">DiGraph</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">graph_dict_factory</span> <span class="o">=</span> <span class="n">gdf</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph_dict_factory</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">graph</span> <span class="o">=</span> <span class="n">gdf</span><span class="p">()</span>
@@ -390,9 +524,6 @@
                         <span class="n">n1</span><span class="p">,</span> <span class="n">n2</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">edge</span><span class="p">[</span><span class="n">n1</span><span class="p">][</span><span class="n">n2</span><span class="p">]</span><span class="o">.</span><span class="n">lhs_total</span><span class="p">,</span>
                         <span class="bp">self</span><span class="o">.</span><span class="n">edge</span><span class="p">[</span><span class="n">n1</span><span class="p">][</span><span class="n">n2</span><span class="p">]</span><span class="o">.</span><span class="n">rhs_total</span>
                     <span class="p">)</span>
-                <span class="c1"># res += &quot;lhs mapping: %s\n&quot; % str(self.edge[n1][n2].lhs_mapping)</span>
-                <span class="c1"># res += &quot;rhs mapping: %s\n&quot; %</span>
-                <span class="c1"># str(self.edge[n1][n2].rhs_mapping)</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="k">raise</span> <span class="n">HierarchyError</span><span class="p">(</span>
                     <span class="s2">&quot;Hierarchy error: unknown type &#39;</span><span class="si">%s</span><span class="s2">&#39; of the edge &#39;</span><span class="si">%s</span><span class="s2">-&gt;</span><span class="si">%s</span><span class="s2">&#39;!&quot;</span> <span class="o">%</span>
@@ -417,8 +548,6 @@
             <span class="k">return</span> <span class="kc">False</span>
 
         <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
-            <span class="c1"># normalize_attrs(self.node[node].attrs)</span>
-            <span class="c1"># normalize_attrs(hie.node[node].attrs)</span>
             <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">node</span><span class="p">]</span><span class="o">.</span><span class="n">attrs</span> <span class="o">!=</span> <span class="n">hie</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">node</span><span class="p">]</span><span class="o">.</span><span class="n">attrs</span><span class="p">:</span>
                 <span class="k">return</span>
             <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">node</span><span class="p">],</span> <span class="n">GraphNode</span><span class="p">)</span> <span class="ow">and</span>\
@@ -436,8 +565,7 @@
                 <span class="k">return</span> <span class="kc">False</span>
 
         <span class="k">for</span> <span class="n">s</span><span class="p">,</span> <span class="n">t</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">edges</span><span class="p">():</span>
-            <span class="c1"># normalize_attrs(self.edge[s][t].attrs)</span>
-            <span class="c1"># normalize_attrs(hie.edge[s][t].attrs)</span>
+
             <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">edge</span><span class="p">[</span><span class="n">s</span><span class="p">][</span><span class="n">t</span><span class="p">]</span><span class="o">.</span><span class="n">attrs</span> <span class="o">!=</span> <span class="n">hie</span><span class="o">.</span><span class="n">edge</span><span class="p">[</span><span class="n">s</span><span class="p">][</span><span class="n">t</span><span class="p">]</span><span class="o">.</span><span class="n">attrs</span><span class="p">:</span>
                 <span class="k">return</span> <span class="kc">False</span>
             <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">edge</span><span class="p">[</span><span class="n">s</span><span class="p">][</span><span class="n">t</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph_typing_cls</span><span class="p">)</span> <span class="ow">and</span>\
@@ -462,39 +590,21 @@
                 <span class="k">return</span> <span class="kc">False</span>
         <span class="k">return</span> <span class="kc">True</span>
 
-<div class="viewcode-block" id="Hierarchy.add_attrs"><a class="viewcode-back" href="../../hierarchy.html#regraph.hierarchy.Hierarchy.add_attrs">[docs]</a>    <span class="k">def</span> <span class="nf">add_attrs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">attrs_dict</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Add attrs_dict to hierarchy attrs.&quot;&quot;&quot;</span>
-        <span class="n">normalize_attrs</span><span class="p">(</span><span class="n">attrs_dict</span><span class="p">)</span>
-        <span class="n">old_attrs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">attrs</span>
-        <span class="k">if</span> <span class="n">old_attrs</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">attrs</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">attrs_dict</span><span class="p">)</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">attrs_dict</span><span class="p">:</span>
-                <span class="k">if</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">old_attrs</span><span class="p">:</span>
-                    <span class="n">old_attrs</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">old_attrs</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="o">.</span><span class="n">union</span><span class="p">(</span><span class="n">attrs_dict</span><span class="p">[</span><span class="n">key</span><span class="p">])</span>
-                <span class="k">else</span><span class="p">:</span>
-                    <span class="n">old_attrs</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">attrs_dict</span><span class="p">[</span><span class="n">key</span><span class="p">]</span></div>
+<div class="viewcode-block" id="Hierarchy.graphs"><a class="viewcode-back" href="../../hierarchy.html#regraph.hierarchy.Hierarchy.graphs">[docs]</a>    <span class="k">def</span> <span class="nf">graphs</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return a list of graphs in the hierarchy.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span></div>
 
-<div class="viewcode-block" id="Hierarchy.remove_node"><a class="viewcode-back" href="../../hierarchy.html#regraph.hierarchy.Hierarchy.remove_node">[docs]</a>    <span class="k">def</span> <span class="nf">remove_node</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Overloading NetworkX method `remove_node`.&quot;&quot;&quot;</span>
-        <span class="n">nx</span><span class="o">.</span><span class="n">DiGraph</span><span class="o">.</span><span class="n">remove_node</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n</span><span class="p">)</span>
-        <span class="k">if</span> <span class="n">n</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">relation</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
-            <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">relation</span><span class="p">[</span><span class="n">n</span><span class="p">]</span>
-        <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">relation</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-            <span class="k">if</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">v</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
-                <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">relation</span><span class="p">[</span><span class="n">k</span><span class="p">][</span><span class="n">n</span><span class="p">]</span>
-        <span class="k">return</span></div>
+<div class="viewcode-block" id="Hierarchy.typings"><a class="viewcode-back" href="../../hierarchy.html#regraph.hierarchy.Hierarchy.typings">[docs]</a>    <span class="k">def</span> <span class="nf">typings</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return a list of graph typing edges in the hierarchy.&quot;&quot;&quot;</span>
+        <span class="n">typings</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">vals</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">typing</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">for</span> <span class="n">v</span><span class="p">,</span> <span class="n">vv</span> <span class="ow">in</span> <span class="n">vals</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="n">typings</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">k</span><span class="p">,</span> <span class="n">v</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">typings</span></div>
 
-<div class="viewcode-block" id="Hierarchy.remove_relation"><a class="viewcode-back" href="../../hierarchy.html#regraph.hierarchy.Hierarchy.remove_relation">[docs]</a>    <span class="k">def</span> <span class="nf">remove_relation</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">g1</span><span class="p">,</span> <span class="n">g2</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Remove relation from the hierarchy.&quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="p">(</span><span class="n">g1</span><span class="p">,</span> <span class="n">g2</span><span class="p">)</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">relations</span><span class="p">()</span> <span class="ow">and</span>\
-           <span class="p">(</span><span class="n">g2</span><span class="p">,</span> <span class="n">g1</span><span class="p">)</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">relations</span><span class="p">():</span>
-            <span class="k">raise</span> <span class="n">HierarchyError</span><span class="p">(</span>
-                <span class="s2">&quot;Relation &#39;</span><span class="si">%s</span><span class="s2">-</span><span class="si">%s</span><span class="s2">&#39; is not defined in the hierarchy&quot;</span> <span class="o">%</span>
-                <span class="p">(</span><span class="n">g1</span><span class="p">,</span> <span class="n">g2</span><span class="p">)</span>
-            <span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">relation</span><span class="o">.</span><span class="n">update</span><span class="p">({</span><span class="n">g1</span><span class="p">:</span> <span class="nb">dict</span><span class="p">()})</span>
-        <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">relation</span><span class="p">[</span><span class="n">g2</span><span class="p">][</span><span class="n">g1</span><span class="p">]</span></div>
+<div class="viewcode-block" id="Hierarchy.rules"><a class="viewcode-back" href="../../hierarchy.html#regraph.hierarchy.Hierarchy.rules">[docs]</a>    <span class="k">def</span> <span class="nf">rules</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return a list of rules in the hierary.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rule</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span></div>
 
 <div class="viewcode-block" id="Hierarchy.relations"><a class="viewcode-back" href="../../hierarchy.html#regraph.hierarchy.Hierarchy.relations">[docs]</a>    <span class="k">def</span> <span class="nf">relations</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Return a list of relations.&quot;&quot;&quot;</span>
@@ -507,7 +617,19 @@
         <span class="k">return</span> <span class="n">rel</span></div>
 
 <div class="viewcode-block" id="Hierarchy.add_graph"><a class="viewcode-back" href="../../hierarchy.html#regraph.hierarchy.Hierarchy.add_graph">[docs]</a>    <span class="k">def</span> <span class="nf">add_graph</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">graph_id</span><span class="p">,</span> <span class="n">graph</span><span class="p">,</span> <span class="n">graph_attrs</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Add graph to the hierarchy.&quot;&quot;&quot;</span>
+        <span class="sd">&quot;&quot;&quot;Add graph to the hierarchy.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        graph_id : hashable</span>
+<span class="sd">        graph : nx.(Di)Graph object</span>
+<span class="sd">        graph_attrs : dict</span>
+
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        HierarchyError : </span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">directed</span> <span class="o">!=</span> <span class="n">graph</span><span class="o">.</span><span class="n">is_directed</span><span class="p">():</span>
             <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">directed</span><span class="p">:</span>
                 <span class="k">raise</span> <span class="n">HierarchyError</span><span class="p">(</span>
@@ -570,7 +692,7 @@
         <span class="k">return</span></div>
 
 <div class="viewcode-block" id="Hierarchy.add_typing"><a class="viewcode-back" href="../../hierarchy.html#regraph.hierarchy.Hierarchy.add_typing">[docs]</a>    <span class="k">def</span> <span class="nf">add_typing</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">source</span><span class="p">,</span> <span class="n">target</span><span class="p">,</span> <span class="n">mapping</span><span class="p">,</span>
-                   <span class="n">total</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">attrs</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+                   <span class="n">total</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">attrs</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Add homomorphism to the hierarchy.&quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="n">source</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
             <span class="k">raise</span> <span class="n">HierarchyError</span><span class="p">(</span>
@@ -714,7 +836,7 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">edge</span><span class="p">[</span><span class="n">rule_id</span><span class="p">][</span><span class="n">graph_id</span><span class="p">]</span><span class="o">.</span><span class="n">rhs_mapping</span>
         <span class="k">return</span></div>
 
-<div class="viewcode-block" id="Hierarchy.add_relation"><a class="viewcode-back" href="../../hierarchy.html#regraph.hierarchy.Hierarchy.add_relation">[docs]</a>    <span class="k">def</span> <span class="nf">add_relation</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">g1</span><span class="p">,</span> <span class="n">g2</span><span class="p">,</span> <span class="n">rel_pairs</span><span class="p">,</span> <span class="n">attrs</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<div class="viewcode-block" id="Hierarchy.add_relation"><a class="viewcode-back" href="../../hierarchy.html#regraph.hierarchy.Hierarchy.add_relation">[docs]</a>    <span class="k">def</span> <span class="nf">add_relation</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">g1</span><span class="p">,</span> <span class="n">g2</span><span class="p">,</span> <span class="n">relation</span><span class="p">,</span> <span class="n">attrs</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Add relation to the hierarchy.&quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="n">g1</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
             <span class="k">raise</span> <span class="n">HierarchyError</span><span class="p">(</span>
@@ -740,62 +862,53 @@
                 <span class="s2">&quot;multiple edges are not allowed!&quot;</span> <span class="o">%</span>
                 <span class="p">(</span><span class="n">g1</span><span class="p">,</span> <span class="n">g2</span><span class="p">)</span>
             <span class="p">)</span>
+        <span class="c1"># normalize relation dict</span>
+        <span class="n">new_relation_dict</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">values</span> <span class="ow">in</span> <span class="n">relation</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">values</span><span class="p">)</span> <span class="o">==</span> <span class="nb">set</span><span class="p">:</span>
+                <span class="n">new_relation_dict</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">values</span>
+            <span class="k">elif</span> <span class="nb">type</span><span class="p">(</span><span class="n">values</span><span class="p">)</span> <span class="o">==</span> <span class="nb">str</span><span class="p">:</span>
+                <span class="n">new_relation_dict</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="n">values</span><span class="p">}</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">new_set</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+                    <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">values</span><span class="p">:</span>
+                        <span class="n">new_set</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">v</span><span class="p">)</span>
+                    <span class="n">new_relation_dict</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">new_set</span>
+                <span class="k">except</span> <span class="ne">TypeError</span><span class="p">:</span>
+                    <span class="n">values</span> <span class="o">=</span> <span class="p">{</span><span class="n">values</span><span class="p">}</span>
+        <span class="n">relation</span> <span class="o">=</span> <span class="n">new_relation_dict</span>
 
         <span class="c1"># check relation is well-defined on g1 and g2</span>
-        <span class="k">for</span> <span class="n">n1</span><span class="p">,</span> <span class="n">n2</span> <span class="ow">in</span> <span class="n">rel_pairs</span><span class="p">:</span>
-            <span class="k">if</span> <span class="n">n1</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">g1</span><span class="p">]</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
+        <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">values</span> <span class="ow">in</span> <span class="n">relation</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">g1</span><span class="p">]</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
                 <span class="k">raise</span> <span class="n">HierarchyError</span><span class="p">(</span>
                     <span class="s2">&quot;Relation is not valid: node &#39;</span><span class="si">%s</span><span class="s2">&#39; does not &quot;</span>
                     <span class="s2">&quot;exist in a graph &#39;</span><span class="si">%s</span><span class="s2">&#39;&quot;</span> <span class="o">%</span>
-                    <span class="p">(</span><span class="n">n1</span><span class="p">,</span> <span class="n">g1</span><span class="p">)</span>
+                    <span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">g1</span><span class="p">)</span>
                 <span class="p">)</span>
-            <span class="k">if</span> <span class="n">n2</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">g2</span><span class="p">]</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
-                <span class="k">raise</span> <span class="n">HierarchyError</span><span class="p">(</span>
-                    <span class="s2">&quot;Relation is not valid: node &#39;</span><span class="si">%s</span><span class="s2">&#39; does not &quot;</span>
-                    <span class="s2">&quot;exist in a graph &#39;</span><span class="si">%s</span><span class="s2">&#39;&quot;</span> <span class="o">%</span>
-                    <span class="p">(</span><span class="n">n2</span><span class="p">,</span> <span class="n">g2</span><span class="p">)</span>
-                <span class="p">)</span>
+            <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">values</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">v</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">g2</span><span class="p">]</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
+                    <span class="k">raise</span> <span class="n">HierarchyError</span><span class="p">(</span>
+                        <span class="s2">&quot;Relation is not valid: node &#39;</span><span class="si">%s</span><span class="s2">&#39; does not &quot;</span>
+                        <span class="s2">&quot;exist in a graph &#39;</span><span class="si">%s</span><span class="s2">&#39;&quot;</span> <span class="o">%</span>
+                        <span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">g2</span><span class="p">)</span>
+                    <span class="p">)</span>
         <span class="k">if</span> <span class="n">attrs</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">normalize_attrs</span><span class="p">(</span><span class="n">attrs</span><span class="p">)</span>
-        <span class="n">rel_ab_obj</span> <span class="o">=</span> <span class="n">GraphRelation</span><span class="p">(</span><span class="n">rel_pairs</span><span class="p">,</span> <span class="n">attrs</span><span class="p">)</span>
-        <span class="n">rel_ba_obj</span> <span class="o">=</span> <span class="n">GraphRelation</span><span class="p">(</span>
-            <span class="nb">set</span><span class="p">([(</span><span class="n">b</span><span class="p">,</span> <span class="n">a</span><span class="p">)</span> <span class="k">for</span> <span class="n">a</span><span class="p">,</span> <span class="n">b</span> <span class="ow">in</span> <span class="n">rel_pairs</span><span class="p">]),</span>
-            <span class="n">attrs</span>
-        <span class="p">)</span>
+
+        <span class="n">pairs</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">values</span> <span class="ow">in</span> <span class="n">relation</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">values</span><span class="p">:</span>
+                <span class="n">pairs</span><span class="o">.</span><span class="n">add</span><span class="p">((</span><span class="n">k</span><span class="p">,</span> <span class="n">v</span><span class="p">))</span>
+        <span class="n">right_relation</span> <span class="o">=</span> <span class="n">right_relation_dict</span><span class="p">(</span><span class="n">pairs</span><span class="p">)</span>
+        <span class="n">rel_ab_obj</span> <span class="o">=</span> <span class="n">GraphRelation</span><span class="p">(</span><span class="n">relation</span><span class="p">,</span> <span class="n">attrs</span><span class="p">)</span>
+        <span class="n">rel_ba_obj</span> <span class="o">=</span> <span class="n">GraphRelation</span><span class="p">(</span><span class="n">right_relation</span><span class="p">,</span> <span class="n">attrs</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">relation</span><span class="p">[</span><span class="n">g1</span><span class="p">]</span><span class="o">.</span><span class="n">update</span><span class="p">({</span><span class="n">g2</span><span class="p">:</span> <span class="n">rel_ab_obj</span><span class="p">})</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">relation</span><span class="p">[</span><span class="n">g2</span><span class="p">]</span><span class="o">.</span><span class="n">update</span><span class="p">({</span><span class="n">g1</span><span class="p">:</span> <span class="n">rel_ba_obj</span><span class="p">})</span>
+        <span class="k">assert</span><span class="p">(</span><span class="n">g1</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">relation</span><span class="p">[</span><span class="n">g2</span><span class="p">]</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+        <span class="k">assert</span><span class="p">(</span><span class="n">g2</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">relation</span><span class="p">[</span><span class="n">g1</span><span class="p">]</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
         <span class="k">return</span></div>
-
-<div class="viewcode-block" id="Hierarchy.adjacent_relations"><a class="viewcode-back" href="../../hierarchy.html#regraph.hierarchy.Hierarchy.adjacent_relations">[docs]</a>    <span class="k">def</span> <span class="nf">adjacent_relations</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">g</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Return a list of related graphs.&quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="n">g</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
-            <span class="k">raise</span> <span class="n">HierarchyError</span><span class="p">(</span>
-                <span class="s2">&quot;Node &#39;</span><span class="si">%s</span><span class="s2">&#39; is not defined in the hierarchy!&quot;</span> <span class="o">%</span> <span class="n">g</span><span class="p">)</span>
-        <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">relation</span><span class="p">[</span><span class="n">g</span><span class="p">]</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span></div>
-
-<div class="viewcode-block" id="Hierarchy.relation_to_span"><a class="viewcode-back" href="../../hierarchy.html#regraph.hierarchy.Hierarchy.relation_to_span">[docs]</a>    <span class="k">def</span> <span class="nf">relation_to_span</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">g1</span><span class="p">,</span> <span class="n">g2</span><span class="p">,</span> <span class="n">edges</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">attrs</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Convert relation to a span.&quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="n">g1</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
-            <span class="k">raise</span> <span class="n">HierarchyError</span><span class="p">(</span>
-                <span class="s2">&quot;Node &#39;</span><span class="si">%s</span><span class="s2">&#39; is not defined in the hierarchy!&quot;</span> <span class="o">%</span> <span class="n">g1</span><span class="p">)</span>
-        <span class="k">if</span> <span class="n">g2</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
-            <span class="k">raise</span> <span class="n">HierarchyError</span><span class="p">(</span>
-                <span class="s2">&quot;Node &#39;</span><span class="si">%s</span><span class="s2">&#39; is not defined in the hierarchy!&quot;</span> <span class="o">%</span> <span class="n">g2</span><span class="p">)</span>
-
-        <span class="k">if</span> <span class="p">(</span><span class="n">g1</span><span class="p">,</span> <span class="n">g2</span><span class="p">)</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">relations</span><span class="p">()</span> <span class="ow">and</span>\
-           <span class="p">(</span><span class="n">g2</span><span class="p">,</span> <span class="n">g1</span><span class="p">)</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">relations</span><span class="p">():</span>
-            <span class="k">raise</span> <span class="n">HierarchyError</span><span class="p">(</span>
-                <span class="s2">&quot;Relation between graphs &#39;</span><span class="si">%s</span><span class="s2">&#39; and &#39;</span><span class="si">%s</span><span class="s2">&#39; is not defined&quot;</span> <span class="o">%</span>
-                <span class="p">(</span><span class="n">g1</span><span class="p">,</span> <span class="n">g2</span><span class="p">)</span>
-            <span class="p">)</span>
-
-        <span class="k">return</span> <span class="n">relation_to_span</span><span class="p">(</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">g1</span><span class="p">]</span><span class="o">.</span><span class="n">graph</span><span class="p">,</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">g2</span><span class="p">]</span><span class="o">.</span><span class="n">graph</span><span class="p">,</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">relation</span><span class="p">[</span><span class="n">g1</span><span class="p">][</span><span class="n">g2</span><span class="p">]</span><span class="o">.</span><span class="n">rel</span><span class="p">,</span>
-            <span class="n">edges</span><span class="p">,</span>
-            <span class="n">attrs</span><span class="p">,</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">directed</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="Hierarchy.remove_graph"><a class="viewcode-back" href="../../hierarchy.html#regraph.hierarchy.Hierarchy.remove_graph">[docs]</a>    <span class="k">def</span> <span class="nf">remove_graph</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">graph_id</span><span class="p">,</span> <span class="n">reconnect</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Remove graph from the hierarchy.</span>
@@ -850,6 +963,61 @@
                             <span class="p">)</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">remove_node</span><span class="p">(</span><span class="n">graph_id</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Hierarchy.remove_node"><a class="viewcode-back" href="../../hierarchy.html#regraph.hierarchy.Hierarchy.remove_node">[docs]</a>    <span class="k">def</span> <span class="nf">remove_node</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Overloading NetworkX method `remove_node`.</span>
+
+<span class="sd">        This overloading is provided to maintain</span>
+<span class="sd">        consistency in relations.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">nx</span><span class="o">.</span><span class="n">DiGraph</span><span class="o">.</span><span class="n">remove_node</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">n</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">relation</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+            <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">relation</span><span class="p">[</span><span class="n">n</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">relation</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">v</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">relation</span><span class="p">[</span><span class="n">k</span><span class="p">][</span><span class="n">n</span><span class="p">]</span>
+        <span class="k">return</span></div>
+
+<div class="viewcode-block" id="Hierarchy.remove_relation"><a class="viewcode-back" href="../../hierarchy.html#regraph.hierarchy.Hierarchy.remove_relation">[docs]</a>    <span class="k">def</span> <span class="nf">remove_relation</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">g1</span><span class="p">,</span> <span class="n">g2</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Remove relation from the hierarchy.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">g1</span><span class="p">,</span> <span class="n">g2</span><span class="p">)</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">relations</span><span class="p">()</span> <span class="ow">and</span>\
+           <span class="p">(</span><span class="n">g2</span><span class="p">,</span> <span class="n">g1</span><span class="p">)</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">relations</span><span class="p">():</span>
+            <span class="k">raise</span> <span class="n">HierarchyError</span><span class="p">(</span>
+                <span class="s2">&quot;Relation &#39;</span><span class="si">%s</span><span class="s2">-</span><span class="si">%s</span><span class="s2">&#39; is not defined in the hierarchy&quot;</span> <span class="o">%</span>
+                <span class="p">(</span><span class="n">g1</span><span class="p">,</span> <span class="n">g2</span><span class="p">)</span>
+            <span class="p">)</span>
+        <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">relation</span><span class="p">[</span><span class="n">g1</span><span class="p">][</span><span class="n">g2</span><span class="p">]</span>
+        <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">relation</span><span class="p">[</span><span class="n">g2</span><span class="p">][</span><span class="n">g1</span><span class="p">]</span></div>
+
+<div class="viewcode-block" id="Hierarchy.adjacent_relations"><a class="viewcode-back" href="../../hierarchy.html#regraph.hierarchy.Hierarchy.adjacent_relations">[docs]</a>    <span class="k">def</span> <span class="nf">adjacent_relations</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">g</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return a list of related graphs.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">g</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
+            <span class="k">raise</span> <span class="n">HierarchyError</span><span class="p">(</span>
+                <span class="s2">&quot;Node &#39;</span><span class="si">%s</span><span class="s2">&#39; is not defined in the hierarchy!&quot;</span> <span class="o">%</span> <span class="n">g</span><span class="p">)</span>
+        <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">relation</span><span class="p">[</span><span class="n">g</span><span class="p">]</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span></div>
+
+<div class="viewcode-block" id="Hierarchy.relation_to_span"><a class="viewcode-back" href="../../hierarchy.html#regraph.hierarchy.Hierarchy.relation_to_span">[docs]</a>    <span class="k">def</span> <span class="nf">relation_to_span</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">g1</span><span class="p">,</span> <span class="n">g2</span><span class="p">,</span> <span class="n">edges</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">attrs</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Convert relation to a span.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">g1</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
+            <span class="k">raise</span> <span class="n">HierarchyError</span><span class="p">(</span>
+                <span class="s2">&quot;Node &#39;</span><span class="si">%s</span><span class="s2">&#39; is not defined in the hierarchy!&quot;</span> <span class="o">%</span> <span class="n">g1</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">g2</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
+            <span class="k">raise</span> <span class="n">HierarchyError</span><span class="p">(</span>
+                <span class="s2">&quot;Node &#39;</span><span class="si">%s</span><span class="s2">&#39; is not defined in the hierarchy!&quot;</span> <span class="o">%</span> <span class="n">g2</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="p">(</span><span class="n">g1</span><span class="p">,</span> <span class="n">g2</span><span class="p">)</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">relations</span><span class="p">()</span> <span class="ow">and</span>\
+           <span class="p">(</span><span class="n">g2</span><span class="p">,</span> <span class="n">g1</span><span class="p">)</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">relations</span><span class="p">():</span>
+            <span class="k">raise</span> <span class="n">HierarchyError</span><span class="p">(</span>
+                <span class="s2">&quot;Relation between graphs &#39;</span><span class="si">%s</span><span class="s2">&#39; and &#39;</span><span class="si">%s</span><span class="s2">&#39; is not defined&quot;</span> <span class="o">%</span>
+                <span class="p">(</span><span class="n">g1</span><span class="p">,</span> <span class="n">g2</span><span class="p">)</span>
+            <span class="p">)</span>
+        <span class="k">return</span> <span class="n">relation_to_span</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">g1</span><span class="p">]</span><span class="o">.</span><span class="n">graph</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">g2</span><span class="p">]</span><span class="o">.</span><span class="n">graph</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">relation</span><span class="p">[</span><span class="n">g1</span><span class="p">][</span><span class="n">g2</span><span class="p">]</span><span class="o">.</span><span class="n">rel</span><span class="p">,</span>
+            <span class="n">edges</span><span class="p">,</span>
+            <span class="n">attrs</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">directed</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="Hierarchy.node_type"><a class="viewcode-back" href="../../hierarchy.html#regraph.hierarchy.Hierarchy.node_type">[docs]</a>    <span class="k">def</span> <span class="nf">node_type</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">graph_id</span><span class="p">,</span> <span class="n">node_id</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Get a list of the immediate types of a node.&quot;&quot;&quot;</span>
@@ -972,12 +1140,14 @@
                         <span class="n">lhs_h</span><span class="p">,</span> <span class="n">rhs_h</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">compose_path_typing</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
                         <span class="k">if</span> <span class="n">lhs_h</span> <span class="o">!=</span> <span class="n">new_lhs_h</span><span class="p">:</span>
                             <span class="k">raise</span> <span class="n">HierarchyError</span><span class="p">(</span>
-                                <span class="s2">&quot;Invalid lhs typing: homomorphism does not commute with an existing &quot;</span> <span class="o">+</span>
+                                <span class="s2">&quot;Invalid lhs typing: homomorphism does not &quot;</span>
+                                <span class="s2">&quot;commute with an existing &quot;</span>
                                 <span class="s2">&quot;path from &#39;</span><span class="si">%s</span><span class="s2">&#39; to &#39;</span><span class="si">%s</span><span class="s2">&#39;!&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">t</span><span class="p">)</span>
                             <span class="p">)</span>
                         <span class="k">if</span> <span class="n">rhs_h</span> <span class="o">!=</span> <span class="n">new_rhs_h</span><span class="p">:</span>
                             <span class="k">raise</span> <span class="n">HierarchyError</span><span class="p">(</span>
-                                <span class="s2">&quot;Invalid rhs typing: homomorphism does not commute with an existing &quot;</span> <span class="o">+</span>
+                                <span class="s2">&quot;Invalid rhs typing: homomorphism does not &quot;</span>
+                                <span class="s2">&quot;commute with an existing &quot;</span> <span class="o">+</span>
                                 <span class="s2">&quot;path from &#39;</span><span class="si">%s</span><span class="s2">&#39; to &#39;</span><span class="si">%s</span><span class="s2">&#39;!&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">t</span><span class="p">)</span>
                             <span class="p">)</span>
                 <span class="k">except</span><span class="p">(</span><span class="n">nx</span><span class="o">.</span><span class="n">NetworkXNoPath</span><span class="p">):</span>
@@ -1208,7 +1378,8 @@
     <span class="c1"># return find_match(graph, pattern, graph_typings, pattern_typings,</span>
     <span class="c1"># typing_graphs)</span>
 
-<div class="viewcode-block" id="Hierarchy.find_matching"><a class="viewcode-back" href="../../hierarchy.html#regraph.hierarchy.Hierarchy.find_matching">[docs]</a>    <span class="k">def</span> <span class="nf">find_matching</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">graph_id</span><span class="p">,</span> <span class="n">pattern</span><span class="p">,</span> <span class="n">pattern_typing</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<div class="viewcode-block" id="Hierarchy.find_matching"><a class="viewcode-back" href="../../hierarchy.html#regraph.hierarchy.Hierarchy.find_matching">[docs]</a>    <span class="k">def</span> <span class="nf">find_matching</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">graph_id</span><span class="p">,</span> <span class="n">pattern</span><span class="p">,</span>
+                      <span class="n">pattern_typing</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">nodes</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Find an instance of a pattern in a specified graph.</span>
 
 <span class="sd">        `graph_id` -- id of a graph in the hierarchy to search for matches;</span>
@@ -1261,11 +1432,15 @@
                     <span class="p">)</span>
             <span class="n">pattern_typing</span> <span class="o">=</span> <span class="n">new_pattern_typing</span>
 
+        <span class="k">if</span> <span class="n">nodes</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">g</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">graph_id</span><span class="p">]</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">subgraph</span><span class="p">(</span><span class="n">nodes</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">g</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">graph_id</span><span class="p">]</span><span class="o">.</span><span class="n">graph</span>
         <span class="n">labels_mapping</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span>
             <span class="p">[(</span><span class="n">n</span><span class="p">,</span> <span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">n</span> <span class="ow">in</span>
-             <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">graph_id</span><span class="p">]</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">nodes</span><span class="p">())]</span>
+             <span class="nb">enumerate</span><span class="p">(</span><span class="n">g</span><span class="o">.</span><span class="n">nodes</span><span class="p">())]</span>
         <span class="p">)</span>
-        <span class="n">g</span> <span class="o">=</span> <span class="n">get_relabeled_graph</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">graph_id</span><span class="p">]</span><span class="o">.</span><span class="n">graph</span><span class="p">,</span> <span class="n">labels_mapping</span><span class="p">)</span>
+        <span class="n">g</span> <span class="o">=</span> <span class="n">get_relabeled_graph</span><span class="p">(</span><span class="n">g</span><span class="p">,</span> <span class="n">labels_mapping</span><span class="p">)</span>
 
         <span class="n">inverse_mapping</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span>
             <span class="p">[(</span><span class="n">value</span><span class="p">,</span> <span class="n">key</span><span class="p">)</span> <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">labels_mapping</span><span class="o">.</span><span class="n">items</span><span class="p">()]</span>
@@ -1298,15 +1473,18 @@
                     <span class="k">for</span> <span class="n">typing_graph</span><span class="p">,</span> <span class="p">(</span><span class="n">typing</span><span class="p">,</span> <span class="n">_</span><span class="p">)</span> <span class="ow">in</span> <span class="n">pattern_typing</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
                         <span class="k">if</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">g_typing</span><span class="p">[</span><span class="n">typing_graph</span><span class="p">]</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span> <span class="ow">and</span>\
                            <span class="n">pattern_node</span> <span class="ow">in</span> <span class="n">typing</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
-                            <span class="k">if</span> <span class="n">g_typing</span><span class="p">[</span><span class="n">typing_graph</span><span class="p">][</span><span class="n">node</span><span class="p">]</span> <span class="o">==</span> <span class="n">typing</span><span class="p">[</span><span class="n">pattern_node</span><span class="p">]:</span>
-                                <span class="k">if</span> <span class="n">is_subdict</span><span class="p">(</span><span class="n">pattern</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">pattern_node</span><span class="p">],</span> <span class="n">g</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">node</span><span class="p">]):</span>
+                            <span class="k">if</span> <span class="n">g_typing</span><span class="p">[</span><span class="n">typing_graph</span><span class="p">][</span><span class="n">node</span><span class="p">]</span> <span class="o">==</span> <span class="n">typing</span><span class="p">[</span>
+                                    <span class="n">pattern_node</span><span class="p">]:</span>
+                                <span class="k">if</span> <span class="n">is_subdict</span><span class="p">(</span><span class="n">pattern</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">pattern_node</span><span class="p">],</span>
+                                              <span class="n">g</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">node</span><span class="p">]):</span>
                                     <span class="n">match</span> <span class="o">=</span> <span class="kc">True</span>
                             <span class="k">else</span><span class="p">:</span>
                                 <span class="c1"># there is no mapping of this node in the</span>
                                 <span class="c1"># typing by `typing_graph`</span>
                                 <span class="k">pass</span>
                         <span class="k">else</span><span class="p">:</span>
-                            <span class="k">if</span> <span class="n">is_subdict</span><span class="p">(</span><span class="n">pattern</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">pattern_node</span><span class="p">],</span> <span class="n">g</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">node</span><span class="p">]):</span>
+                            <span class="k">if</span> <span class="n">is_subdict</span><span class="p">(</span><span class="n">pattern</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">pattern_node</span><span class="p">],</span>
+                                          <span class="n">g</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">node</span><span class="p">]):</span>
                                 <span class="n">match</span> <span class="o">=</span> <span class="kc">True</span>
                     <span class="k">if</span> <span class="n">match</span><span class="p">:</span>
                         <span class="n">matching_nodes</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">node</span><span class="p">)</span>
@@ -1324,7 +1502,8 @@
                 <span class="k">if</span> <span class="n">g</span><span class="o">.</span><span class="n">is_directed</span><span class="p">():</span>
                     <span class="n">edge_induced_graph</span> <span class="o">=</span> <span class="n">nx</span><span class="o">.</span><span class="n">DiGraph</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">edgeset</span><span class="p">))</span>
                     <span class="n">edge_induced_graph</span><span class="o">.</span><span class="n">add_nodes_from</span><span class="p">(</span>
-                        <span class="p">[</span><span class="n">n</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">subg</span><span class="o">.</span><span class="n">nodes</span><span class="p">()</span> <span class="k">if</span> <span class="n">n</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">edge_induced_graph</span><span class="o">.</span><span class="n">nodes</span><span class="p">()])</span>
+                        <span class="p">[</span><span class="n">n</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">subg</span><span class="o">.</span><span class="n">nodes</span><span class="p">()</span>
+                         <span class="k">if</span> <span class="n">n</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">edge_induced_graph</span><span class="o">.</span><span class="n">nodes</span><span class="p">()])</span>
                     <span class="n">matching_obj</span> <span class="o">=</span> <span class="n">isomorphism</span><span class="o">.</span><span class="n">DiGraphMatcher</span><span class="p">(</span>
                         <span class="n">pattern</span><span class="p">,</span> <span class="n">edge_induced_graph</span><span class="p">)</span>
                     <span class="k">for</span> <span class="n">isom</span> <span class="ow">in</span> <span class="n">matching_obj</span><span class="o">.</span><span class="n">isomorphisms_iter</span><span class="p">():</span>
@@ -1332,7 +1511,8 @@
                 <span class="k">else</span><span class="p">:</span>
                     <span class="n">edge_induced_graph</span> <span class="o">=</span> <span class="n">nx</span><span class="o">.</span><span class="n">Graph</span><span class="p">(</span><span class="n">edgeset</span><span class="p">)</span>
                     <span class="n">edge_induced_graph</span><span class="o">.</span><span class="n">add_nodes_from</span><span class="p">(</span>
-                        <span class="p">[</span><span class="n">n</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">subg</span><span class="o">.</span><span class="n">nodes</span><span class="p">()</span> <span class="k">if</span> <span class="n">n</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">edge_induced_graph</span><span class="o">.</span><span class="n">nodes</span><span class="p">()])</span>
+                        <span class="p">[</span><span class="n">n</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">subg</span><span class="o">.</span><span class="n">nodes</span><span class="p">()</span>
+                         <span class="k">if</span> <span class="n">n</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">edge_induced_graph</span><span class="o">.</span><span class="n">nodes</span><span class="p">()])</span>
                     <span class="n">matching_obj</span> <span class="o">=</span> <span class="n">isomorphism</span><span class="o">.</span><span class="n">GraphMatcher</span><span class="p">(</span>
                         <span class="n">pattern</span><span class="p">,</span> <span class="n">edge_induced_graph</span><span class="p">)</span>
                     <span class="k">for</span> <span class="n">isom</span> <span class="ow">in</span> <span class="n">matching_obj</span><span class="o">.</span><span class="n">isomorphisms_iter</span><span class="p">():</span>
@@ -1347,9 +1527,11 @@
                     <span class="k">for</span> <span class="n">typing_graph</span><span class="p">,</span> <span class="p">(</span><span class="n">typing</span><span class="p">,</span> <span class="n">_</span><span class="p">)</span> <span class="ow">in</span> <span class="n">pattern_typing</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
                         <span class="k">if</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">g_typing</span><span class="p">[</span><span class="n">typing_graph</span><span class="p">]</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span> <span class="ow">and</span>\
                            <span class="n">pattern_node</span> <span class="ow">in</span> <span class="n">typing</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
-                            <span class="k">if</span> <span class="n">g_typing</span><span class="p">[</span><span class="n">typing_graph</span><span class="p">][</span><span class="n">node</span><span class="p">]</span> <span class="o">!=</span> <span class="n">typing</span><span class="p">[</span><span class="n">pattern_node</span><span class="p">]:</span>
+                            <span class="k">if</span> <span class="n">g_typing</span><span class="p">[</span><span class="n">typing_graph</span><span class="p">][</span><span class="n">node</span><span class="p">]</span> <span class="o">!=</span> <span class="n">typing</span><span class="p">[</span>
+                                    <span class="n">pattern_node</span><span class="p">]:</span>
                                 <span class="k">break</span>
-                        <span class="k">if</span> <span class="ow">not</span> <span class="n">is_subdict</span><span class="p">(</span><span class="n">pattern</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">pattern_node</span><span class="p">],</span> <span class="n">subgraph</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">node</span><span class="p">]):</span>
+                        <span class="k">if</span> <span class="ow">not</span> <span class="n">is_subdict</span><span class="p">(</span><span class="n">pattern</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">pattern_node</span><span class="p">],</span>
+                                          <span class="n">subgraph</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">node</span><span class="p">]):</span>
                             <span class="k">break</span>
                     <span class="k">else</span><span class="p">:</span>
                         <span class="k">continue</span>
@@ -1473,19 +1655,18 @@
             <span class="s2">&quot;relations&quot;</span><span class="p">:</span> <span class="n">base_changes</span><span class="p">[</span><span class="s2">&quot;relations&quot;</span><span class="p">]</span>
         <span class="p">}</span>
 
-        <span class="k">if</span> <span class="n">rule</span><span class="o">.</span><span class="n">is_restrictive</span><span class="p">():</span>
-            <span class="c1"># 4. Propagate rewriting up the hierarchy</span>
-            <span class="n">new_upstream_changes</span> <span class="o">=</span>\
-                <span class="n">rewriting_utils</span><span class="o">.</span><span class="n">_propagate_up</span><span class="p">(</span>
-                    <span class="bp">self</span><span class="p">,</span> <span class="n">graph_id</span><span class="p">,</span> <span class="n">rule</span><span class="p">,</span> <span class="n">instance</span><span class="p">,</span> <span class="n">p_g_m</span><span class="p">,</span> <span class="n">g_m_g_prime</span><span class="p">,</span> <span class="n">inplace</span><span class="p">)</span>
+        <span class="c1"># 4. Propagate rewriting up the hierarchy</span>
+        <span class="n">new_upstream_changes</span> <span class="o">=</span>\
+            <span class="n">rewriting_utils</span><span class="o">.</span><span class="n">_propagate_up</span><span class="p">(</span>
+                <span class="bp">self</span><span class="p">,</span> <span class="n">graph_id</span><span class="p">,</span> <span class="n">rule</span><span class="p">,</span> <span class="n">instance</span><span class="p">,</span> <span class="n">p_g_m</span><span class="p">,</span> <span class="n">g_m_g_prime</span><span class="p">,</span> <span class="n">inplace</span><span class="p">)</span>
 
-            <span class="n">upstream_changes</span><span class="p">[</span><span class="s2">&quot;graphs&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">new_upstream_changes</span><span class="p">[</span><span class="s2">&quot;graphs&quot;</span><span class="p">])</span>
-            <span class="n">upstream_changes</span><span class="p">[</span><span class="s2">&quot;homomorphisms&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">update</span><span class="p">(</span>
-                <span class="n">new_upstream_changes</span><span class="p">[</span><span class="s2">&quot;homomorphisms&quot;</span><span class="p">])</span>
-            <span class="n">upstream_changes</span><span class="p">[</span><span class="s2">&quot;rules&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">new_upstream_changes</span><span class="p">[</span><span class="s2">&quot;rules&quot;</span><span class="p">])</span>
-            <span class="n">upstream_changes</span><span class="p">[</span><span class="s2">&quot;rule_homomorphisms&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">update</span><span class="p">(</span>
-                <span class="n">new_upstream_changes</span><span class="p">[</span><span class="s2">&quot;rule_homomorphisms&quot;</span><span class="p">])</span>
-            <span class="n">upstream_changes</span><span class="p">[</span><span class="s2">&quot;relations&quot;</span><span class="p">]</span> <span class="o">+=</span> <span class="n">new_upstream_changes</span><span class="p">[</span><span class="s2">&quot;relations&quot;</span><span class="p">]</span>
+        <span class="n">upstream_changes</span><span class="p">[</span><span class="s2">&quot;graphs&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">new_upstream_changes</span><span class="p">[</span><span class="s2">&quot;graphs&quot;</span><span class="p">])</span>
+        <span class="n">upstream_changes</span><span class="p">[</span><span class="s2">&quot;homomorphisms&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">update</span><span class="p">(</span>
+            <span class="n">new_upstream_changes</span><span class="p">[</span><span class="s2">&quot;homomorphisms&quot;</span><span class="p">])</span>
+        <span class="n">upstream_changes</span><span class="p">[</span><span class="s2">&quot;rules&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">new_upstream_changes</span><span class="p">[</span><span class="s2">&quot;rules&quot;</span><span class="p">])</span>
+        <span class="n">upstream_changes</span><span class="p">[</span><span class="s2">&quot;rule_homomorphisms&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">update</span><span class="p">(</span>
+            <span class="n">new_upstream_changes</span><span class="p">[</span><span class="s2">&quot;rule_homomorphisms&quot;</span><span class="p">])</span>
+        <span class="n">upstream_changes</span><span class="p">[</span><span class="s2">&quot;relations&quot;</span><span class="p">]</span> <span class="o">+=</span> <span class="n">new_upstream_changes</span><span class="p">[</span><span class="s2">&quot;relations&quot;</span><span class="p">]</span>
 
         <span class="n">graph_construct</span> <span class="o">=</span> <span class="p">(</span><span class="n">g_m</span><span class="p">,</span> <span class="n">g_m_g</span><span class="p">,</span> <span class="n">g_prime</span><span class="p">,</span> <span class="n">g_m_g_prime</span><span class="p">,</span> <span class="n">r_g_prime</span><span class="p">)</span>
 
@@ -1500,15 +1681,13 @@
         <span class="k">if</span> <span class="n">inplace</span><span class="p">:</span>
             <span class="n">rewriting_utils</span><span class="o">.</span><span class="n">_apply_changes</span><span class="p">(</span>
                 <span class="bp">self</span><span class="p">,</span> <span class="n">upstream_changes</span><span class="p">,</span> <span class="n">downstream_changes</span><span class="p">)</span>
-            <span class="n">updated_graphs</span> <span class="o">=</span> <span class="kc">None</span>
-            <span class="k">return</span> <span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">updated_graphs</span><span class="p">)</span>
+            <span class="k">return</span> <span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">r_g_prime</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="c1"># First, create a new hierarchy</span>
             <span class="n">new_graph</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
             <span class="n">rewriting_utils</span><span class="o">.</span><span class="n">_apply_changes</span><span class="p">(</span>
                 <span class="n">new_graph</span><span class="p">,</span> <span class="n">upstream_changes</span><span class="p">,</span> <span class="n">downstream_changes</span><span class="p">)</span>
-            <span class="n">updated_graphs</span> <span class="o">=</span> <span class="kc">None</span>
-            <span class="k">return</span> <span class="p">(</span><span class="n">new_graph</span><span class="p">,</span> <span class="n">updated_graphs</span><span class="p">)</span></div>
+            <span class="k">return</span> <span class="p">(</span><span class="n">new_graph</span><span class="p">,</span> <span class="n">r_g_prime</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="Hierarchy.apply_rule"><a class="viewcode-back" href="../../hierarchy.html#regraph.hierarchy.Hierarchy.apply_rule">[docs]</a>    <span class="k">def</span> <span class="nf">apply_rule</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">graph_id</span><span class="p">,</span> <span class="n">rule_id</span><span class="p">,</span> <span class="n">instance</span><span class="p">,</span>
                    <span class="n">strong_typing</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">total</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
@@ -1665,7 +1844,8 @@
         <span class="k">for</span> <span class="n">rule_typing_data</span> <span class="ow">in</span> <span class="n">json_data</span><span class="p">[</span><span class="s2">&quot;rule_typing&quot;</span><span class="p">]:</span>
             <span class="k">if</span> <span class="n">ignore</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span>\
                <span class="s2">&quot;rule_typing&quot;</span> <span class="ow">in</span> <span class="n">ignore</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span> <span class="ow">and</span>\
-               <span class="p">(</span><span class="n">rule_typing_data</span><span class="p">[</span><span class="s2">&quot;from&quot;</span><span class="p">],</span> <span class="n">rule_typing_data</span><span class="p">[</span><span class="s2">&quot;to&quot;</span><span class="p">])</span> <span class="ow">in</span> <span class="n">ignore</span><span class="p">[</span><span class="s2">&quot;rule_typing&quot;</span><span class="p">]:</span>
+               <span class="p">(</span><span class="n">rule_typing_data</span><span class="p">[</span><span class="s2">&quot;from&quot;</span><span class="p">],</span> <span class="n">rule_typing_data</span><span class="p">[</span><span class="s2">&quot;to&quot;</span><span class="p">])</span> <span class="ow">in</span> <span class="n">ignore</span><span class="p">[</span>
+                    <span class="s2">&quot;rule_typing&quot;</span><span class="p">]:</span>
                 <span class="k">pass</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="k">if</span> <span class="s2">&quot;attrs&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">rule_typing_data</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
@@ -1687,8 +1867,9 @@
         <span class="k">for</span> <span class="n">relation_data</span> <span class="ow">in</span> <span class="n">json_data</span><span class="p">[</span><span class="s2">&quot;relations&quot;</span><span class="p">]:</span>
             <span class="k">if</span> <span class="n">ignore</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span>\
                <span class="s2">&quot;relations&quot;</span> <span class="ow">in</span> <span class="n">ignore</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span> <span class="ow">and</span>\
-               <span class="p">((</span><span class="n">relation_data</span><span class="p">[</span><span class="s2">&quot;from&quot;</span><span class="p">],</span> <span class="n">relation_data</span><span class="p">[</span><span class="s2">&quot;to&quot;</span><span class="p">])</span> <span class="ow">in</span> <span class="n">ignore</span><span class="p">[</span><span class="s2">&quot;relations&quot;</span><span class="p">]</span> <span class="ow">or</span>
-                    <span class="p">(</span><span class="n">relation_data</span><span class="p">[</span><span class="s2">&quot;to&quot;</span><span class="p">],</span> <span class="n">relation_data</span><span class="p">[</span><span class="s2">&quot;from&quot;</span><span class="p">])</span> <span class="ow">in</span> <span class="n">ignore</span><span class="p">[</span><span class="s2">&quot;relations&quot;</span><span class="p">]):</span>
+               <span class="p">((</span><span class="n">relation_data</span><span class="p">[</span><span class="s2">&quot;from&quot;</span><span class="p">],</span> <span class="n">relation_data</span><span class="p">[</span><span class="s2">&quot;to&quot;</span><span class="p">])</span> <span class="ow">in</span> <span class="n">ignore</span><span class="p">[</span>
+                    <span class="s2">&quot;relations&quot;</span><span class="p">]</span> <span class="ow">or</span> <span class="p">(</span><span class="n">relation_data</span><span class="p">[</span><span class="s2">&quot;to&quot;</span><span class="p">],</span>
+                                     <span class="n">relation_data</span><span class="p">[</span><span class="s2">&quot;from&quot;</span><span class="p">])</span> <span class="ow">in</span> <span class="n">ignore</span><span class="p">[</span><span class="s2">&quot;relations&quot;</span><span class="p">]):</span>
                 <span class="k">pass</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="k">if</span> <span class="s2">&quot;attrs&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">relation_data</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
@@ -1720,25 +1901,6 @@
         <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
             <span class="n">j_data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">to_json</span><span class="p">()</span>
             <span class="n">json</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">j_data</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span></div>
-
-<div class="viewcode-block" id="Hierarchy.remove_attrs"><a class="viewcode-back" href="../../hierarchy.html#regraph.hierarchy.Hierarchy.remove_attrs">[docs]</a>    <span class="k">def</span> <span class="nf">remove_attrs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">graph_id</span><span class="p">,</span> <span class="n">node</span><span class="p">,</span> <span class="n">attr_dict</span><span class="p">,</span> <span class="n">force</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Remove attributes of a node in a graph `graph_id`.&quot;&quot;&quot;</span>
-        <span class="c1"># try to remove attrs</span>
-        <span class="n">children</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">predecessors</span><span class="p">(</span><span class="n">graph_id</span><span class="p">)</span>
-        <span class="n">typing_with_attrs</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
-        <span class="k">for</span> <span class="n">child</span> <span class="ow">in</span> <span class="n">children</span><span class="p">:</span>
-            <span class="n">typing_with_attrs</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">child</span><span class="p">)</span>
-
-        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">typing_with_attrs</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-            <span class="k">pass</span>
-            <span class="c1"># remove_node_attrs(self.node[graph_id].graph, node, attr_dict)</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="k">if</span> <span class="n">force</span><span class="p">:</span>
-                <span class="k">pass</span>
-            <span class="k">else</span><span class="p">:</span>
-                <span class="c1"># check no homomorphisms are broken</span>
-                <span class="k">pass</span>
-        <span class="k">return</span></div>
 
 <div class="viewcode-block" id="Hierarchy.get_ancestors"><a class="viewcode-back" href="../../hierarchy.html#regraph.hierarchy.Hierarchy.get_ancestors">[docs]</a>    <span class="k">def</span> <span class="nf">get_ancestors</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">graph_id</span><span class="p">,</span> <span class="n">maybe</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Return ancestors of a graph as well as the typing morphisms.&quot;&quot;&quot;</span>
@@ -1903,8 +2065,9 @@
                         <span class="k">if</span> <span class="n">key</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">edge</span><span class="p">[</span><span class="n">n1</span><span class="p">][</span><span class="n">n2</span><span class="p">]</span><span class="o">.</span><span class="n">mapping</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
                             <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">edge</span><span class="p">[</span><span class="n">n1</span><span class="p">][</span><span class="n">n2</span><span class="p">]</span><span class="o">.</span><span class="n">maping</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">!=</span> <span class="n">value</span><span class="p">:</span>
                                 <span class="k">raise</span> <span class="n">HierarchyError</span><span class="p">(</span>
-                                    <span class="s2">&quot;Cannot merge with the input hierarchy: typing of nodes&quot;</span>
-                                    <span class="s2">&quot;in `</span><span class="si">%s</span><span class="s2">-&gt;</span><span class="si">%s</span><span class="s2">` does not coincide with present typing!&quot;</span> <span class="o">%</span>
+                                    <span class="s2">&quot;Cannot merge with the input hierarchy: &quot;</span>
+                                    <span class="s2">&quot;typing of nodes in `</span><span class="si">%s</span><span class="s2">-&gt;</span><span class="si">%s</span><span class="s2">` does not &quot;</span>
+                                    <span class="s2">&quot;coincide with present typing!&quot;</span> <span class="o">%</span>
                                     <span class="p">(</span><span class="n">n1</span><span class="p">,</span> <span class="n">n2</span><span class="p">)</span>
                                 <span class="p">)</span>
 
@@ -2017,20 +2180,23 @@
                 <span class="k">for</span> <span class="n">n2</span> <span class="ow">in</span> <span class="n">hierarchy</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
                     <span class="k">if</span> <span class="n">attr</span> <span class="ow">in</span> <span class="n">hierarchy</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">n2</span><span class="p">]</span><span class="o">.</span><span class="n">attrs</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
                         <span class="k">if</span> <span class="n">hierarchy</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">n2</span><span class="p">]</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="n">attr</span><span class="p">]</span> <span class="o">==</span> <span class="n">value</span><span class="p">:</span>
-                            <span class="k">if</span> <span class="n">n1</span> <span class="ow">in</span> <span class="n">to_merge</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span> <span class="ow">or</span> <span class="n">n2</span> <span class="ow">in</span> <span class="n">to_merge</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
+                            <span class="k">if</span> <span class="n">n1</span> <span class="ow">in</span> <span class="n">to_merge</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span> <span class="ow">or</span>\
+                               <span class="n">n2</span> <span class="ow">in</span> <span class="n">to_merge</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
                                 <span class="k">raise</span> <span class="n">HierarchyError</span><span class="p">(</span>
                                     <span class="s2">&quot;Cannot merge with the input hierarchy: &quot;</span>
-                                    <span class="s2">&quot;matching of nodes by attr &#39;</span><span class="si">%s</span><span class="s2">&#39; with value &#39;</span><span class="si">%s</span><span class="s2">&#39;&quot;</span>
-                                    <span class="s2">&quot; is ambiguous!&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">attr</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+                                    <span class="s2">&quot;matching of nodes by attr &#39;</span><span class="si">%s</span><span class="s2">&#39; with &quot;</span>
+                                    <span class="s2">&quot;value&#39;</span><span class="si">%s</span><span class="s2">&#39; is ambiguous!&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">attr</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
                                 <span class="p">)</span>
                             <span class="k">else</span><span class="p">:</span>
                                 <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">n1</span><span class="p">],</span> <span class="n">GraphNode</span><span class="p">)</span> <span class="ow">and</span>\
                                    <span class="nb">isinstance</span><span class="p">(</span><span class="n">hierarchy</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">n2</span><span class="p">],</span> <span class="n">GraphNode</span><span class="p">):</span>
-                                    <span class="k">if</span> <span class="n">equal</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">n1</span><span class="p">]</span><span class="o">.</span><span class="n">graph</span><span class="p">,</span> <span class="n">hierarchy</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">n2</span><span class="p">]</span><span class="o">.</span><span class="n">graph</span><span class="p">):</span>
+                                    <span class="k">if</span> <span class="n">equal</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">n1</span><span class="p">]</span><span class="o">.</span><span class="n">graph</span><span class="p">,</span>
+                                             <span class="n">hierarchy</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">n2</span><span class="p">]</span><span class="o">.</span><span class="n">graph</span><span class="p">):</span>
                                         <span class="n">to_merge</span><span class="p">[</span><span class="n">n1</span><span class="p">]</span> <span class="o">=</span> <span class="n">n2</span>
                                 <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">n1</span><span class="p">],</span> <span class="n">RuleNode</span><span class="p">)</span> <span class="ow">and</span>\
                                         <span class="nb">isinstance</span><span class="p">(</span><span class="n">hierarchy</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">n2</span><span class="p">],</span> <span class="n">RuleNode</span><span class="p">):</span>
-                                    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">n1</span><span class="p">]</span><span class="o">.</span><span class="n">rule</span> <span class="o">==</span> <span class="n">hierarchy</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">n1</span><span class="p">]</span><span class="o">.</span><span class="n">rule</span><span class="p">:</span>
+                                    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">n1</span><span class="p">]</span><span class="o">.</span><span class="n">rule</span> <span class="o">==</span>\
+                                       <span class="n">hierarchy</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">n1</span><span class="p">]</span><span class="o">.</span><span class="n">rule</span><span class="p">:</span>
                                         <span class="n">to_merge</span><span class="p">[</span><span class="n">n1</span><span class="p">]</span> <span class="o">=</span> <span class="n">n2</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="k">continue</span>
@@ -2049,11 +2215,10 @@
                         <span class="k">if</span> <span class="n">key</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">edge</span><span class="p">[</span><span class="n">n1</span><span class="p">][</span><span class="n">n2</span><span class="p">]</span><span class="o">.</span><span class="n">mapping</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
                             <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">edge</span><span class="p">[</span><span class="n">n1</span><span class="p">][</span><span class="n">n2</span><span class="p">]</span><span class="o">.</span><span class="n">maping</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">!=</span> <span class="n">value</span><span class="p">:</span>
                                 <span class="k">raise</span> <span class="n">HierarchyError</span><span class="p">(</span>
-                                    <span class="s2">&quot;Cannot merge with the input hierarchy: typing of nodes&quot;</span>
-                                    <span class="s2">&quot;in `</span><span class="si">%s</span><span class="s2">-&gt;</span><span class="si">%s</span><span class="s2">` does not coincide with present typing!&quot;</span> <span class="o">%</span>
-                                    <span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">n1</span><span class="p">),</span> <span class="nb">str</span><span class="p">(</span><span class="n">n2</span><span class="p">))</span>
-                                <span class="p">)</span>
-
+                                    <span class="s2">&quot;Cannot merge with the input hierarchy: &quot;</span>
+                                    <span class="s2">&quot;typing of nodes in `</span><span class="si">%s</span><span class="s2">-&gt;</span><span class="si">%s</span><span class="s2">` does not &quot;</span>
+                                    <span class="s2">&quot;coincide with present typing!&quot;</span> <span class="o">%</span>
+                                    <span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">n1</span><span class="p">),</span> <span class="nb">str</span><span class="p">(</span><span class="n">n2</span><span class="p">)))</span>
         <span class="n">visited</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="n">new_names</span> <span class="o">=</span> <span class="p">{}</span>
 
@@ -2087,9 +2252,9 @@
                                 <span class="bp">self</span><span class="o">.</span><span class="n">edge</span><span class="p">[</span><span class="n">new_name</span><span class="p">][</span>
                                     <span class="n">new_names</span><span class="p">[</span><span class="n">original_suc</span><span class="p">]]</span><span class="o">.</span><span class="n">mapping</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
                             <span class="c1"># merge edge attrs</span>
-                            <span class="bp">self</span><span class="o">.</span><span class="n">edge</span><span class="p">[</span><span class="n">new_name</span><span class="p">][</span><span class="n">new_names</span><span class="p">[</span><span class="n">original_suc</span><span class="p">]]</span><span class="o">.</span><span class="n">add_attrs</span><span class="p">(</span>
-                                <span class="n">hierarchy</span><span class="o">.</span><span class="n">edge</span><span class="p">[</span><span class="n">node</span><span class="p">][</span><span class="n">suc</span><span class="p">]</span><span class="o">.</span><span class="n">attrs</span>
-                            <span class="p">)</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">edge</span><span class="p">[</span><span class="n">new_name</span><span class="p">][</span>
+                                <span class="n">new_names</span><span class="p">[</span><span class="n">original_suc</span><span class="p">]]</span><span class="o">.</span><span class="n">add_attrs</span><span class="p">(</span>
+                                    <span class="n">hierarchy</span><span class="o">.</span><span class="n">edge</span><span class="p">[</span><span class="n">node</span><span class="p">][</span><span class="n">suc</span><span class="p">]</span><span class="o">.</span><span class="n">attrs</span><span class="p">)</span>
                         <span class="k">else</span><span class="p">:</span>
                             <span class="k">if</span> <span class="n">suc</span> <span class="ow">in</span> <span class="n">to_rename</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
                                 <span class="n">new_suc_name</span> <span class="o">=</span> <span class="n">to_rename</span><span class="p">[</span><span class="n">suc</span><span class="p">]</span>
@@ -2217,61 +2382,10 @@
                     <span class="bp">self</span><span class="o">.</span><span class="n">edge</span><span class="p">[</span><span class="n">source</span><span class="p">][</span><span class="n">target</span><span class="p">])</span>
         <span class="k">return</span> <span class="n">new</span>
 
-    <span class="c1"># # build new nuggets after rewriting of old one following rewriting of the</span>
-    <span class="c1"># # action graph.</span>
-    <span class="c1"># def create_valid_nuggets(self, old_nugget, new_nugget, updated_graphs):</span>
-    <span class="c1">#     pattern = copy.deepcopy(self.node[old_nugget].graph)</span>
-    <span class="c1">#     for node in pattern.nodes():</span>
-    <span class="c1">#         pattern.node[node] = dict()</span>
-    <span class="c1">#     pattern_typing = {&quot;typing&quot;: {node: node for node in pattern.nodes()}}</span>
-    <span class="c1">#     tmp_hie = Hierarchy(self.directed, GraphNode)</span>
-    <span class="c1">#     # tmp_hie.add_graph(&quot;old&quot;, pattern)</span>
-    <span class="c1">#     tmp_hie.add_graph(&quot;typing&quot;, self.node[old_nugget].graph)</span>
-    <span class="c1">#     # tmp_hie.add_typing(&quot;old&quot;, &quot;typing&quot;, pattern_typing)</span>
-    <span class="c1">#     tmp_hie.add_graph(&quot;new&quot;, self.node[new_nugget].graph)</span>
-    <span class="c1">#     tmp_hie.add_typing(&quot;new&quot;, &quot;typing&quot;, updated_graphs[new_nugget][1])</span>
-    <span class="c1">#     matchings = tmp_hie.find_matching2(&quot;new&quot;, pattern, pattern_typing)</span>
-    <span class="c1">#     new_nuggets = []</span>
-    <span class="c1">#     for matching in matchings:</span>
-    <span class="c1">#         instance = copy.deepcopy(self.node[old_nugget].graph)</span>
-    <span class="c1">#         for node in instance.nodes():</span>
-    <span class="c1">#             attrs = merge_attributes(instance.node[node],</span>
-    <span class="c1">#                                      self.node[new_nugget].graph.node[</span>
-    <span class="c1">#                 matching[node]],</span>
-    <span class="c1">#                 &quot;intersection&quot;)</span>
-    <span class="c1">#             # attrs = instance.node[node]</span>
-    <span class="c1">#             # if attrs is None:</span>
-    <span class="c1">#             #     continue</span>
-    <span class="c1">#             # for (k, v) in attrs.items():</span>
-    <span class="c1">#             #     nw_attrs = self.node[new_nugget].graph.node[matching[node]]</span>
-    <span class="c1">#             #     print(&quot;image&quot;,matching[node], nw_attrs)</span>
-    <span class="c1">#             #     print(&quot;ante&quot;,node, attrs)</span>
-    <span class="c1">#             #     attrs[k] = v &amp; nw_attrs[k]</span>
-    <span class="c1">#         instance_id = self.unique_graph_id(old_nugget)</span>
-    <span class="c1">#         self.add_graph(instance_id, instance, copy.deepcopy(</span>
-    <span class="c1">#             self.node[old_nugget].attrs))</span>
-    <span class="c1">#         for (_, typing) in self.out_edges(new_nugget):</span>
-    <span class="c1">#             new_typing = self.edge[new_nugget][typing]</span>
-    <span class="c1">#             instance_typing = compose(new_typing.mapping,</span>
-    <span class="c1">#                                                     matching)</span>
-    <span class="c1">#             # print(&quot;new_typing&quot;, instance_typing)</span>
-    <span class="c1">#             # print(&quot;stating nodes&quot;,self.node[old_nugget].graph.nodes())</span>
-    <span class="c1">#             # print(&quot;ending nodes&quot;, self.node[typing].graph.nodes())</span>
-    <span class="c1">#             # print(&quot;typing_new_nugget&quot;,typing, new_typing.mapping)</span>
-    <span class="c1">#             # print(&quot;new_nugget_nodes&quot;,</span>
-    <span class="c1">#             # self.node[new_nugget].graph.nodes())</span>
-    <span class="c1">#             self.add_typing(instance_id, typing, instance_typing,</span>
-    <span class="c1">#                             total=new_typing.total,</span>
-    <span class="c1">#                             attrs=new_typing.attrs)</span>
-    <span class="c1">#         new_nuggets.append(instance_id)</span>
-    <span class="c1">#     return new_nuggets</span>
-
     <span class="k">def</span> <span class="nf">delete_all_children</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">graph_id</span><span class="p">):</span>
         <span class="n">desc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">descendents</span><span class="p">(</span><span class="n">graph_id</span><span class="p">)</span>
         <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">desc</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">remove_node</span><span class="p">(</span><span class="n">node</span><span class="p">)</span></div>
-
-
 </pre></div>
 
           </div>

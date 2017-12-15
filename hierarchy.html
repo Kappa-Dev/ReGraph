@@ -41,11 +41,45 @@
             
   <div class="section" id="hierarchy">
 <span id="id1"></span><h1>Hierarchy<a class="headerlink" href="#hierarchy" title="Permalink to this headline">¶</a></h1>
-<span class="target" id="module-regraph.hierarchy"></span><p>.</p>
+<span class="target" id="module-regraph.hierarchy"></span><p>Graph hierarchy related data structures.</p>
+<p>This module contains a collection of data structures implementing
+graph hierarchy and its various components.
+Graph hierarchy is a DAG, whose nodes can be graphs or rules of
+sesqui-pushout rewriting, and whose edges (directed) represent
+homomorphisms between graphs. In addition, hierarchies are
+equipped with relations on graphs (which can be thought of as
+undirected edges or, alternatively, spans).</p>
+<p>The following data structures are implemented in this module:</p>
+<ul class="simple">
+<li><cite>AttributeContainter</cite> – base class for objects containing
+attributes, provides an interface for different operations
+on attributes;</li>
+<li><cite>GraphNode</cite> – class for graph nodes of a hierarchy;</li>
+<li><cite>RuleNode</cite> – class for rule nodes of a hierarchy;</li>
+<li><cite>Typing</cite> – class for graph typing edges of a hierarchy,
+encapsulates graph homomorphism from a source graph node
+to a target graph node;</li>
+<li><cite>RuleTyping</cite> – class for rule typing edges of a hierarchy
+(its source node is assumed to be a rule and its target – a graph),
+encapsulated two homomorphisms: from the left-hand side of the rule
+to the target and from the right-hand side of the rule to the target;</li>
+<li><cite>Relation</cite> – base class for relations in the hierarchy;</li>
+<li><cite>GraphRelation</cite> – class for binary symmetric relations between
+two graphs.</li>
+<li><cite>Hierarchy</cite> – class for graph hierarchies (nodes: graphs or rules, edges:
+graph/rule homomorphisms + relations: separate from edges, act as undirected
+edges), based on <cite>networkx.DiGraph</cite>,
+additionally constrained to be acyclic and to respect the property of
+commuting paths.</li>
+</ul>
+<p>TODO:</p>
+<ul class="simple">
+<li><cite>RuleRelation</cite></li>
+</ul>
 <dl class="class">
 <dt id="regraph.hierarchy.AttributeContainter">
 <em class="property">class </em><code class="descclassname">regraph.hierarchy.</code><code class="descname">AttributeContainter</code><a class="reference internal" href="_modules/regraph/hierarchy.html#AttributeContainter"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.hierarchy.AttributeContainter" title="Permalink to this definition">¶</a></dt>
-<dd><p>Abstract class for a container with attributes.</p>
+<dd><p>Base class for containers of attributes.</p>
 <p class="rubric">Methods</p>
 <table border="1" class="longtable docutils">
 <colgroup>
@@ -54,7 +88,7 @@
 </colgroup>
 <tbody valign="top">
 <tr class="row-odd"><td><a class="reference internal" href="#regraph.hierarchy.AttributeContainter.add_attrs" title="regraph.hierarchy.AttributeContainter.add_attrs"><code class="xref py py-obj docutils literal"><span class="pre">add_attrs</span></code></a>(attrs)</td>
-<td>Add attrs to the graph node.</td>
+<td>Add attrs to the container.</td>
 </tr>
 <tr class="row-even"><td><a class="reference internal" href="#regraph.hierarchy.AttributeContainter.attrs_from_json" title="regraph.hierarchy.AttributeContainter.attrs_from_json"><code class="xref py py-obj docutils literal"><span class="pre">attrs_from_json</span></code></a>(json_data)</td>
 <td>Retreive attrs from json-like dict.</td>
@@ -73,7 +107,7 @@
 <dl class="method">
 <dt id="regraph.hierarchy.AttributeContainter.add_attrs">
 <code class="descname">add_attrs</code><span class="sig-paren">(</span><em>attrs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/hierarchy.html#AttributeContainter.add_attrs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.hierarchy.AttributeContainter.add_attrs" title="Permalink to this definition">¶</a></dt>
-<dd><p>Add attrs to the graph node.</p>
+<dd><p>Add attrs to the container.</p>
 </dd></dl>
 
 <dl class="staticmethod">
@@ -106,6 +140,21 @@
 <dt id="regraph.hierarchy.GraphNode">
 <em class="property">class </em><code class="descclassname">regraph.hierarchy.</code><code class="descname">GraphNode</code><span class="sig-paren">(</span><em>graph</em>, <em>attrs=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/hierarchy.html#GraphNode"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.hierarchy.GraphNode" title="Permalink to this definition">¶</a></dt>
 <dd><p>Data structure incapsulating graph in the node of the hierarchy.</p>
+<p class="rubric">Attributes</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="16%" />
+<col width="84%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td><strong>graph</strong></td>
+<td>(nx.(Di)Graph)</td>
+</tr>
+<tr class="row-even"><td><strong>attrs</strong></td>
+<td>(dict) Dictionary with attrs of the graph node</td>
+</tr>
+</tbody>
+</table>
 <p class="rubric">Methods</p>
 <table border="1" class="longtable docutils">
 <colgroup>
@@ -114,7 +163,7 @@
 </colgroup>
 <tbody valign="top">
 <tr class="row-odd"><td><code class="xref py py-obj docutils literal"><span class="pre">add_attrs</span></code>(attrs)</td>
-<td>Add attrs to the graph node.</td>
+<td>Add attrs to the container.</td>
 </tr>
 <tr class="row-even"><td><code class="xref py py-obj docutils literal"><span class="pre">attrs_from_json</span></code>(json_data)</td>
 <td>Retreive attrs from json-like dict.</td>
@@ -134,8 +183,23 @@
 
 <dl class="class">
 <dt id="regraph.hierarchy.GraphRelation">
-<em class="property">class </em><code class="descclassname">regraph.hierarchy.</code><code class="descname">GraphRelation</code><span class="sig-paren">(</span><em>rel_pairs</em>, <em>attrs=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/hierarchy.html#GraphRelation"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.hierarchy.GraphRelation" title="Permalink to this definition">¶</a></dt>
-<dd><p>Implements relations on graphs.</p>
+<em class="property">class </em><code class="descclassname">regraph.hierarchy.</code><code class="descname">GraphRelation</code><span class="sig-paren">(</span><em>relation_dict</em>, <em>attrs=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/hierarchy.html#GraphRelation"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.hierarchy.GraphRelation" title="Permalink to this definition">¶</a></dt>
+<dd><p>Data structure incapsulating relations on graphs.</p>
+<p class="rubric">Attributes</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="5%" />
+<col width="95%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td><strong>rel</strong></td>
+<td>(dict) Dictionary represeting a relation between two graphs, keys represent nodes of the left graph and values are collections of nodes from the right graph to which they are related.</td>
+</tr>
+<tr class="row-even"><td><strong>attrs</strong></td>
+<td>(dict) Dictionary containing attrs of graph relation.</td>
+</tr>
+</tbody>
+</table>
 <p class="rubric">Methods</p>
 <table border="1" class="longtable docutils">
 <colgroup>
@@ -144,7 +208,7 @@
 </colgroup>
 <tbody valign="top">
 <tr class="row-odd"><td><code class="xref py py-obj docutils literal"><span class="pre">add_attrs</span></code>(attrs)</td>
-<td>Add attrs to the graph node.</td>
+<td>Add attrs to the container.</td>
 </tr>
 <tr class="row-even"><td><code class="xref py py-obj docutils literal"><span class="pre">attrs_from_json</span></code>(json_data)</td>
 <td>Retreive attrs from json-like dict.</td>
@@ -153,13 +217,13 @@
 <td>Convert attributes to json.</td>
 </tr>
 <tr class="row-even"><td><a class="reference internal" href="#regraph.hierarchy.GraphRelation.left_domain" title="regraph.hierarchy.GraphRelation.left_domain"><code class="xref py py-obj docutils literal"><span class="pre">left_domain</span></code></a>()</td>
-<td>Return definition domain of the left member of relation.</td>
+<td>Return the definition domain of the left member of relation.</td>
 </tr>
 <tr class="row-odd"><td><code class="xref py py-obj docutils literal"><span class="pre">remove_attrs</span></code>(attrs)</td>
 <td>Remove attributes.</td>
 </tr>
 <tr class="row-even"><td><a class="reference internal" href="#regraph.hierarchy.GraphRelation.right_domain" title="regraph.hierarchy.GraphRelation.right_domain"><code class="xref py py-obj docutils literal"><span class="pre">right_domain</span></code></a>()</td>
-<td>Return definition domain of the right member of relation.</td>
+<td>Return the definition domain of the right member of relation.</td>
 </tr>
 <tr class="row-odd"><td><code class="xref py py-obj docutils literal"><span class="pre">update_attrs</span></code>(attrs)</td>
 <td>Update attribures.</td>
@@ -169,30 +233,45 @@
 <dl class="method">
 <dt id="regraph.hierarchy.GraphRelation.left_domain">
 <code class="descname">left_domain</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/hierarchy.html#GraphRelation.left_domain"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.hierarchy.GraphRelation.left_domain" title="Permalink to this definition">¶</a></dt>
-<dd><p>Return definition domain of the left member of relation.</p>
+<dd><p>Return the definition domain of the left member of relation.</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="regraph.hierarchy.GraphRelation.right_domain">
 <code class="descname">right_domain</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/hierarchy.html#GraphRelation.right_domain"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.hierarchy.GraphRelation.right_domain" title="Permalink to this definition">¶</a></dt>
-<dd><p>Return definition domain of the right member of relation.</p>
+<dd><p>Return the definition domain of the right member of relation.</p>
 </dd></dl>
 
 </dd></dl>
 
 <dl class="class">
 <dt id="regraph.hierarchy.Hierarchy">
-<em class="property">class </em><code class="descclassname">regraph.hierarchy.</code><code class="descname">Hierarchy</code><span class="sig-paren">(</span><em>directed=True</em>, <em>graph_node_cls=&lt;class 'regraph.hierarchy.GraphNode'&gt;</em>, <em>rule_node_cls=&lt;class 'regraph.hierarchy.RuleNode'&gt;</em>, <em>graph_typing_cls=&lt;class 'regraph.hierarchy.Typing'&gt;</em>, <em>rule_typing_cls=&lt;class 'regraph.hierarchy.RuleTyping'&gt;</em>, <em>relation_cls=&lt;class 'regraph.hierarchy.GraphRelation'&gt;</em>, <em>data=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/hierarchy.html#Hierarchy"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.hierarchy.Hierarchy" title="Permalink to this definition">¶</a></dt>
-<dd><p>Implements a hierarchy of graphs as a DAG.</p>
+<em class="property">class </em><code class="descclassname">regraph.hierarchy.</code><code class="descname">Hierarchy</code><span class="sig-paren">(</span><em>directed=True</em>, <em>attrs=None</em>, <em>graph_node_cls=&lt;class 'regraph.hierarchy.GraphNode'&gt;</em>, <em>rule_node_cls=&lt;class 'regraph.hierarchy.RuleNode'&gt;</em>, <em>graph_typing_cls=&lt;class 'regraph.hierarchy.Typing'&gt;</em>, <em>rule_typing_cls=&lt;class 'regraph.hierarchy.RuleTyping'&gt;</em>, <em>relation_cls=&lt;class 'regraph.hierarchy.GraphRelation'&gt;</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/hierarchy.html#Hierarchy"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.hierarchy.Hierarchy" title="Permalink to this definition">¶</a></dt>
+<dd><p>Class implementing graph hierarchy.</p>
+<p>Base on <cite>networkx.DiGraph</cite>, acyclic, all paths commute</p>
+<p class="rubric">Examples</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">hierarchy</span> <span class="o">=</span> <span class="n">Hierarchy</span><span class="p">()</span> <span class="c1"># create empty hierarchy</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">t</span> <span class="o">=</span> <span class="n">nx</span><span class="o">.</span><span class="n">DiGraph</span><span class="p">([(</span><span class="s2">&quot;red&quot;</span><span class="p">,</span> <span class="s2">&quot;blue&quot;</span><span class="p">),</span> <span class="p">(</span><span class="s2">&quot;blue&quot;</span><span class="p">,</span> <span class="s2">&quot;blue&quot;</span><span class="p">)])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">hierarchy</span><span class="o">.</span><span class="n">add_graph</span><span class="p">(</span><span class="s2">&quot;t&quot;</span><span class="p">,</span> <span class="n">t</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">g</span> <span class="o">=</span> <span class="n">nx</span><span class="o">.</span><span class="n">DiGraph</span><span class="p">([(</span><span class="s2">&quot;a&quot;</span><span class="p">,</span> <span class="s2">&quot;b&quot;</span><span class="p">),</span> <span class="p">(</span><span class="s2">&quot;c&quot;</span><span class="p">,</span> <span class="s2">&quot;b&quot;</span><span class="p">),</span> <span class="p">(</span><span class="s2">&quot;b&quot;</span><span class="p">,</span> <span class="s2">&quot;d&quot;</span><span class="p">)])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">hierarchy</span><span class="o">.</span><span class="n">add_graph</span><span class="p">(</span><span class="s2">&quot;g&quot;</span><span class="p">,</span> <span class="n">g</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">g_t_typing</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;a&quot;</span><span class="p">:</span> <span class="s2">&quot;red&quot;</span><span class="p">,</span> <span class="s2">&quot;b&quot;</span><span class="p">:</span> <span class="s2">&quot;blue&quot;</span><span class="p">,</span> <span class="s2">&quot;c&quot;</span><span class="p">:</span> <span class="s2">&quot;red&quot;</span><span class="p">,</span> <span class="s2">&quot;d&quot;</span><span class="p">:</span> <span class="s2">&quot;blue&quot;</span><span class="p">}</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">hierarchy</span><span class="o">.</span><span class="n">add_typing</span><span class="p">(</span><span class="s2">&quot;g&quot;</span><span class="p">,</span> <span class="s2">&quot;t&quot;</span><span class="p">,</span> <span class="n">g_t_typing</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">hierarchy</span><span class="o">.</span><span class="n">graphs</span><span class="p">()</span>
+<span class="go">[&quot;t&quot;, &quot;g&quot;]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">hierarchy</span><span class="o">.</span><span class="n">typings</span><span class="p">()</span>
+<span class="go">[(&quot;g&quot;, &quot;t&quot;)]</span>
+</pre></div>
+</div>
 <p class="rubric">Attributes</p>
-<table border="1" class="longtable docutils">
+<table border="1" class="docutils">
 <colgroup>
-<col width="10%" />
-<col width="90%" />
+<col width="47%" />
+<col width="53%" />
 </colgroup>
 <tbody valign="top">
-<tr class="row-odd"><td><code class="xref py py-obj docutils literal"><span class="pre">name</span></code></td>
-<td></td>
+<tr class="row-odd"><td><strong>graph</strong></td>
+<td>&#160;</td>
 </tr>
 </tbody>
 </table>
@@ -203,8 +282,8 @@
 <col width="90%" />
 </colgroup>
 <tbody valign="top">
-<tr class="row-odd"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.add_attrs" title="regraph.hierarchy.Hierarchy.add_attrs"><code class="xref py py-obj docutils literal"><span class="pre">add_attrs</span></code></a>(attrs_dict)</td>
-<td>Add attrs_dict to hierarchy attrs.</td>
+<tr class="row-odd"><td><code class="xref py py-obj docutils literal"><span class="pre">add_attrs</span></code>(attrs)</td>
+<td>Add attrs to the container.</td>
 </tr>
 <tr class="row-even"><td><code class="xref py py-obj docutils literal"><span class="pre">add_cycle</span></code>(nodes,&nbsp;**attr)</td>
 <td>Add a cycle.</td>
@@ -230,7 +309,7 @@
 <tr class="row-odd"><td><code class="xref py py-obj docutils literal"><span class="pre">add_path</span></code>(nodes,&nbsp;**attr)</td>
 <td>Add a path.</td>
 </tr>
-<tr class="row-even"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.add_relation" title="regraph.hierarchy.Hierarchy.add_relation"><code class="xref py py-obj docutils literal"><span class="pre">add_relation</span></code></a>(g1,&nbsp;g2,&nbsp;rel_pairs[,&nbsp;attrs])</td>
+<tr class="row-even"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.add_relation" title="regraph.hierarchy.Hierarchy.add_relation"><code class="xref py py-obj docutils literal"><span class="pre">add_relation</span></code></a>(g1,&nbsp;g2,&nbsp;relation[,&nbsp;attrs])</td>
 <td>Add relation to the hierarchy.</td>
 </tr>
 <tr class="row-odd"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.add_rule" title="regraph.hierarchy.Hierarchy.add_rule"><code class="xref py py-obj docutils literal"><span class="pre">add_rule</span></code></a>(rule_id,&nbsp;rule[,&nbsp;rule_attrs])</td>
@@ -262,6 +341,12 @@
 </tr>
 <tr class="row-even"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.apply_rule" title="regraph.hierarchy.Hierarchy.apply_rule"><code class="xref py py-obj docutils literal"><span class="pre">apply_rule</span></code></a>(graph_id,&nbsp;rule_id,&nbsp;instance[,&nbsp;…])</td>
 <td>Apply rule from the hierarchy.</td>
+</tr>
+<tr class="row-odd"><td><code class="xref py py-obj docutils literal"><span class="pre">attrs_from_json</span></code>(json_data)</td>
+<td>Retreive attrs from json-like dict.</td>
+</tr>
+<tr class="row-even"><td><code class="xref py py-obj docutils literal"><span class="pre">attrs_to_json</span></code>()</td>
+<td>Convert attributes to json.</td>
 </tr>
 <tr class="row-odd"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.child_rule_from_nodes" title="regraph.hierarchy.Hierarchy.child_rule_from_nodes"><code class="xref py py-obj docutils literal"><span class="pre">child_rule_from_nodes</span></code></a>(nodes,&nbsp;graph_id,&nbsp;…)</td>
 <td>Build a subrule from nodes and type it by these nodes.</td>
@@ -326,155 +411,161 @@
 <tr class="row-odd"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.graph_dict_factory" title="regraph.hierarchy.Hierarchy.graph_dict_factory"><code class="xref py py-obj docutils literal"><span class="pre">graph_dict_factory</span></code></a></td>
 <td>alias of <code class="xref py py-class docutils literal"><span class="pre">dict</span></code></td>
 </tr>
-<tr class="row-even"><td><code class="xref py py-obj docutils literal"><span class="pre">has_edge</span></code>(u,&nbsp;v)</td>
+<tr class="row-even"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.graphs" title="regraph.hierarchy.Hierarchy.graphs"><code class="xref py py-obj docutils literal"><span class="pre">graphs</span></code></a>()</td>
+<td>Return a list of graphs in the hierarchy.</td>
+</tr>
+<tr class="row-odd"><td><code class="xref py py-obj docutils literal"><span class="pre">has_edge</span></code>(u,&nbsp;v)</td>
 <td>Return True if the edge (u,v) is in the graph.</td>
 </tr>
-<tr class="row-odd"><td><code class="xref py py-obj docutils literal"><span class="pre">has_node</span></code>(n)</td>
+<tr class="row-even"><td><code class="xref py py-obj docutils literal"><span class="pre">has_node</span></code>(n)</td>
 <td>Return True if the graph contains the node n.</td>
 </tr>
-<tr class="row-even"><td><code class="xref py py-obj docutils literal"><span class="pre">has_predecessor</span></code>(u,&nbsp;v)</td>
+<tr class="row-odd"><td><code class="xref py py-obj docutils literal"><span class="pre">has_predecessor</span></code>(u,&nbsp;v)</td>
 <td>Return True if node u has predecessor v.</td>
 </tr>
-<tr class="row-odd"><td><code class="xref py py-obj docutils literal"><span class="pre">has_successor</span></code>(u,&nbsp;v)</td>
+<tr class="row-even"><td><code class="xref py py-obj docutils literal"><span class="pre">has_successor</span></code>(u,&nbsp;v)</td>
 <td>Return True if node u has successor v.</td>
 </tr>
-<tr class="row-even"><td><code class="xref py py-obj docutils literal"><span class="pre">in_degree</span></code>([nbunch,&nbsp;weight])</td>
+<tr class="row-odd"><td><code class="xref py py-obj docutils literal"><span class="pre">in_degree</span></code>([nbunch,&nbsp;weight])</td>
 <td>Return the in-degree of a node or nodes.</td>
 </tr>
-<tr class="row-odd"><td><code class="xref py py-obj docutils literal"><span class="pre">in_degree_iter</span></code>([nbunch,&nbsp;weight])</td>
+<tr class="row-even"><td><code class="xref py py-obj docutils literal"><span class="pre">in_degree_iter</span></code>([nbunch,&nbsp;weight])</td>
 <td>Return an iterator for (node, in-degree).</td>
 </tr>
-<tr class="row-even"><td><code class="xref py py-obj docutils literal"><span class="pre">in_edges</span></code>([nbunch,&nbsp;data])</td>
+<tr class="row-odd"><td><code class="xref py py-obj docutils literal"><span class="pre">in_edges</span></code>([nbunch,&nbsp;data])</td>
 <td>Return a list of the incoming edges.</td>
 </tr>
-<tr class="row-odd"><td><code class="xref py py-obj docutils literal"><span class="pre">in_edges_iter</span></code>([nbunch,&nbsp;data])</td>
+<tr class="row-even"><td><code class="xref py py-obj docutils literal"><span class="pre">in_edges_iter</span></code>([nbunch,&nbsp;data])</td>
 <td>Return an iterator over the incoming edges.</td>
 </tr>
-<tr class="row-even"><td><code class="xref py py-obj docutils literal"><span class="pre">is_directed</span></code>()</td>
+<tr class="row-odd"><td><code class="xref py py-obj docutils literal"><span class="pre">is_directed</span></code>()</td>
 <td>Return True if graph is directed, False otherwise.</td>
 </tr>
-<tr class="row-odd"><td><code class="xref py py-obj docutils literal"><span class="pre">is_multigraph</span></code>()</td>
+<tr class="row-even"><td><code class="xref py py-obj docutils literal"><span class="pre">is_multigraph</span></code>()</td>
 <td>Return True if graph is a multigraph, False otherwise.</td>
 </tr>
-<tr class="row-even"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.load" title="regraph.hierarchy.Hierarchy.load"><code class="xref py py-obj docutils literal"><span class="pre">load</span></code></a>(filename[,&nbsp;ignore,&nbsp;directed])</td>
+<tr class="row-odd"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.load" title="regraph.hierarchy.Hierarchy.load"><code class="xref py py-obj docutils literal"><span class="pre">load</span></code></a>(filename[,&nbsp;ignore,&nbsp;directed])</td>
 <td>Load the hierarchy from a file.</td>
 </tr>
-<tr class="row-odd"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.merge_by_attr" title="regraph.hierarchy.Hierarchy.merge_by_attr"><code class="xref py py-obj docutils literal"><span class="pre">merge_by_attr</span></code></a>(hierarchy,&nbsp;attr)</td>
+<tr class="row-even"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.merge_by_attr" title="regraph.hierarchy.Hierarchy.merge_by_attr"><code class="xref py py-obj docutils literal"><span class="pre">merge_by_attr</span></code></a>(hierarchy,&nbsp;attr)</td>
 <td>Merge with a hierarchy by nodes with matching attr.</td>
 </tr>
-<tr class="row-even"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.merge_by_id" title="regraph.hierarchy.Hierarchy.merge_by_id"><code class="xref py py-obj docutils literal"><span class="pre">merge_by_id</span></code></a>(hierarchy)</td>
+<tr class="row-odd"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.merge_by_id" title="regraph.hierarchy.Hierarchy.merge_by_id"><code class="xref py py-obj docutils literal"><span class="pre">merge_by_id</span></code></a>(hierarchy)</td>
 <td>Recursive merge with a hierarchy.</td>
 </tr>
-<tr class="row-odd"><td><code class="xref py py-obj docutils literal"><span class="pre">nbunch_iter</span></code>([nbunch])</td>
+<tr class="row-even"><td><code class="xref py py-obj docutils literal"><span class="pre">nbunch_iter</span></code>([nbunch])</td>
 <td>Return an iterator of nodes contained in nbunch that are also in the graph.</td>
 </tr>
-<tr class="row-even"><td><code class="xref py py-obj docutils literal"><span class="pre">neighbors</span></code>(n)</td>
+<tr class="row-odd"><td><code class="xref py py-obj docutils literal"><span class="pre">neighbors</span></code>(n)</td>
 <td>Return a list of successor nodes of n.</td>
 </tr>
-<tr class="row-odd"><td><code class="xref py py-obj docutils literal"><span class="pre">neighbors_iter</span></code>(n)</td>
+<tr class="row-even"><td><code class="xref py py-obj docutils literal"><span class="pre">neighbors_iter</span></code>(n)</td>
 <td>Return an iterator over successor nodes of n.</td>
 </tr>
-<tr class="row-even"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.new_graph_from_nodes" title="regraph.hierarchy.Hierarchy.new_graph_from_nodes"><code class="xref py py-obj docutils literal"><span class="pre">new_graph_from_nodes</span></code></a>(nodes,&nbsp;graph_id,&nbsp;…)</td>
+<tr class="row-odd"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.new_graph_from_nodes" title="regraph.hierarchy.Hierarchy.new_graph_from_nodes"><code class="xref py py-obj docutils literal"><span class="pre">new_graph_from_nodes</span></code></a>(nodes,&nbsp;graph_id,&nbsp;…)</td>
 <td>Build a subgraph from nodes and type it by these nodes.</td>
 </tr>
-<tr class="row-odd"><td><code class="xref py py-obj docutils literal"><span class="pre">node_dict_factory</span></code></td>
+<tr class="row-even"><td><code class="xref py py-obj docutils literal"><span class="pre">node_dict_factory</span></code></td>
 <td>alias of <code class="xref py py-class docutils literal"><span class="pre">dict</span></code></td>
 </tr>
-<tr class="row-even"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.node_type" title="regraph.hierarchy.Hierarchy.node_type"><code class="xref py py-obj docutils literal"><span class="pre">node_type</span></code></a>(graph_id,&nbsp;node_id)</td>
+<tr class="row-odd"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.node_type" title="regraph.hierarchy.Hierarchy.node_type"><code class="xref py py-obj docutils literal"><span class="pre">node_type</span></code></a>(graph_id,&nbsp;node_id)</td>
 <td>Get a list of the immediate types of a node.</td>
 </tr>
-<tr class="row-odd"><td><code class="xref py py-obj docutils literal"><span class="pre">nodes</span></code>([data])</td>
+<tr class="row-even"><td><code class="xref py py-obj docutils literal"><span class="pre">nodes</span></code>([data])</td>
 <td>Return a list of the nodes in the graph.</td>
 </tr>
-<tr class="row-even"><td><code class="xref py py-obj docutils literal"><span class="pre">nodes_iter</span></code>([data])</td>
+<tr class="row-odd"><td><code class="xref py py-obj docutils literal"><span class="pre">nodes_iter</span></code>([data])</td>
 <td>Return an iterator over the nodes.</td>
 </tr>
-<tr class="row-odd"><td><code class="xref py py-obj docutils literal"><span class="pre">nodes_with_selfloops</span></code>()</td>
+<tr class="row-even"><td><code class="xref py py-obj docutils literal"><span class="pre">nodes_with_selfloops</span></code>()</td>
 <td>Return a list of nodes with self loops.</td>
 </tr>
-<tr class="row-even"><td><code class="xref py py-obj docutils literal"><span class="pre">number_of_edges</span></code>([u,&nbsp;v])</td>
+<tr class="row-odd"><td><code class="xref py py-obj docutils literal"><span class="pre">number_of_edges</span></code>([u,&nbsp;v])</td>
 <td>Return the number of edges between two nodes.</td>
 </tr>
-<tr class="row-odd"><td><code class="xref py py-obj docutils literal"><span class="pre">number_of_nodes</span></code>()</td>
+<tr class="row-even"><td><code class="xref py py-obj docutils literal"><span class="pre">number_of_nodes</span></code>()</td>
 <td>Return the number of nodes in the graph.</td>
 </tr>
-<tr class="row-even"><td><code class="xref py py-obj docutils literal"><span class="pre">number_of_selfloops</span></code>()</td>
+<tr class="row-odd"><td><code class="xref py py-obj docutils literal"><span class="pre">number_of_selfloops</span></code>()</td>
 <td>Return the number of selfloop edges.</td>
 </tr>
-<tr class="row-odd"><td><code class="xref py py-obj docutils literal"><span class="pre">order</span></code>()</td>
+<tr class="row-even"><td><code class="xref py py-obj docutils literal"><span class="pre">order</span></code>()</td>
 <td>Return the number of nodes in the graph.</td>
 </tr>
-<tr class="row-even"><td><code class="xref py py-obj docutils literal"><span class="pre">out_degree</span></code>([nbunch,&nbsp;weight])</td>
+<tr class="row-odd"><td><code class="xref py py-obj docutils literal"><span class="pre">out_degree</span></code>([nbunch,&nbsp;weight])</td>
 <td>Return the out-degree of a node or nodes.</td>
 </tr>
-<tr class="row-odd"><td><code class="xref py py-obj docutils literal"><span class="pre">out_degree_iter</span></code>([nbunch,&nbsp;weight])</td>
+<tr class="row-even"><td><code class="xref py py-obj docutils literal"><span class="pre">out_degree_iter</span></code>([nbunch,&nbsp;weight])</td>
 <td>Return an iterator for (node, out-degree).</td>
 </tr>
-<tr class="row-even"><td><code class="xref py py-obj docutils literal"><span class="pre">out_edges</span></code>([nbunch,&nbsp;data,&nbsp;default])</td>
+<tr class="row-odd"><td><code class="xref py py-obj docutils literal"><span class="pre">out_edges</span></code>([nbunch,&nbsp;data,&nbsp;default])</td>
 <td>Return a list of edges.</td>
 </tr>
-<tr class="row-odd"><td><code class="xref py py-obj docutils literal"><span class="pre">out_edges_iter</span></code>([nbunch,&nbsp;data,&nbsp;default])</td>
+<tr class="row-even"><td><code class="xref py py-obj docutils literal"><span class="pre">out_edges_iter</span></code>([nbunch,&nbsp;data,&nbsp;default])</td>
 <td>Return an iterator over the edges.</td>
 </tr>
-<tr class="row-even"><td><code class="xref py py-obj docutils literal"><span class="pre">predecessors</span></code>(n)</td>
+<tr class="row-odd"><td><code class="xref py py-obj docutils literal"><span class="pre">predecessors</span></code>(n)</td>
 <td>Return a list of predecessor nodes of n.</td>
 </tr>
-<tr class="row-odd"><td><code class="xref py py-obj docutils literal"><span class="pre">predecessors_iter</span></code>(n)</td>
+<tr class="row-even"><td><code class="xref py py-obj docutils literal"><span class="pre">predecessors_iter</span></code>(n)</td>
 <td>Return an iterator over predecessor nodes of n.</td>
 </tr>
-<tr class="row-even"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.relation_dict_factory" title="regraph.hierarchy.Hierarchy.relation_dict_factory"><code class="xref py py-obj docutils literal"><span class="pre">relation_dict_factory</span></code></a></td>
+<tr class="row-odd"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.relation_dict_factory" title="regraph.hierarchy.Hierarchy.relation_dict_factory"><code class="xref py py-obj docutils literal"><span class="pre">relation_dict_factory</span></code></a></td>
 <td>alias of <code class="xref py py-class docutils literal"><span class="pre">dict</span></code></td>
 </tr>
-<tr class="row-odd"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.relation_to_span" title="regraph.hierarchy.Hierarchy.relation_to_span"><code class="xref py py-obj docutils literal"><span class="pre">relation_to_span</span></code></a>(g1,&nbsp;g2[,&nbsp;edges,&nbsp;attrs])</td>
+<tr class="row-even"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.relation_to_span" title="regraph.hierarchy.Hierarchy.relation_to_span"><code class="xref py py-obj docutils literal"><span class="pre">relation_to_span</span></code></a>(g1,&nbsp;g2[,&nbsp;edges,&nbsp;attrs])</td>
 <td>Convert relation to a span.</td>
 </tr>
-<tr class="row-even"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.relations" title="regraph.hierarchy.Hierarchy.relations"><code class="xref py py-obj docutils literal"><span class="pre">relations</span></code></a>()</td>
+<tr class="row-odd"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.relations" title="regraph.hierarchy.Hierarchy.relations"><code class="xref py py-obj docutils literal"><span class="pre">relations</span></code></a>()</td>
 <td>Return a list of relations.</td>
 </tr>
-<tr class="row-odd"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.remove_attrs" title="regraph.hierarchy.Hierarchy.remove_attrs"><code class="xref py py-obj docutils literal"><span class="pre">remove_attrs</span></code></a>(graph_id,&nbsp;node,&nbsp;attr_dict[,&nbsp;force])</td>
-<td>Remove attributes of a node in a graph <cite>graph_id</cite>.</td>
+<tr class="row-even"><td><code class="xref py py-obj docutils literal"><span class="pre">remove_attrs</span></code>(attrs)</td>
+<td>Remove attributes.</td>
 </tr>
-<tr class="row-even"><td><code class="xref py py-obj docutils literal"><span class="pre">remove_edge</span></code>(u,&nbsp;v)</td>
+<tr class="row-odd"><td><code class="xref py py-obj docutils literal"><span class="pre">remove_edge</span></code>(u,&nbsp;v)</td>
 <td>Remove the edge between u and v.</td>
 </tr>
-<tr class="row-odd"><td><code class="xref py py-obj docutils literal"><span class="pre">remove_edges_from</span></code>(ebunch)</td>
+<tr class="row-even"><td><code class="xref py py-obj docutils literal"><span class="pre">remove_edges_from</span></code>(ebunch)</td>
 <td>Remove all edges specified in ebunch.</td>
 </tr>
-<tr class="row-even"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.remove_graph" title="regraph.hierarchy.Hierarchy.remove_graph"><code class="xref py py-obj docutils literal"><span class="pre">remove_graph</span></code></a>(graph_id[,&nbsp;reconnect])</td>
+<tr class="row-odd"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.remove_graph" title="regraph.hierarchy.Hierarchy.remove_graph"><code class="xref py py-obj docutils literal"><span class="pre">remove_graph</span></code></a>(graph_id[,&nbsp;reconnect])</td>
 <td>Remove graph from the hierarchy.</td>
 </tr>
-<tr class="row-odd"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.remove_node" title="regraph.hierarchy.Hierarchy.remove_node"><code class="xref py py-obj docutils literal"><span class="pre">remove_node</span></code></a>(n)</td>
+<tr class="row-even"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.remove_node" title="regraph.hierarchy.Hierarchy.remove_node"><code class="xref py py-obj docutils literal"><span class="pre">remove_node</span></code></a>(n)</td>
 <td>Overloading NetworkX method <cite>remove_node</cite>.</td>
 </tr>
-<tr class="row-even"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.remove_node_type" title="regraph.hierarchy.Hierarchy.remove_node_type"><code class="xref py py-obj docutils literal"><span class="pre">remove_node_type</span></code></a>(graph_id,&nbsp;typing_graph,&nbsp;node_id)</td>
+<tr class="row-odd"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.remove_node_type" title="regraph.hierarchy.Hierarchy.remove_node_type"><code class="xref py py-obj docutils literal"><span class="pre">remove_node_type</span></code></a>(graph_id,&nbsp;typing_graph,&nbsp;node_id)</td>
 <td>Remove a type a node in a graph <cite>graph_id</cite>.</td>
 </tr>
-<tr class="row-odd"><td><code class="xref py py-obj docutils literal"><span class="pre">remove_nodes_from</span></code>(nbunch)</td>
+<tr class="row-even"><td><code class="xref py py-obj docutils literal"><span class="pre">remove_nodes_from</span></code>(nbunch)</td>
 <td>Remove multiple nodes.</td>
 </tr>
-<tr class="row-even"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.remove_relation" title="regraph.hierarchy.Hierarchy.remove_relation"><code class="xref py py-obj docutils literal"><span class="pre">remove_relation</span></code></a>(g1,&nbsp;g2)</td>
+<tr class="row-odd"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.remove_relation" title="regraph.hierarchy.Hierarchy.remove_relation"><code class="xref py py-obj docutils literal"><span class="pre">remove_relation</span></code></a>(g1,&nbsp;g2)</td>
 <td>Remove relation from the hierarchy.</td>
 </tr>
-<tr class="row-odd"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.rename_graph" title="regraph.hierarchy.Hierarchy.rename_graph"><code class="xref py py-obj docutils literal"><span class="pre">rename_graph</span></code></a>(graph_id,&nbsp;new_graph_id)</td>
+<tr class="row-even"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.rename_graph" title="regraph.hierarchy.Hierarchy.rename_graph"><code class="xref py py-obj docutils literal"><span class="pre">rename_graph</span></code></a>(graph_id,&nbsp;new_graph_id)</td>
 <td>Rename a graph in the hierarchy.</td>
 </tr>
-<tr class="row-even"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.rename_node" title="regraph.hierarchy.Hierarchy.rename_node"><code class="xref py py-obj docutils literal"><span class="pre">rename_node</span></code></a>(graph_id,&nbsp;node,&nbsp;new_name)</td>
+<tr class="row-odd"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.rename_node" title="regraph.hierarchy.Hierarchy.rename_node"><code class="xref py py-obj docutils literal"><span class="pre">rename_node</span></code></a>(graph_id,&nbsp;node,&nbsp;new_name)</td>
 <td>Rename a node in a graph of the hierarchy.</td>
 </tr>
-<tr class="row-odd"><td><code class="xref py py-obj docutils literal"><span class="pre">reverse</span></code>([copy])</td>
+<tr class="row-even"><td><code class="xref py py-obj docutils literal"><span class="pre">reverse</span></code>([copy])</td>
 <td>Return the reverse of the graph.</td>
 </tr>
-<tr class="row-even"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.rewrite" title="regraph.hierarchy.Hierarchy.rewrite"><code class="xref py py-obj docutils literal"><span class="pre">rewrite</span></code></a>(graph_id,&nbsp;rule,&nbsp;instance[,&nbsp;…])</td>
+<tr class="row-odd"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.rewrite" title="regraph.hierarchy.Hierarchy.rewrite"><code class="xref py py-obj docutils literal"><span class="pre">rewrite</span></code></a>(graph_id,&nbsp;rule,&nbsp;instance[,&nbsp;…])</td>
 <td>Rewrite and propagate the changes up &amp; down.</td>
 </tr>
-<tr class="row-odd"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.rule_dict_factory" title="regraph.hierarchy.Hierarchy.rule_dict_factory"><code class="xref py py-obj docutils literal"><span class="pre">rule_dict_factory</span></code></a></td>
+<tr class="row-even"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.rule_dict_factory" title="regraph.hierarchy.Hierarchy.rule_dict_factory"><code class="xref py py-obj docutils literal"><span class="pre">rule_dict_factory</span></code></a></td>
 <td>alias of <code class="xref py py-class docutils literal"><span class="pre">dict</span></code></td>
 </tr>
-<tr class="row-even"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.rule_lhs_typing_dict_factory" title="regraph.hierarchy.Hierarchy.rule_lhs_typing_dict_factory"><code class="xref py py-obj docutils literal"><span class="pre">rule_lhs_typing_dict_factory</span></code></a></td>
+<tr class="row-odd"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.rule_lhs_typing_dict_factory" title="regraph.hierarchy.Hierarchy.rule_lhs_typing_dict_factory"><code class="xref py py-obj docutils literal"><span class="pre">rule_lhs_typing_dict_factory</span></code></a></td>
 <td>alias of <code class="xref py py-class docutils literal"><span class="pre">dict</span></code></td>
 </tr>
-<tr class="row-odd"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.rule_rhs_typing_dict_factory" title="regraph.hierarchy.Hierarchy.rule_rhs_typing_dict_factory"><code class="xref py py-obj docutils literal"><span class="pre">rule_rhs_typing_dict_factory</span></code></a></td>
+<tr class="row-even"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.rule_rhs_typing_dict_factory" title="regraph.hierarchy.Hierarchy.rule_rhs_typing_dict_factory"><code class="xref py py-obj docutils literal"><span class="pre">rule_rhs_typing_dict_factory</span></code></a></td>
 <td>alias of <code class="xref py py-class docutils literal"><span class="pre">dict</span></code></td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.rules" title="regraph.hierarchy.Hierarchy.rules"><code class="xref py py-obj docutils literal"><span class="pre">rules</span></code></a>()</td>
+<td>Return a list of rules in the hierary.</td>
 </tr>
 <tr class="row-even"><td><code class="xref py py-obj docutils literal"><span class="pre">selfloop_edges</span></code>([data,&nbsp;default])</td>
 <td>Return a list of selfloop edges.</td>
@@ -509,21 +600,35 @@
 <tr class="row-even"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.typing_dict_factory" title="regraph.hierarchy.Hierarchy.typing_dict_factory"><code class="xref py py-obj docutils literal"><span class="pre">typing_dict_factory</span></code></a></td>
 <td>alias of <code class="xref py py-class docutils literal"><span class="pre">dict</span></code></td>
 </tr>
-<tr class="row-odd"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.unique_graph_id" title="regraph.hierarchy.Hierarchy.unique_graph_id"><code class="xref py py-obj docutils literal"><span class="pre">unique_graph_id</span></code></a>(prefix)</td>
+<tr class="row-odd"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.typings" title="regraph.hierarchy.Hierarchy.typings"><code class="xref py py-obj docutils literal"><span class="pre">typings</span></code></a>()</td>
+<td>Return a list of graph typing edges in the hierarchy.</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.unique_graph_id" title="regraph.hierarchy.Hierarchy.unique_graph_id"><code class="xref py py-obj docutils literal"><span class="pre">unique_graph_id</span></code></a>(prefix)</td>
 <td>Generate a new graph id.</td>
+</tr>
+<tr class="row-odd"><td><code class="xref py py-obj docutils literal"><span class="pre">update_attrs</span></code>(attrs)</td>
+<td>Update attribures.</td>
 </tr>
 </tbody>
 </table>
 <dl class="method">
-<dt id="regraph.hierarchy.Hierarchy.add_attrs">
-<code class="descname">add_attrs</code><span class="sig-paren">(</span><em>attrs_dict</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/hierarchy.html#Hierarchy.add_attrs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.hierarchy.Hierarchy.add_attrs" title="Permalink to this definition">¶</a></dt>
-<dd><p>Add attrs_dict to hierarchy attrs.</p>
-</dd></dl>
-
-<dl class="method">
 <dt id="regraph.hierarchy.Hierarchy.add_graph">
 <code class="descname">add_graph</code><span class="sig-paren">(</span><em>graph_id</em>, <em>graph</em>, <em>graph_attrs=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/hierarchy.html#Hierarchy.add_graph"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.hierarchy.Hierarchy.add_graph" title="Permalink to this definition">¶</a></dt>
 <dd><p>Add graph to the hierarchy.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>graph_id</strong> : hashable</p>
+<p><strong>graph</strong> : nx.(Di)Graph object</p>
+<p><strong>graph_attrs</strong> : dict</p>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Raises:</th><td class="field-body"><p class="first last"><strong>HierarchyError :</strong></p>
+</td>
+</tr>
+</tbody>
+</table>
 </dd></dl>
 
 <dl class="method">
@@ -534,7 +639,7 @@
 
 <dl class="method">
 <dt id="regraph.hierarchy.Hierarchy.add_relation">
-<code class="descname">add_relation</code><span class="sig-paren">(</span><em>g1</em>, <em>g2</em>, <em>rel_pairs</em>, <em>attrs=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/hierarchy.html#Hierarchy.add_relation"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.hierarchy.Hierarchy.add_relation" title="Permalink to this definition">¶</a></dt>
+<code class="descname">add_relation</code><span class="sig-paren">(</span><em>g1</em>, <em>g2</em>, <em>relation</em>, <em>attrs=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/hierarchy.html#Hierarchy.add_relation"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.hierarchy.Hierarchy.add_relation" title="Permalink to this definition">¶</a></dt>
 <dd><p>Add relation to the hierarchy.</p>
 </dd></dl>
 
@@ -552,7 +657,7 @@
 
 <dl class="method">
 <dt id="regraph.hierarchy.Hierarchy.add_typing">
-<code class="descname">add_typing</code><span class="sig-paren">(</span><em>source</em>, <em>target</em>, <em>mapping</em>, <em>total=False</em>, <em>attrs=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/hierarchy.html#Hierarchy.add_typing"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.hierarchy.Hierarchy.add_typing" title="Permalink to this definition">¶</a></dt>
+<code class="descname">add_typing</code><span class="sig-paren">(</span><em>source</em>, <em>target</em>, <em>mapping</em>, <em>total=True</em>, <em>attrs=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/hierarchy.html#Hierarchy.add_typing"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.hierarchy.Hierarchy.add_typing" title="Permalink to this definition">¶</a></dt>
 <dd><p>Add homomorphism to the hierarchy.</p>
 </dd></dl>
 
@@ -594,7 +699,7 @@
 
 <dl class="method">
 <dt id="regraph.hierarchy.Hierarchy.find_matching">
-<code class="descname">find_matching</code><span class="sig-paren">(</span><em>graph_id</em>, <em>pattern</em>, <em>pattern_typing=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/hierarchy.html#Hierarchy.find_matching"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.hierarchy.Hierarchy.find_matching" title="Permalink to this definition">¶</a></dt>
+<code class="descname">find_matching</code><span class="sig-paren">(</span><em>graph_id</em>, <em>pattern</em>, <em>pattern_typing=None</em>, <em>nodes=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/hierarchy.html#Hierarchy.find_matching"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.hierarchy.Hierarchy.find_matching" title="Permalink to this definition">¶</a></dt>
 <dd><p>Find an instance of a pattern in a specified graph.</p>
 <p><cite>graph_id</cite> – id of a graph in the hierarchy to search for matches;
 <cite>pattern</cite> – nx.(Di)Graph object defining a pattern to match;
@@ -638,6 +743,12 @@ of nodes from pattern to the typing graph;</p>
 <dt id="regraph.hierarchy.Hierarchy.graph_dict_factory">
 <code class="descname">graph_dict_factory</code><a class="headerlink" href="#regraph.hierarchy.Hierarchy.graph_dict_factory" title="Permalink to this definition">¶</a></dt>
 <dd><p>alias of <code class="xref py py-class docutils literal"><span class="pre">dict</span></code></p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.hierarchy.Hierarchy.graphs">
+<code class="descname">graphs</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/hierarchy.html#Hierarchy.graphs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.hierarchy.Hierarchy.graphs" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return a list of graphs in the hierarchy.</p>
 </dd></dl>
 
 <dl class="classmethod">
@@ -689,12 +800,6 @@ of nodes from pattern to the typing graph;</p>
 </dd></dl>
 
 <dl class="method">
-<dt id="regraph.hierarchy.Hierarchy.remove_attrs">
-<code class="descname">remove_attrs</code><span class="sig-paren">(</span><em>graph_id</em>, <em>node</em>, <em>attr_dict</em>, <em>force=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/hierarchy.html#Hierarchy.remove_attrs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.hierarchy.Hierarchy.remove_attrs" title="Permalink to this definition">¶</a></dt>
-<dd><p>Remove attributes of a node in a graph <cite>graph_id</cite>.</p>
-</dd></dl>
-
-<dl class="method">
 <dt id="regraph.hierarchy.Hierarchy.remove_graph">
 <code class="descname">remove_graph</code><span class="sig-paren">(</span><em>graph_id</em>, <em>reconnect=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/hierarchy.html#Hierarchy.remove_graph"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.hierarchy.Hierarchy.remove_graph" title="Permalink to this definition">¶</a></dt>
 <dd><p>Remove graph from the hierarchy.</p>
@@ -706,6 +811,8 @@ of this graph to its parents.</p>
 <dt id="regraph.hierarchy.Hierarchy.remove_node">
 <code class="descname">remove_node</code><span class="sig-paren">(</span><em>n</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/hierarchy.html#Hierarchy.remove_node"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.hierarchy.Hierarchy.remove_node" title="Permalink to this definition">¶</a></dt>
 <dd><p>Overloading NetworkX method <cite>remove_node</cite>.</p>
+<p>This overloading is provided to maintain
+consistency in relations.</p>
 </dd></dl>
 
 <dl class="method">
@@ -757,6 +864,12 @@ of this graph to its parents.</p>
 </dd></dl>
 
 <dl class="method">
+<dt id="regraph.hierarchy.Hierarchy.rules">
+<code class="descname">rules</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/hierarchy.html#Hierarchy.rules"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.hierarchy.Hierarchy.rules" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return a list of rules in the hierary.</p>
+</dd></dl>
+
+<dl class="method">
 <dt id="regraph.hierarchy.Hierarchy.to_json">
 <code class="descname">to_json</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/hierarchy.html#Hierarchy.to_json"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.hierarchy.Hierarchy.to_json" title="Permalink to this definition">¶</a></dt>
 <dd><p>Return json representation of the hierarchy.</p>
@@ -781,6 +894,12 @@ of this graph to its parents.</p>
 </dd></dl>
 
 <dl class="method">
+<dt id="regraph.hierarchy.Hierarchy.typings">
+<code class="descname">typings</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/hierarchy.html#Hierarchy.typings"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.hierarchy.Hierarchy.typings" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return a list of graph typing edges in the hierarchy.</p>
+</dd></dl>
+
+<dl class="method">
 <dt id="regraph.hierarchy.Hierarchy.unique_graph_id">
 <code class="descname">unique_graph_id</code><span class="sig-paren">(</span><em>prefix</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/hierarchy.html#Hierarchy.unique_graph_id"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.hierarchy.Hierarchy.unique_graph_id" title="Permalink to this definition">¶</a></dt>
 <dd><p>Generate a new graph id.</p>
@@ -791,7 +910,7 @@ of this graph to its parents.</p>
 <dl class="class">
 <dt id="regraph.hierarchy.Relation">
 <em class="property">class </em><code class="descclassname">regraph.hierarchy.</code><code class="descname">Relation</code><a class="reference internal" href="_modules/regraph/hierarchy.html#Relation"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.hierarchy.Relation" title="Permalink to this definition">¶</a></dt>
-<dd><p>Abstract class for relations in the hierarchy.</p>
+<dd><p>Base class for relations equipped with attrs.</p>
 <p class="rubric">Methods</p>
 <table border="1" class="longtable docutils">
 <colgroup>
@@ -800,7 +919,7 @@ of this graph to its parents.</p>
 </colgroup>
 <tbody valign="top">
 <tr class="row-odd"><td><code class="xref py py-obj docutils literal"><span class="pre">add_attrs</span></code>(attrs)</td>
-<td>Add attrs to the graph node.</td>
+<td>Add attrs to the container.</td>
 </tr>
 <tr class="row-even"><td><code class="xref py py-obj docutils literal"><span class="pre">attrs_from_json</span></code>(json_data)</td>
 <td>Retreive attrs from json-like dict.</td>
@@ -822,36 +941,21 @@ of this graph to its parents.</p>
 <dt id="regraph.hierarchy.RuleNode">
 <em class="property">class </em><code class="descclassname">regraph.hierarchy.</code><code class="descname">RuleNode</code><span class="sig-paren">(</span><em>rule</em>, <em>attrs=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/hierarchy.html#RuleNode"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.hierarchy.RuleNode" title="Permalink to this definition">¶</a></dt>
 <dd><p>Data structure incapsulating a rule in the node of the hierarchy.</p>
-<p class="rubric">Methods</p>
-<table border="1" class="longtable docutils">
+<p class="rubric">Attributes</p>
+<table border="1" class="docutils">
 <colgroup>
-<col width="10%" />
-<col width="90%" />
+<col width="17%" />
+<col width="83%" />
 </colgroup>
 <tbody valign="top">
-<tr class="row-odd"><td><code class="xref py py-obj docutils literal"><span class="pre">add_attrs</span></code>(attrs)</td>
-<td>Add attrs to the graph node.</td>
+<tr class="row-odd"><td><strong>rule</strong></td>
+<td>(regraph.rules.Rule)</td>
 </tr>
-<tr class="row-even"><td><code class="xref py py-obj docutils literal"><span class="pre">attrs_from_json</span></code>(json_data)</td>
-<td>Retreive attrs from json-like dict.</td>
-</tr>
-<tr class="row-odd"><td><code class="xref py py-obj docutils literal"><span class="pre">attrs_to_json</span></code>()</td>
-<td>Convert attributes to json.</td>
-</tr>
-<tr class="row-even"><td><code class="xref py py-obj docutils literal"><span class="pre">remove_attrs</span></code>(attrs)</td>
-<td>Remove attributes.</td>
-</tr>
-<tr class="row-odd"><td><code class="xref py py-obj docutils literal"><span class="pre">update_attrs</span></code>(attrs)</td>
-<td>Update attribures.</td>
+<tr class="row-even"><td><strong>attrs</strong></td>
+<td>(dict) Dictionary with attrs of the rule node</td>
 </tr>
 </tbody>
 </table>
-</dd></dl>
-
-<dl class="class">
-<dt id="regraph.hierarchy.RuleRelation">
-<em class="property">class </em><code class="descclassname">regraph.hierarchy.</code><code class="descname">RuleRelation</code><span class="sig-paren">(</span><em>lhs_pairs</em>, <em>p_pairs</em>, <em>rhs_pairs</em>, <em>attrs=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/hierarchy.html#RuleRelation"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.hierarchy.RuleRelation" title="Permalink to this definition">¶</a></dt>
-<dd><p>Implements relations on rules.</p>
 <p class="rubric">Methods</p>
 <table border="1" class="longtable docutils">
 <colgroup>
@@ -860,7 +964,7 @@ of this graph to its parents.</p>
 </colgroup>
 <tbody valign="top">
 <tr class="row-odd"><td><code class="xref py py-obj docutils literal"><span class="pre">add_attrs</span></code>(attrs)</td>
-<td>Add attrs to the graph node.</td>
+<td>Add attrs to the container.</td>
 </tr>
 <tr class="row-even"><td><code class="xref py py-obj docutils literal"><span class="pre">attrs_from_json</span></code>(json_data)</td>
 <td>Retreive attrs from json-like dict.</td>
@@ -881,7 +985,34 @@ of this graph to its parents.</p>
 <dl class="class">
 <dt id="regraph.hierarchy.RuleTyping">
 <em class="property">class </em><code class="descclassname">regraph.hierarchy.</code><code class="descname">RuleTyping</code><span class="sig-paren">(</span><em>lhs_mapping</em>, <em>rhs_mapping</em>, <em>lhs_total=False</em>, <em>rhs_total=False</em>, <em>attrs=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/hierarchy.html#RuleTyping"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.hierarchy.RuleTyping" title="Permalink to this definition">¶</a></dt>
-<dd><p>Incapsulates rule typing in the edge of the hierarchy.</p>
+<dd><p>Data structure incapsulating rule typing.</p>
+<p>A rule typing by a graph is defined by two homomorphisms:
+lhs -&gt; graph and rhs -&gt; graph, such that they commute
+(p -&gt; lhs -&gt; graph and p -&gt; rhs -&gt; graph commute).</p>
+<p class="rubric">Attributes</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="14%" />
+<col width="86%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td><strong>lhs_mapping</strong></td>
+<td>(dict) Dictionary containing a map from nodes of the lhs of the rule to nodes of a target graph.</td>
+</tr>
+<tr class="row-even"><td><strong>rhs_mapping</strong></td>
+<td>(dict) Dictionary containing a map from nodes of the rhs of the rule to nodes of a target graph.</td>
+</tr>
+<tr class="row-odd"><td><strong>lhs_total</strong></td>
+<td>(bool) Flag indication if the typing of the lhs is forced to be total</td>
+</tr>
+<tr class="row-even"><td><strong>rhs_total</strong></td>
+<td>(bool) Flag indication if the typing of the rhs is forced to be total</td>
+</tr>
+<tr class="row-odd"><td><strong>attrs</strong></td>
+<td>(dict) Dictionary with attrs of the rule typing</td>
+</tr>
+</tbody>
+</table>
 <p class="rubric">Methods</p>
 <table border="1" class="longtable docutils">
 <colgroup>
@@ -890,7 +1021,7 @@ of this graph to its parents.</p>
 </colgroup>
 <tbody valign="top">
 <tr class="row-odd"><td><code class="xref py py-obj docutils literal"><span class="pre">add_attrs</span></code>(attrs)</td>
-<td>Add attrs to the graph node.</td>
+<td>Add attrs to the container.</td>
 </tr>
 <tr class="row-even"><td><a class="reference internal" href="#regraph.hierarchy.RuleTyping.all_total" title="regraph.hierarchy.RuleTyping.all_total"><code class="xref py py-obj docutils literal"><span class="pre">all_total</span></code></a>()</td>
 <td>All the components of the rule are totally typed.</td>
@@ -938,7 +1069,25 @@ of this graph to its parents.</p>
 <dl class="class">
 <dt id="regraph.hierarchy.Typing">
 <em class="property">class </em><code class="descclassname">regraph.hierarchy.</code><code class="descname">Typing</code><span class="sig-paren">(</span><em>mapping</em>, <em>total=False</em>, <em>attrs=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/hierarchy.html#Typing"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.hierarchy.Typing" title="Permalink to this definition">¶</a></dt>
-<dd><p>Incapsulate homomorphism in the edge of the hierarchy.</p>
+<dd><p>Data structure incapsulating a homomorphism between graphs.</p>
+<p class="rubric">Attributes</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="11%" />
+<col width="89%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td><strong>mapping</strong></td>
+<td>(dict) Dictionary containing a map from nodes of a source graph to nodes of a target.</td>
+</tr>
+<tr class="row-even"><td><strong>total</strong></td>
+<td>(bool) Flag indication if the typing is forced to be total</td>
+</tr>
+<tr class="row-odd"><td><strong>attrs</strong></td>
+<td>(dict) Dictionary with attrs of the typing</td>
+</tr>
+</tbody>
+</table>
 <p class="rubric">Methods</p>
 <table border="1" class="longtable docutils">
 <colgroup>
@@ -947,7 +1096,7 @@ of this graph to its parents.</p>
 </colgroup>
 <tbody valign="top">
 <tr class="row-odd"><td><code class="xref py py-obj docutils literal"><span class="pre">add_attrs</span></code>(attrs)</td>
-<td>Add attrs to the graph node.</td>
+<td>Add attrs to the container.</td>
 </tr>
 <tr class="row-even"><td><code class="xref py py-obj docutils literal"><span class="pre">attrs_from_json</span></code>(json_data)</td>
 <td>Retreive attrs from json-like dict.</td>
