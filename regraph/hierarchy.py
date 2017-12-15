@@ -87,7 +87,7 @@ class AttributeContainter(object):
 
     @staticmethod
     def attrs_from_json(json_data):
-        """Retreive attrs from json-like dict."""
+        """Retrieve attrs from json-like dict."""
         attrs = dict()
         for key, value in json_data.items():
             attrs[key] = AttributeSet.from_json(value)
@@ -370,10 +370,6 @@ class Hierarchy(nx.DiGraph, AttributeContainter):
 
     Base on `networkx.DiGraph`, acyclic, all paths commute
 
-    Attributes
-    ----------
-    graph
-
     Examples
     --------
     >>> hierarchy = Hierarchy() # create empty hierarchy
@@ -585,7 +581,7 @@ class Hierarchy(nx.DiGraph, AttributeContainter):
 
         Raises
         ------
-        HierarchyError : 
+        HierarchyError
 
         """
         if self.directed != graph.is_directed():
@@ -935,6 +931,10 @@ class Hierarchy(nx.DiGraph, AttributeContainter):
             if n in v.keys():
                 del self.relation[k][n]
         return
+
+    def add_cycle(self, nodes, **attr):
+        """Method of adding cycle to the graph hierarchy."""
+        raise HierarchyError("Cycles are not allowed in graph hierarchy")
 
     def remove_relation(self, g1, g2):
         """Remove relation from the hierarchy."""
