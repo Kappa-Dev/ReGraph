@@ -80,12 +80,12 @@ class TestRelations(object):
     def test_add_relation(self):
         self.hierarchy.add_relation(
             "a1", "a2",
-            [
-                ("white_circle", "right_circle"),
-                ("white_square", "middle_square"),
-                ("black_circle", "left_circle"),
-                ("black_circle", "right_circle")
-            ],
+            {
+                "white_circle": "right_circle",
+                "white_square": "middle_square",
+                "black_circle": "left_circle",
+                "black_circle": "right_circle"
+            },
             {"name": "Some relation"}
         )
         # print(self.hierarchy.relations())

@@ -10,7 +10,6 @@ Implements the following data structures:
   library for finding inclusion and intersection of regular expressions,
   its method `match` can be used to test if a given string is in
   a set of strings defined by regular expressions;
-
 * `IntegerSet` -- a class for possibly infinite sets of integers
   defined by a set of disjoint intervals, inherits `AttributeSet`,
   provides the method `contains` for testing if a given integer is in

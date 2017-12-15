@@ -115,7 +115,7 @@ def _propagate_rule_to(graph, origin_typing, rule, instance, p_origin,
     lhs_cloned_nodes = rule.cloned_nodes()
 
     graph_prime_graph = id_of(graph.nodes())
-    graph_prime_origin = dict()
+    graph_prime_origin = copy.deepcopy(origin_typing)
 
     for lhs_node in rule.lhs.nodes():
         origin_node = instance[lhs_node]
@@ -126,6 +126,7 @@ def _propagate_rule_to(graph, origin_typing, rule, instance, p_origin,
                 primitives.remove_node(
                     graph_prime, node)
                 del graph_prime_graph[node]
+                del graph_prime_origin[node]
             else:
                 graph_prime_origin[node] = origin_node
 
@@ -173,7 +174,6 @@ def _propagate_rule_to(graph, origin_typing, rule, instance, p_origin,
 
 def _propagate_up(hierarchy, graph_id, rule, instance,
                   p_origin_m, origin_m_origin_prime, inplace=False):
-
     updated_graphs = dict()
     updated_homomorphisms = dict()
     updated_relations = set()
@@ -195,13 +195,11 @@ def _propagate_up(hierarchy, graph_id, rule, instance,
                     (graph_prime, graph_prime_graph, None, graph_prime_origin)
 
                 for suc in hierarchy.successors(graph):
-
                     if suc == graph_id:
                         graph_prime_suc_prime =\
                             compose(
                                 graph_prime_origin,
                                 origin_m_origin_prime)
-
                     elif suc in updated_graphs.keys():
                         graph_prime_suc_prime =\
                             get_unique_map_to_pullback(
@@ -419,13 +417,13 @@ def _apply_changes(hierarchy, upstream_changes, downstream_changes):
     rels = dict()
     for g1, g2 in upstream_changes["relations"]:
         if (g1, g2) not in visited and (g2, g1) not in visited:
-            new_pairs = set()
+            new_relation = dict()
             # upstream changes in both related graphs
 
             if (g2, g1) in upstream_changes["relations"]:
                 # update left side
                 new_left_dict = dict()
-                left_dict = left_relation_dict(hierarchy.relation[g1][g2].rel)
+                left_dict = hierarchy.relation[g1][g2].rel
                 for node in upstream_changes["graphs"][g1][0].nodes():
                     old_node = upstream_changes["graphs"][g1][1][node]
                     if old_node in left_dict.keys():
@@ -433,13 +431,13 @@ def _apply_changes(hierarchy, upstream_changes, downstream_changes):
 
                 # update right side
                 new_right_dict = dict()
-                right_dict = right_relation_dict(hierarchy.relation[g1][g2].rel)
+                right_dict = hierarchy.relation[g2][g1].rel
                 for node in upstream_changes["graphs"][g2][0].nodes():
                     old_node = upstream_changes["graphs"][g2][1][node]
                     if old_node in right_dict.keys():
                         new_right_dict[node] = right_dict[old_node]
 
-                new_pairs = compose_relation_dicts(
+                new_relation = compose_relation_dicts(
                     new_left_dict, new_right_dict)
 
             # downstream changes in one of the related graphs
@@ -447,28 +445,33 @@ def _apply_changes(hierarchy, upstream_changes, downstream_changes):
                  "graphs" in downstream_changes.keys() and\
                  (g2, g1) in downstream_changes["relations"]:
                 # update left side
-                left_dict = left_relation_dict(hierarchy.relation[g1][g2].rel)
+                left_dict = hierarchy.relation[g1][g2].rel
                 for node in upstream_changes["graphs"][g1][0].nodes():
                     old_node = upstream_changes["graphs"][g1][1][node]
                     if old_node in left_dict.keys():
                         for right_el in left_dict[old_node]:
-                            new_pairs.add(
-                                (node,
-                                 downstream_changes[
-                                     "graphs"][g2][1][right_el]))
+                            if node in new_relation.keys():
+                                new_relation[node].add(
+                                    downstream_changes[
+                                        "graphs"][g2][1][right_el])
+                            else:
+                                new_relation[node] =\
+                                    {downstream_changes[
+                                     "graphs"][g2][1][right_el]}
 
             # updates in a single graph involved in the relation
             else:
-                left_dict = left_relation_dict(hierarchy.relation[g1][g2].rel)
+                left_dict = hierarchy.relation[g1][g2].rel
                 for node in upstream_changes["graphs"][g1][0].nodes():
                     if node in upstream_changes["graphs"][g1][1].keys():
                         old_node = upstream_changes["graphs"][g1][1][node]
                         if old_node in left_dict.keys():
                             for el in left_dict[old_node]:
-                                new_pairs.add(
-                                    (node, el))
-
-            rels[(g1, g2)] = new_pairs
+                                if node in new_relation.keys():
+                                    new_relation[node].add(el)
+                                else:
+                                    new_relation[node] = {el}
+            rels[(g1, g2)] = new_relation
             visited.add((g1, g2))
 
     if "relations" in downstream_changes.keys() and\
@@ -476,26 +479,30 @@ def _apply_changes(hierarchy, upstream_changes, downstream_changes):
         for g1, g2 in downstream_changes["relations"]:
             if (g1, g2) not in visited and (g2, g1) not in visited:
                 # downstream changes in both related graphs
-                new_pairs = set()
+                new_relation = dict()
                 if (g2, g1) in downstream_changes["relations"]:
-                    left_dict = left_relation_dict(hierarchy.relation[g1][g2])
+                    left_dict = hierarchy.relation[g1][g2]
                     for left_el, right_els in left_dict.items():
                         new_left_node =\
                             downstream_changes["graphs"][g1][1][left_el]
                         for right_el in right_els:
                             new_right_node =\
                                 downstream_changes["graphs"][g2][1][right_el]
-                            new_pairs.add((new_left_node, new_right_node))
+                            if new_left_node in new_relation.keys():
+                                new_relation[new_left_node].add(new_right_node)
+                            else:
+                                new_relation[new_left_node] = {new_right_node}
                 else:
-                    left_dict = left_relation_dict(
-                        hierarchy.relation[g1][g2].rel)
+                    left_dict = hierarchy.relation[g1][g2].rel
                     for left_el, right_els in left_dict.items():
                         new_left_node =\
                             downstream_changes["graphs"][g1][1][left_el]
                         for right_el in right_els:
-                            new_pairs.add((new_left_node, right_el))
-
-                rels[(g1, g2)] = new_pairs
+                            if new_left_node in new_relation.keys():
+                                new_relation[new_left_node].add(right_el)
+                            else:
+                                new_relation[new_left_node] = {right_el}
+                rels[(g1, g2)] = new_relation
                 visited.add((g1, g2))
 
     # update graphs

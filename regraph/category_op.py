@@ -634,17 +634,18 @@ def relation_to_span(g1, g2, relation, edges=False, attrs=False, directed=True):
         left_h = dict()
         right_h = dict()
 
-        for a, b in relation:
-            new_node = str(a) + "_" + str(b)
-            new_graph.add_node(new_node)
-            if attrs:
-                common_attrs = attrs_intersection(
-                    g1.node[a],
-                    g2.node[b]
-                )
-                add_node_attrs(new_graph, new_node, common_attrs)
-            left_h[new_node] = a
-            right_h[new_node] = b
+        for a, bs in relation.items():
+            for b in bs:
+                new_node = str(a) + "_" + str(b)
+                new_graph.add_node(new_node)
+                if attrs:
+                    common_attrs = attrs_intersection(
+                        g1.node[a],
+                        g2.node[b]
+                    )
+                    add_node_attrs(new_graph, new_node, common_attrs)
+                left_h[new_node] = a
+                right_h[new_node] = b
 
         for n1 in new_graph.nodes():
             for n2 in new_graph.nodes():
@@ -738,11 +739,13 @@ def pushout_from_relation(g1, g2, relation, inplace=False):
 
 
 def compose_relation_dicts(left_dict, right_dict):
-    pairs = set()
-
+    result_dict = dict()
     for left_el, right_els in left_dict.items():
         for right_el in right_els:
             if right_el in right_dict.keys():
-                pairs.add((left_el, right_el))
 
-    return pairs
+                if left_el in result_dict.keys():
+                    result_dict[left_el].add(right_el)
+                else:
+                    result_dict[left_el] = set([right_el])
+    return result_dict
