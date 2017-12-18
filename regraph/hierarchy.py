@@ -1552,11 +1552,16 @@ class Hierarchy(nx.DiGraph, AttributeContainter):
                             suc1.intersection(suc2)
         return common_sucs
 
-    def rewrite(self, graph_id, rule, instance,
-                lhs_typing=None, rhs_typing=None, strict=True, inplace=True):
+    def rewrite(self, graph_id, rule, instance=None,
+                lhs_typing=None, rhs_typing=None, strict=False, inplace=True):
         """Rewrite and propagate the changes up & down."""
         if type(self.node[graph_id]) == RuleNode:
             raise ReGraphError("Rewriting of a rule is not implemented!")
+
+        if instance is None:
+            instance = {
+                n: n for n in rule.lhs.nodes()
+            }
 
         # 1. Check consistency of the input
         # 1a. Autocomplete typing
@@ -1629,11 +1634,10 @@ class Hierarchy(nx.DiGraph, AttributeContainter):
         graph_construct = (g_m, g_m_g, g_prime, g_m_g_prime, r_g_prime)
 
         downstream_changes = dict()
-        if strict is False:
-            downstream_changes =\
-                rewriting_utils._propagate_down(
-                    self, graph_id, graph_construct,
-                    rule, instance, new_rhs_typing, inplace)
+        downstream_changes =\
+            rewriting_utils._propagate_down(
+                self, graph_id, graph_construct,
+                rule, instance, new_rhs_typing, inplace)
 
         # 6. Apply all the changes in the hierarchy
         if inplace:
