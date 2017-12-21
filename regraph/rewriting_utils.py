@@ -1,4 +1,5 @@
 """A collection of (internal usage) utils for rewriting and propagation in the hierarchy."""
+import time
 import copy
 import networkx as nx
 import warnings
@@ -415,6 +416,7 @@ def _apply_changes(hierarchy, upstream_changes, downstream_changes):
     # update relations
     visited = set()
     rels = dict()
+    start = time.time()
     for g1, g2 in upstream_changes["relations"]:
         if (g1, g2) not in visited and (g2, g1) not in visited:
             new_relation = dict()
@@ -473,7 +475,9 @@ def _apply_changes(hierarchy, upstream_changes, downstream_changes):
                                     new_relation[node] = {el}
             rels[(g1, g2)] = new_relation
             visited.add((g1, g2))
-
+    end = time.time() - start
+    print("\t\t\t\tTime to compute updates of upstream rels: ", end)
+    start = time.time()
     if "relations" in downstream_changes.keys() and\
        "graphs" in downstream_changes.keys():
         for g1, g2 in downstream_changes["relations"]:
@@ -504,7 +508,9 @@ def _apply_changes(hierarchy, upstream_changes, downstream_changes):
                                 new_relation[new_left_node] = {right_el}
                 rels[(g1, g2)] = new_relation
                 visited.add((g1, g2))
-
+    end = time.time() - start
+    print("\t\t\t\tTime to compute updates of downstream rels: ", end)
+    start = time.time()
     # update graphs
     for graph, (graph_m, _, graph_prime, _) in upstream_changes["graphs"].items():
         if graph_prime is not None:
@@ -517,12 +523,18 @@ def _apply_changes(hierarchy, upstream_changes, downstream_changes):
         for graph, (graph_prime, _, _) in downstream_changes["graphs"].items():
             hierarchy.node[graph].graph = graph_prime
             hierarchy.graph[graph] = hierarchy.node[graph].graph
+    end = time.time() - start
+    print("\t\t\t\tTime to apply graph changes: ", end)
 
+    start = time.time()
     for (g1, g2), rel in rels.items():
         old_attrs = copy.deepcopy(hierarchy.relation[g1][g2].attrs)
         hierarchy.remove_relation(g1, g2)
         hierarchy.add_relation(g1, g2, rel, old_attrs)
+    end = time.time() - start
+    print("\t\t\t\tTime to apply rel changes: ", end)
 
+    start = time.time()
     # update homomorphisms
     updated_homomorphisms = dict()
     updated_homomorphisms.update(upstream_changes["homomorphisms"])
@@ -545,6 +557,8 @@ def _apply_changes(hierarchy, upstream_changes, downstream_changes):
             mapping, total, hierarchy.edge[s][t].attrs
         )
         hierarchy.typing[s][t] = hierarchy.edge[s][t].mapping
+    end = time.time() - start
+    print("\t\t\t\tTime to apply hom changes: ", end)
     # update rules & rule homomorphisms
     for rule, new_rule in upstream_changes["rules"].items():
         hierarchy.node[rule] = hierarchy.rule_node_cls(

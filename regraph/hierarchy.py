@@ -35,6 +35,7 @@ TODO:
 
 * `RuleRelation`
 """
+import time
 import copy
 import itertools
 import json
@@ -1555,6 +1556,7 @@ class Hierarchy(nx.DiGraph, AttributeContainter):
     def rewrite(self, graph_id, rule, instance=None,
                 lhs_typing=None, rhs_typing=None, strict=False, inplace=True):
         """Rewrite and propagate the changes up & down."""
+        start = time.time()
         if type(self.node[graph_id]) == RuleNode:
             raise ReGraphError("Rewriting of a rule is not implemented!")
 
@@ -1601,8 +1603,11 @@ class Hierarchy(nx.DiGraph, AttributeContainter):
                 rule_type_checking._check_totality(
                     self, graph_id, rule, instance,
                     new_lhs_typing, new_rhs_typing)
+        end = time.time() - start
+        print("\t\t\tReGraph: time to do all type checks: ", end)
 
         # 2. Rewrite a graph `graph_id`
+        start = time.time()
         base_changes = rewriting_utils._rewrite_base(
             self, graph_id, rule, instance,
             new_lhs_typing, new_rhs_typing, inplace)
@@ -1617,8 +1622,10 @@ class Hierarchy(nx.DiGraph, AttributeContainter):
             "rules": dict(),
             "relations": base_changes["relations"]
         }
-
+        end = time.time() - start
+        print("\t\t\tReGraph: time to do base SqPO: ", end)
         # 4. Propagate rewriting up the hierarchy
+        start = time.time()
         new_upstream_changes =\
             rewriting_utils._propagate_up(
                 self, graph_id, rule, instance, p_g_m, g_m_g_prime, inplace)
@@ -1632,23 +1639,33 @@ class Hierarchy(nx.DiGraph, AttributeContainter):
         upstream_changes["relations"] += new_upstream_changes["relations"]
 
         graph_construct = (g_m, g_m_g, g_prime, g_m_g_prime, r_g_prime)
+        end = time.time() - start
+        print("\t\t\tReGraph: time to propagate up: ", end)
 
+        start = time.time()
         downstream_changes = dict()
         downstream_changes =\
             rewriting_utils._propagate_down(
                 self, graph_id, graph_construct,
                 rule, instance, new_rhs_typing, inplace)
-
+        end = time.time() - start
+        print("\t\t\tReGraph: time to propagate down: ", end)
         # 6. Apply all the changes in the hierarchy
         if inplace:
+            start = time.time()
             rewriting_utils._apply_changes(
                 self, upstream_changes, downstream_changes)
+            end = time.time() - start
+            print("\t\t\tReGraph: time to apply changes: ", end)
             return (self, r_g_prime)
         else:
             # First, create a new hierarchy
+            start = time.time()
             new_graph = copy.deepcopy(self)
             rewriting_utils._apply_changes(
                 new_graph, upstream_changes, downstream_changes)
+            end = time.time() - start
+            print("\t\t\tReGraph: time to apply changes: ", end)
             return (new_graph, r_g_prime)
 
     def apply_rule(self, graph_id, rule_id, instance,
@@ -1733,7 +1750,7 @@ class Hierarchy(nx.DiGraph, AttributeContainter):
             json_data["relations"].append({
                 "from": u,
                 "to": v,
-                "rel": [[a, b] for a, b in self.relation[u][v].rel],
+                "rel": {a: list(b) for a, b in self.relation[u][v].rel.items()},
                 "attrs": self.relation[u][v].attrs_to_json()
             })
         return json_data
@@ -1842,7 +1859,7 @@ class Hierarchy(nx.DiGraph, AttributeContainter):
                 hierarchy.add_relation(
                     relation_data["from"],
                     relation_data["to"],
-                    [(a, b) for a, b in relation_data["rel"]],
+                    {a: set(b) for a, b in relation_data["rel"].items()},
                     attrs
                 )
         return hierarchy
