@@ -817,6 +817,7 @@ class Hierarchy(nx.DiGraph, AttributeContainter):
                 "multiple edges are not allowed!" %
                 (g1, g2)
             )
+
         # normalize relation dict
         new_relation_dict = dict()
         for key, values in relation.items():
@@ -849,6 +850,7 @@ class Hierarchy(nx.DiGraph, AttributeContainter):
                         "exist in a graph '%s'" %
                         (v, g2)
                     )
+
         if attrs is not None:
             normalize_attrs(attrs)
 
@@ -861,8 +863,6 @@ class Hierarchy(nx.DiGraph, AttributeContainter):
         rel_ba_obj = GraphRelation(right_relation, attrs)
         self.relation[g1].update({g2: rel_ab_obj})
         self.relation[g2].update({g1: rel_ba_obj})
-        assert(g1 in self.relation[g2].keys())
-        assert(g2 in self.relation[g1].keys())
         return
 
     def remove_graph(self, graph_id, reconnect=False):
@@ -1556,7 +1556,8 @@ class Hierarchy(nx.DiGraph, AttributeContainter):
     def rewrite(self, graph_id, rule, instance=None,
                 lhs_typing=None, rhs_typing=None, strict=False, inplace=True):
         """Rewrite and propagate the changes up & down."""
-        start = time.time()
+
+        # start = time.time()
         if type(self.node[graph_id]) == RuleNode:
             raise ReGraphError("Rewriting of a rule is not implemented!")
 
@@ -1603,11 +1604,12 @@ class Hierarchy(nx.DiGraph, AttributeContainter):
                 rule_type_checking._check_totality(
                     self, graph_id, rule, instance,
                     new_lhs_typing, new_rhs_typing)
-        end = time.time() - start
-        print("\t\t\tReGraph: time to do all type checks: ", end)
 
+        # end = time.time() - start
+        # print("\t\t\t\tTime to type check: ", end)
         # 2. Rewrite a graph `graph_id`
-        start = time.time()
+
+        # start = time.time()
         base_changes = rewriting_utils._rewrite_base(
             self, graph_id, rule, instance,
             new_lhs_typing, new_rhs_typing, inplace)
@@ -1622,10 +1624,12 @@ class Hierarchy(nx.DiGraph, AttributeContainter):
             "rules": dict(),
             "relations": base_changes["relations"]
         }
-        end = time.time() - start
-        print("\t\t\tReGraph: time to do base SqPO: ", end)
+
+        # end = time.time() - start
+        # print("\t\t\t\tTime to compute base: ", end)
+
+        # start = time.time()
         # 4. Propagate rewriting up the hierarchy
-        start = time.time()
         new_upstream_changes =\
             rewriting_utils._propagate_up(
                 self, graph_id, rule, instance, p_g_m, g_m_g_prime, inplace)
@@ -1639,33 +1643,33 @@ class Hierarchy(nx.DiGraph, AttributeContainter):
         upstream_changes["relations"] += new_upstream_changes["relations"]
 
         graph_construct = (g_m, g_m_g, g_prime, g_m_g_prime, r_g_prime)
-        end = time.time() - start
-        print("\t\t\tReGraph: time to propagate up: ", end)
+        # end = time.time() - start
+        # print("\t\t\t\tTime to propagate up: ", end)
 
-        start = time.time()
+        # start = time.time()
         downstream_changes = dict()
         downstream_changes =\
             rewriting_utils._propagate_down(
                 self, graph_id, graph_construct,
                 rule, instance, new_rhs_typing, inplace)
-        end = time.time() - start
-        print("\t\t\tReGraph: time to propagate down: ", end)
+        # end = time.time() - start
+        # print("\t\t\t\tTime to propagate down: ", end)
+
         # 6. Apply all the changes in the hierarchy
         if inplace:
-            start = time.time()
+            # start = time.time()
             rewriting_utils._apply_changes(
                 self, upstream_changes, downstream_changes)
-            end = time.time() - start
-            print("\t\t\tReGraph: time to apply changes: ", end)
+            # end = time.time() - start
+            # print("\t\t\t\tTime to apply changes: ", end)
+
             return (self, r_g_prime)
         else:
+            # start = time.time()
             # First, create a new hierarchy
-            start = time.time()
             new_graph = copy.deepcopy(self)
             rewriting_utils._apply_changes(
                 new_graph, upstream_changes, downstream_changes)
-            end = time.time() - start
-            print("\t\t\tReGraph: time to apply changes: ", end)
             return (new_graph, r_g_prime)
 
     def apply_rule(self, graph_id, rule_id, instance,
@@ -1956,11 +1960,11 @@ class Hierarchy(nx.DiGraph, AttributeContainter):
 
     def get_typing(self, source, target):
         """Get typing dict of `source` by `target`."""
-        desc = self.descendents(target)
-        if source not in desc:
-            return None
-        ancestors = self.get_ancestors(source, desc)
-        return ancestors[target]
+        if (source, target) in self.edges():
+            return self.edge[source][target].mapping
+        else:
+            path = nx.shortest_path(self, source, target)
+            return self.compose_path_typing(path)
 
     def get_rule_typing(self, source, target):
         """Get typing dict of `source` by `target` (`source` is rule)."""
