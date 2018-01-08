@@ -1059,30 +1059,51 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">relation</span><span class="p">[</span><span class="n">right</span><span class="p">]</span><span class="o">.</span><span class="n">update</span><span class="p">({</span><span class="n">left</span><span class="p">:</span> <span class="n">rel_ba_obj</span><span class="p">})</span>
         <span class="k">return</span></div>
 
-<div class="viewcode-block" id="Hierarchy.remove_graph"><a class="viewcode-back" href="../../hierarchy.html#regraph.hierarchy.Hierarchy.remove_graph">[docs]</a>    <span class="k">def</span> <span class="nf">remove_graph</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">graph_id</span><span class="p">,</span> <span class="n">reconnect</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Remove graph from the hierarchy.</span>
+<div class="viewcode-block" id="Hierarchy.remove_node"><a class="viewcode-back" href="../../hierarchy.html#regraph.hierarchy.Hierarchy.remove_node">[docs]</a>    <span class="k">def</span> <span class="nf">remove_node</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node_id</span><span class="p">,</span> <span class="n">reconnect</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Remove node from the hierarchy.</span>
 
-<span class="sd">        If `reconnect`, map the children homomorphisms</span>
-<span class="sd">        of this graph to its parents.</span>
+<span class="sd">        Removes a node from the hierarchy, if the `reconnect`</span>
+<span class="sd">        parameter is set to True, adds typing from the</span>
+<span class="sd">        predecessors of the removed node to all its successors,</span>
+<span class="sd">        by composing the homomorphisms (for every predecessor `p`</span>
+<span class="sd">        and for every successor &#39;s&#39; composes two homomorphisms</span>
+<span class="sd">        `p`-&gt;`node_id` and `node_id`-&gt;`s`, then removes `node_id` and</span>
+<span class="sd">        all its incident edges, by which makes node&#39;s</span>
+<span class="sd">        removal a procedure of &#39;forgetting&#39; one level</span>
+<span class="sd">        of &#39;abstraction&#39;).</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        node_id</span>
+<span class="sd">            Id of a node to remove</span>
+<span class="sd">        reconnect : bool</span>
+<span class="sd">            Reconnect the descendants of the removed node to</span>
+<span class="sd">            its predecessors</span>
+
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        HierarchyError</span>
+<span class="sd">            If node with `node_id` is not defined in the hierarchy</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="n">graph_id</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
+        <span class="k">if</span> <span class="n">node_id</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
             <span class="k">raise</span> <span class="n">HierarchyError</span><span class="p">(</span>
-                <span class="s2">&quot;Graph `</span><span class="si">%s</span><span class="s2">` is not defined in the hierarchy!&quot;</span> <span class="o">%</span> <span class="n">graph_id</span><span class="p">)</span>
+                <span class="s2">&quot;Node `</span><span class="si">%s</span><span class="s2">` is not defined in the hierarchy!&quot;</span> <span class="o">%</span> <span class="n">node_id</span><span class="p">)</span>
 
         <span class="k">if</span> <span class="n">reconnect</span><span class="p">:</span>
-            <span class="n">out_graphs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">successors</span><span class="p">(</span><span class="n">graph_id</span><span class="p">)</span>
-            <span class="n">in_graphs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">predecessors</span><span class="p">(</span><span class="n">graph_id</span><span class="p">)</span>
+            <span class="n">out_graphs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">successors</span><span class="p">(</span><span class="n">node_id</span><span class="p">)</span>
+            <span class="n">in_graphs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">predecessors</span><span class="p">(</span><span class="n">node_id</span><span class="p">)</span>
 
             <span class="k">for</span> <span class="n">source</span> <span class="ow">in</span> <span class="n">in_graphs</span><span class="p">:</span>
                 <span class="k">for</span> <span class="n">target</span> <span class="ow">in</span> <span class="n">out_graphs</span><span class="p">:</span>
-                    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">edge</span><span class="p">[</span><span class="n">source</span><span class="p">][</span><span class="n">graph_id</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">rule_typing_cls</span><span class="p">):</span>
+                    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">edge</span><span class="p">[</span><span class="n">source</span><span class="p">][</span><span class="n">node_id</span><span class="p">],</span>
+                                  <span class="bp">self</span><span class="o">.</span><span class="n">rule_typing_cls</span><span class="p">):</span>
                         <span class="n">lhs_mapping</span> <span class="o">=</span> <span class="n">compose</span><span class="p">(</span>
-                            <span class="bp">self</span><span class="o">.</span><span class="n">edge</span><span class="p">[</span><span class="n">source</span><span class="p">][</span><span class="n">graph_id</span><span class="p">]</span><span class="o">.</span><span class="n">lhs_mapping</span><span class="p">,</span>
-                            <span class="bp">self</span><span class="o">.</span><span class="n">edge</span><span class="p">[</span><span class="n">graph_id</span><span class="p">][</span><span class="n">target</span><span class="p">]</span><span class="o">.</span><span class="n">mapping</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">edge</span><span class="p">[</span><span class="n">source</span><span class="p">][</span><span class="n">node_id</span><span class="p">]</span><span class="o">.</span><span class="n">lhs_mapping</span><span class="p">,</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">edge</span><span class="p">[</span><span class="n">node_id</span><span class="p">][</span><span class="n">target</span><span class="p">]</span><span class="o">.</span><span class="n">mapping</span>
                         <span class="p">)</span>
                         <span class="n">rhs_mapping</span> <span class="o">=</span> <span class="n">compose</span><span class="p">(</span>
-                            <span class="bp">self</span><span class="o">.</span><span class="n">edge</span><span class="p">[</span><span class="n">source</span><span class="p">][</span><span class="n">graph_id</span><span class="p">]</span><span class="o">.</span><span class="n">rhs_mapping</span><span class="p">,</span>
-                            <span class="bp">self</span><span class="o">.</span><span class="n">edge</span><span class="p">[</span><span class="n">graph_id</span><span class="p">][</span><span class="n">target</span><span class="p">]</span><span class="o">.</span><span class="n">mapping</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">edge</span><span class="p">[</span><span class="n">source</span><span class="p">][</span><span class="n">node_id</span><span class="p">]</span><span class="o">.</span><span class="n">rhs_mapping</span><span class="p">,</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">edge</span><span class="p">[</span><span class="n">node_id</span><span class="p">][</span><span class="n">target</span><span class="p">]</span><span class="o">.</span><span class="n">mapping</span>
                         <span class="p">)</span>
                         <span class="k">if</span> <span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="n">target</span><span class="p">)</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">edges</span><span class="p">():</span>
                             <span class="bp">self</span><span class="o">.</span><span class="n">add_rule_typing</span><span class="p">(</span>
@@ -1090,16 +1111,17 @@
                                 <span class="n">target</span><span class="p">,</span>
                                 <span class="n">lhs_mapping</span><span class="p">,</span>
                                 <span class="n">rhs_mapping</span><span class="p">,</span>
-                                <span class="bp">self</span><span class="o">.</span><span class="n">edge</span><span class="p">[</span><span class="n">source</span><span class="p">][</span><span class="n">graph_id</span><span class="p">]</span><span class="o">.</span><span class="n">lhs_total</span> <span class="ow">and</span>
-                                <span class="bp">self</span><span class="o">.</span><span class="n">edge</span><span class="p">[</span><span class="n">graph_id</span><span class="p">][</span><span class="n">target</span><span class="p">]</span><span class="o">.</span><span class="n">lhs_total</span><span class="p">,</span>
-                                <span class="bp">self</span><span class="o">.</span><span class="n">edge</span><span class="p">[</span><span class="n">source</span><span class="p">][</span><span class="n">graph_id</span><span class="p">]</span><span class="o">.</span><span class="n">rhs_total</span> <span class="ow">and</span>
-                                <span class="bp">self</span><span class="o">.</span><span class="n">edge</span><span class="p">[</span><span class="n">graph_id</span><span class="p">][</span><span class="n">target</span><span class="p">]</span><span class="o">.</span><span class="n">rhs_total</span>
+                                <span class="bp">self</span><span class="o">.</span><span class="n">edge</span><span class="p">[</span><span class="n">source</span><span class="p">][</span><span class="n">node_id</span><span class="p">]</span><span class="o">.</span><span class="n">lhs_total</span> <span class="ow">and</span>
+                                <span class="bp">self</span><span class="o">.</span><span class="n">edge</span><span class="p">[</span><span class="n">node_id</span><span class="p">][</span><span class="n">target</span><span class="p">]</span><span class="o">.</span><span class="n">lhs_total</span><span class="p">,</span>
+                                <span class="bp">self</span><span class="o">.</span><span class="n">edge</span><span class="p">[</span><span class="n">source</span><span class="p">][</span><span class="n">node_id</span><span class="p">]</span><span class="o">.</span><span class="n">rhs_total</span> <span class="ow">and</span>
+                                <span class="bp">self</span><span class="o">.</span><span class="n">edge</span><span class="p">[</span><span class="n">node_id</span><span class="p">][</span><span class="n">target</span><span class="p">]</span><span class="o">.</span><span class="n">rhs_total</span>
                             <span class="p">)</span>
-                    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">edge</span><span class="p">[</span><span class="n">source</span><span class="p">][</span><span class="n">graph_id</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph_typing_cls</span><span class="p">):</span>
+                    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">edge</span><span class="p">[</span><span class="n">source</span><span class="p">][</span><span class="n">node_id</span><span class="p">],</span>
+                                    <span class="bp">self</span><span class="o">.</span><span class="n">graph_typing_cls</span><span class="p">):</span>
                         <span class="c1"># compose two homomorphisms</span>
                         <span class="n">mapping</span> <span class="o">=</span> <span class="n">compose</span><span class="p">(</span>
-                            <span class="bp">self</span><span class="o">.</span><span class="n">edge</span><span class="p">[</span><span class="n">source</span><span class="p">][</span><span class="n">graph_id</span><span class="p">]</span><span class="o">.</span><span class="n">mapping</span><span class="p">,</span>
-                            <span class="bp">self</span><span class="o">.</span><span class="n">edge</span><span class="p">[</span><span class="n">graph_id</span><span class="p">][</span><span class="n">target</span><span class="p">]</span><span class="o">.</span><span class="n">mapping</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">edge</span><span class="p">[</span><span class="n">source</span><span class="p">][</span><span class="n">node_id</span><span class="p">]</span><span class="o">.</span><span class="n">mapping</span><span class="p">,</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">edge</span><span class="p">[</span><span class="n">node_id</span><span class="p">][</span><span class="n">target</span><span class="p">]</span><span class="o">.</span><span class="n">mapping</span>
                         <span class="p">)</span>
 
                         <span class="k">if</span> <span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="n">target</span><span class="p">)</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">edges</span><span class="p">():</span>
@@ -1107,24 +1129,18 @@
                                 <span class="n">source</span><span class="p">,</span>
                                 <span class="n">target</span><span class="p">,</span>
                                 <span class="n">mapping</span><span class="p">,</span>
-                                <span class="bp">self</span><span class="o">.</span><span class="n">edge</span><span class="p">[</span><span class="n">source</span><span class="p">][</span><span class="n">graph_id</span><span class="p">]</span><span class="o">.</span><span class="n">total</span> <span class="ow">and</span>
-                                <span class="bp">self</span><span class="o">.</span><span class="n">edge</span><span class="p">[</span><span class="n">graph_id</span><span class="p">][</span><span class="n">target</span><span class="p">]</span><span class="o">.</span><span class="n">total</span>
+                                <span class="bp">self</span><span class="o">.</span><span class="n">edge</span><span class="p">[</span><span class="n">source</span><span class="p">][</span><span class="n">node_id</span><span class="p">]</span><span class="o">.</span><span class="n">total</span> <span class="ow">and</span>
+                                <span class="bp">self</span><span class="o">.</span><span class="n">edge</span><span class="p">[</span><span class="n">node_id</span><span class="p">][</span><span class="n">target</span><span class="p">]</span><span class="o">.</span><span class="n">total</span>
                             <span class="p">)</span>
 
-        <span class="bp">self</span><span class="o">.</span><span class="n">remove_node</span><span class="p">(</span><span class="n">graph_id</span><span class="p">)</span></div>
+        <span class="n">nx</span><span class="o">.</span><span class="n">DiGraph</span><span class="o">.</span><span class="n">remove_node</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node_id</span><span class="p">)</span>
 
-<div class="viewcode-block" id="Hierarchy.remove_node"><a class="viewcode-back" href="../../hierarchy.html#regraph.hierarchy.Hierarchy.remove_node">[docs]</a>    <span class="k">def</span> <span class="nf">remove_node</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Overloading NetworkX method `remove_node`.</span>
-
-<span class="sd">        This overloading is provided to maintain</span>
-<span class="sd">        consistency in relations.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">nx</span><span class="o">.</span><span class="n">DiGraph</span><span class="o">.</span><span class="n">remove_node</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n</span><span class="p">)</span>
-        <span class="k">if</span> <span class="n">n</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">relation</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
-            <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">relation</span><span class="p">[</span><span class="n">n</span><span class="p">]</span>
+        <span class="c1"># Update dicts representing relations</span>
+        <span class="k">if</span> <span class="n">node_id</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">relation</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+            <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">relation</span><span class="p">[</span><span class="n">node_id</span><span class="p">]</span>
         <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">relation</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-            <span class="k">if</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">v</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
-                <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">relation</span><span class="p">[</span><span class="n">k</span><span class="p">][</span><span class="n">n</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">node_id</span> <span class="ow">in</span> <span class="n">v</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">relation</span><span class="p">[</span><span class="n">k</span><span class="p">][</span><span class="n">node_id</span><span class="p">]</span>
         <span class="k">return</span></div>
 
 <div class="viewcode-block" id="Hierarchy.add_cycle"><a class="viewcode-back" href="../../hierarchy.html#regraph.hierarchy.Hierarchy.add_cycle">[docs]</a>    <span class="k">def</span> <span class="nf">add_cycle</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">nodes</span><span class="p">,</span> <span class="o">**</span><span class="n">attr</span><span class="p">):</span>
@@ -1149,28 +1165,47 @@
                 <span class="s2">&quot;Node &#39;</span><span class="si">%s</span><span class="s2">&#39; is not defined in the hierarchy!&quot;</span> <span class="o">%</span> <span class="n">g</span><span class="p">)</span>
         <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">relation</span><span class="p">[</span><span class="n">g</span><span class="p">]</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span></div>
 
-<div class="viewcode-block" id="Hierarchy.relation_to_span"><a class="viewcode-back" href="../../hierarchy.html#regraph.hierarchy.Hierarchy.relation_to_span">[docs]</a>    <span class="k">def</span> <span class="nf">relation_to_span</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">g1</span><span class="p">,</span> <span class="n">g2</span><span class="p">,</span> <span class="n">edges</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">attrs</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Convert relation to a span.&quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="n">g1</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
-            <span class="k">raise</span> <span class="n">HierarchyError</span><span class="p">(</span>
-                <span class="s2">&quot;Node &#39;</span><span class="si">%s</span><span class="s2">&#39; is not defined in the hierarchy!&quot;</span> <span class="o">%</span> <span class="n">g1</span><span class="p">)</span>
-        <span class="k">if</span> <span class="n">g2</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
-            <span class="k">raise</span> <span class="n">HierarchyError</span><span class="p">(</span>
-                <span class="s2">&quot;Node &#39;</span><span class="si">%s</span><span class="s2">&#39; is not defined in the hierarchy!&quot;</span> <span class="o">%</span> <span class="n">g2</span><span class="p">)</span>
+<div class="viewcode-block" id="Hierarchy.relation_to_span"><a class="viewcode-back" href="../../hierarchy.html#regraph.hierarchy.Hierarchy.relation_to_span">[docs]</a>    <span class="k">def</span> <span class="nf">relation_to_span</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">left</span><span class="p">,</span> <span class="n">right</span><span class="p">,</span> <span class="n">edges</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">attrs</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Convert relation to a span.</span>
 
-        <span class="k">if</span> <span class="p">(</span><span class="n">g1</span><span class="p">,</span> <span class="n">g2</span><span class="p">)</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">relations</span><span class="p">()</span> <span class="ow">and</span>\
-           <span class="p">(</span><span class="n">g2</span><span class="p">,</span> <span class="n">g1</span><span class="p">)</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">relations</span><span class="p">():</span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        left</span>
+<span class="sd">        right</span>
+<span class="sd">        edges</span>
+<span class="sd">        attrs</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        new_graph : nx.(Di)Graph</span>
+<span class="sd">        left_h : dict</span>
+<span class="sd">        right_h : dict</span>
+
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        HierarchyError</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">left</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
+            <span class="k">raise</span> <span class="n">HierarchyError</span><span class="p">(</span>
+                <span class="s2">&quot;Node &#39;</span><span class="si">%s</span><span class="s2">&#39; is not defined in the hierarchy!&quot;</span> <span class="o">%</span> <span class="n">left</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">right</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
+            <span class="k">raise</span> <span class="n">HierarchyError</span><span class="p">(</span>
+                <span class="s2">&quot;Node &#39;</span><span class="si">%s</span><span class="s2">&#39; is not defined in the hierarchy!&quot;</span> <span class="o">%</span> <span class="n">right</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="p">(</span><span class="n">left</span><span class="p">,</span> <span class="n">right</span><span class="p">)</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">relations</span><span class="p">()</span> <span class="ow">and</span>\
+           <span class="p">(</span><span class="n">right</span><span class="p">,</span> <span class="n">left</span><span class="p">)</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">relations</span><span class="p">():</span>
             <span class="k">raise</span> <span class="n">HierarchyError</span><span class="p">(</span>
                 <span class="s2">&quot;Relation between graphs &#39;</span><span class="si">%s</span><span class="s2">&#39; and &#39;</span><span class="si">%s</span><span class="s2">&#39; is not defined&quot;</span> <span class="o">%</span>
-                <span class="p">(</span><span class="n">g1</span><span class="p">,</span> <span class="n">g2</span><span class="p">)</span>
+                <span class="p">(</span><span class="n">left</span><span class="p">,</span> <span class="n">right</span><span class="p">)</span>
             <span class="p">)</span>
-        <span class="k">return</span> <span class="n">relation_to_span</span><span class="p">(</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">g1</span><span class="p">]</span><span class="o">.</span><span class="n">graph</span><span class="p">,</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">g2</span><span class="p">]</span><span class="o">.</span><span class="n">graph</span><span class="p">,</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">relation</span><span class="p">[</span><span class="n">g1</span><span class="p">][</span><span class="n">g2</span><span class="p">]</span><span class="o">.</span><span class="n">rel</span><span class="p">,</span>
+        <span class="n">new_graph</span><span class="p">,</span> <span class="n">left_h</span><span class="p">,</span> <span class="n">right_h</span> <span class="o">=</span> <span class="n">relation_to_span</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">left</span><span class="p">]</span><span class="o">.</span><span class="n">graph</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">right</span><span class="p">]</span><span class="o">.</span><span class="n">graph</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">relation</span><span class="p">[</span><span class="n">left</span><span class="p">][</span><span class="n">right</span><span class="p">]</span><span class="o">.</span><span class="n">rel</span><span class="p">,</span>
             <span class="n">edges</span><span class="p">,</span>
             <span class="n">attrs</span><span class="p">,</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">directed</span><span class="p">)</span></div>
+            <span class="bp">self</span><span class="o">.</span><span class="n">directed</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">new_graph</span><span class="p">,</span> <span class="n">left_h</span><span class="p">,</span> <span class="n">right_h</span></div>
 
 <div class="viewcode-block" id="Hierarchy.node_type"><a class="viewcode-back" href="../../hierarchy.html#regraph.hierarchy.Hierarchy.node_type">[docs]</a>    <span class="k">def</span> <span class="nf">node_type</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">graph_id</span><span class="p">,</span> <span class="n">node_id</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Get a list of the immediate types of a node.&quot;&quot;&quot;</span>

@@ -35,6 +35,10 @@ Hierarchy
 Hierarchy creation
 ^^^^^^^^^^^^^^^^^^
 
+>>> from regraph.hierarchy import Hierarchy
+>>> hierarchy = Hierarchy()
+
+
 .. _rewriting_in_hierarchy:
 
 ^^^^^^^^^^^^^^^^^^^^^^^^^^

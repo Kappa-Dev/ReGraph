@@ -73,7 +73,7 @@ Define nodes and edges (possibly equipped with attributes), then add them to the
 using ReGraph primitives `regraph.primitives.add_nodes_from` and
 `regraph.primitives.add_edges_from`.::
 
-    from regraph import primitives
+    import regraph as rg
 
     nodes = [
         (1, {"name": "alice", "color": "blue"}),
@@ -84,37 +84,37 @@ using ReGraph primitives `regraph.primitives.add_nodes_from` and
         (1, 2),
         (3, 2, {"friends": False})
     ]
-    primitives.add_nodes_from(graph, nodes)
-    primitives.add_edges_from(graph, edges)
+    rg.add_nodes_from(graph, nodes)
+    rg.add_edges_from(graph, edges)
 
 We can plot this graph:
 
->>> from regraph.plotting import plot_graph
->>> plot_graph(graph)
+>>> rg.plot_graph(graph)
 
 .. image:: _static/graph1.png
 
 Add attributes to the the nodes/edges of the graph:
 
->>> primitives.add_node_attrs(graph, 1, {"age": 20})
+>>> rg.add_node_attrs(graph, 1, {"age": 20})
 >>> graph.node[1]
 {"name": {"alice"}, "color": {"blue"}, {"age": {20}}}
->>> primitives.add_edge_attrs(graph, 1, 2, {"friends": True})
+>>> rg.add_edge_attrs(graph, 1, 2, {"friends": True})
 >>> graph.edge[1][2]
 {"friends": {True}}
 
 Remove attributes from the nodes/edges of the graph:
 
->>> primitives.remove_node_attrs(graph, 3, {"color": "red"})
+>>> rg.remove_node_attrs(graph, 3, {"color": "red"})
 >>> graph.node[3]
 {"name": {"john"}}
->>> primitives.remove_edge_attrs(graph, 3, 2, {"friends": False})
+>>> rg.remove_edge_attrs(graph, 3, 2, {"friends": False})
 >>> graph.edge[3][2]
 {}
 
 Clone a node of the graph:
 
->>> primitives.clone_node(graph, 2, "2_clone")
+>>> rg.clone_node(graph, 2, "2_clone")
+'2_clone'
 >>> graph.nodes()
 [1, 2, "2_clone", 3]
 >>> graph.edges()
@@ -127,7 +127,7 @@ all the nodes adjacent to the original node become connected to the clone as wel
 
 Merge two nodes of the graph.
 
->>> primitives.merge_nodes(graph, [1, 3])
+>>> rg.merge_nodes(graph, [1, 3])
 >>> graph.nodes()
 ["1_3", 2, "2_clone"]
 >>> graph.edges()
@@ -148,7 +148,7 @@ are merged.
 
 Dump your graph object to its JSON representation (Python dict):
 
->>> json_data = primitives.graph_to_json(graph)
+>>> json_data = rg.graph_to_json(graph)
 >>> json_data.keys()
 dict_keys(["nodes", "edges"])
 >>> json_data["nodes"]
@@ -232,22 +232,22 @@ For more details on attribute sets see the next section :ref:`advanced_attribute
 Consider the following pattern graph:
 
 >>> pattern = nx.DiGraph()
->>> primitives.add_nodes_from(pattern, ["x", "y"])
->>> primitives.add_edges_from(pattern, [("x", "y", {"friends": True})])
+>>> rg.add_nodes_from(pattern, ["x", "y"])
+>>> rg.add_edges_from(pattern, [("x", "y", {"friends": True})])
 
 Find all the instances of `pattern` in the graph:
 
->>> instances = primitives.find_matching(graph, pattern)
+>>> instances = rg.find_matching(graph, pattern)
 >>> instances
 [{"x": "1_3", "y": 2}, {"x": "1_3", "y": "2_clone"}]
 
 Now, let us remove the attributes ``{"friends": True}`` from the edge from "1_3" to 2:
 
->>> primitives.remove_edge_attrs(graph, "1_3", 2, {"friends": {True}})
+>>> rg.remove_edge_attrs(graph, "1_3", 2, {"friends": {True}})
 
 Then, find again all the instances of `pattern` in the graph:
 
->>> instances = primitives.find_matching(graph, pattern)
+>>> instances = rg.find_matching(graph, pattern)
 >>> instances
 [{"x": "1_3", "y": "2_clone"}]
 
@@ -458,8 +458,9 @@ The following examples will hopefully illustrate the idea behind the sesqui-push
 Create a rewriting rule: 
 ::
 
-    from regraph.rules import Rule
-    from regraph.plotting import plot_rule
+    from regraph import Rule
+    from regraph import plot_rule
+    from regraph import primitives
 
 
     # Define the left-hand side of the rule
