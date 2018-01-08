@@ -28,7 +28,14 @@ If you missed the part of the ReGraph tutorial about primitive graph transformat
 ---------
 Hierarchy
 ---------
-    
+
+A graph hierarchy is a directed acyclic graph, where nodes are graphs with attributes and edges are
+homomorphisms representing graph typing in the system. This construction provides means
+for mathematically robust procedures of propagation of changes (expressed through graph rewriting
+rules) on any level of the hierarchy, up to all the graphs which are transitively typed by the graph
+subject to rewriting. In the following section we give a simple example of such hierarchy and its
+functionality implemented in ReGraph.
+
 .. _hierarchy_creation:
 
 ^^^^^^^^^^^^^^^^^^
@@ -74,11 +81,11 @@ Add graphs to the hierarchy as follows: ::
 
 >>> plot_graph(hierarchy.graph["T"])
 
-.. image:: _static/ex1_meta_meta_model.png
+.. image:: _images/ex1_meta_meta_model.png
 
 >>> plot_graph(hierarchy.graph["G"])
 
-.. image:: _static/ex1_meta_model.png
+.. image:: _images/ex1_meta_model.png
 
 
 Add graph typing (typing of `'G'` by `'T'`):
