@@ -35,7 +35,6 @@ TODO:
 
 * `RuleRelation`
 """
-import time
 import copy
 import itertools
 import json
@@ -319,7 +318,7 @@ class RuleTyping(AttributeContainter):
 
 
 class Relation(AttributeContainter):
-    """Base class for relations equipped with attrs."""
+    """Base class for relations equipped with attributes."""
 
 
 class GraphRelation(Relation):
@@ -369,7 +368,17 @@ class GraphRelation(Relation):
 class Hierarchy(nx.DiGraph, AttributeContainter):
     """Class implementing graph hierarchy.
 
-    Base on `networkx.DiGraph`, acyclic, all paths commute
+    A graph hierarchy is a DAG, where nodes are graphs with attributes and
+    edges are homomorphisms representing graph typing in the system.
+    This construction provides means for mathematically robust
+    procedures ofpropagation of changes (expressed through
+    graph rewriting rules) on any level of the hierarchy,
+    up to all the graphs which are transitively typed by the graph
+    subject to rewriting.
+
+    This class inherits the `networkx.DiGraph` class, and ensures that
+    at any time the hierarchy graph is acyclic, and all paths from the same
+    source to the same target commute.
 
     Examples
     --------
@@ -447,7 +456,7 @@ class Hierarchy(nx.DiGraph, AttributeContainter):
         return
 
     def __str__(self):
-        """Print the hierarchy."""
+        """String representation of the hierarchy."""
         res = ""
         res += "\nGraphs (directed == %s): \n" % self.directed
         res += "\nNodes:\n"
@@ -468,22 +477,18 @@ class Hierarchy(nx.DiGraph, AttributeContainter):
         for n1, n2 in self.edges():
             if isinstance(self.edge[n1][n2], self.graph_typing_cls):
                 res += "%s -> %s: total == %s\n" %\
-                    (
-                        n1, n2, self.edge[n1][n2].total
-                    )
-                # res += "mapping: %s\n" % str(self.edge[n1][n2].mapping)
+                    (n1, n2, self.edge[n1][n2].total)
+
             elif isinstance(self.edge[n1][n2], self.rule_typing_cls):
                 res +=\
                     ("%s -> %s: lhs_total == %s, rhs_total == %s,") %\
-                    (
-                        n1, n2, self.edge[n1][n2].lhs_total,
-                        self.edge[n1][n2].rhs_total
-                    )
+                    (n1, n2, self.edge[n1][n2].lhs_total,
+                     self.edge[n1][n2].rhs_total)
             else:
                 raise HierarchyError(
                     "Hierarchy error: unknown type '%s' of the edge '%s->%s'!" %
-                    (type(self.edge[n1][n2]), n1, n2)
-                )
+                    (type(self.edge[n1][n2]), n1, n2))
+
         res += "\nRelations:\n"
         for n1, n2 in self.relations():
             res += "%s-%s: %s\n" % (n1, n2, str(self.relation[n1][n2].attrs))
@@ -496,7 +501,7 @@ class Hierarchy(nx.DiGraph, AttributeContainter):
         return res
 
     def __eq__(self, hie):
-        """Equality test."""
+        """Hierarchy equality test."""
         g1 = self.to_nx_graph()
         g2 = hie.to_nx_graph()
         if not equal(g1, g2):
@@ -577,12 +582,20 @@ class Hierarchy(nx.DiGraph, AttributeContainter):
         Parameters
         ----------
         graph_id : hashable
-        graph : nx.(Di)Graph object
+            Id of a new node in the hierarchy
+        graph : nx.(Di)Graph
+            Graph object corresponding to the new node of
+            the hierarchy
         graph_attrs : dict
+            Dictionary containing attributes of the new node
 
         Raises
         ------
         HierarchyError
+            If the graph object is directed/undirected while the
+            hierarchy's parameter `directed` is False/True
+            (the hierarchy accommodates undirected/directed graphs);
+            if node with provided id already exists in the hierarchy
 
         """
         if self.directed != graph.is_directed():
@@ -611,7 +624,28 @@ class Hierarchy(nx.DiGraph, AttributeContainter):
         return
 
     def add_rule(self, rule_id, rule, rule_attrs=None):
-        """Add rule to the hierarchy."""
+        """Add rule to the hierarchy.
+
+        Parameters
+        ----------
+        rule_id : hashable
+            Id of a new node in the hierarchy
+        rule : regraph.rules.Rule
+            Rule object corresponding to the new node of
+            the hierarchy
+        rule_attrs : dict
+            Dictionary containing attributes of the new node
+
+        Raises
+        ------
+        HierarchyError
+            If the rule object is defined for directed/undirected
+            graphs while the hierarchy's parameter `directed` is
+            False/True (the hierarchy accommodates undirected/directed
+            graphs) or if node with provided id already exists
+            in the hierarchy
+
+        """
         if self.directed != rule.lhs.is_directed():
             raise HierarchyError(
                 "Hierarchy is defined for directed == %s graphs: " +
@@ -648,7 +682,40 @@ class Hierarchy(nx.DiGraph, AttributeContainter):
 
     def add_typing(self, source, target, mapping,
                    total=True, attrs=None):
-        """Add homomorphism to the hierarchy."""
+        """Add homomorphism to the hierarchy.
+
+        Parameters
+        ----------
+        source
+            Id of a source graph node of typing
+        target
+            Id of a target graph node of typing
+        mapping : dict
+            Dictionary representing a mapping of nodes
+            from the source graph to target's nodes
+        total : bool
+            True if typing is total, False otherwise
+        attrs : dict
+            Dictionary containing attributes of the new
+            typing edge
+
+        Raises
+        ------
+        HierarchyError
+            This error is raised in the following cases:
+
+                * source or target ids are not found in the hierarchy
+                * a typing edge between source and target already exists
+                * a source node is not a graph
+                * addition of an edge between source and target creates
+                a cycle or produces paths that do not commute with
+                some already existing paths
+
+        InvalidHomomorphism
+            If a homomorphisms from a graph at the source to a graph at
+            the target given by `mapping` is not a valid homomorphism.
+
+        """
         if source not in self.nodes():
             raise HierarchyError(
                 "Node '%s' is not defined in the hierarchy!" % source)
@@ -712,7 +779,43 @@ class Hierarchy(nx.DiGraph, AttributeContainter):
                         rhs_mapping=None,
                         lhs_total=False, rhs_total=False,
                         attrs=None):
-        """Add typing of a rule."""
+        """Add typing of a rule.
+
+        source
+            Id of a rule node to type
+        target
+            Id of a target graph node of typing
+        lhs_mapping : dict
+            Dictionary representing a mapping of nodes
+            from the left-hand side of the rule to target's nodes
+        rhs_mapping : dict
+            Dictionary representing a mapping of nodes
+            from the right-hand side of the rule to target's nodes
+        lhs_total : bool
+            True if left-hand side typing is total, False otherwise
+        rhs_total : bool
+            True if right-hand side typing is total, False otherwise
+        attrs : dict
+            Dictionary containing attributes of the new
+            typing edge
+
+        Raises
+        ------
+        HierarchyError
+            This error is raised in the following cases:
+
+                * source or target ids are not found in the hierarchy
+                * a typing edge between source and target already exists
+                * a source node is not a rule
+                * a target node is not a graph
+                * addition of an edge produces paths that do not commute with
+                some already existing paths
+
+        InvalidHomomorphism
+            If a homomorphisms from the left(right)-hand side to a graph at
+            the target given by `lhs(rhs)_mapping` is not a valid homomorphism.
+
+        """
         if rule_id not in self.nodes():
             raise HierarchyError(
                 "Node '%s' is not defined in the hierarchy!" % rule_id)
@@ -791,31 +894,80 @@ class Hierarchy(nx.DiGraph, AttributeContainter):
             self.edge[rule_id][graph_id].rhs_mapping
         return
 
-    def add_relation(self, g1, g2, relation, attrs=None):
-        """Add relation to the hierarchy."""
-        if g1 not in self.nodes():
-            raise HierarchyError(
-                "Node '%s' is not defined in the hierarchy!" % g1)
-        if g2 not in self.nodes():
-            raise HierarchyError(
-                "Node '%s' is not defined in the hierarchy!" % g2)
+    def add_relation(self, left, right, relation, attrs=None):
+        """Add relation to the hierarchy.
 
-        if not isinstance(self.node[g1], GraphNode):
+        This method adds a relation between two graphs in
+        the hierarchy corresponding to the nodes with ids
+        `left` and `right`, the relation itself is defined
+        by a dictionary `relation`, where a key is a node in
+        the `left` graph and its corresponding value is a set
+        of nodes from the `right` graph to which the node is
+        related. Relations in the hierarchy are symmetric
+        (see example below).
+
+        Parameters
+        ----------
+        left
+            Id of the hierarchy's node represening the `left` graph
+        right
+            Id of the hierarchy's node represening the `right` graph
+        relation : dict
+            Dictionary representing a relation of nodes from `left`
+            to the nodes from `right`, a key of the dictionary is
+            assumed to be a node from `left` and its value a set
+            of ids of related nodes from `right`
+        attrs : dict
+            Dictionary containing attributes of the new relation
+
+        Raises
+        ------
+        HierarchyError
+            This error is raised in the following cases:
+
+                * node with id `left`/`right` is not defined in the hierarchy;
+                * node with id `left`/`right` is not a graph;
+                * a relation between `left` and `right` already exists;
+                * some node ids specified in `relation` are not found in the
+                `left`\`right` graph.
+
+        Examples
+        --------
+        >>> hierarchy = Hierarchy()
+        >>> g1 = nx.DiGraph([("a", "b"), ("a", "a")])
+        >>> g2 = nx.DiGraph([(1, 2), (2, 3)])
+        >>> hierarchy.add_graph("G1", g1)
+        >>> hierarchy.add_graph("G2", g2)
+        >>> hierarchy.add_relation("G1", "G2", {"a": {1, 2}, "b": 3})
+        >>> hierarchy.relation["G1"]["G2"].rel
+        {'a': {1, 2}, 'b': {3}}
+        >>> hierarchy.relation["G2"]["G1"].rel
+        {1: {'a'}, 2: {'a'}, 3: {'b'}}
+
+        """
+        if left not in self.nodes():
+            raise HierarchyError(
+                "Node '%s' is not defined in the hierarchy!" % left)
+        if right not in self.nodes():
+            raise HierarchyError(
+                "Node '%s' is not defined in the hierarchy!" % right)
+
+        if not isinstance(self.node[left], GraphNode):
             raise HierarchyError(
                 "Relation can be defined on graphs, '%s' is provided" %
-                type(self.node[g1])
+                type(self.node[left])
             )
-        if not isinstance(self.node[g2], GraphNode):
+        if not isinstance(self.node[right], GraphNode):
             raise HierarchyError(
                 "Relation can be defined on graphs, '%s' is provided" %
-                type(self.node[g2])
+                type(self.node[right])
             )
 
-        if (g1, g2) in self.relations():
+        if (left, right) in self.relations():
             raise HierarchyError(
                 "Relation '%s-%s' already exists in the hierarchy "
                 "multiple edges are not allowed!" %
-                (g1, g2)
+                (left, right)
             )
 
         # normalize relation dict
@@ -832,23 +984,23 @@ class Hierarchy(nx.DiGraph, AttributeContainter):
                         new_set.add(v)
                     new_relation_dict[key] = new_set
                 except TypeError:
-                    values = {values}
+                    new_relation_dict[key] = {values}
         relation = new_relation_dict
 
-        # check relation is well-defined on g1 and g2
+        # check relation is well-defined on left and right side
         for key, values in relation.items():
-            if key not in self.node[g1].graph.nodes():
+            if key not in self.node[left].graph.nodes():
                 raise HierarchyError(
                     "Relation is not valid: node '%s' does not "
                     "exist in a graph '%s'" %
-                    (key, g1)
+                    (key, left)
                 )
             for v in values:
-                if v not in self.node[g2].graph.nodes():
+                if v not in self.node[right].graph.nodes():
                     raise HierarchyError(
                         "Relation is not valid: node '%s' does not "
                         "exist in a graph '%s'" %
-                        (v, g2)
+                        (v, right)
                     )
 
         if attrs is not None:
@@ -861,34 +1013,55 @@ class Hierarchy(nx.DiGraph, AttributeContainter):
         right_relation = right_relation_dict(pairs)
         rel_ab_obj = GraphRelation(relation, attrs)
         rel_ba_obj = GraphRelation(right_relation, attrs)
-        self.relation[g1].update({g2: rel_ab_obj})
-        self.relation[g2].update({g1: rel_ba_obj})
+        self.relation[left].update({right: rel_ab_obj})
+        self.relation[right].update({left: rel_ba_obj})
         return
 
-    def remove_graph(self, graph_id, reconnect=False):
-        """Remove graph from the hierarchy.
+    def remove_node(self, node_id, reconnect=False):
+        """Remove node from the hierarchy.
 
-        If `reconnect`, map the children homomorphisms
-        of this graph to its parents.
+        Removes a node from the hierarchy, if the `reconnect`
+        parameter is set to True, adds typing from the
+        predecessors of the removed node to all its successors,
+        by composing the homomorphisms (for every predecessor `p`
+        and for every successor 's' composes two homomorphisms
+        `p`->`node_id` and `node_id`->`s`, then removes `node_id` and
+        all its incident edges, by which makes node's
+        removal a procedure of 'forgetting' one level
+        of 'abstraction').
+
+        Parameters
+        ----------
+        node_id
+            Id of a node to remove
+        reconnect : bool
+            Reconnect the descendants of the removed node to
+            its predecessors
+
+        Raises
+        ------
+        HierarchyError
+            If node with `node_id` is not defined in the hierarchy
         """
-        if graph_id not in self.nodes():
+        if node_id not in self.nodes():
             raise HierarchyError(
-                "Graph `%s` is not defined in the hierarchy!" % graph_id)
+                "Node `%s` is not defined in the hierarchy!" % node_id)
 
         if reconnect:
-            out_graphs = self.successors(graph_id)
-            in_graphs = self.predecessors(graph_id)
+            out_graphs = self.successors(node_id)
+            in_graphs = self.predecessors(node_id)
 
             for source in in_graphs:
                 for target in out_graphs:
-                    if isinstance(self.edge[source][graph_id], self.rule_typing_cls):
+                    if isinstance(self.edge[source][node_id],
+                                  self.rule_typing_cls):
                         lhs_mapping = compose(
-                            self.edge[source][graph_id].lhs_mapping,
-                            self.edge[graph_id][target].mapping
+                            self.edge[source][node_id].lhs_mapping,
+                            self.edge[node_id][target].mapping
                         )
                         rhs_mapping = compose(
-                            self.edge[source][graph_id].rhs_mapping,
-                            self.edge[graph_id][target].mapping
+                            self.edge[source][node_id].rhs_mapping,
+                            self.edge[node_id][target].mapping
                         )
                         if (source, target) not in self.edges():
                             self.add_rule_typing(
@@ -896,16 +1069,17 @@ class Hierarchy(nx.DiGraph, AttributeContainter):
                                 target,
                                 lhs_mapping,
                                 rhs_mapping,
-                                self.edge[source][graph_id].lhs_total and
-                                self.edge[graph_id][target].lhs_total,
-                                self.edge[source][graph_id].rhs_total and
-                                self.edge[graph_id][target].rhs_total
+                                self.edge[source][node_id].lhs_total and
+                                self.edge[node_id][target].lhs_total,
+                                self.edge[source][node_id].rhs_total and
+                                self.edge[node_id][target].rhs_total
                             )
-                    elif isinstance(self.edge[source][graph_id], self.graph_typing_cls):
+                    elif isinstance(self.edge[source][node_id],
+                                    self.graph_typing_cls):
                         # compose two homomorphisms
                         mapping = compose(
-                            self.edge[source][graph_id].mapping,
-                            self.edge[graph_id][target].mapping
+                            self.edge[source][node_id].mapping,
+                            self.edge[node_id][target].mapping
                         )
 
                         if (source, target) not in self.edges():
@@ -913,24 +1087,18 @@ class Hierarchy(nx.DiGraph, AttributeContainter):
                                 source,
                                 target,
                                 mapping,
-                                self.edge[source][graph_id].total and
-                                self.edge[graph_id][target].total
+                                self.edge[source][node_id].total and
+                                self.edge[node_id][target].total
                             )
 
-        self.remove_node(graph_id)
+        nx.DiGraph.remove_node(self, node_id)
 
-    def remove_node(self, n):
-        """Overloading NetworkX method `remove_node`.
-
-        This overloading is provided to maintain
-        consistency in relations.
-        """
-        nx.DiGraph.remove_node(self, n)
-        if n in self.relation.keys():
-            del self.relation[n]
+        # Update dicts representing relations
+        if node_id in self.relation.keys():
+            del self.relation[node_id]
         for k, v in self.relation.items():
-            if n in v.keys():
-                del self.relation[k][n]
+            if node_id in v.keys():
+                del self.relation[k][node_id]
         return
 
     def add_cycle(self, nodes, **attr):
@@ -955,28 +1123,47 @@ class Hierarchy(nx.DiGraph, AttributeContainter):
                 "Node '%s' is not defined in the hierarchy!" % g)
         return list(self.relation[g].keys())
 
-    def relation_to_span(self, g1, g2, edges=False, attrs=False):
-        """Convert relation to a span."""
-        if g1 not in self.nodes():
-            raise HierarchyError(
-                "Node '%s' is not defined in the hierarchy!" % g1)
-        if g2 not in self.nodes():
-            raise HierarchyError(
-                "Node '%s' is not defined in the hierarchy!" % g2)
+    def relation_to_span(self, left, right, edges=False, attrs=False):
+        """Convert relation to a span.
 
-        if (g1, g2) not in self.relations() and\
-           (g2, g1) not in self.relations():
+        Parameters
+        ----------
+        left
+        right
+        edges
+        attrs
+
+        Returns
+        -------
+        new_graph : nx.(Di)Graph
+        left_h : dict
+        right_h : dict
+
+        Raises
+        ------
+        HierarchyError
+        """
+        if left not in self.nodes():
+            raise HierarchyError(
+                "Node '%s' is not defined in the hierarchy!" % left)
+        if right not in self.nodes():
+            raise HierarchyError(
+                "Node '%s' is not defined in the hierarchy!" % right)
+
+        if (left, right) not in self.relations() and\
+           (right, left) not in self.relations():
             raise HierarchyError(
                 "Relation between graphs '%s' and '%s' is not defined" %
-                (g1, g2)
+                (left, right)
             )
-        return relation_to_span(
-            self.node[g1].graph,
-            self.node[g2].graph,
-            self.relation[g1][g2].rel,
+        new_graph, left_h, right_h = relation_to_span(
+            self.node[left].graph,
+            self.node[right].graph,
+            self.relation[left][right].rel,
             edges,
             attrs,
             self.directed)
+        return new_graph, left_h, right_h
 
     def node_type(self, graph_id, node_id):
         """Get a list of the immediate types of a node."""

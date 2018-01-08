@@ -1,3 +1,4 @@
+"""Collection of utils for plotting various regraph objects."""
 import copy
 
 import networkx as nx
@@ -47,12 +48,35 @@ def _set_limits(nodes, labels, margin=0.1):
     return
 
 
-def plot_graph(graph, types=True, filename=None, parent_pos=None):
-    """Plot graph with node colors corresponding to types."""
-    # if types:
-    #     color_list = colors_by_type(graph)
-    # else:
-    #     color_list = None
+def plot_graph(graph, filename=None, parent_pos=None):
+    """Plot networkx graph.
+
+    If `filename` is specified, saves the plot into the file,
+    otherwise invokes `matplotlib.pylab.show` function
+    (shows the plot). In addition, this function allows to
+    specify user defined position for some subset of
+    graphs nodes (with `parent_pos` parameter), nodes
+    whose positioning is not specified in `parent_pos` are
+    placed using `nx.spring_layout` function.
+
+    Parameters
+    ----------
+    graph : nx.(Di)Graph
+        Graph object to plot
+    filename : str, optional
+        Path to file to save the plot
+    parent_pos : dict
+        Dictionary containing positioning of a subset of nodes of
+        the graph, keys are node ids and values are pairs of x/y
+        coordinates
+
+    Returns
+    -------
+    pos : dict
+        Dictionary containing positioning of all nodes of
+        the graph, keys are node ids and values are pairs of x/y
+        coordinates
+    """
     if not parent_pos:
         pos = nx.spring_layout(graph)
     else:
@@ -64,15 +88,13 @@ def plot_graph(graph, types=True, filename=None, parent_pos=None):
 
     nx.draw_networkx_nodes(graph, pos,
                            node_color='green',
-                           # node_color=color_list,
                            node_size=100, arrows=True)
     nx.draw_networkx_edges(graph, pos, alpha=0.4)
 
     labels = {}
     for node in graph.nodes():
         labels[node] = str(node)
-        # if types:
-        #     labels[node] += ":" + str(graph.node[node].type_)
+
     offset = 0.1
     labels_pos = copy.deepcopy(pos)
     for p in pos:  # raise text positions
@@ -81,10 +103,8 @@ def plot_graph(graph, types=True, filename=None, parent_pos=None):
 
     _ticks_off()
     _set_limits(pos, labels_pos)
-    # save to the file
+    # save to a file
     if filename is not None:
-        # with open(filename, "w") as f:
-            # plt.savefig(f)
         plt.savefig(filename)
         plt.clf()
     else:
@@ -93,7 +113,41 @@ def plot_graph(graph, types=True, filename=None, parent_pos=None):
 
 
 def plot_instance(graph, pattern, instance, filename=None, parent_pos=None):
-    """Plot the graph with instance of pattern highlighted."""
+    """Plot the graph with instance of pattern highlighted.
+
+    This util plots a graph and highlights an instance of a pattern
+    graph. If `filename` is specified, saves the plot into the file,
+    otherwise invokes `matplotlib.pylab.show` function
+    (shows the plot). In addition, this function allows to
+    specify user defined position for some subset of
+    graphs nodes (with `parent_pos` parameter), nodes
+    whose positioning is not specified in `parent_pos` are
+    placed using `nx.spring_layout` function.
+
+    Parameters
+    ----------
+    graph : nx.(Di)Graph
+        Graph object to plot
+    pattern : nx.(Di)Graph
+        Graph object representing a pattern graph
+    instance : dict
+        Dictionary representing an instance of the pattern inside
+        of the graph, keys are nodes of the pattern and values are
+        corresponding nodes in the graph.
+    filename : str, optional
+        Path to file to save the plot
+    parent_pos : dict
+        Dictionary containing positioning of a subset of nodes of
+        the graph, keys are node ids and values are pairs of x/y
+        coordinates
+
+    Returns
+    -------
+    pos : dict
+        Dictionary containing positioning of all nodes of
+        the graph, keys are node ids and values are pairs of x/y
+        coordinates
+    """
     new_colors = ["g" if not graph.nodes()[i] in instance.values()
                   else "r" for i, c in enumerate(graph.nodes())]
     if not parent_pos:
@@ -141,6 +195,21 @@ def plot_instance(graph, pattern, instance, filename=None, parent_pos=None):
 
 
 def plot_rule(rule, filename=None):
+    """Plot ReGraph's rule object.
+
+    This function plots a rule object, it produces three
+    separate plots: for the left-hand side of the rule,
+    preserved part and the right-hand side, where the two
+    homomorphsisms p->lhs, p->rhs are encoded with colors
+    of nodes.
+
+    Parameters
+    ----------
+    rule : regraph.rules.Rule
+        Rule object to plot
+    filename : str, optional
+        Path to file to save the plot
+    """
     plt.figure(figsize=(14, 3))
 
     # generate colors

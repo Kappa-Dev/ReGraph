@@ -662,7 +662,7 @@ def relation_to_span(g1, g2, relation, edges=False, attrs=False, directed=True):
                         common_attrs
                     )
 
-        return (new_graph, left_h, right_h)
+        return new_graph, left_h, right_h
 
 
 def left_relation_dict(relation):
