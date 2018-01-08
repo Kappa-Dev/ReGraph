@@ -187,7 +187,8 @@ class TestPropagation(object):
         }
         try:
             self.hierarchy.rewrite(
-                "n1", rule, instance, lhs_typing=None, rhs_typing=rhs_typing)
+                "n1", rule, instance, lhs_typing=None,
+                rhs_typing=rhs_typing, strict=True)
             raise ValueError("Error was not caught!")
         except RewritingError:
             pass
@@ -195,7 +196,7 @@ class TestPropagation(object):
         new_hierarchy, _ = self.hierarchy.rewrite(
             "n1", rule, instance,
             lhs_typing=None, rhs_typing=rhs_typing,
-            strict=False, inplace=False)
+            inplace=False)
 
         # test propagation of node adds
         assert("B_res_1" in new_hierarchy.graph["n1"].nodes())
@@ -224,7 +225,6 @@ class TestPropagation(object):
         assert(new_hierarchy.typing["mm"]["colors"]["Y"] == "red")
 
     def test_porpagation_node_attrs_adds(self):
-
         p = nx.DiGraph()
         primitives.add_nodes_from(
             p, [1, 2]
@@ -251,7 +251,8 @@ class TestPropagation(object):
 
         try:
             self.hierarchy.rewrite(
-                "n1", rule, instance, lhs_typing=None, rhs_typing=rhs_typing)
+                "n1", rule, instance, lhs_typing=None,
+                rhs_typing=rhs_typing, strict=True)
             raise ValueError("Error was not caught!")
         except RewritingError:
             pass
@@ -259,7 +260,7 @@ class TestPropagation(object):
         new_hierarchy, _ = self.hierarchy.rewrite(
             "n1", rule, instance,
             lhs_typing=None, rhs_typing=rhs_typing,
-            strict=False, inplace=False)
+            inplace=False)
 
         # test propagation of the node attribute adds
         assert("a1" in new_hierarchy.graph["n1"].node["A"])

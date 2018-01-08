@@ -249,26 +249,26 @@ def _propagate_up(hierarchy, graph_id, rule, instance,
                         _propagate_rule_to(
                             rule_to_rewrite.lhs,
                             lhs_origin_typing, rule, instance,
-                            p_origin_m, inplace)
+                            p_origin_m, inplace=False)
 
                     (pr_prime, pr_prime_pr, pr_prime_origin) =\
                         _propagate_rule_to(
                             rule_to_rewrite.p,
                             p_origin_typing, rule, instance,
-                            p_origin_m, inplace)
+                            p_origin_m, inplace=False)
 
                     (rhs_prime, rhs_prime_rhs, rhs_prime_origin) =\
                         _propagate_rule_to(
                             rule_to_rewrite.rhs,
                             rhs_origin_typing, rule, instance,
-                            p_origin_m, inplace)
+                            p_origin_m, inplace=False)
 
                     # find p_m -> lhs_m
                     new_p_lhs = get_unique_map_to_pullback(
                         lhs_prime.nodes(),
                         lhs_prime_lhs,
                         lhs_prime_origin,
-                        compose(pr_prime_pr, rule.p_lhs),
+                        compose(pr_prime_pr, rule_to_rewrite.p_lhs),
                         pr_prime_origin
                     )
 
@@ -277,7 +277,7 @@ def _propagate_up(hierarchy, graph_id, rule, instance,
                         rhs_prime.nodes(),
                         rhs_prime_rhs,
                         rhs_prime_origin,
-                        compose(pr_prime_pr, rule.p_rhs),
+                        compose(pr_prime_pr, rule_to_rewrite.p_rhs),
                         pr_prime_origin
                     )
 
