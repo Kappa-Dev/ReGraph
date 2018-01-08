@@ -936,31 +936,80 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">edge</span><span class="p">[</span><span class="n">rule_id</span><span class="p">][</span><span class="n">graph_id</span><span class="p">]</span><span class="o">.</span><span class="n">rhs_mapping</span>
         <span class="k">return</span></div>
 
-<div class="viewcode-block" id="Hierarchy.add_relation"><a class="viewcode-back" href="../../hierarchy.html#regraph.hierarchy.Hierarchy.add_relation">[docs]</a>    <span class="k">def</span> <span class="nf">add_relation</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">g1</span><span class="p">,</span> <span class="n">g2</span><span class="p">,</span> <span class="n">relation</span><span class="p">,</span> <span class="n">attrs</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Add relation to the hierarchy.&quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="n">g1</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
-            <span class="k">raise</span> <span class="n">HierarchyError</span><span class="p">(</span>
-                <span class="s2">&quot;Node &#39;</span><span class="si">%s</span><span class="s2">&#39; is not defined in the hierarchy!&quot;</span> <span class="o">%</span> <span class="n">g1</span><span class="p">)</span>
-        <span class="k">if</span> <span class="n">g2</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
-            <span class="k">raise</span> <span class="n">HierarchyError</span><span class="p">(</span>
-                <span class="s2">&quot;Node &#39;</span><span class="si">%s</span><span class="s2">&#39; is not defined in the hierarchy!&quot;</span> <span class="o">%</span> <span class="n">g2</span><span class="p">)</span>
+<div class="viewcode-block" id="Hierarchy.add_relation"><a class="viewcode-back" href="../../hierarchy.html#regraph.hierarchy.Hierarchy.add_relation">[docs]</a>    <span class="k">def</span> <span class="nf">add_relation</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">left</span><span class="p">,</span> <span class="n">right</span><span class="p">,</span> <span class="n">relation</span><span class="p">,</span> <span class="n">attrs</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Add relation to the hierarchy.</span>
 
-        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">g1</span><span class="p">],</span> <span class="n">GraphNode</span><span class="p">):</span>
+<span class="sd">        This method adds a relation between two graphs in</span>
+<span class="sd">        the hierarchy corresponding to the nodes with ids</span>
+<span class="sd">        `left` and `right`, the relation itself is defined</span>
+<span class="sd">        by a dictionary `relation`, where a key is a node in</span>
+<span class="sd">        the `left` graph and its corresponding value is a set</span>
+<span class="sd">        of nodes from the `right` graph to which the node is</span>
+<span class="sd">        related. Relations in the hierarchy are symmetric</span>
+<span class="sd">        (see example below).</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        left</span>
+<span class="sd">            Id of the hierarchy&#39;s node represening the `left` graph</span>
+<span class="sd">        right</span>
+<span class="sd">            Id of the hierarchy&#39;s node represening the `right` graph</span>
+<span class="sd">        relation : dict</span>
+<span class="sd">            Dictionary representing a relation of nodes from `left`</span>
+<span class="sd">            to the nodes from `right`, a key of the dictionary is</span>
+<span class="sd">            assumed to be a node from `left` and its value a set</span>
+<span class="sd">            of ids of related nodes from `right`</span>
+<span class="sd">        attrs : dict</span>
+<span class="sd">            Dictionary containing attributes of the new relation</span>
+
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        HierarchyError</span>
+<span class="sd">            This error is raised in the following cases:</span>
+
+<span class="sd">                * node with id `left`/`right` is not defined in the hierarchy;</span>
+<span class="sd">                * node with id `left`/`right` is not a graph;</span>
+<span class="sd">                * a relation between `left` and `right` already exists;</span>
+<span class="sd">                * some node ids specified in `relation` are not found in the</span>
+<span class="sd">                `left`\`right` graph.</span>
+
+<span class="sd">        Examples</span>
+<span class="sd">        --------</span>
+<span class="sd">        &gt;&gt;&gt; hierarchy = Hierarchy()</span>
+<span class="sd">        &gt;&gt;&gt; g1 = nx.DiGraph([(&quot;a&quot;, &quot;b&quot;), (&quot;a&quot;, &quot;a&quot;)])</span>
+<span class="sd">        &gt;&gt;&gt; g2 = nx.DiGraph([(1, 2), (2, 3)])</span>
+<span class="sd">        &gt;&gt;&gt; hierarchy.add_graph(&quot;G1&quot;, g1)</span>
+<span class="sd">        &gt;&gt;&gt; hierarchy.add_graph(&quot;G2&quot;, g2)</span>
+<span class="sd">        &gt;&gt;&gt; hierarchy.add_relation(&quot;G1&quot;, &quot;G2&quot;, {&quot;a&quot;: {1, 2}, &quot;b&quot;: 3})</span>
+<span class="sd">        &gt;&gt;&gt; hierarchy.relation[&quot;G1&quot;][&quot;G2&quot;].rel</span>
+<span class="sd">        {&#39;a&#39;: {1, 2}, &#39;b&#39;: {3}}</span>
+<span class="sd">        &gt;&gt;&gt; hierarchy.relation[&quot;G2&quot;][&quot;G1&quot;].rel</span>
+<span class="sd">        {1: {&#39;a&#39;}, 2: {&#39;a&#39;}, 3: {&#39;b&#39;}}</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">left</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
+            <span class="k">raise</span> <span class="n">HierarchyError</span><span class="p">(</span>
+                <span class="s2">&quot;Node &#39;</span><span class="si">%s</span><span class="s2">&#39; is not defined in the hierarchy!&quot;</span> <span class="o">%</span> <span class="n">left</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">right</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
+            <span class="k">raise</span> <span class="n">HierarchyError</span><span class="p">(</span>
+                <span class="s2">&quot;Node &#39;</span><span class="si">%s</span><span class="s2">&#39; is not defined in the hierarchy!&quot;</span> <span class="o">%</span> <span class="n">right</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">left</span><span class="p">],</span> <span class="n">GraphNode</span><span class="p">):</span>
             <span class="k">raise</span> <span class="n">HierarchyError</span><span class="p">(</span>
                 <span class="s2">&quot;Relation can be defined on graphs, &#39;</span><span class="si">%s</span><span class="s2">&#39; is provided&quot;</span> <span class="o">%</span>
-                <span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">g1</span><span class="p">])</span>
+                <span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">left</span><span class="p">])</span>
             <span class="p">)</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">g2</span><span class="p">],</span> <span class="n">GraphNode</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">right</span><span class="p">],</span> <span class="n">GraphNode</span><span class="p">):</span>
             <span class="k">raise</span> <span class="n">HierarchyError</span><span class="p">(</span>
                 <span class="s2">&quot;Relation can be defined on graphs, &#39;</span><span class="si">%s</span><span class="s2">&#39; is provided&quot;</span> <span class="o">%</span>
-                <span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">g2</span><span class="p">])</span>
+                <span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">right</span><span class="p">])</span>
             <span class="p">)</span>
 
-        <span class="k">if</span> <span class="p">(</span><span class="n">g1</span><span class="p">,</span> <span class="n">g2</span><span class="p">)</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">relations</span><span class="p">():</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">left</span><span class="p">,</span> <span class="n">right</span><span class="p">)</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">relations</span><span class="p">():</span>
             <span class="k">raise</span> <span class="n">HierarchyError</span><span class="p">(</span>
                 <span class="s2">&quot;Relation &#39;</span><span class="si">%s</span><span class="s2">-</span><span class="si">%s</span><span class="s2">&#39; already exists in the hierarchy &quot;</span>
                 <span class="s2">&quot;multiple edges are not allowed!&quot;</span> <span class="o">%</span>
-                <span class="p">(</span><span class="n">g1</span><span class="p">,</span> <span class="n">g2</span><span class="p">)</span>
+                <span class="p">(</span><span class="n">left</span><span class="p">,</span> <span class="n">right</span><span class="p">)</span>
             <span class="p">)</span>
 
         <span class="c1"># normalize relation dict</span>
@@ -977,23 +1026,23 @@
                         <span class="n">new_set</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">v</span><span class="p">)</span>
                     <span class="n">new_relation_dict</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">new_set</span>
                 <span class="k">except</span> <span class="ne">TypeError</span><span class="p">:</span>
-                    <span class="n">values</span> <span class="o">=</span> <span class="p">{</span><span class="n">values</span><span class="p">}</span>
+                    <span class="n">new_relation_dict</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="n">values</span><span class="p">}</span>
         <span class="n">relation</span> <span class="o">=</span> <span class="n">new_relation_dict</span>
 
-        <span class="c1"># check relation is well-defined on g1 and g2</span>
+        <span class="c1"># check relation is well-defined on left and right side</span>
         <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">values</span> <span class="ow">in</span> <span class="n">relation</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-            <span class="k">if</span> <span class="n">key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">g1</span><span class="p">]</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">left</span><span class="p">]</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
                 <span class="k">raise</span> <span class="n">HierarchyError</span><span class="p">(</span>
                     <span class="s2">&quot;Relation is not valid: node &#39;</span><span class="si">%s</span><span class="s2">&#39; does not &quot;</span>
                     <span class="s2">&quot;exist in a graph &#39;</span><span class="si">%s</span><span class="s2">&#39;&quot;</span> <span class="o">%</span>
-                    <span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">g1</span><span class="p">)</span>
+                    <span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">left</span><span class="p">)</span>
                 <span class="p">)</span>
             <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">values</span><span class="p">:</span>
-                <span class="k">if</span> <span class="n">v</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">g2</span><span class="p">]</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
+                <span class="k">if</span> <span class="n">v</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">right</span><span class="p">]</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
                     <span class="k">raise</span> <span class="n">HierarchyError</span><span class="p">(</span>
                         <span class="s2">&quot;Relation is not valid: node &#39;</span><span class="si">%s</span><span class="s2">&#39; does not &quot;</span>
                         <span class="s2">&quot;exist in a graph &#39;</span><span class="si">%s</span><span class="s2">&#39;&quot;</span> <span class="o">%</span>
-                        <span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">g2</span><span class="p">)</span>
+                        <span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">right</span><span class="p">)</span>
                     <span class="p">)</span>
 
         <span class="k">if</span> <span class="n">attrs</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
@@ -1006,8 +1055,8 @@
         <span class="n">right_relation</span> <span class="o">=</span> <span class="n">right_relation_dict</span><span class="p">(</span><span class="n">pairs</span><span class="p">)</span>
         <span class="n">rel_ab_obj</span> <span class="o">=</span> <span class="n">GraphRelation</span><span class="p">(</span><span class="n">relation</span><span class="p">,</span> <span class="n">attrs</span><span class="p">)</span>
         <span class="n">rel_ba_obj</span> <span class="o">=</span> <span class="n">GraphRelation</span><span class="p">(</span><span class="n">right_relation</span><span class="p">,</span> <span class="n">attrs</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">relation</span><span class="p">[</span><span class="n">g1</span><span class="p">]</span><span class="o">.</span><span class="n">update</span><span class="p">({</span><span class="n">g2</span><span class="p">:</span> <span class="n">rel_ab_obj</span><span class="p">})</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">relation</span><span class="p">[</span><span class="n">g2</span><span class="p">]</span><span class="o">.</span><span class="n">update</span><span class="p">({</span><span class="n">g1</span><span class="p">:</span> <span class="n">rel_ba_obj</span><span class="p">})</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">relation</span><span class="p">[</span><span class="n">left</span><span class="p">]</span><span class="o">.</span><span class="n">update</span><span class="p">({</span><span class="n">right</span><span class="p">:</span> <span class="n">rel_ab_obj</span><span class="p">})</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">relation</span><span class="p">[</span><span class="n">right</span><span class="p">]</span><span class="o">.</span><span class="n">update</span><span class="p">({</span><span class="n">left</span><span class="p">:</span> <span class="n">rel_ba_obj</span><span class="p">})</span>
         <span class="k">return</span></div>
 
 <div class="viewcode-block" id="Hierarchy.remove_graph"><a class="viewcode-back" href="../../hierarchy.html#regraph.hierarchy.Hierarchy.remove_graph">[docs]</a>    <span class="k">def</span> <span class="nf">remove_graph</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">graph_id</span><span class="p">,</span> <span class="n">reconnect</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>

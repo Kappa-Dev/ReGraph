@@ -249,7 +249,7 @@ source to the same target commute.</p>
 <tr class="row-odd"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.add_node_type" title="regraph.hierarchy.Hierarchy.add_node_type"><code class="xref py py-obj docutils literal"><span class="pre">add_node_type</span></code></a>(graph_id,&nbsp;node_id,&nbsp;typing_dict)</td>
 <td>Type a node in a graph according to <cite>typing_dict</cite>.</td>
 </tr>
-<tr class="row-even"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.add_relation" title="regraph.hierarchy.Hierarchy.add_relation"><code class="xref py py-obj docutils literal"><span class="pre">add_relation</span></code></a>(g1,&nbsp;g2,&nbsp;relation[,&nbsp;attrs])</td>
+<tr class="row-even"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.add_relation" title="regraph.hierarchy.Hierarchy.add_relation"><code class="xref py py-obj docutils literal"><span class="pre">add_relation</span></code></a>(left,&nbsp;right,&nbsp;relation[,&nbsp;attrs])</td>
 <td>Add relation to the hierarchy.</td>
 </tr>
 <tr class="row-odd"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.add_rule" title="regraph.hierarchy.Hierarchy.add_rule"><code class="xref py py-obj docutils literal"><span class="pre">add_rule</span></code></a>(rule_id,&nbsp;rule[,&nbsp;rule_attrs])</td>
@@ -436,8 +436,71 @@ if node with provided id already exists in the hierarchy</p>
 
 <dl class="method">
 <dt id="regraph.hierarchy.Hierarchy.add_relation">
-<code class="descname">add_relation</code><span class="sig-paren">(</span><em>g1</em>, <em>g2</em>, <em>relation</em>, <em>attrs=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/hierarchy.html#Hierarchy.add_relation"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.hierarchy.Hierarchy.add_relation" title="Permalink to this definition">¶</a></dt>
+<code class="descname">add_relation</code><span class="sig-paren">(</span><em>left</em>, <em>right</em>, <em>relation</em>, <em>attrs=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/hierarchy.html#Hierarchy.add_relation"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.hierarchy.Hierarchy.add_relation" title="Permalink to this definition">¶</a></dt>
 <dd><p>Add relation to the hierarchy.</p>
+<p>This method adds a relation between two graphs in
+the hierarchy corresponding to the nodes with ids
+<cite>left</cite> and <cite>right</cite>, the relation itself is defined
+by a dictionary <cite>relation</cite>, where a key is a node in
+the <cite>left</cite> graph and its corresponding value is a set
+of nodes from the <cite>right</cite> graph to which the node is
+related. Relations in the hierarchy are symmetric
+(see example below).</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>left</strong></p>
+<blockquote>
+<div><p>Id of the hierarchy’s node represening the <cite>left</cite> graph</p>
+</div></blockquote>
+<p><strong>right</strong></p>
+<blockquote>
+<div><p>Id of the hierarchy’s node represening the <cite>right</cite> graph</p>
+</div></blockquote>
+<p><strong>relation</strong> : dict</p>
+<blockquote>
+<div><p>Dictionary representing a relation of nodes from <cite>left</cite>
+to the nodes from <cite>right</cite>, a key of the dictionary is
+assumed to be a node from <cite>left</cite> and its value a set
+of ids of related nodes from <cite>right</cite></p>
+</div></blockquote>
+<p><strong>attrs</strong> : dict</p>
+<blockquote>
+<div><p>Dictionary containing attributes of the new relation</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Raises:</th><td class="field-body"><p class="first"><strong>HierarchyError</strong></p>
+<blockquote class="last">
+<div><p>This error is raised in the following cases:</p>
+<blockquote>
+<div><ul class="simple">
+<li>node with id <cite>left</cite>/<cite>right</cite> is not defined in the hierarchy;</li>
+<li>node with id <cite>left</cite>/<cite>right</cite> is not a graph;</li>
+<li>a relation between <cite>left</cite> and <cite>right</cite> already exists;</li>
+<li>some node ids specified in <cite>relation</cite> are not found in the</li>
+</ul>
+<p><cite>left</cite>`right` graph.</p>
+</div></blockquote>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Examples</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">hierarchy</span> <span class="o">=</span> <span class="n">Hierarchy</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">g1</span> <span class="o">=</span> <span class="n">nx</span><span class="o">.</span><span class="n">DiGraph</span><span class="p">([(</span><span class="s2">&quot;a&quot;</span><span class="p">,</span> <span class="s2">&quot;b&quot;</span><span class="p">),</span> <span class="p">(</span><span class="s2">&quot;a&quot;</span><span class="p">,</span> <span class="s2">&quot;a&quot;</span><span class="p">)])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">g2</span> <span class="o">=</span> <span class="n">nx</span><span class="o">.</span><span class="n">DiGraph</span><span class="p">([(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span> <span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">)])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">hierarchy</span><span class="o">.</span><span class="n">add_graph</span><span class="p">(</span><span class="s2">&quot;G1&quot;</span><span class="p">,</span> <span class="n">g1</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">hierarchy</span><span class="o">.</span><span class="n">add_graph</span><span class="p">(</span><span class="s2">&quot;G2&quot;</span><span class="p">,</span> <span class="n">g2</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">hierarchy</span><span class="o">.</span><span class="n">add_relation</span><span class="p">(</span><span class="s2">&quot;G1&quot;</span><span class="p">,</span> <span class="s2">&quot;G2&quot;</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;a&quot;</span><span class="p">:</span> <span class="p">{</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">},</span> <span class="s2">&quot;b&quot;</span><span class="p">:</span> <span class="mi">3</span><span class="p">})</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">hierarchy</span><span class="o">.</span><span class="n">relation</span><span class="p">[</span><span class="s2">&quot;G1&quot;</span><span class="p">][</span><span class="s2">&quot;G2&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">rel</span>
+<span class="go">{&#39;a&#39;: {1, 2}, &#39;b&#39;: {3}}</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">hierarchy</span><span class="o">.</span><span class="n">relation</span><span class="p">[</span><span class="s2">&quot;G2&quot;</span><span class="p">][</span><span class="s2">&quot;G1&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">rel</span>
+<span class="go">{1: {&#39;a&#39;}, 2: {&#39;a&#39;}, 3: {&#39;b&#39;}}</span>
+</pre></div>
+</div>
 </dd></dl>
 
 <dl class="method">
