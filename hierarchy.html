@@ -209,7 +209,16 @@ commuting paths.</li>
 <dt id="regraph.hierarchy.Hierarchy">
 <em class="property">class </em><code class="descclassname">regraph.hierarchy.</code><code class="descname">Hierarchy</code><span class="sig-paren">(</span><em>directed=True</em>, <em>attrs=None</em>, <em>graph_node_cls=&lt;class 'regraph.hierarchy.GraphNode'&gt;</em>, <em>rule_node_cls=&lt;class 'regraph.hierarchy.RuleNode'&gt;</em>, <em>graph_typing_cls=&lt;class 'regraph.hierarchy.Typing'&gt;</em>, <em>rule_typing_cls=&lt;class 'regraph.hierarchy.RuleTyping'&gt;</em>, <em>relation_cls=&lt;class 'regraph.hierarchy.GraphRelation'&gt;</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/hierarchy.html#Hierarchy"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.hierarchy.Hierarchy" title="Permalink to this definition">¶</a></dt>
 <dd><p>Class implementing graph hierarchy.</p>
-<p>Base on <cite>networkx.DiGraph</cite>, acyclic, all paths commute</p>
+<p>A graph hierarchy is a DAG, where nodes are graphs with attributes and
+edges are homomorphisms representing graph typing in the system.
+This construction provides means for mathematically robust
+procedures ofpropagation of changes (expressed through
+graph rewriting rules) on any level of the hierarchy,
+up to all the graphs which are transitively typed by the graph
+subject to rewriting.</p>
+<p>This class inherits the <cite>networkx.DiGraph</cite> class, and ensures that
+at any time the hierarchy graph is acyclic, and all paths from the same
+source to the same target commute.</p>
 <p class="rubric">Examples</p>
 <div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">hierarchy</span> <span class="o">=</span> <span class="n">Hierarchy</span><span class="p">()</span> <span class="c1"># create empty hierarchy</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">t</span> <span class="o">=</span> <span class="n">nx</span><span class="o">.</span><span class="n">DiGraph</span><span class="p">([(</span><span class="s2">&quot;red&quot;</span><span class="p">,</span> <span class="s2">&quot;blue&quot;</span><span class="p">),</span> <span class="p">(</span><span class="s2">&quot;blue&quot;</span><span class="p">,</span> <span class="s2">&quot;blue&quot;</span><span class="p">)])</span>
@@ -342,7 +351,7 @@ commuting paths.</li>
 <tr class="row-odd"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.rename_node" title="regraph.hierarchy.Hierarchy.rename_node"><code class="xref py py-obj docutils literal"><span class="pre">rename_node</span></code></a>(graph_id,&nbsp;node,&nbsp;new_name)</td>
 <td>Rename a node in a graph of the hierarchy.</td>
 </tr>
-<tr class="row-even"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.rewrite" title="regraph.hierarchy.Hierarchy.rewrite"><code class="xref py py-obj docutils literal"><span class="pre">rewrite</span></code></a>(graph_id,&nbsp;rule,&nbsp;instance[,&nbsp;…])</td>
+<tr class="row-even"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.rewrite" title="regraph.hierarchy.Hierarchy.rewrite"><code class="xref py py-obj docutils literal"><span class="pre">rewrite</span></code></a>(graph_id,&nbsp;rule[,&nbsp;instance,&nbsp;…])</td>
 <td>Rewrite and propagate the changes up &amp; down.</td>
 </tr>
 <tr class="row-odd"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.rule_dict_factory" title="regraph.hierarchy.Hierarchy.rule_dict_factory"><code class="xref py py-obj docutils literal"><span class="pre">rule_dict_factory</span></code></a></td>
@@ -392,11 +401,27 @@ commuting paths.</li>
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>graph_id</strong> : hashable</p>
-<p><strong>graph</strong> : nx.(Di)Graph object</p>
+<blockquote>
+<div><p>Id of a new node in the hierarchy</p>
+</div></blockquote>
+<p><strong>graph</strong> : nx.(Di)Graph</p>
+<blockquote>
+<div><p>Graph object corresponding to the new node of
+the hierarchy</p>
+</div></blockquote>
 <p><strong>graph_attrs</strong> : dict</p>
+<blockquote>
+<div><p>Dictionary containing attributes of the new node</p>
+</div></blockquote>
 </td>
 </tr>
-<tr class="field-even field"><th class="field-name">Raises:</th><td class="field-body"><p class="first last"><strong>HierarchyError</strong></p>
+<tr class="field-even field"><th class="field-name">Raises:</th><td class="field-body"><p class="first"><strong>HierarchyError</strong></p>
+<blockquote class="last">
+<div><p>If the graph object is directed/undirected while the
+hierarchy’s parameter <cite>directed</cite> is False/True
+(the hierarchy accommodates undirected/directed graphs);
+if node with provided id already exists in the hierarchy</p>
+</div></blockquote>
 </td>
 </tr>
 </tbody>
@@ -419,18 +444,146 @@ commuting paths.</li>
 <dt id="regraph.hierarchy.Hierarchy.add_rule">
 <code class="descname">add_rule</code><span class="sig-paren">(</span><em>rule_id</em>, <em>rule</em>, <em>rule_attrs=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/hierarchy.html#Hierarchy.add_rule"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.hierarchy.Hierarchy.add_rule" title="Permalink to this definition">¶</a></dt>
 <dd><p>Add rule to the hierarchy.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>rule_id</strong> : hashable</p>
+<blockquote>
+<div><p>Id of a new node in the hierarchy</p>
+</div></blockquote>
+<p><strong>rule</strong> : regraph.rules.Rule</p>
+<blockquote>
+<div><p>Rule object corresponding to the new node of
+the hierarchy</p>
+</div></blockquote>
+<p><strong>rule_attrs</strong> : dict</p>
+<blockquote>
+<div><p>Dictionary containing attributes of the new node</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Raises:</th><td class="field-body"><p class="first"><strong>HierarchyError</strong></p>
+<blockquote class="last">
+<div><p>If the rule object is defined for directed/undirected
+graphs while the hierarchy’s parameter <cite>directed</cite> is
+False/True (the hierarchy accommodates undirected/directed
+graphs) or if node with provided id already exists
+in the hierarchy</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
 </dd></dl>
 
 <dl class="method">
 <dt id="regraph.hierarchy.Hierarchy.add_rule_typing">
 <code class="descname">add_rule_typing</code><span class="sig-paren">(</span><em>rule_id</em>, <em>graph_id</em>, <em>lhs_mapping</em>, <em>rhs_mapping=None</em>, <em>lhs_total=False</em>, <em>rhs_total=False</em>, <em>attrs=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/hierarchy.html#Hierarchy.add_rule_typing"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.hierarchy.Hierarchy.add_rule_typing" title="Permalink to this definition">¶</a></dt>
 <dd><p>Add typing of a rule.</p>
+<dl class="docutils">
+<dt>source</dt>
+<dd>Id of a rule node to type</dd>
+<dt>target</dt>
+<dd>Id of a target graph node of typing</dd>
+<dt>lhs_mapping <span class="classifier-delimiter">:</span> <span class="classifier">dict</span></dt>
+<dd>Dictionary representing a mapping of nodes
+from the left-hand side of the rule to target’s nodes</dd>
+<dt>rhs_mapping <span class="classifier-delimiter">:</span> <span class="classifier">dict</span></dt>
+<dd>Dictionary representing a mapping of nodes
+from the right-hand side of the rule to target’s nodes</dd>
+<dt>lhs_total <span class="classifier-delimiter">:</span> <span class="classifier">bool</span></dt>
+<dd>True if left-hand side typing is total, False otherwise</dd>
+<dt>rhs_total <span class="classifier-delimiter">:</span> <span class="classifier">bool</span></dt>
+<dd>True if right-hand side typing is total, False otherwise</dd>
+<dt>attrs <span class="classifier-delimiter">:</span> <span class="classifier">dict</span></dt>
+<dd>Dictionary containing attributes of the new
+typing edge</dd>
+</dl>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Raises:</th><td class="field-body"><p class="first"><strong>HierarchyError</strong></p>
+<blockquote>
+<div><p>This error is raised in the following cases:</p>
+<blockquote>
+<div><ul class="simple">
+<li>source or target ids are not found in the hierarchy</li>
+<li>a typing edge between source and target already exists</li>
+<li>a source node is not a rule</li>
+<li>a target node is not a graph</li>
+<li>addition of an edge produces paths that do not commute with</li>
+</ul>
+<p>some already existing paths</p>
+</div></blockquote>
+</div></blockquote>
+<p><strong>InvalidHomomorphism</strong></p>
+<blockquote class="last">
+<div><p>If a homomorphisms from the left(right)-hand side to a graph at
+the target given by <cite>lhs(rhs)_mapping</cite> is not a valid homomorphism.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
 </dd></dl>
 
 <dl class="method">
 <dt id="regraph.hierarchy.Hierarchy.add_typing">
 <code class="descname">add_typing</code><span class="sig-paren">(</span><em>source</em>, <em>target</em>, <em>mapping</em>, <em>total=True</em>, <em>attrs=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/hierarchy.html#Hierarchy.add_typing"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.hierarchy.Hierarchy.add_typing" title="Permalink to this definition">¶</a></dt>
 <dd><p>Add homomorphism to the hierarchy.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>source</strong></p>
+<blockquote>
+<div><p>Id of a source graph node of typing</p>
+</div></blockquote>
+<p><strong>target</strong></p>
+<blockquote>
+<div><p>Id of a target graph node of typing</p>
+</div></blockquote>
+<p><strong>mapping</strong> : dict</p>
+<blockquote>
+<div><p>Dictionary representing a mapping of nodes
+from the source graph to target’s nodes</p>
+</div></blockquote>
+<p><strong>total</strong> : bool</p>
+<blockquote>
+<div><p>True if typing is total, False otherwise</p>
+</div></blockquote>
+<p><strong>attrs</strong> : dict</p>
+<blockquote>
+<div><p>Dictionary containing attributes of the new
+typing edge</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Raises:</th><td class="field-body"><p class="first"><strong>HierarchyError</strong></p>
+<blockquote>
+<div><p>This error is raised in the following cases:</p>
+<blockquote>
+<div><ul class="simple">
+<li>source or target ids are not found in the hierarchy</li>
+<li>a typing edge between source and target already exists</li>
+<li>a source node is not a graph</li>
+<li>addition of an edge between source and target creates</li>
+</ul>
+<p>a cycle or produces paths that do not commute with
+some already existing paths</p>
+</div></blockquote>
+</div></blockquote>
+<p><strong>InvalidHomomorphism</strong></p>
+<blockquote class="last">
+<div><p>If a homomorphisms from a graph at the source to a graph at
+the target given by <cite>mapping</cite> is not a valid homomorphism.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
 </dd></dl>
 
 <dl class="method">
@@ -613,7 +766,7 @@ consistency in relations.</p>
 
 <dl class="method">
 <dt id="regraph.hierarchy.Hierarchy.rewrite">
-<code class="descname">rewrite</code><span class="sig-paren">(</span><em>graph_id</em>, <em>rule</em>, <em>instance</em>, <em>lhs_typing=None</em>, <em>rhs_typing=None</em>, <em>strict=True</em>, <em>inplace=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/hierarchy.html#Hierarchy.rewrite"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.hierarchy.Hierarchy.rewrite" title="Permalink to this definition">¶</a></dt>
+<code class="descname">rewrite</code><span class="sig-paren">(</span><em>graph_id</em>, <em>rule</em>, <em>instance=None</em>, <em>lhs_typing=None</em>, <em>rhs_typing=None</em>, <em>strict=False</em>, <em>inplace=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/hierarchy.html#Hierarchy.rewrite"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.hierarchy.Hierarchy.rewrite" title="Permalink to this definition">¶</a></dt>
 <dd><p>Rewrite and propagate the changes up &amp; down.</p>
 </dd></dl>
 
@@ -682,7 +835,7 @@ consistency in relations.</p>
 <dl class="class">
 <dt id="regraph.hierarchy.Relation">
 <em class="property">class </em><code class="descclassname">regraph.hierarchy.</code><code class="descname">Relation</code><a class="reference internal" href="_modules/regraph/hierarchy.html#Relation"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.hierarchy.Relation" title="Permalink to this definition">¶</a></dt>
-<dd><p>Base class for relations equipped with attrs.</p>
+<dd><p>Base class for relations equipped with attributes.</p>
 </dd></dl>
 
 <dl class="class">
