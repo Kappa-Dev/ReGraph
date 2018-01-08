@@ -131,7 +131,7 @@ using ReGraph primitives <cite>regraph.primitives.add_nodes_from</cite> and
 <div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">rg</span><span class="o">.</span><span class="n">plot_graph</span><span class="p">(</span><span class="n">graph</span><span class="p">)</span>
 </pre></div>
 </div>
-<img alt="_static/graph1.png" src="_static/graph1.png" />
+<img alt="_images/graph1.png" src="_images/graph1.png" />
 <p>Add attributes to the the nodes/edges of the graph:</p>
 <div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">rg</span><span class="o">.</span><span class="n">add_node_attrs</span><span class="p">(</span><span class="n">graph</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;age&quot;</span><span class="p">:</span> <span class="mi">20</span><span class="p">})</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">graph</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
@@ -161,7 +161,7 @@ using ReGraph primitives <cite>regraph.primitives.add_nodes_from</cite> and
 </div>
 <p>The new node corresponding to the clone is created in the hierarchy, and
 all the nodes adjacent to the original node become connected to the clone as well:</p>
-<img alt="_static/graph1_clone.png" src="_static/graph1_clone.png" />
+<img alt="_images/graph1_clone.png" src="_images/graph1_clone.png" />
 <p>Merge two nodes of the graph.</p>
 <div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">rg</span><span class="o">.</span><span class="n">merge_nodes</span><span class="p">(</span><span class="n">graph</span><span class="p">,</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">])</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">graph</span><span class="o">.</span><span class="n">nodes</span><span class="p">()</span>
@@ -180,7 +180,7 @@ all the nodes adjacent to the original node become connected to the clone as wel
 to the result of merge is created. All the edges incident to the original nodes
 stay incident to the result of merge, and all the attribute dictionaries of nodes/edges
 are merged.</p>
-<img alt="_static/graph1_merge.png" src="_static/graph1_merge.png" />
+<img alt="_images/graph1_merge.png" src="_images/graph1_merge.png" />
 <p>Dump your graph object to its JSON representation (Python dict):</p>
 <div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">json_data</span> <span class="o">=</span> <span class="n">rg</span><span class="o">.</span><span class="n">graph_to_json</span><span class="p">(</span><span class="n">graph</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">json_data</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span>
@@ -493,7 +493,7 @@ the corresponding two nodes will be merged.</p>
 </pre></div>
 </div>
 <p>Invoking the <cite>plot_rule</cite> function on the last line produces the following plot of the rule:</p>
-<img alt="_static/rule1.png" src="_static/rule1.png" />
+<img alt="_images/rule1.png" src="_images/rule1.png" />
 <p>From this plot we can see that the node <cite>1</cite> is cloned and its clone is represented with the node <cite>1_clone</cite>,
 then the edge between the nodes <cite>2</cite> and <cite>3</cite> is removed, and finally, the new node (with id <cite>new_node</cite>) is created and attached with an edge to the <cite>1_clone</cite> node.</p>
 <p>Now, let’s try to apply this rule and rewrite some graph, for example the following one:</p>
@@ -505,7 +505,7 @@ then the edge between the nodes <cite>2</cite> and <cite>3</cite> is removed, an
 <span class="n">pos</span> <span class="o">=</span> <span class="n">plot_graph</span><span class="p">(</span><span class="n">graph</span><span class="p">)</span>
 </pre></div>
 </div>
-<img alt="_static/graph_to_rewrite.png" src="_static/graph_to_rewrite.png" />
+<img alt="_images/graph_to_rewrite.png" src="_images/graph_to_rewrite.png" />
 <p>First, we need to find instances of the <cite>lhs</cite> of the rule in this graph,
 which can be done by <cite>regraph.primitives.find_matching</cite> function presented above:</p>
 <div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">instances</span> <span class="o">=</span> <span class="n">primitives</span><span class="o">.</span><span class="n">find_matching</span><span class="p">(</span><span class="n">graph</span><span class="p">,</span> <span class="n">rule1</span><span class="o">.</span><span class="n">lhs</span><span class="p">)</span>
@@ -517,7 +517,7 @@ which can be done by <cite>regraph.primitives.find_matching</cite> function pres
 <div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">plot_instance</span><span class="p">(</span><span class="n">graph</span><span class="p">,</span> <span class="n">rule1</span><span class="o">.</span><span class="n">lhs</span><span class="p">,</span> <span class="n">instances</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">parent_pos</span><span class="o">=</span><span class="n">pos</span><span class="p">)</span>
 </pre></div>
 </div>
-<img alt="_static/graph_to_rewrite_instance.png" src="_static/graph_to_rewrite_instance.png" />
+<img alt="_images/graph_to_rewrite_instance.png" src="_images/graph_to_rewrite_instance.png" />
 <p>Finally, perform graph rewriting on the instance that was found:</p>
 <div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">new_graph</span><span class="p">,</span> <span class="n">rhs_instance</span> <span class="o">=</span> <span class="n">rule1</span><span class="o">.</span><span class="n">apply_to</span><span class="p">(</span><span class="n">graph</span><span class="p">,</span> <span class="n">instances</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
 </pre></div>
@@ -528,7 +528,7 @@ Plot the new graph and the <cite>rhs</cite> instance:</p>
 <div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">plot_instance</span><span class="p">(</span><span class="n">new_graph</span><span class="p">,</span> <span class="n">rule1</span><span class="o">.</span><span class="n">rhs</span><span class="p">,</span> <span class="n">rhs_instance</span><span class="p">,</span> <span class="n">parent_pos</span><span class="o">=</span><span class="n">pos</span><span class="p">)</span>
 </pre></div>
 </div>
-<img alt="_static/graph_to_rewrite_result.png" src="_static/graph_to_rewrite_result.png" />
+<img alt="_images/graph_to_rewrite_result.png" src="_images/graph_to_rewrite_result.png" />
 <div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">pattern</span> <span class="o">=</span> <span class="n">nx</span><span class="o">.</span><span class="n">DiGraph</span><span class="p">()</span>
 <span class="n">add_nodes_from</span><span class="p">(</span><span class="n">pattern</span><span class="p">,</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">])</span>
 <span class="n">add_edges_from</span><span class="p">(</span><span class="n">pattern</span><span class="p">,</span> <span class="p">[(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span> <span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">)])</span>
