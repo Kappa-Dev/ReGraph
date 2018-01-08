@@ -138,9 +138,17 @@ functionality implemented in ReGraph.</p>
 </div>
 <img alt="_images/ex1_meta_model.png" src="_images/ex1_meta_model.png" />
 <p>Add graph typing (typing of <cite>‘G’</cite> by <cite>‘T’</cite>):</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">mapping</span> <span class="o">=</span> <span class="p">{}</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">hierarchy</span><span class="o">.</span><span class="n">add_typing</span><span class="p">(</span><span class="s2">&quot;G&quot;</span><span class="p">,</span> <span class="s2">&quot;T&quot;</span><span class="p">,</span> <span class="n">mapping</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">hierarchy</span><span class="o">.</span><span class="n">typing</span><span class="p">[</span><span class="s2">&quot;G&quot;</span><span class="p">][</span><span class="s2">&quot;T&quot;</span><span class="p">]</span>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">mapping</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s2">&quot;protein&quot;</span><span class="p">:</span> <span class="s2">&quot;agent&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;region&quot;</span><span class="p">:</span> <span class="s2">&quot;agent&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;activity&quot;</span><span class="p">:</span> <span class="s2">&quot;state&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;mod&quot;</span><span class="p">:</span> <span class="s2">&quot;action&quot;</span>
+<span class="p">}</span>
+<span class="n">hierarchy</span><span class="o">.</span><span class="n">add_typing</span><span class="p">(</span><span class="s2">&quot;G&quot;</span><span class="p">,</span> <span class="s2">&quot;T&quot;</span><span class="p">,</span> <span class="n">mapping</span><span class="p">)</span>
+</pre></div>
+</div>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">hierarchy</span><span class="o">.</span><span class="n">typing</span><span class="p">[</span><span class="s2">&quot;G&quot;</span><span class="p">][</span><span class="s2">&quot;T&quot;</span><span class="p">]</span>
+<span class="go">{&#39;activity&#39;: &#39;state&#39;, &#39;mod&#39;: &#39;action&#39;, &#39;protein&#39;: &#39;agent&#39;, &#39;region&#39;: &#39;agent&#39;}</span>
 </pre></div>
 </div>
 </div>

@@ -88,11 +88,19 @@ Add graphs to the hierarchy as follows: ::
 .. image:: _images/ex1_meta_model.png
 
 
-Add graph typing (typing of `'G'` by `'T'`):
+Add graph typing (typing of `'G'` by `'T'`): ::
 
->>> mapping = {}
->>> hierarchy.add_typing("G", "T", mapping)
+	mapping = {
+		"protein": "agent",
+		"region": "agent",
+		"activity": "state",
+		"mod": "action"
+	}
+	hierarchy.add_typing("G", "T", mapping)
+
 >>> hierarchy.typing["G"]["T"]
+{'activity': 'state', 'mod': 'action', 'protein': 'agent', 'region': 'agent'}
+
 
 .. _rewriting_in_hierarchy:
 
