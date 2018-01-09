@@ -110,6 +110,7 @@ Add graph typing (typing of `'G'` by `'T'`): ::
 {'T': 'agent'}
 
 Create another graph and type it by `G` ::
+
 	model = nx.DiGraph()
 	primitives.add_nodes_from(
 	    model,
@@ -127,6 +128,7 @@ Create another graph and type it by `G` ::
 .. image:: _images/ex1_model.png
 
 ::
+
 	mapping = {
 		"A": "protein",
 		"R": "region",
