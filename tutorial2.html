@@ -126,7 +126,6 @@ functionality implemented in ReGraph.</p>
         <span class="p">(</span><span class="s2">&quot;&quot;</span><span class="p">)</span>
 <span class="p">])</span>
 
-
 <span class="n">hierarchy</span><span class="o">.</span><span class="n">add_graph</span><span class="p">(</span><span class="s2">&quot;T&quot;</span><span class="p">,</span> <span class="n">t</span><span class="p">)</span>
 <span class="n">hierarchy</span><span class="o">.</span><span class="n">add_graph</span><span class="p">(</span><span class="s2">&quot;G&quot;</span><span class="p">,</span> <span class="n">g</span><span class="p">)</span>
 </pre></div>
@@ -191,6 +190,32 @@ functionality implemented in ReGraph.</p>
 </div>
 <div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">hierarchy</span><span class="o">.</span><span class="n">typings</span><span class="p">()</span>
 <span class="go">[(&#39;G&#39;, &#39;T&#39;), (&#39;model&#39;, &#39;G&#39;)]</span>
+</pre></div>
+</div>
+<p>Remove the node from the hierarchy and reconnect its predecessors with its successors:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">hierarchy</span><span class="o">.</span><span class="n">remove_node</span><span class="p">(</span><span class="s2">&quot;G&quot;</span><span class="p">,</span> <span class="n">reconnect</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">hierarchy</span><span class="o">.</span><span class="n">typings</span><span class="p">()</span>
+<span class="go">[(&#39;model&#39;, &#39;T&#39;)]</span>
+</pre></div>
+</div>
+<p>Graph hierarchy is also able to accommodate binary symmetric relations on graphs.
+Consider the following graph</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">catalysis</span> <span class="o">=</span> <span class="n">nx</span><span class="o">.</span><span class="n">DiGraph</span><span class="p">()</span>
+<span class="n">primitives</span><span class="o">.</span><span class="n">add_nodes_from</span><span class="p">(</span>
+        <span class="n">catalysis</span><span class="p">,</span>
+        <span class="p">[</span><span class="s2">&quot;enzyme&quot;</span><span class="p">,</span> <span class="s2">&quot;substrate&quot;</span><span class="p">,</span>
+         <span class="s2">&quot;mod&quot;</span><span class="p">,</span> <span class="s2">&quot;mod_state&quot;</span><span class="p">]</span>
+<span class="p">)</span>
+<span class="n">primitives</span><span class="o">.</span><span class="n">add_edges_from</span><span class="p">(</span><span class="n">catalysis</span><span class="p">,</span> <span class="p">[</span>
+        <span class="p">(</span><span class="s2">&quot;enzyme&quot;</span><span class="p">,</span> <span class="s2">&quot;mod&quot;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s2">&quot;mod&quot;</span><span class="p">,</span> <span class="s2">&quot;mod_state&quot;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s2">&quot;mod_state&quot;</span><span class="p">,</span> <span class="s2">&quot;substrate&quot;</span><span class="p">)</span>
+<span class="p">])</span>
+
+<span class="n">hierarchy</span><span class="o">.</span><span class="n">add_graph</span><span class="p">(</span><span class="s2">&quot;catalysis&quot;</span><span class="p">,</span> <span class="n">catalysis</span><span class="p">)</span>
+</pre></div>
+</div>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">plot_graph</span><span class="p">(</span><span class="n">hierarchy</span><span class="o">.</span><span class="n">graph</span><span class="p">[</span><span class="s2">&quot;catalysis&quot;</span><span class="p">])</span>
 </pre></div>
 </div>
 </div>

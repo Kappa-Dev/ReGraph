@@ -76,7 +76,6 @@ Add graphs to the hierarchy as follows: ::
 		("")
 	])
 
-
 	hierarchy.add_graph("T", t)
 	hierarchy.add_graph("G", g)
 	
@@ -94,7 +93,7 @@ Add graphs to the hierarchy as follows: ::
 ['T', 'G']
 
 Add graph typing (typing of `'G'` by `'T'`): ::
-
+	
 	mapping = {
 		"protein": "agent",
 		"region": "agent",
@@ -110,7 +109,7 @@ Add graph typing (typing of `'G'` by `'T'`): ::
 {'T': 'agent'}
 
 Create another graph and type it by `G` ::
-
+	
 	model = nx.DiGraph()
 	primitives.add_nodes_from(
 	    model,
@@ -140,6 +139,34 @@ Create another graph and type it by `G` ::
 
 >>> hierarchy.typings()
 [('G', 'T'), ('model', 'G')]
+
+Remove the node from the hierarchy and reconnect its predecessors with its successors:
+
+>>> hierarchy.remove_node("G", reconnect=True)
+>>> hierarchy.typings()
+[('model', 'T')]
+
+Graph hierarchy is also able to accommodate binary symmetric relations on graphs.
+Consider the following graph 
+
+::
+
+	catalysis = nx.DiGraph()
+	primitives.add_nodes_from(
+		catalysis,
+		["enzyme", "substrate",
+		 "mod", "mod_state"]
+	)
+	primitives.add_edges_from(catalysis, [
+		("enzyme", "mod"),
+		("mod", "mod_state"),
+		("mod_state", "substrate")
+	])
+
+	hierarchy.add_graph("catalysis", catalysis)
+
+>>> plot_graph(hierarchy.graph["catalysis"])
+
 
 .. _rewriting_in_hierarchy:
 
