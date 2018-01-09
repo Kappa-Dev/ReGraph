@@ -199,7 +199,7 @@ class TestHierarchy(object):
 
     def test_remove_graph(self):
         h = copy.deepcopy(self.hierarchy)
-        h.remove_graph("g1", reconnect=True)
+        h.remove_node("g1", reconnect=True)
         # print(h)
         # print(self.hierarchy)
 

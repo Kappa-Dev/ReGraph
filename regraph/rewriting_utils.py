@@ -454,7 +454,7 @@ def _apply_changes(hierarchy, upstream_changes, downstream_changes):
             if (g2, g1) in upstream_changes["relations"]:
                 # update left side
                 new_left_dict = dict()
-                left_dict = hierarchy.relation[g1][g2].rel
+                left_dict = hierarchy.relation[g1][g2]
                 for node in upstream_changes["graphs"][g1][0].nodes():
                     old_node = upstream_changes["graphs"][g1][1][node]
                     if old_node in left_dict.keys():
@@ -462,7 +462,7 @@ def _apply_changes(hierarchy, upstream_changes, downstream_changes):
 
                 # update right side
                 new_right_dict = dict()
-                right_dict = hierarchy.relation[g2][g1].rel
+                right_dict = hierarchy.relation[g2][g1]
                 for node in upstream_changes["graphs"][g2][0].nodes():
                     old_node = upstream_changes["graphs"][g2][1][node]
                     if old_node in right_dict.keys():
@@ -476,7 +476,7 @@ def _apply_changes(hierarchy, upstream_changes, downstream_changes):
                  "graphs" in downstream_changes.keys() and\
                  (g2, g1) in downstream_changes["relations"]:
                 # update left side
-                left_dict = hierarchy.relation[g1][g2].rel
+                left_dict = hierarchy.relation[g1][g2]
                 for node in upstream_changes["graphs"][g1][0].nodes():
                     old_node = upstream_changes["graphs"][g1][1][node]
                     if old_node in left_dict.keys():
@@ -492,7 +492,7 @@ def _apply_changes(hierarchy, upstream_changes, downstream_changes):
 
             # updates in a single graph involved in the relation
             else:
-                left_dict = hierarchy.relation[g1][g2].rel
+                left_dict = hierarchy.relation[g1][g2]
                 for node in upstream_changes["graphs"][g1][0].nodes():
                     if node in upstream_changes["graphs"][g1][1].keys():
                         old_node = upstream_changes["graphs"][g1][1][node]
@@ -524,7 +524,7 @@ def _apply_changes(hierarchy, upstream_changes, downstream_changes):
                             else:
                                 new_relation[new_left_node] = {new_right_node}
                 else:
-                    left_dict = hierarchy.relation[g1][g2].rel
+                    left_dict = hierarchy.relation[g1][g2]
                     for left_el, right_els in left_dict.items():
                         new_left_node =\
                             downstream_changes["graphs"][g1][1][left_el]
@@ -550,7 +550,7 @@ def _apply_changes(hierarchy, upstream_changes, downstream_changes):
             hierarchy.graph[graph] = hierarchy.node[graph].graph
 
     for (g1, g2), rel in rels.items():
-        old_attrs = copy.deepcopy(hierarchy.relation[g1][g2].attrs)
+        old_attrs = copy.deepcopy(hierarchy.relation_edge[g1][g2].attrs)
         hierarchy.remove_relation(g1, g2)
         hierarchy.add_relation(g1, g2, rel, old_attrs)
 

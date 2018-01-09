@@ -403,7 +403,7 @@ class Hierarchy(nx.DiGraph, AttributeContainter):
     typing_dict_factory = dict
     rule_lhs_typing_dict_factory = dict
     rule_rhs_typing_dict_factory = dict
-    relation_dict_factory = dict
+    rel_dict_factory = dict
 
     def __init__(self, directed=True,
                  attrs=None,
@@ -444,6 +444,9 @@ class Hierarchy(nx.DiGraph, AttributeContainter):
         self.rule_rhs_typing_dict_factory = rrtdf =\
             self.rule_rhs_typing_dict_factory
         self.rule_rhs_typing = rrtdf()
+        self.rel_dict_factory = reldf = self.rel_dict_factory
+        self.relation_edge = reldf()
+        self.relation = reldf()
 
         self.attrs = dict()
         self.directed = directed
@@ -452,7 +455,7 @@ class Hierarchy(nx.DiGraph, AttributeContainter):
         self.graph_typing_cls = graph_typing_cls
         self.rule_typing_cls = rule_typing_cls
         self.relation_cls = relation_cls
-        self.relation = dict()
+
         return
 
     def __str__(self):
@@ -491,7 +494,7 @@ class Hierarchy(nx.DiGraph, AttributeContainter):
 
         res += "\nRelations:\n"
         for n1, n2 in self.relations():
-            res += "%s-%s: %s\n" % (n1, n2, str(self.relation[n1][n2].attrs))
+            res += "%s-%s: %s\n" % (n1, n2, str(self.relation_edge[n1][n2].attrs))
 
         res += "\n"
         res += "attributes : \n"
@@ -546,7 +549,7 @@ class Hierarchy(nx.DiGraph, AttributeContainter):
                 if self.edge[s][t].rhs_total != hie.edge[s][t].rhs_total:
                     return False
         for n1, n2 in self.relations():
-            if set(self.relation[n1][n2].rel) != set(hie.relation[n1][n2].rel):
+            if set(self.relation[n1][n2]) != set(hie.relation[n1][n2]):
                 return False
         return True
 
@@ -569,9 +572,9 @@ class Hierarchy(nx.DiGraph, AttributeContainter):
     def relations(self):
         """Return a list of relations."""
         rel = list()
-        for k, v in self.relation.items():
-            if len(self.relation[k]) > 0:
-                for v, _ in self.relation[k].items():
+        for k, v in self.relation_edge.items():
+            if len(self.relation_edge[k]) > 0:
+                for v, _ in self.relation_edge[k].items():
                     if (k, v) not in rel and (v, k) not in rel:
                         rel.append((k, v))
         return rel
@@ -616,6 +619,8 @@ class Hierarchy(nx.DiGraph, AttributeContainter):
         if graph_attrs is not None:
             normalize_attrs(graph_attrs)
         self.node[graph_id] = self.graph_node_cls(graph, graph_attrs)
+        if graph_id not in self.relation_edge.keys():
+            self.relation_edge.update({graph_id: dict()})
         if graph_id not in self.relation.keys():
             self.relation.update({graph_id: dict()})
         self.graph[graph_id] = self.node[graph_id].graph
@@ -929,7 +934,7 @@ class Hierarchy(nx.DiGraph, AttributeContainter):
                 * node with id `left`/`right` is not a graph;
                 * a relation between `left` and `right` already exists;
                 * some node ids specified in `relation` are not found in the
-                `left`\`right` graph.
+                `left`/`right` graph.
 
         Examples
         --------
@@ -943,7 +948,6 @@ class Hierarchy(nx.DiGraph, AttributeContainter):
         {'a': {1, 2}, 'b': {3}}
         >>> hierarchy.relation["G2"]["G1"].rel
         {1: {'a'}, 2: {'a'}, 3: {'b'}}
-
         """
         if left not in self.nodes():
             raise HierarchyError(
@@ -1013,8 +1017,12 @@ class Hierarchy(nx.DiGraph, AttributeContainter):
         right_relation = right_relation_dict(pairs)
         rel_ab_obj = GraphRelation(relation, attrs)
         rel_ba_obj = GraphRelation(right_relation, attrs)
-        self.relation[left].update({right: rel_ab_obj})
-        self.relation[right].update({left: rel_ba_obj})
+        self.relation_edge[left].update({right: rel_ab_obj})
+        self.relation[left].update(
+            {right: self.relation_edge[left][right].rel})
+        self.relation_edge[right].update({left: rel_ba_obj})
+        self.relation[right].update(
+            {left: self.relation_edge[right][left].rel})
         return
 
     def remove_node(self, node_id, reconnect=False):
@@ -1094,6 +1102,12 @@ class Hierarchy(nx.DiGraph, AttributeContainter):
         nx.DiGraph.remove_node(self, node_id)
 
         # Update dicts representing relations
+        if node_id in self.relation_edge.keys():
+            del self.relation_edge[node_id]
+        for k, v in self.relation_edge.items():
+            if node_id in v.keys():
+                del self.relation_edge[k][node_id]
+
         if node_id in self.relation.keys():
             del self.relation[node_id]
         for k, v in self.relation.items():
@@ -1138,7 +1152,9 @@ class Hierarchy(nx.DiGraph, AttributeContainter):
                 "Relation '%s-%s' is not defined in the hierarchy" %
                 (g1, g2)
             )
+        del self.relation_edge[g1][g2]
         del self.relation[g1][g2]
+        del self.relation_edge[g2][g1]
         del self.relation[g2][g1]
 
     def adjacent_relations(self, g):
@@ -1146,7 +1162,7 @@ class Hierarchy(nx.DiGraph, AttributeContainter):
         if g not in self.nodes():
             raise HierarchyError(
                 "Node '%s' is not defined in the hierarchy!" % g)
-        return list(self.relation[g].keys())
+        return list(self.relation_edge[g].keys())
 
     def relation_to_span(self, left, right, edges=False, attrs=False):
         """Convert relation to a span.
@@ -1184,7 +1200,7 @@ class Hierarchy(nx.DiGraph, AttributeContainter):
         new_graph, left_h, right_h = relation_to_span(
             self.node[left].graph,
             self.node[right].graph,
-            self.relation[left][right].rel,
+            self.relation[left][right],
             edges,
             attrs,
             self.directed)
@@ -1966,8 +1982,8 @@ class Hierarchy(nx.DiGraph, AttributeContainter):
             json_data["relations"].append({
                 "from": u,
                 "to": v,
-                "rel": {a: list(b) for a, b in self.relation[u][v].rel.items()},
-                "attrs": self.relation[u][v].attrs_to_json()
+                "rel": {a: list(b) for a, b in self.relation[u][v].items()},
+                "attrs": self.relation_edge[u][v].attrs_to_json()
             })
         return json_data
 
