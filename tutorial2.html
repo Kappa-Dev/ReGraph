@@ -104,7 +104,8 @@ functionality implemented in ReGraph.</p>
 <span class="kn">from</span> <span class="nn">regraph</span> <span class="k">import</span> <span class="n">primitives</span>
 
 <span class="n">t</span> <span class="o">=</span> <span class="n">nx</span><span class="o">.</span><span class="n">DiGraph</span><span class="p">()</span>
-<span class="n">primitives</span><span class="o">.</span><span class="n">add_nodes_from</span><span class="p">([</span><span class="s2">&quot;agent&quot;</span><span class="p">,</span> <span class="s2">&quot;action&quot;</span><span class="p">,</span> <span class="s2">&quot;state&quot;</span><span class="p">])</span>
+<span class="n">primitives</span><span class="o">.</span><span class="n">add_nodes_from</span><span class="p">(</span>
+        <span class="p">[</span><span class="s2">&quot;agent&quot;</span><span class="p">,</span> <span class="s2">&quot;action&quot;</span><span class="p">,</span> <span class="s2">&quot;state&quot;</span><span class="p">])</span>
 <span class="n">primitives</span><span class="o">.</span><span class="n">add_edges_from</span><span class="p">([</span>
         <span class="p">(</span><span class="s2">&quot;agent&quot;</span><span class="p">,</span> <span class="s2">&quot;agent&quot;</span><span class="p">),</span>
         <span class="p">(</span><span class="s2">&quot;state&quot;</span><span class="p">,</span> <span class="s2">&quot;agent&quot;</span><span class="p">),</span>
@@ -114,7 +115,8 @@ functionality implemented in ReGraph.</p>
 
 <span class="n">g</span> <span class="o">=</span> <span class="n">nx</span><span class="o">.</span><span class="n">DiGraph</span><span class="p">()</span>
 <span class="n">primitives</span><span class="o">.</span><span class="n">add_nodes_from</span><span class="p">(</span>
-        <span class="p">[</span><span class="s2">&quot;protein&quot;</span><span class="p">,</span> <span class="s2">&quot;region&quot;</span><span class="p">,</span> <span class="s2">&quot;activity&quot;</span><span class="p">,</span> <span class="s2">&quot;mod&quot;</span><span class="p">])</span>
+        <span class="p">[</span><span class="s2">&quot;protein&quot;</span><span class="p">,</span> <span class="s2">&quot;region&quot;</span><span class="p">,</span>
+         <span class="s2">&quot;activity&quot;</span><span class="p">,</span> <span class="s2">&quot;mod&quot;</span><span class="p">])</span>
 <span class="n">primitives</span><span class="o">.</span><span class="n">add_edges_from</span><span class="p">([</span>
         <span class="p">(</span><span class="s2">&quot;region&quot;</span><span class="p">,</span> <span class="s2">&quot;protein&quot;</span><span class="p">),</span>
         <span class="p">(</span><span class="s2">&quot;activity&quot;</span><span class="p">,</span> <span class="s2">&quot;protein&quot;</span><span class="p">),</span>
@@ -137,6 +139,10 @@ functionality implemented in ReGraph.</p>
 </pre></div>
 </div>
 <img alt="_images/ex1_meta_model.png" src="_images/ex1_meta_model.png" />
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">hierarchy</span><span class="o">.</span><span class="n">graphs</span><span class="p">()</span>
+<span class="go">[&#39;T&#39;, &#39;G&#39;]</span>
+</pre></div>
+</div>
 <p>Add graph typing (typing of <cite>‘G’</cite> by <cite>‘T’</cite>):</p>
 <div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">mapping</span> <span class="o">=</span> <span class="p">{</span>
         <span class="s2">&quot;protein&quot;</span><span class="p">:</span> <span class="s2">&quot;agent&quot;</span><span class="p">,</span>
@@ -149,6 +155,50 @@ functionality implemented in ReGraph.</p>
 </div>
 <div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">hierarchy</span><span class="o">.</span><span class="n">typing</span><span class="p">[</span><span class="s2">&quot;G&quot;</span><span class="p">][</span><span class="s2">&quot;T&quot;</span><span class="p">]</span>
 <span class="go">{&#39;activity&#39;: &#39;state&#39;, &#39;mod&#39;: &#39;action&#39;, &#39;protein&#39;: &#39;agent&#39;, &#39;region&#39;: &#39;agent&#39;}</span>
+</pre></div>
+</div>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">hierarchy</span><span class="o">.</span><span class="n">node_type</span><span class="p">(</span><span class="s2">&quot;G&quot;</span><span class="p">,</span> <span class="s2">&quot;region&quot;</span><span class="p">)</span>
+<span class="go">{&#39;T&#39;: &#39;agent&#39;}</span>
+</pre></div>
+</div>
+<dl class="docutils">
+<dt>Create another graph and type it by <cite>G</cite> ::</dt>
+<dd><p class="first">model = nx.DiGraph()
+primitives.add_nodes_from(</p>
+<blockquote>
+<div>model,
+[“A”, “R”, “B”, “B_activity”, “activation”])</div></blockquote>
+<dl class="docutils">
+<dt>primitives.add_edges_from(model, [</dt>
+<dd>(“R”, “A”),
+(“R”, “activation”),
+(“activation”, “B_activity”),
+(“B_activity”, “B”)</dd>
+</dl>
+<p class="last">])
+hierarchy.add_graph(“model”, model)</p>
+</dd>
+</dl>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">plot_graph</span><span class="p">(</span><span class="n">hierarchy</span><span class="o">.</span><span class="n">graph</span><span class="p">[</span><span class="s2">&quot;model&quot;</span><span class="p">])</span>
+</pre></div>
+</div>
+<img alt="_images/ex1_model.png" src="_images/ex1_model.png" />
+<dl class="docutils">
+<dt>::</dt>
+<dd><dl class="first docutils">
+<dt>mapping = {</dt>
+<dd>“A”: “protein”,
+“R”: “region”,
+“B”: “protein”,
+“B_activity”: “activity”,
+“activation”: “mod”</dd>
+</dl>
+<p class="last">}
+hierarchy.add_typing(“model”, “G”, mapping)</p>
+</dd>
+</dl>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">hierarchy</span><span class="o">.</span><span class="n">typings</span><span class="p">()</span>
+<span class="go">[(&#39;G&#39;, &#39;T&#39;), (&#39;model&#39;, &#39;G&#39;)]</span>
 </pre></div>
 </div>
 </div>

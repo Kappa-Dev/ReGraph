@@ -54,7 +54,8 @@ Add graphs to the hierarchy as follows: ::
 	from regraph import primitives
 
 	t = nx.DiGraph()
-	primitives.add_nodes_from(["agent", "action", "state"])
+	primitives.add_nodes_from(
+		["agent", "action", "state"])
 	primitives.add_edges_from([
 		("agent", "agent"),
 		("state", "agent"),
@@ -64,7 +65,8 @@ Add graphs to the hierarchy as follows: ::
 
 	g = nx.DiGraph()
 	primitives.add_nodes_from(
-		["protein", "region", "activity", "mod"])
+		["protein", "region",
+		 "activity", "mod"])
 	primitives.add_edges_from([
 		("region", "protein"),
 		("activity", "protein"),
@@ -88,6 +90,9 @@ Add graphs to the hierarchy as follows: ::
 .. image:: _images/ex1_meta_model.png
 
 
+>>> hierarchy.graphs()
+['T', 'G']
+
 Add graph typing (typing of `'G'` by `'T'`): ::
 
 	mapping = {
@@ -101,6 +106,38 @@ Add graph typing (typing of `'G'` by `'T'`): ::
 >>> hierarchy.typing["G"]["T"]
 {'activity': 'state', 'mod': 'action', 'protein': 'agent', 'region': 'agent'}
 
+>>> hierarchy.node_type("G", "region")
+{'T': 'agent'}
+
+Create another graph and type it by `G` ::
+	model = nx.DiGraph()
+	primitives.add_nodes_from(
+	    model,
+	    ["A", "R", "B", "B_activity", "activation"])
+	primitives.add_edges_from(model, [
+	    ("R", "A"),
+	    ("R", "activation"),
+	    ("activation", "B_activity"),
+	    ("B_activity", "B")
+	])
+	hierarchy.add_graph("model", model)
+
+>>> plot_graph(hierarchy.graph["model"])
+
+.. image:: _images/ex1_model.png
+
+::
+	mapping = {
+		"A": "protein",
+		"R": "region",
+		"B": "protein",
+		"B_activity": "activity",
+		"activation": "mod"
+	}
+	hierarchy.add_typing("model", "G", mapping)
+
+>>> hierarchy.typings()
+[('G', 'T'), ('model', 'G')]
 
 .. _rewriting_in_hierarchy:
 
