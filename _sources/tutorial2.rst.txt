@@ -86,7 +86,7 @@ Add graphs to the hierarchy as follows: ::
 
 >>> plot_graph(hierarchy.graph["G"])
 
-.. image:: _images/ex1_meta_model.png
+.. image:: _static/ex1_meta_model.png
 
 
 >>> hierarchy.graphs()
@@ -124,7 +124,8 @@ Create another graph and type it by `G` ::
 
 >>> plot_graph(hierarchy.graph["model"])
 
-.. image:: _images/ex1_model.png
+.. image:: _static/ex1_model.png
+
 
 ::
 
@@ -165,7 +166,7 @@ Consider the following graph
 
 	hierarchy.add_graph("catalysis", catalysis)
 
->>> plot_graph(hierarchy.graph["catalysis"])
+    plot_graph(hierarchy.graph["catalysis"])
 
 
 .. _rewriting_in_hierarchy:

@@ -200,22 +200,21 @@ functionality implemented in ReGraph.</p>
 </div>
 <p>Graph hierarchy is also able to accommodate binary symmetric relations on graphs.
 Consider the following graph</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">catalysis</span> <span class="o">=</span> <span class="n">nx</span><span class="o">.</span><span class="n">DiGraph</span><span class="p">()</span>
-<span class="n">primitives</span><span class="o">.</span><span class="n">add_nodes_from</span><span class="p">(</span>
-        <span class="n">catalysis</span><span class="p">,</span>
-        <span class="p">[</span><span class="s2">&quot;enzyme&quot;</span><span class="p">,</span> <span class="s2">&quot;substrate&quot;</span><span class="p">,</span>
-         <span class="s2">&quot;mod&quot;</span><span class="p">,</span> <span class="s2">&quot;mod_state&quot;</span><span class="p">]</span>
-<span class="p">)</span>
-<span class="n">primitives</span><span class="o">.</span><span class="n">add_edges_from</span><span class="p">(</span><span class="n">catalysis</span><span class="p">,</span> <span class="p">[</span>
-        <span class="p">(</span><span class="s2">&quot;enzyme&quot;</span><span class="p">,</span> <span class="s2">&quot;mod&quot;</span><span class="p">),</span>
-        <span class="p">(</span><span class="s2">&quot;mod&quot;</span><span class="p">,</span> <span class="s2">&quot;mod_state&quot;</span><span class="p">),</span>
-        <span class="p">(</span><span class="s2">&quot;mod_state&quot;</span><span class="p">,</span> <span class="s2">&quot;substrate&quot;</span><span class="p">)</span>
-<span class="p">])</span>
+<div class="highlight-default"><div class="highlight"><pre><span></span>    <span class="n">catalysis</span> <span class="o">=</span> <span class="n">nx</span><span class="o">.</span><span class="n">DiGraph</span><span class="p">()</span>
+    <span class="n">primitives</span><span class="o">.</span><span class="n">add_nodes_from</span><span class="p">(</span>
+            <span class="n">catalysis</span><span class="p">,</span>
+            <span class="p">[</span><span class="s2">&quot;enzyme&quot;</span><span class="p">,</span> <span class="s2">&quot;substrate&quot;</span><span class="p">,</span>
+             <span class="s2">&quot;mod&quot;</span><span class="p">,</span> <span class="s2">&quot;mod_state&quot;</span><span class="p">]</span>
+    <span class="p">)</span>
+    <span class="n">primitives</span><span class="o">.</span><span class="n">add_edges_from</span><span class="p">(</span><span class="n">catalysis</span><span class="p">,</span> <span class="p">[</span>
+            <span class="p">(</span><span class="s2">&quot;enzyme&quot;</span><span class="p">,</span> <span class="s2">&quot;mod&quot;</span><span class="p">),</span>
+            <span class="p">(</span><span class="s2">&quot;mod&quot;</span><span class="p">,</span> <span class="s2">&quot;mod_state&quot;</span><span class="p">),</span>
+            <span class="p">(</span><span class="s2">&quot;mod_state&quot;</span><span class="p">,</span> <span class="s2">&quot;substrate&quot;</span><span class="p">)</span>
+    <span class="p">])</span>
 
-<span class="n">hierarchy</span><span class="o">.</span><span class="n">add_graph</span><span class="p">(</span><span class="s2">&quot;catalysis&quot;</span><span class="p">,</span> <span class="n">catalysis</span><span class="p">)</span>
-</pre></div>
-</div>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">plot_graph</span><span class="p">(</span><span class="n">hierarchy</span><span class="o">.</span><span class="n">graph</span><span class="p">[</span><span class="s2">&quot;catalysis&quot;</span><span class="p">])</span>
+    <span class="n">hierarchy</span><span class="o">.</span><span class="n">add_graph</span><span class="p">(</span><span class="s2">&quot;catalysis&quot;</span><span class="p">,</span> <span class="n">catalysis</span><span class="p">)</span>
+
+<span class="n">plot_graph</span><span class="p">(</span><span class="n">hierarchy</span><span class="o">.</span><span class="n">graph</span><span class="p">[</span><span class="s2">&quot;catalysis&quot;</span><span class="p">])</span>
 </pre></div>
 </div>
 </div>
