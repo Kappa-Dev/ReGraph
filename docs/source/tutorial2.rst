@@ -11,7 +11,6 @@ Tutorial
     * :ref:`hierarchy_tutorial`
         * :ref:`hierarchy_creation`
         * :ref:`rewriting_in_hierarchy`
-        * :ref:`propagation_in_hierarchy`
 
 
 .. _tutorial_part2:
@@ -28,25 +27,189 @@ If you missed the part of the ReGraph tutorial about primitive graph transformat
 ---------
 Hierarchy
 ---------
-    
+
+A graph hierarchy is a directed acyclic graph, where nodes are graphs with attributes and edges are
+homomorphisms representing graph typing in the system. This construction provides means
+for mathematically robust procedures of propagation of changes (expressed through graph rewriting
+rules) on any level of the hierarchy, up to all the graphs which are transitively typed by the graph
+subject to rewriting. In the following section we give a simple example of such hierarchy and its
+functionality implemented in ReGraph.
+
 .. _hierarchy_creation:
 
 ^^^^^^^^^^^^^^^^^^
 Hierarchy creation
 ^^^^^^^^^^^^^^^^^^
+Create an empty hierarchy:
 
->>> from regraph.hierarchy import Hierarchy
+>>> from regraph import Hierarchy
 >>> hierarchy = Hierarchy()
 
+Add graphs to the hierarchy as follows: ::
+	
+	import networkx as nx
+
+	from regraph import plot_graph
+	from regraph import primitives
+
+	t = nx.DiGraph()
+	primitives.add_nodes_from(
+		["agent", "action", "state"])
+	primitives.add_edges_from([
+		("agent", "agent"),
+		("state", "agent"),
+		("agent", "action"),
+		("action", "state")
+	])
+
+	g = nx.DiGraph()
+	primitives.add_nodes_from(
+		["protein", "region",
+		 "activity", "mod"])
+	primitives.add_edges_from([
+		("region", "protein"),
+		("activity", "protein"),
+		("activity", "region"),
+		("protein", "mod"),
+		("region", "mod"),
+		("")
+	])
+
+	hierarchy.add_graph("T", t)
+	hierarchy.add_graph("G", g)
+	
+
+>>> plot_graph(hierarchy.graph["T"])
+
+.. image:: _images/ex1_meta_meta_model.png
+
+>>> plot_graph(hierarchy.graph["G"])
+
+.. image:: _static/ex1_meta_model.png
+
+
+>>> hierarchy.graphs()
+['T', 'G']
+
+Add graph typing (typing of `'G'` by `'T'`): ::
+	
+	mapping = {
+		"protein": "agent",
+		"region": "agent",
+		"activity": "state",
+		"mod": "action"
+	}
+	hierarchy.add_typing("G", "T", mapping)
+
+>>> hierarchy.typing["G"]["T"]
+{'activity': 'state', 'mod': 'action', 'protein': 'agent', 'region': 'agent'}
+
+>>> hierarchy.node_type("G", "region")
+{'T': 'agent'}
+
+Create another graph and type it by `G` ::
+	
+	model = nx.DiGraph()
+	primitives.add_nodes_from(
+	    model,
+	    ["A", "R", "B", "C", "B_activity", "C_activity", "activation"])
+	primitives.add_edges_from(model, [
+	    ("R", "A"),
+	    ("R", "activation"),
+	    ("activation", "B_activity"),
+	    ("B_activity", "B"),
+	    ("activation", "C_activity"),
+	    ("C_activity", "C")
+	])
+	hierarchy.add_graph("model", model)
+
+>>> plot_graph(hierarchy.graph["model"])
+
+.. image:: _static/ex1_model.png
+
+
+::
+
+	mapping = {
+		"A": "protein",
+		"R": "region",
+		"B": "protein",
+		"C": "protein",
+		"B_activity": "activity",
+		"C_activity": "activity",
+		"activation": "mod"
+	}
+	hierarchy.add_typing("model", "G", mapping)
+
+>>> hierarchy.typings()
+[('G', 'T'), ('model', 'G')]
+
+Remove the node from the hierarchy and reconnect its predecessors with its successors:
+
+>>> hierarchy.remove_node("G", reconnect=True)
+>>> hierarchy.typings()
+[('model', 'T')]
+>>> hierarchy.typing["model"]["T"]
+{'A': 'agent',
+ 'B': 'agent',
+ 'B_activity': 'state',
+ 'C': 'agent',
+ 'C_activity': 'state',
+ 'R': 'agent',
+ 'activation': 'action'}
+
+
+Graph hierarchy is also able to accommodate binary symmetric relations on graphs.
+Consider the following graph 
+
+::
+
+	catalysis = nx.DiGraph()
+	primitives.add_nodes_from(
+		catalysis,
+		["enzyme", "substrate",
+		 "mod", "mod_state"]
+	)
+	primitives.add_edges_from(catalysis, [
+		("enzyme", "mod"),
+		("mod", "mod_state"),
+		("mod_state", "substrate")
+	])
+
+	hierarchy.add_graph("catalysis", catalysis)
+
+    plot_graph(hierarchy.graph["catalysis"])
+
+
+.. image:: _static/ex1_catalysis.png
+
+Create a relation between graph `model` and graph `catalysis`: ::
+
+	relation = {
+		"A": "enzyme",
+		"B": "substrate",
+		"C": "substrate",
+		"B_activity": "mod_state",
+		"C_activity": "mod_state",
+		"activation": "mod"
+	}
+	hierarchy.add_relation('model', 'catalysis')
+
+>>> hierarchy.relation['model']['catalysis']
+{'A': {'enzyme'},
+ 'B': {'substrate'},
+ 'B_activity': {'mod_state'},
+ 'C': {'substrate'},
+ 'C_activity': {'mod_state'},
+ 'activation': {'mod'}}
+>>> hierarchy.relation['catalysis']['model']
+{'enzyme': {'A'},
+ 'mod': {'activation'},
+ 'mod_state': {'B_activity', 'C_activity'},
+ 'substrate': {'B', 'C'}}
 
 .. _rewriting_in_hierarchy:
 
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 Rewriting in the hierarchy
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-.. _propagation_in_hierarchy:
-
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-Propagation in the hierarchy
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^

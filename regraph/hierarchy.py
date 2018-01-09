@@ -1099,6 +1099,31 @@ class Hierarchy(nx.DiGraph, AttributeContainter):
         for k, v in self.relation.items():
             if node_id in v.keys():
                 del self.relation[k][node_id]
+
+        # Update graph/rule dict
+        if node_id in self.graph.keys():
+            del self.graph[node_id]
+        if node_id in self.rule.keys():
+            del self.rule[node_id]
+
+        # Update (rule) typing dict
+        if node_id in self.typing.keys():
+            del self.typing[node_id]
+        for k, v in self.typing.items():
+            if node_id in v.keys():
+                del self.typing[k][node_id]
+
+        if node_id in self.rule_lhs_typing.keys():
+            del self.rule_lhs_typing[node_id]
+        for k, v in self.rule_lhs_typing.items():
+            if node_id in v.keys():
+                del self.rule_lhs_typing[k][node_id]
+
+        if node_id in self.rule_rhs_typing.keys():
+            del self.rule_rhs_typing[node_id]
+        for k, v in self.rule_rhs_typing.items():
+            if node_id in v.keys():
+                del self.rule_rhs_typing[k][node_id]
         return
 
     def add_cycle(self, nodes, **attr):

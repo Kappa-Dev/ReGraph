@@ -91,7 +91,7 @@ We can plot this graph:
 
 >>> rg.plot_graph(graph)
 
-.. image:: _static/graph1.png
+.. image:: _images/graph1.png
 
 Add attributes to the the nodes/edges of the graph:
 
@@ -123,7 +123,7 @@ Clone a node of the graph:
 The new node corresponding to the clone is created in the hierarchy, and 
 all the nodes adjacent to the original node become connected to the clone as well:
 
-.. image:: _static/graph1_clone.png
+.. image:: _images/graph1_clone.png
 
 Merge two nodes of the graph.
 
@@ -144,7 +144,7 @@ to the result of merge is created. All the edges incident to the original nodes
 stay incident to the result of merge, and all the attribute dictionaries of nodes/edges
 are merged.
 
-.. image:: _static/graph1_merge.png
+.. image:: _images/graph1_merge.png
 
 Dump your graph object to its JSON representation (Python dict):
 
@@ -488,7 +488,7 @@ Create a rewriting rule:
 
 Invoking the `plot_rule` function on the last line produces the following plot of the rule:
 
-.. image:: _static/rule1.png
+.. image:: _images/rule1.png
 
 From this plot we can see that the node `1` is cloned and its clone is represented with the node `1_clone`,
 then the edge between the nodes `2` and `3` is removed, and finally, the new node (with id `new_node`) is created and attached with an edge to the `1_clone` node.
@@ -505,7 +505,7 @@ Now, let's try to apply this rule and rewrite some graph, for example the follow
     pos = plot_graph(graph)
 
 
-.. image:: _static/graph_to_rewrite.png
+.. image:: _images/graph_to_rewrite.png
 
 First, we need to find instances of the `lhs` of the rule in this graph,
 which can be done by `regraph.primitives.find_matching` function presented above:
@@ -518,7 +518,7 @@ We can also plot the instance in the graph:
 
 >>> plot_instance(graph, rule1.lhs, instances[0], parent_pos=pos)
 
-.. image:: _static/graph_to_rewrite_instance.png
+.. image:: _images/graph_to_rewrite_instance.png
 
 Finally, perform graph rewriting on the instance that was found:
 
@@ -530,7 +530,7 @@ Plot the new graph and the `rhs` instance:
 
 >>> plot_instance(new_graph, rule1.rhs, rhs_instance, parent_pos=pos)
 
-.. image:: _static/graph_to_rewrite_result.png
+.. image:: _images/graph_to_rewrite_result.png
 
 
 ::
