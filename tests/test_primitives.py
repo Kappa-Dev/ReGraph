@@ -1,11 +1,8 @@
 import networkx as nx
 
-from regraph.atset import to_atset
 from regraph.rules import Rule
-from regraph.utils import (dict_sub,
-                           valid_attributes,
-                           normalize_attrs,
-                           is_subdict)
+from regraph.utils import (valid_attributes,
+                           normalize_attrs)
 from regraph.category_utils import identity
 from regraph.primitives import *
 import regraph.primitives as prim
