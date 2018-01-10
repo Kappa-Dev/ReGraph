@@ -2,9 +2,133 @@
 import networkx as nx
 from networkx.exception import NetworkXNoPath
 
-from regraph.category_op import check_homomorphism
-from regraph.exceptions import RewritingError
+from regraph.category_utils import check_homomorphism, compose
+from regraph.exceptions import RewritingError, HierarchyError
 from regraph.utils import keys_by_value, format_typing
+
+
+def _check_rule_typing(hierarchy, rule_id, graph_id, lhs_mapping, rhs_mapping):
+    all_paths = nx.all_pairs_shortest_path(hierarchy)
+
+    paths_from_target = {}
+    for s in hierarchy.nodes():
+        if s == graph_id:
+            for key in all_paths[graph_id].keys():
+                paths_from_target[key] = all_paths[graph_id][key]
+
+    for t in paths_from_target.keys():
+        if t != graph_id:
+            new_lhs_h = compose(
+                lhs_mapping,
+                hierarchy.compose_path_typing(paths_from_target[t]))
+            new_rhs_h = compose(
+                rhs_mapping,
+                hierarchy.compose_path_typing(paths_from_target[t]))
+            try:
+                # find homomorphisms from s to t via other paths
+                s_t_paths = nx.all_shortest_paths(hierarchy, rule_id, t)
+                for path in s_t_paths:
+                    lhs_h, rhs_h = hierarchy.compose_path_typing(path)
+                    if lhs_h != new_lhs_h:
+                        raise HierarchyError(
+                            "Invalid lhs typing: homomorphism does not "
+                            "commute with an existing "
+                            "path from '%s' to '%s'!" % (s, t)
+                        )
+                    if rhs_h != new_rhs_h:
+                        raise HierarchyError(
+                            "Invalid rhs typing: homomorphism does not "
+                            "commute with an existing " +
+                            "path from '%s' to '%s'!" % (s, t)
+                        )
+            except(nx.NetworkXNoPath):
+                pass
+    return
+
+
+def _check_consistency(hierarchy, source, target, mapping=None):
+    all_paths = nx.all_pairs_shortest_path(hierarchy)
+
+    paths_to_source = {}
+    paths_from_target = {}
+    for s in hierarchy.nodes():
+        if source in all_paths[s].keys():
+            paths_to_source[s] = all_paths[s][source]
+        if s == target:
+            for key in all_paths[target].keys():
+                paths_from_target[key] = all_paths[target][key]
+
+    for s in paths_to_source.keys():
+        if hierarchy._path_from_rule(paths_to_source[s]):
+            for t in paths_from_target.keys():
+                # find homomorphism from s to t via new path
+                if s == source:
+                    raise HierarchyError(
+                        "Found a rule typing some node in the hierarchy!"
+                    )
+                new_lhs_h, new_rhs_h = hierarchy.compose_path_typing(
+                    paths_to_source[s])
+                new_lhs_h = compose(new_lhs_h, mapping)
+                new_rhs_h = compose(new_rhs_h, mapping)
+
+                if t != target:
+                    new_lhs_h = compose(
+                        new_lhs_h,
+                        hierarchy.compose_path_typing(paths_from_target[t])
+                    )
+                    new_rhs_h = compose(
+                        new_rhs_h,
+                        hierarchy.compose_path_typing(paths_from_target[t]),
+                    )
+                try:
+                    # find homomorphisms from s to t via other paths
+                    s_t_paths = nx.all_shortest_paths(hierarchy, s, t)
+                    for path in s_t_paths:
+                        lhs_h, rhs_h = hierarchy.compose_path_typing(path)
+                        if lhs_h != new_lhs_h:
+                            raise HierarchyError(
+                                "Invalid lhs typing: homomorphism does "
+                                "not commute with an existing " +
+                                "path from '%s' to '%s'!" % (s, t)
+                            )
+                        if rhs_h != new_rhs_h:
+                            raise HierarchyError(
+                                "Invalid rhs typing: homomorphism does "
+                                "not commute with an existing " +
+                                "path from '%s' to '%s'!" % (s, t)
+                            )
+                except(nx.NetworkXNoPath):
+                    pass
+        else:
+            for t in paths_from_target.keys():
+                # find homomorphism from s to t via new path
+                if s != source:
+                    new_homomorphism = hierarchy.compose_path_typing(
+                        paths_to_source[s])
+                else:
+                    new_homomorphism = dict([(key, key)
+                                             for key, _ in mapping.items()])
+                new_homomorphism = compose(
+                    new_homomorphism, mapping)
+                if t != target:
+                    new_homomorphism = compose(
+                        new_homomorphism,
+                        hierarchy.compose_path_typing(paths_from_target[t])
+                    )
+
+                # find homomorphisms from s to t via other paths
+                s_t_paths = nx.all_shortest_paths(hierarchy, s, t)
+                try:
+                    # check only the first path
+                    for path in s_t_paths:
+                        path_homomorphism = hierarchy.compose_path_typing(path)
+                        if path_homomorphism != new_homomorphism:
+                            raise HierarchyError(
+                                "Homomorphism does not commute with an " +
+                                "existing path from '%s' to '%s'!" % (s, t)
+                            )
+                except(nx.NetworkXNoPath):
+                        pass
 
 
 def _autocomplete_typing(hierarchy, graph_id, instance,

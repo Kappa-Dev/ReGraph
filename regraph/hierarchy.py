@@ -1,39 +1,16 @@
 """Graph hierarchy related data structures.
 
-This module contains a collection of data structures implementing
-graph hierarchy and its various components.
-Graph hierarchy is a DAG, whose nodes can be graphs or rules of
-sesqui-pushout rewriting, and whose edges (directed) represent
+This module contains a data structure implementing
+graph hierarchy. Graph hierarchy is a DAG, whose nodes
+can be graphs or rules of sesqui-pushout rewriting,
+and whose edges (directed) represent
 homomorphisms between graphs. In addition, hierarchies are
 equipped with relations on graphs (which can be thought of as
 undirected edges or, alternatively, spans).
 
-The following data structures are implemented in this module:
-
-* `AttributeContainter` -- base class for objects containing
-  attributes, provides an interface for different operations
-  on attributes;
-* `GraphNode` -- class for graph nodes of a hierarchy;
-* `RuleNode` -- class for rule nodes of a hierarchy;
-* `Typing` -- class for graph typing edges of a hierarchy,
-  encapsulates graph homomorphism from a source graph node
-  to a target graph node;
-* `RuleTyping` -- class for rule typing edges of a hierarchy
-  (its source node is assumed to be a rule and its target -- a graph),
-  encapsulated two homomorphisms: from the left-hand side of the rule
-  to the target and from the right-hand side of the rule to the target;
-* `Relation` -- base class for relations in the hierarchy;
-* `GraphRelation` -- class for binary symmetric relations between
-  two graphs.
-* `Hierarchy` -- class for graph hierarchies (nodes: graphs or rules, edges:
-  graph/rule homomorphisms + relations: separate from edges, act as undirected
-  edges), based on `networkx.DiGraph`,
+* `Hierarchy` -- class for graph hierarchies, based on `networkx.DiGraph`,
   additionally constrained to be acyclic and to respect the property of
   commuting paths.
-
-TODO:
-
-* `RuleRelation`
 """
 import copy
 import itertools
@@ -47,13 +24,13 @@ from networkx.algorithms import isomorphism
 from networkx.exception import NetworkXNoPath
 
 from regraph import rewriting_utils
-from regraph import rule_type_checking
-from regraph.attribute_sets import AttributeSet, FiniteSet
-from regraph.category_op import (compose,
-                                 check_homomorphism,
-                                 is_total_homomorphism,
-                                 relation_to_span,
-                                 right_relation_dict)
+from regraph import type_checking
+
+from regraph.category_utils import (compose,
+                                    check_homomorphism,
+                                    is_total_homomorphism,
+                                    relation_to_span,
+                                    right_relation_dict)
 from regraph.primitives import (get_relabeled_graph,
                                 relabel_node,
                                 get_edge,
@@ -63,9 +40,7 @@ from regraph.primitives import (get_relabeled_graph,
 from regraph.utils import (is_subdict,
                            keys_by_value,
                            normalize_attrs,
-                           to_set,
-                           replace_source,
-                           replace_target)
+                           )
 from regraph.rules import Rule
 from regraph.exceptions import (HierarchyError,
                                 TotalityWarning,
@@ -73,296 +48,12 @@ from regraph.exceptions import (HierarchyError,
                                 RewritingError,
                                 InvalidHomomorphism,
                                 GraphError)
-
-
-class AttributeContainter(object):
-    """Base class for containers of attributes."""
-
-    def attrs_to_json(self):
-        """Convert attributes to json."""
-        json_data = dict()
-        for key, value in self.attrs.items():
-            json_data[key] = value.to_json()
-        return json_data
-
-    @staticmethod
-    def attrs_from_json(json_data):
-        """Retrieve attrs from json-like dict."""
-        attrs = dict()
-        for key, value in json_data.items():
-            attrs[key] = AttributeSet.from_json(value)
-        return attrs
-
-    def add_attrs(self, attrs):
-        """Add attrs to the container."""
-        if attrs:
-            new_attrs = copy.deepcopy(attrs)
-            normalize_attrs(new_attrs)
-        else:
-            new_attrs = dict()
-        if len(self.attrs) == 0:
-            self.attrs = new_attrs
-        else:
-            for key, value in new_attrs.items():
-                if key not in self.attrs.keys():
-                    self.attrs[key] = FiniteSet(value)
-                else:
-                    self.attrs[key] = self.attrs[key].union(value)
-        return
-
-    def remove_attrs(self, attrs):
-        """Remove attributes."""
-        if attrs is None:
-            pass
-        else:
-            normalize_attrs(self.attrs)
-            for key, value in attrs.items():
-                if key not in self.attrs.keys():
-                    pass
-                else:
-                    elements_to_remove = []
-                    for el in to_set(value):
-                        if el in self.attrs[key]:
-                            elements_to_remove.append(el)
-                        else:
-                            pass
-                    for el in elements_to_remove:
-                        self.attrs[key].remove(el)
-
-    def update_attrs(self, attrs):
-        """Update attribures."""
-        new_attrs = copy.deepcopy(attrs)
-        if new_attrs is None:
-            pass
-        else:
-            normalize_attrs(new_attrs)
-            self.attrs = new_attrs
-
-
-class GraphNode(AttributeContainter):
-    """Data structure incapsulating graph in the node of the hierarchy.
-
-    Attributes
-    ----------
-    graph : nx.(Di)Graph
-    attrs : dict
-        Dictionary with attrs of the graph node
-    """
-
-    def __init__(self, graph, attrs=None):
-        """Initialize graph node with graph object and attrs."""
-        self.graph = graph
-        if attrs:
-            self.attrs = attrs
-        else:
-            self.attrs = dict()
-        return
-
-    def __eq__(self, other):
-        """Equality of graph nodes."""
-        return isinstance(other, GraphNode) and equal(self.graph, other.graph)
-
-
-class RuleNode(AttributeContainter):
-    """Data structure incapsulating a rule in the node of the hierarchy.
-
-    Attributes
-    ----------
-    rule : regraph.rules.Rule
-    attrs : dict
-        Dictionary with attrs of the rule node
-    """
-
-    def __init__(self, rule, attrs=None):
-        """Initialize rule with a Rule object."""
-        self.rule = rule
-        if attrs:
-            self.attrs = attrs
-        else:
-            self.attrs = dict()
-        return
-
-    def __eq__(self, other):
-        """Equality of rule nodes."""
-        return isinstance(other, RuleNode) and self.rule == other.rule
-
-    def __ne__(self, other):
-        """Non-equality of the rule nodes."""
-        return not (self == other)
-
-
-class Typing(AttributeContainter):
-    """Data structure incapsulating a homomorphism between graphs.
-
-    Attributes
-    ----------
-    mapping : dict
-        Dictionary containing a map from nodes of a source graph
-        to nodes of a target.
-    total : bool
-        Flag indication if the typing is forced to be total
-    attrs : dict
-        Dictionary with attrs of the typing
-    """
-
-    def __init__(self, mapping, total=False, attrs=None):
-        """Initialize homomorphism."""
-        self.mapping = mapping
-        self.total = total
-        if attrs:
-            self.attrs = attrs
-        else:
-            self.attrs = dict()
-        return
-
-    def is_total(self):
-        """Test typing totality attribute."""
-        return self.total
-
-    def rename_source(self, old_name, new_name):
-        """Rename source of typing."""
-        replace_source(old_name, new_name, self.mapping)
-
-    def rename_target(self, old_name, new_name):
-        """Rename typing of typing."""
-        replace_target(old_name, new_name, self.mapping)
-
-    def __rmul__(self, other):
-        """Right multiplication operation."""
-        if isinstance(other, Typing):
-            return Typing(
-                compose(other.mapping),
-                self.total and other.total,
-                self.attrs)
-        else:
-            return NotImplemented
-
-    def __mul__(self, other):
-        """Multiplication operation."""
-        if isinstance(other, Typing):
-            return Typing(
-                compose(other.mapping, self.mapping),
-                self.total and other.total)
-
-        elif isinstance(other, RuleTyping):
-            return RuleTyping(
-                compose(other.lhs_mapping, self.mapping),
-                compose(other.rhs_mapping, self.mapping),
-                other.lhs_total and self.total,
-                other.rhs_total and self.total)
-        else:
-            return NotImplemented
-
-
-class RuleTyping(AttributeContainter):
-    """Data structure incapsulating rule typing.
-
-    A rule typing by a graph is defined by two homomorphisms:
-    lhs -> graph and rhs -> graph, such that they commute
-    (p -> lhs -> graph and p -> rhs -> graph commute).
-
-    Attributes
-    ----------
-    lhs_mapping : dict
-        Dictionary containing a map from nodes of the lhs of
-        the rule to nodes of a target graph.
-    rhs_mapping : dict
-        Dictionary containing a map from nodes of the rhs of
-        the rule to nodes of a target graph.
-    lhs_total : bool
-        Flag indication if the typing of the lhs is forced to be total
-    rhs_total : bool
-        Flag indication if the typing of the rhs is forced to be total
-    attrs : dict
-        Dictionary with attrs of the rule typing
-    """
-
-    def __init__(self, lhs_mapping, rhs_mapping,
-                 lhs_total=False, rhs_total=False, attrs=None):
-        """Initialize homomorphism."""
-        self.lhs_mapping = copy.deepcopy(lhs_mapping)
-        self.rhs_mapping = copy.deepcopy(rhs_mapping)
-        self.lhs_total = lhs_total
-        self.rhs_total = rhs_total
-        if attrs:
-            self.attrs = attrs
-        else:
-            self.attrs = dict()
-        return
-
-    def rename_source(self, old_name, new_name):
-        """Name the source of the rule typing."""
-        replace_source(old_name, new_name, self.lhs_mapping)
-        replace_source(old_name, new_name, self.rhs_mapping)
-
-    def rename_target(self, old_name, new_name):
-        """Name the target of the rule typing."""
-        replace_target(old_name, new_name, self.lhs_mapping)
-        replace_target(old_name, new_name, self.rhs_mapping)
-
-    def all_total(self):
-        """All the components of the rule are totally typed."""
-        return self.lhs_total and self.rhs_total
-
-    def __rmul__(self, other):
-        """Right multiplication."""
-        if isinstance(other, Typing):
-            return RuleTyping(
-                compose(self.lhs_mapping, other.mapping),
-                compose(self.rhs_mapping, other.mapping),
-                self.lhs_total and other.total,
-                self.rhs_total and other.total,
-                self.attrs)
-        else:
-            return NotImplemented
-
-
-class Relation(AttributeContainter):
-    """Base class for relations equipped with attributes."""
-
-
-class GraphRelation(Relation):
-    """Data structure incapsulating relations on graphs.
-
-    Attributes
-    ----------
-    rel : dict
-        Dictionary represeting a relation between two graphs,
-        keys represent nodes of the left graph and values are
-        collections of nodes from the right graph to which they
-        are related.
-    attrs : dict
-        Dictionary containing attrs of graph relation.
-    """
-
-    def __init__(self, relation_dict, attrs=None):
-        """Initialize graph relation."""
-        self.rel = relation_dict
-        if attrs:
-            self.attrs = attrs
-        else:
-            self.attrs = dict()
-        return
-
-    def left_domain(self):
-        """Return the definition domain of the left member of relation."""
-        return set(self.rel.keys())
-
-    def right_domain(self):
-        """Return the definition domain of the right member of relation."""
-        return set(self.rel.values())
-
-
-# class RuleGraphRelation(Relation):
-#     pass
-
-
-# class RuleRelation(Relation):
-#     """Implements relations on rules."""
-
-#     def __init__(self, lhs_pairs, p_pairs, rhs_pairs, attrs=None):
-#         """Initialize graph relation."""
-#         pass
+from regraph.components import (AttributeContainter,
+                                GraphNode,
+                                RuleNode,
+                                Typing,
+                                RuleTyping,
+                                GraphRelation)
 
 
 class Hierarchy(nx.DiGraph, AttributeContainter):
@@ -461,7 +152,7 @@ class Hierarchy(nx.DiGraph, AttributeContainter):
     def __str__(self):
         """String representation of the hierarchy."""
         res = ""
-        res += "\nGraphs (directed == %s): \n" % self.directed
+        res += "\nGraphs (directed == {}): \n".format(self.directed)
         res += "\nNodes:\n"
         for n in self.nodes():
             if isinstance(self.node[n], GraphNode):
@@ -470,37 +161,32 @@ class Hierarchy(nx.DiGraph, AttributeContainter):
                 res += "Rule:"
             else:
                 raise HierarchyError(
-                    "Hierarchy error: unknown type '%s' of the node '%s'!" %
-                    (type(self.node[n]), n)
-                )
-            res += " " + str(n) + " " +\
-                str(self.node[n].attrs) + "\n"
-        res += "\n"
-        res += "Typing homomorphisms: \n"
+                    "Hierarchy error: unknown type '{}' of "
+                    "the node '{}'".format(type(self.node[n]), n))
+            res += " {} {}\n".format(n, self.node[n].attrs)
+        res += "\nTyping homomorphisms: \n"
         for n1, n2 in self.edges():
             if isinstance(self.edge[n1][n2], self.graph_typing_cls):
-                res += "%s -> %s: total == %s\n" %\
-                    (n1, n2, self.edge[n1][n2].total)
+                res += "{} -> {}: total == {}\n".format(
+                    n1, n2, self.edge[n1][n2].total)
 
             elif isinstance(self.edge[n1][n2], self.rule_typing_cls):
                 res +=\
-                    ("%s -> %s: lhs_total == %s, rhs_total == %s,") %\
-                    (n1, n2, self.edge[n1][n2].lhs_total,
-                     self.edge[n1][n2].rhs_total)
+                    ("{} -> {}: lhs_total == {}, rhs_total == {},").format(
+                        n1, n2, self.edge[n1][n2].lhs_total,
+                        self.edge[n1][n2].rhs_total)
             else:
                 raise HierarchyError(
-                    "Hierarchy error: unknown type '%s' of the edge '%s->%s'!" %
-                    (type(self.edge[n1][n2]), n1, n2))
+                    "Hierarchy error: unknown type '{}' "
+                    "of the edge '{}->{}'".format(
+                        type(self.edge[n1][n2]), n1, n2))
 
         res += "\nRelations:\n"
         for n1, n2 in self.relations():
-            res += "%s-%s: %s\n" % (n1, n2, str(self.relation_edge[n1][n2].attrs))
+            res += "{}-{}: {}\n".format(
+                n1, n2, str(self.relation_edge[n1][n2].attrs))
 
-        res += "\n"
-        res += "attributes : \n"
-        res += str(self.attrs)
-        res += "\n"
-
+        res += "\nattributes : \n{}\n".format(self.attrs)
         return res
 
     def __eq__(self, hie):
@@ -604,17 +290,14 @@ class Hierarchy(nx.DiGraph, AttributeContainter):
         if self.directed != graph.is_directed():
             if self.directed:
                 raise HierarchyError(
-                    "Hierarchy is defined for directed == %s graphs!" %
-                    self.directed
-                )
+                    "Hierarchy is defined for directed == {} graphs!".format(
+                        self.directed))
             else:
                 raise HierarchyError(
                     "Hierarchy is defined for undirected graphs!")
         if graph_id in self.nodes():
             raise HierarchyError(
-                "Node '%s' already exists in the hierarchy!" %
-                graph_id
-            )
+                "Node '{}' already exists in the hierarchy!".format(graph_id))
         self.add_node(graph_id)
         if graph_attrs is not None:
             normalize_attrs(graph_attrs)
@@ -685,8 +368,7 @@ class Hierarchy(nx.DiGraph, AttributeContainter):
             self.rule_rhs_typing[rule_id] = dict()
         return
 
-    def add_typing(self, source, target, mapping,
-                   total=True, attrs=None):
+    def add_typing(self, source, target, mapping, total=True, attrs=None):
         """Add homomorphism to the hierarchy.
 
         Parameters
@@ -770,7 +452,7 @@ class Hierarchy(nx.DiGraph, AttributeContainter):
         )
 
         # check if newly created path commutes with existing shortest paths
-        self._check_consistency(source, target, mapping)
+        type_checking._check_consistency(self, source, target, mapping)
 
         self.add_edge(source, target)
         if attrs is not None:
@@ -835,9 +517,10 @@ class Hierarchy(nx.DiGraph, AttributeContainter):
             )
         if not isinstance(self.node[graph_id], GraphNode):
             raise HierarchyError(
-                "Target of a rule typing should be a graph, `%s` is provided!" %
-                type(self.node[graph_id])
-            )
+                "Target of a rule typing should be a graph, "
+                "'{}' is provided!".format(
+                    type(self.node[graph_id])))
+
         # check if an lhs typing is valid
         check_homomorphism(
             self.node[rule_id].rule.lhs,
@@ -880,8 +563,8 @@ class Hierarchy(nx.DiGraph, AttributeContainter):
         )
 
         # check if newly created path commutes with existing shortest paths
-        self._check_rule_typing(
-            rule_id, graph_id, lhs_mapping, new_rhs_mapping)
+        type_checking._check_rule_typing(
+            self, rule_id, graph_id, lhs_mapping, new_rhs_mapping)
 
         self.add_edge(rule_id, graph_id)
         if attrs is not None:
@@ -1025,6 +708,10 @@ class Hierarchy(nx.DiGraph, AttributeContainter):
             {left: self.relation_edge[right][left].rel})
         return
 
+    def add_cycle(self, nodes, **attr):
+        """Method of adding cycle to the graph hierarchy."""
+        raise HierarchyError("Cycles are not allowed in graph hierarchy")
+
     def remove_node(self, node_id, reconnect=False):
         """Remove node from the hierarchy.
 
@@ -1140,9 +827,22 @@ class Hierarchy(nx.DiGraph, AttributeContainter):
                 del self.rule_rhs_typing[k][node_id]
         return
 
-    def add_cycle(self, nodes, **attr):
-        """Method of adding cycle to the graph hierarchy."""
-        raise HierarchyError("Cycles are not allowed in graph hierarchy")
+    def remove_edge(self, u, v):
+        """Remove an edge from the hierarchy."""
+        nx.DiGraph.remove_edge(self, u, v)
+        if u in self.typing.keys():
+            if v in self.typing[u].keys():
+                del self.typing[u][v]
+        if v in self.typing.keys():
+            if u in self.typing[v].keys():
+                del self.typing[v][u]
+        if u in self.rule_lhs_typing.keys():
+            if v in self.rule_lhs_typing.keys():
+                del self.rule_lhs_typing[u][v]
+        if v in self.rule_rhs_typing.keys():
+            if u in self.rule_rhs_typing.keys():
+                del self.rule_rhs_typing[v][u]
+        return
 
     def remove_relation(self, g1, g2):
         """Remove relation from the hierarchy."""
@@ -1167,22 +867,42 @@ class Hierarchy(nx.DiGraph, AttributeContainter):
     def relation_to_span(self, left, right, edges=False, attrs=False):
         """Convert relation to a span.
 
+        This method computes the span of the form
+        `left` <- `common` -> `right` from a binary
+        symmetric relation between two graphs in
+        the hierarchy.
+
         Parameters
         ----------
         left
+            Id of the hierarchy's node represening the `left` graph
         right
-        edges
-        attrs
+            Id of the hierarchy's node represening the `right` graph
+        edges : bool, optional
+            If True, maximal set of edges is added to the common
+            part graph
+        attrs : bool, optional
+            If True, maximal dict of attrs is added to the nodes of
+            the common part graph
 
         Returns
         -------
-        new_graph : nx.(Di)Graph
+        common : nx.(Di)Graph
+            Graph representing the common part graph induced
+            by the relation
         left_h : dict
+            Homomorphism from the common part graph to the left
+            graph of the relation
         right_h : dict
+            Homomorphism from the common part graph to the right
+            graph of the relation
 
         Raises
         ------
         HierarchyError
+            If nodes corresponding to either `left` or `right` ids
+            do not exist in the hierarchy, or there is no relation
+            between them.
         """
         if left not in self.nodes():
             raise HierarchyError(
@@ -1197,14 +917,14 @@ class Hierarchy(nx.DiGraph, AttributeContainter):
                 "Relation between graphs '%s' and '%s' is not defined" %
                 (left, right)
             )
-        new_graph, left_h, right_h = relation_to_span(
+        common, left_h, right_h = relation_to_span(
             self.node[left].graph,
             self.node[right].graph,
             self.relation[left][right],
             edges,
             attrs,
             self.directed)
-        return new_graph, left_h, right_h
+        return common, left_h, right_h
 
     def node_type(self, graph_id, node_id):
         """Get a list of the immediate types of a node."""
@@ -1273,7 +993,33 @@ class Hierarchy(nx.DiGraph, AttributeContainter):
         return
 
     def compose_path_typing(self, path):
-        """Compose homomorphisms along the path."""
+        """Compose homomorphisms along the path.
+
+        Parameters
+        ----------
+        path : list
+            List of nodes of the hierarchy forming a path
+
+        Returns
+        -------
+        If source node of the path is a graph
+
+        homomorphism : dict
+            Dictionary containg the typing of the nodes
+            from the source graph of the path by the nodes
+            of the target graph
+
+        if source node of the path is a rule
+
+        lhs_homomorphism : dict
+            Dictionary containg the typing of the nodes
+            from the left-hand side of the source rule
+            of the path by the nodes of the target graph
+        rhs_homomorphism : dict
+            Dictionary containg the typing of the nodes
+            from the right-hand side of the source rule
+            of the path by the nodes of the target graph
+        """
         s = path[0]
         if isinstance(self.node[s], GraphNode):
             t = path[1]
@@ -1302,128 +1048,6 @@ class Hierarchy(nx.DiGraph, AttributeContainter):
     def _path_from_rule(self, path):
         s = path[0]
         return isinstance(self.node[s], RuleNode)
-
-    def _check_rule_typing(self, rule_id, graph_id, lhs_mapping, rhs_mapping):
-        all_paths = nx.all_pairs_shortest_path(self)
-
-        paths_from_target = {}
-        for s in self.nodes():
-            if s == graph_id:
-                for key in all_paths[graph_id].keys():
-                    paths_from_target[key] = all_paths[graph_id][key]
-
-        for t in paths_from_target.keys():
-            if t != graph_id:
-                new_lhs_h = compose(
-                    lhs_mapping,
-                    self.compose_path_typing(paths_from_target[t]))
-                new_rhs_h = compose(
-                    rhs_mapping,
-                    self.compose_path_typing(paths_from_target[t]))
-                try:
-                    # find homomorphisms from s to t via other paths
-                    s_t_paths = nx.all_shortest_paths(self, rule_id, t)
-                    for path in s_t_paths:
-                        lhs_h, rhs_h = self.compose_path_typing(path)
-                        if lhs_h != new_lhs_h:
-                            raise HierarchyError(
-                                "Invalid lhs typing: homomorphism does not "
-                                "commute with an existing "
-                                "path from '%s' to '%s'!" % (s, t)
-                            )
-                        if rhs_h != new_rhs_h:
-                            raise HierarchyError(
-                                "Invalid rhs typing: homomorphism does not "
-                                "commute with an existing " +
-                                "path from '%s' to '%s'!" % (s, t)
-                            )
-                except(nx.NetworkXNoPath):
-                    pass
-        return
-
-    def _check_consistency(self, source, target, mapping=None):
-        all_paths = nx.all_pairs_shortest_path(self)
-
-        paths_to_source = {}
-        paths_from_target = {}
-        for s in self.nodes():
-            if source in all_paths[s].keys():
-                paths_to_source[s] = all_paths[s][source]
-            if s == target:
-                for key in all_paths[target].keys():
-                    paths_from_target[key] = all_paths[target][key]
-
-        for s in paths_to_source.keys():
-            if self._path_from_rule(paths_to_source[s]):
-                for t in paths_from_target.keys():
-                    # find homomorphism from s to t via new path
-                    if s == source:
-                        raise HierarchyError(
-                            "Found a rule typing some node in the hierarchy!"
-                        )
-                    new_lhs_h, new_rhs_h = self.compose_path_typing(
-                        paths_to_source[s])
-                    new_lhs_h = compose(new_lhs_h, mapping)
-                    new_rhs_h = compose(new_rhs_h, mapping)
-
-                    if t != target:
-                        new_lhs_h = compose(
-                            new_lhs_h,
-                            self.compose_path_typing(paths_from_target[t])
-                        )
-                        new_rhs_h = compose(
-                            new_rhs_h,
-                            self.compose_path_typing(paths_from_target[t]),
-                        )
-                    try:
-                        # find homomorphisms from s to t via other paths
-                        s_t_paths = nx.all_shortest_paths(self, s, t)
-                        for path in s_t_paths:
-                            lhs_h, rhs_h = self.compose_path_typing(path)
-                            if lhs_h != new_lhs_h:
-                                raise HierarchyError(
-                                    "Invalid lhs typing: homomorphism does "
-                                    "not commute with an existing " +
-                                    "path from '%s' to '%s'!" % (s, t)
-                                )
-                            if rhs_h != new_rhs_h:
-                                raise HierarchyError(
-                                    "Invalid rhs typing: homomorphism does "
-                                    "not commute with an existing " +
-                                    "path from '%s' to '%s'!" % (s, t)
-                                )
-                    except(nx.NetworkXNoPath):
-                        pass
-            else:
-                for t in paths_from_target.keys():
-                    # find homomorphism from s to t via new path
-                    if s != source:
-                        new_homomorphism = self.compose_path_typing(
-                            paths_to_source[s])
-                    else:
-                        new_homomorphism = dict([(key, key)
-                                                 for key, _ in mapping.items()])
-                    new_homomorphism = compose(
-                        new_homomorphism, mapping)
-                    if t != target:
-                        new_homomorphism = compose(
-                            new_homomorphism,
-                            self.compose_path_typing(paths_from_target[t])
-                        )
-
-                    # find homomorphisms from s to t via other paths
-                    s_t_paths = nx.all_shortest_paths(self, s, t)
-                    try:
-                        # check only the first path
-                        for path in s_t_paths:
-                            path_homomorphism = self.compose_path_typing(path)
-                            if path_homomorphism != new_homomorphism:
-                                raise HierarchyError(
-                                    "Homomorphism does not commute with an " +
-                                    "existing path from '%s' to '%s'!" % (s, t)
-                                )
-                    except(nx.NetworkXNoPath):
-                        pass
 
     def _get_ancestors_paths(self, graph_id):
         ancestors = {}
@@ -1784,7 +1408,6 @@ class Hierarchy(nx.DiGraph, AttributeContainter):
     def rewrite(self, graph_id, rule, instance=None,
                 lhs_typing=None, rhs_typing=None, strict=False, inplace=True):
         """Rewrite and propagate the changes up & down."""
-
         # start = time.time()
         if type(self.node[graph_id]) == RuleNode:
             raise ReGraphError("Rewriting of a rule is not implemented!")
@@ -1798,38 +1421,38 @@ class Hierarchy(nx.DiGraph, AttributeContainter):
         # 1a. Autocomplete typing
 
         new_lhs_typing, new_rhs_typing =\
-            rule_type_checking._autocomplete_typing(
+            type_checking._autocomplete_typing(
                 self, graph_id, instance, lhs_typing,
                 rhs_typing, rule.p_lhs, rule.p_rhs)
 
         # 1b. Check that instance is consistent with lhs & rhs typing
-        rule_type_checking._check_instance(
+        type_checking._check_instance(
             self, graph_id, rule.lhs, instance, new_lhs_typing)
 
         # 1c. Check consistency of the (autocompleted) rhs & lhs typings
         if new_lhs_typing is not None and new_rhs_typing is not None:
             try:
-                rule_type_checking._check_self_consistency(
+                type_checking._check_self_consistency(
                     self, new_lhs_typing)
             except ReGraphError as e:
                 raise RewritingError(
                     "Typing of the lhs is self inconsistent: %s" % str(e)
                 )
             try:
-                rule_type_checking._check_self_consistency(
+                type_checking._check_self_consistency(
                     self, new_rhs_typing, strict)
             except ReGraphError as e:
                 raise RewritingError(
                     "Typing of the rhs is self inconsistent: %s" % str(e)
                 )
 
-            rule_type_checking._check_lhs_rhs_consistency(
+            type_checking._check_lhs_rhs_consistency(
                 self, graph_id, rule, instance,
                 new_lhs_typing, new_rhs_typing,
                 strict)
 
             if strict is True:
-                rule_type_checking._check_totality(
+                type_checking._check_totality(
                     self, graph_id, rule, instance,
                     new_lhs_typing, new_rhs_typing)
 
@@ -2231,13 +1854,14 @@ class Hierarchy(nx.DiGraph, AttributeContainter):
         mapping = {n: n for n in nodes}
         self.add_rule_typing(new_name, graph_id, mapping, mapping, attrs=attrs)
 
-    def _generate_new_name(self, node):
-        i = 1
-        new_name = "%s_%s" % (node, i)
-        while new_name in self.nodes():
+    def unique_graph_id(self, prefix):
+        """Generate a new graph id starting with a prefix."""
+        if prefix not in self.nodes():
+            return prefix
+        i = 0
+        while "{}_{}".format(prefix, i) in self.nodes():
             i += 1
-            new_name = "%s_%s" % (node, i)
-        return new_name
+        return "{}_{}".format(prefix, i)
 
     def merge_by_id(self, hierarchy):
         """Recursive merge with a hierarchy."""
@@ -2252,17 +1876,17 @@ class Hierarchy(nx.DiGraph, AttributeContainter):
                 if equal(self.node[node].graph, hierarchy.node[node].graph):
                     to_merge.append(node)
                 else:
-                    new_name = self._generate_new_name(node)
+                    new_name = self.unique_graph_id(node)
                     to_rename[node] = new_name
             elif isinstance(self.node[node], RuleNode) and\
                     isinstance(hierarchy.node[node], RuleNode):
                 if self.node[node].rule == hierarchy.node[node].rule:
                     to_merge.append(node)
                 else:
-                    new_name = self._generate_new_name(node)
+                    new_name = self.unique_graph_id(node)
                     to_rename[node] = new_name
             else:
-                new_name = self.__generate_new_name(node)
+                new_name = self.unique_graph_id(node)
                 to_rename[node] = new_name
 
         visited = []
@@ -2414,7 +2038,7 @@ class Hierarchy(nx.DiGraph, AttributeContainter):
 
         for n in hierarchy.nodes():
             if n not in to_merge.values() and n in self.nodes():
-                to_rename[n] = self._generate_new_name(n)
+                to_rename[n] = self.unique_graph_id(n)
 
         # Check consistency of the mappings to be merged
         for n1, n2 in self.edges():
@@ -2560,15 +2184,6 @@ class Hierarchy(nx.DiGraph, AttributeContainter):
             _merge_node(node)
 
         return new_names
-
-    def unique_graph_id(self, prefix):
-        """Generate a new graph id."""
-        if prefix not in self.nodes():
-            return prefix
-        i = 0
-        while "{}_{}".format(prefix, i) in self.nodes():
-            i += 1
-        return "{}_{}".format(prefix, i)
 
     def duplicate_subgraph(self, nodes, suffix):
         new = {}

@@ -2,7 +2,7 @@ import networkx as nx
 from regraph.rules import Rule
 from regraph.utils import keys_by_value
 from regraph.exceptions import RuleError
-from regraph.category_op import check_homomorphism
+from regraph.category_utils import check_homomorphism
 import regraph.primitives as prim
 
 

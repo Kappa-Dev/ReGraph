@@ -6,10 +6,10 @@ from nose.tools import assert_equals
 from regraph.primitives import (get_relabeled_graph,
                                 print_graph)
 from regraph.utils import assert_graph_eq
-from regraph.category_op import (pullback,
-                                 pushout,
-                                 pullback_complement,
-                                 nary_pullback)
+from regraph.category_utils import (pullback,
+                                    pushout,
+                                    pullback_complement,
+                                    nary_pullback)
 
 
 def assert_edges_undir(edges1, edges2):
@@ -22,7 +22,7 @@ def assert_edges_undir(edges1, edges2):
             assert False
 
 
-class TestCategoryOp:
+class TestCategoryUtils:
     def __init__(self):
         D = nx.DiGraph()
 

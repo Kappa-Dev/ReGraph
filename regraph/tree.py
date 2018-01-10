@@ -1,26 +1,22 @@
-"""Functions for manipulating a hierarchy as a tree"""
+"""Functions for manipulating a hierarchy as a tree."""
 
 import copy
-import itertools
 import networkx as nx
 
 from regraph.hierarchy import GraphNode, RuleNode, Hierarchy, Typing
 import regraph.primitives as prim
 from regraph.primitives import (graph_to_json,
                                 add_node_attrs,
-                                update_node_attrs,
                                 graph_from_json,
                                 unique_node_id)
 from regraph.rules import Rule
-from regraph.atset import univ_set
-from regraph.category_op import (pushout, compose_homomorphisms,
-                                 check_totality,
-                                 typing_of_pushout,
-                                 typings_of_pushout,
-                                 is_monic,
-                                 check_homomorphism)
+from regraph.category_utils import (pushout, compose_homomorphisms,
+                                    check_totality,
+                                    typings_of_pushout,
+                                    is_monic,
+                                    check_homomorphism)
 from regraph.attribute_sets import UniversalSet, FiniteSet
-from regraph.utils import is_subdict, recursive_merge, valid_attributes
+from regraph.utils import recursive_merge, valid_attributes
 
 # def _complete_rewrite(hie, g_id, rule, match, lhs_typing=None,
 #                       rhs_typing=None):

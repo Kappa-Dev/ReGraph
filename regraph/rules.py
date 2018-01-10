@@ -9,17 +9,15 @@ import warnings
 
 from regraph.parser import parser
 from regraph.utils import (keys_by_value,
-                           normalize_attrs,
                            make_canonical_commands,
                            dict_sub,
                            attrs_union)
-from regraph.category_op import (identity,
-                                 check_homomorphism,
-                                 pullback_complement,
-                                 pushout)
+from regraph.category_utils import (identity,
+                                    check_homomorphism,
+                                    pullback_complement,
+                                    pushout)
 from regraph import primitives
-from regraph.exceptions import (ReGraphWarning, ParsingError, RuleError,
-                                GraphError)
+from regraph.exceptions import (ReGraphWarning, ParsingError, RuleError)
 
 
 class Rule(object):

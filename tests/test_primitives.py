@@ -6,7 +6,7 @@ from regraph.utils import (dict_sub,
                            valid_attributes,
                            normalize_attrs,
                            is_subdict)
-from regraph.category_op import identity
+from regraph.category_utils import identity
 from regraph.primitives import *
 import regraph.primitives as prim
 
