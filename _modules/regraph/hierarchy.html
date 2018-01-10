@@ -445,7 +445,7 @@
     <span class="n">typing_dict_factory</span> <span class="o">=</span> <span class="nb">dict</span>
     <span class="n">rule_lhs_typing_dict_factory</span> <span class="o">=</span> <span class="nb">dict</span>
     <span class="n">rule_rhs_typing_dict_factory</span> <span class="o">=</span> <span class="nb">dict</span>
-    <span class="n">relation_dict_factory</span> <span class="o">=</span> <span class="nb">dict</span>
+    <span class="n">rel_dict_factory</span> <span class="o">=</span> <span class="nb">dict</span>
 
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">directed</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
                  <span class="n">attrs</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
@@ -486,6 +486,9 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">rule_rhs_typing_dict_factory</span> <span class="o">=</span> <span class="n">rrtdf</span> <span class="o">=</span>\
             <span class="bp">self</span><span class="o">.</span><span class="n">rule_rhs_typing_dict_factory</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">rule_rhs_typing</span> <span class="o">=</span> <span class="n">rrtdf</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">rel_dict_factory</span> <span class="o">=</span> <span class="n">reldf</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">rel_dict_factory</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">relation_edge</span> <span class="o">=</span> <span class="n">reldf</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">relation</span> <span class="o">=</span> <span class="n">reldf</span><span class="p">()</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">attrs</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">directed</span> <span class="o">=</span> <span class="n">directed</span>
@@ -494,7 +497,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">graph_typing_cls</span> <span class="o">=</span> <span class="n">graph_typing_cls</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">rule_typing_cls</span> <span class="o">=</span> <span class="n">rule_typing_cls</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">relation_cls</span> <span class="o">=</span> <span class="n">relation_cls</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">relation</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+
         <span class="k">return</span>
 
     <span class="k">def</span> <span class="nf">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -533,7 +536,7 @@
 
         <span class="n">res</span> <span class="o">+=</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Relations:</span><span class="se">\n</span><span class="s2">&quot;</span>
         <span class="k">for</span> <span class="n">n1</span><span class="p">,</span> <span class="n">n2</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">relations</span><span class="p">():</span>
-            <span class="n">res</span> <span class="o">+=</span> <span class="s2">&quot;</span><span class="si">%s</span><span class="s2">-</span><span class="si">%s</span><span class="s2">: </span><span class="si">%s</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">n1</span><span class="p">,</span> <span class="n">n2</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">relation</span><span class="p">[</span><span class="n">n1</span><span class="p">][</span><span class="n">n2</span><span class="p">]</span><span class="o">.</span><span class="n">attrs</span><span class="p">))</span>
+            <span class="n">res</span> <span class="o">+=</span> <span class="s2">&quot;</span><span class="si">%s</span><span class="s2">-</span><span class="si">%s</span><span class="s2">: </span><span class="si">%s</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">n1</span><span class="p">,</span> <span class="n">n2</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">relation_edge</span><span class="p">[</span><span class="n">n1</span><span class="p">][</span><span class="n">n2</span><span class="p">]</span><span class="o">.</span><span class="n">attrs</span><span class="p">))</span>
 
         <span class="n">res</span> <span class="o">+=</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span>
         <span class="n">res</span> <span class="o">+=</span> <span class="s2">&quot;attributes : </span><span class="se">\n</span><span class="s2">&quot;</span>
@@ -588,7 +591,7 @@
                 <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">edge</span><span class="p">[</span><span class="n">s</span><span class="p">][</span><span class="n">t</span><span class="p">]</span><span class="o">.</span><span class="n">rhs_total</span> <span class="o">!=</span> <span class="n">hie</span><span class="o">.</span><span class="n">edge</span><span class="p">[</span><span class="n">s</span><span class="p">][</span><span class="n">t</span><span class="p">]</span><span class="o">.</span><span class="n">rhs_total</span><span class="p">:</span>
                     <span class="k">return</span> <span class="kc">False</span>
         <span class="k">for</span> <span class="n">n1</span><span class="p">,</span> <span class="n">n2</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">relations</span><span class="p">():</span>
-            <span class="k">if</span> <span class="nb">set</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">relation</span><span class="p">[</span><span class="n">n1</span><span class="p">][</span><span class="n">n2</span><span class="p">]</span><span class="o">.</span><span class="n">rel</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">set</span><span class="p">(</span><span class="n">hie</span><span class="o">.</span><span class="n">relation</span><span class="p">[</span><span class="n">n1</span><span class="p">][</span><span class="n">n2</span><span class="p">]</span><span class="o">.</span><span class="n">rel</span><span class="p">):</span>
+            <span class="k">if</span> <span class="nb">set</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">relation</span><span class="p">[</span><span class="n">n1</span><span class="p">][</span><span class="n">n2</span><span class="p">])</span> <span class="o">!=</span> <span class="nb">set</span><span class="p">(</span><span class="n">hie</span><span class="o">.</span><span class="n">relation</span><span class="p">[</span><span class="n">n1</span><span class="p">][</span><span class="n">n2</span><span class="p">]):</span>
                 <span class="k">return</span> <span class="kc">False</span>
         <span class="k">return</span> <span class="kc">True</span>
 
@@ -611,9 +614,9 @@
 <div class="viewcode-block" id="Hierarchy.relations"><a class="viewcode-back" href="../../hierarchy.html#regraph.hierarchy.Hierarchy.relations">[docs]</a>    <span class="k">def</span> <span class="nf">relations</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Return a list of relations.&quot;&quot;&quot;</span>
         <span class="n">rel</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
-        <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">relation</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">relation</span><span class="p">[</span><span class="n">k</span><span class="p">])</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
-                <span class="k">for</span> <span class="n">v</span><span class="p">,</span> <span class="n">_</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">relation</span><span class="p">[</span><span class="n">k</span><span class="p">]</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">relation_edge</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">relation_edge</span><span class="p">[</span><span class="n">k</span><span class="p">])</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">v</span><span class="p">,</span> <span class="n">_</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">relation_edge</span><span class="p">[</span><span class="n">k</span><span class="p">]</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
                     <span class="k">if</span> <span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">rel</span> <span class="ow">and</span> <span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">k</span><span class="p">)</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">rel</span><span class="p">:</span>
                         <span class="n">rel</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">k</span><span class="p">,</span> <span class="n">v</span><span class="p">))</span>
         <span class="k">return</span> <span class="n">rel</span></div>
@@ -658,6 +661,8 @@
         <span class="k">if</span> <span class="n">graph_attrs</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">normalize_attrs</span><span class="p">(</span><span class="n">graph_attrs</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">graph_id</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph_node_cls</span><span class="p">(</span><span class="n">graph</span><span class="p">,</span> <span class="n">graph_attrs</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">graph_id</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">relation_edge</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">relation_edge</span><span class="o">.</span><span class="n">update</span><span class="p">({</span><span class="n">graph_id</span><span class="p">:</span> <span class="nb">dict</span><span class="p">()})</span>
         <span class="k">if</span> <span class="n">graph_id</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">relation</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">relation</span><span class="o">.</span><span class="n">update</span><span class="p">({</span><span class="n">graph_id</span><span class="p">:</span> <span class="nb">dict</span><span class="p">()})</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="p">[</span><span class="n">graph_id</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">graph_id</span><span class="p">]</span><span class="o">.</span><span class="n">graph</span>
@@ -971,7 +976,7 @@
 <span class="sd">                * node with id `left`/`right` is not a graph;</span>
 <span class="sd">                * a relation between `left` and `right` already exists;</span>
 <span class="sd">                * some node ids specified in `relation` are not found in the</span>
-<span class="sd">                `left`\`right` graph.</span>
+<span class="sd">                `left`/`right` graph.</span>
 
 <span class="sd">        Examples</span>
 <span class="sd">        --------</span>
@@ -985,7 +990,6 @@
 <span class="sd">        {&#39;a&#39;: {1, 2}, &#39;b&#39;: {3}}</span>
 <span class="sd">        &gt;&gt;&gt; hierarchy.relation[&quot;G2&quot;][&quot;G1&quot;].rel</span>
 <span class="sd">        {1: {&#39;a&#39;}, 2: {&#39;a&#39;}, 3: {&#39;b&#39;}}</span>
-
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="n">left</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
             <span class="k">raise</span> <span class="n">HierarchyError</span><span class="p">(</span>
@@ -1055,8 +1059,12 @@
         <span class="n">right_relation</span> <span class="o">=</span> <span class="n">right_relation_dict</span><span class="p">(</span><span class="n">pairs</span><span class="p">)</span>
         <span class="n">rel_ab_obj</span> <span class="o">=</span> <span class="n">GraphRelation</span><span class="p">(</span><span class="n">relation</span><span class="p">,</span> <span class="n">attrs</span><span class="p">)</span>
         <span class="n">rel_ba_obj</span> <span class="o">=</span> <span class="n">GraphRelation</span><span class="p">(</span><span class="n">right_relation</span><span class="p">,</span> <span class="n">attrs</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">relation</span><span class="p">[</span><span class="n">left</span><span class="p">]</span><span class="o">.</span><span class="n">update</span><span class="p">({</span><span class="n">right</span><span class="p">:</span> <span class="n">rel_ab_obj</span><span class="p">})</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">relation</span><span class="p">[</span><span class="n">right</span><span class="p">]</span><span class="o">.</span><span class="n">update</span><span class="p">({</span><span class="n">left</span><span class="p">:</span> <span class="n">rel_ba_obj</span><span class="p">})</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">relation_edge</span><span class="p">[</span><span class="n">left</span><span class="p">]</span><span class="o">.</span><span class="n">update</span><span class="p">({</span><span class="n">right</span><span class="p">:</span> <span class="n">rel_ab_obj</span><span class="p">})</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">relation</span><span class="p">[</span><span class="n">left</span><span class="p">]</span><span class="o">.</span><span class="n">update</span><span class="p">(</span>
+            <span class="p">{</span><span class="n">right</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">relation_edge</span><span class="p">[</span><span class="n">left</span><span class="p">][</span><span class="n">right</span><span class="p">]</span><span class="o">.</span><span class="n">rel</span><span class="p">})</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">relation_edge</span><span class="p">[</span><span class="n">right</span><span class="p">]</span><span class="o">.</span><span class="n">update</span><span class="p">({</span><span class="n">left</span><span class="p">:</span> <span class="n">rel_ba_obj</span><span class="p">})</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">relation</span><span class="p">[</span><span class="n">right</span><span class="p">]</span><span class="o">.</span><span class="n">update</span><span class="p">(</span>
+            <span class="p">{</span><span class="n">left</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">relation_edge</span><span class="p">[</span><span class="n">right</span><span class="p">][</span><span class="n">left</span><span class="p">]</span><span class="o">.</span><span class="n">rel</span><span class="p">})</span>
         <span class="k">return</span></div>
 
 <div class="viewcode-block" id="Hierarchy.remove_node"><a class="viewcode-back" href="../../hierarchy.html#regraph.hierarchy.Hierarchy.remove_node">[docs]</a>    <span class="k">def</span> <span class="nf">remove_node</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node_id</span><span class="p">,</span> <span class="n">reconnect</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
@@ -1136,6 +1144,12 @@
         <span class="n">nx</span><span class="o">.</span><span class="n">DiGraph</span><span class="o">.</span><span class="n">remove_node</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node_id</span><span class="p">)</span>
 
         <span class="c1"># Update dicts representing relations</span>
+        <span class="k">if</span> <span class="n">node_id</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">relation_edge</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+            <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">relation_edge</span><span class="p">[</span><span class="n">node_id</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">relation_edge</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">node_id</span> <span class="ow">in</span> <span class="n">v</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">relation_edge</span><span class="p">[</span><span class="n">k</span><span class="p">][</span><span class="n">node_id</span><span class="p">]</span>
+
         <span class="k">if</span> <span class="n">node_id</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">relation</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
             <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">relation</span><span class="p">[</span><span class="n">node_id</span><span class="p">]</span>
         <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">relation</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
@@ -1180,7 +1194,9 @@
                 <span class="s2">&quot;Relation &#39;</span><span class="si">%s</span><span class="s2">-</span><span class="si">%s</span><span class="s2">&#39; is not defined in the hierarchy&quot;</span> <span class="o">%</span>
                 <span class="p">(</span><span class="n">g1</span><span class="p">,</span> <span class="n">g2</span><span class="p">)</span>
             <span class="p">)</span>
+        <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">relation_edge</span><span class="p">[</span><span class="n">g1</span><span class="p">][</span><span class="n">g2</span><span class="p">]</span>
         <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">relation</span><span class="p">[</span><span class="n">g1</span><span class="p">][</span><span class="n">g2</span><span class="p">]</span>
+        <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">relation_edge</span><span class="p">[</span><span class="n">g2</span><span class="p">][</span><span class="n">g1</span><span class="p">]</span>
         <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">relation</span><span class="p">[</span><span class="n">g2</span><span class="p">][</span><span class="n">g1</span><span class="p">]</span></div>
 
 <div class="viewcode-block" id="Hierarchy.adjacent_relations"><a class="viewcode-back" href="../../hierarchy.html#regraph.hierarchy.Hierarchy.adjacent_relations">[docs]</a>    <span class="k">def</span> <span class="nf">adjacent_relations</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">g</span><span class="p">):</span>
@@ -1188,7 +1204,7 @@
         <span class="k">if</span> <span class="n">g</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
             <span class="k">raise</span> <span class="n">HierarchyError</span><span class="p">(</span>
                 <span class="s2">&quot;Node &#39;</span><span class="si">%s</span><span class="s2">&#39; is not defined in the hierarchy!&quot;</span> <span class="o">%</span> <span class="n">g</span><span class="p">)</span>
-        <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">relation</span><span class="p">[</span><span class="n">g</span><span class="p">]</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span></div>
+        <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">relation_edge</span><span class="p">[</span><span class="n">g</span><span class="p">]</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span></div>
 
 <div class="viewcode-block" id="Hierarchy.relation_to_span"><a class="viewcode-back" href="../../hierarchy.html#regraph.hierarchy.Hierarchy.relation_to_span">[docs]</a>    <span class="k">def</span> <span class="nf">relation_to_span</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">left</span><span class="p">,</span> <span class="n">right</span><span class="p">,</span> <span class="n">edges</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">attrs</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Convert relation to a span.</span>
@@ -1226,7 +1242,7 @@
         <span class="n">new_graph</span><span class="p">,</span> <span class="n">left_h</span><span class="p">,</span> <span class="n">right_h</span> <span class="o">=</span> <span class="n">relation_to_span</span><span class="p">(</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">left</span><span class="p">]</span><span class="o">.</span><span class="n">graph</span><span class="p">,</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">right</span><span class="p">]</span><span class="o">.</span><span class="n">graph</span><span class="p">,</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">relation</span><span class="p">[</span><span class="n">left</span><span class="p">][</span><span class="n">right</span><span class="p">]</span><span class="o">.</span><span class="n">rel</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">relation</span><span class="p">[</span><span class="n">left</span><span class="p">][</span><span class="n">right</span><span class="p">],</span>
             <span class="n">edges</span><span class="p">,</span>
             <span class="n">attrs</span><span class="p">,</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">directed</span><span class="p">)</span>
@@ -2008,8 +2024,8 @@
             <span class="n">json_data</span><span class="p">[</span><span class="s2">&quot;relations&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">({</span>
                 <span class="s2">&quot;from&quot;</span><span class="p">:</span> <span class="n">u</span><span class="p">,</span>
                 <span class="s2">&quot;to&quot;</span><span class="p">:</span> <span class="n">v</span><span class="p">,</span>
-                <span class="s2">&quot;rel&quot;</span><span class="p">:</span> <span class="p">{</span><span class="n">a</span><span class="p">:</span> <span class="nb">list</span><span class="p">(</span><span class="n">b</span><span class="p">)</span> <span class="k">for</span> <span class="n">a</span><span class="p">,</span> <span class="n">b</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">relation</span><span class="p">[</span><span class="n">u</span><span class="p">][</span><span class="n">v</span><span class="p">]</span><span class="o">.</span><span class="n">rel</span><span class="o">.</span><span class="n">items</span><span class="p">()},</span>
-                <span class="s2">&quot;attrs&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">relation</span><span class="p">[</span><span class="n">u</span><span class="p">][</span><span class="n">v</span><span class="p">]</span><span class="o">.</span><span class="n">attrs_to_json</span><span class="p">()</span>
+                <span class="s2">&quot;rel&quot;</span><span class="p">:</span> <span class="p">{</span><span class="n">a</span><span class="p">:</span> <span class="nb">list</span><span class="p">(</span><span class="n">b</span><span class="p">)</span> <span class="k">for</span> <span class="n">a</span><span class="p">,</span> <span class="n">b</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">relation</span><span class="p">[</span><span class="n">u</span><span class="p">][</span><span class="n">v</span><span class="p">]</span><span class="o">.</span><span class="n">items</span><span class="p">()},</span>
+                <span class="s2">&quot;attrs&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">relation_edge</span><span class="p">[</span><span class="n">u</span><span class="p">][</span><span class="n">v</span><span class="p">]</span><span class="o">.</span><span class="n">attrs_to_json</span><span class="p">()</span>
             <span class="p">})</span>
         <span class="k">return</span> <span class="n">json_data</span></div>
 

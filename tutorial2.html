@@ -68,7 +68,6 @@
 <dd><ul class="first last">
 <li><a class="reference internal" href="#hierarchy-creation"><span class="std std-ref">Hierarchy creation</span></a></li>
 <li><a class="reference internal" href="#rewriting-in-hierarchy"><span class="std std-ref">Rewriting in the hierarchy</span></a></li>
-<li><a class="reference internal" href="#propagation-in-hierarchy"><span class="std std-ref">Propagation in the hierarchy</span></a></li>
 </ul>
 </dd>
 </dl>
@@ -84,7 +83,7 @@
 <p>If you missed the part of the ReGraph tutorial about primitive graph transformations, advanced graph attributes and rewriting rules, go back to <a class="reference internal" href="tutorial1.html#tutorial-part1"><span class="std std-ref">Tutorial: part 1</span></a>.</p>
 <div class="section" id="hierarchy">
 <span id="hierarchy-tutorial"></span><h2>Hierarchy<a class="headerlink" href="#hierarchy" title="Permalink to this headline">¶</a></h2>
-<p>A graph hierarchy is a directed acyclic graph, where nodes are graphs with attributes and edges are
+<p>A graph hierarchy is a directed acyclic graph where nodes are graphs with attributes and edges are
 homomorphisms representing graph typing in the system. This construction provides means
 for mathematically robust procedures of propagation of changes (expressed through graph rewriting
 rules) on any level of the hierarchy, up to all the graphs which are transitively typed by the graph
@@ -92,16 +91,15 @@ subject to rewriting. In the following section we give a simple example of such 
 functionality implemented in ReGraph.</p>
 <div class="section" id="hierarchy-creation">
 <span id="id1"></span><h3>Hierarchy creation<a class="headerlink" href="#hierarchy-creation" title="Permalink to this headline">¶</a></h3>
-<p>Create an empty hierarchy:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">regraph</span> <span class="k">import</span> <span class="n">Hierarchy</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">hierarchy</span> <span class="o">=</span> <span class="n">Hierarchy</span><span class="p">()</span>
-</pre></div>
-</div>
-<p>Add graphs to the hierarchy as follows:</p>
+<p>Create an empty hierarchy and add graphs to the hierarchy:</p>
 <div class="highlight-default"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">networkx</span> <span class="k">as</span> <span class="nn">nx</span>
 
+<span class="kn">from</span> <span class="nn">regraph</span> <span class="k">import</span> <span class="n">Hierarchy</span>
 <span class="kn">from</span> <span class="nn">regraph</span> <span class="k">import</span> <span class="n">plot_graph</span>
 <span class="kn">from</span> <span class="nn">regraph</span> <span class="k">import</span> <span class="n">primitives</span>
+
+
+<span class="n">hierarchy</span> <span class="o">=</span> <span class="n">Hierarchy</span><span class="p">()</span>
 
 <span class="n">t</span> <span class="o">=</span> <span class="n">nx</span><span class="o">.</span><span class="n">DiGraph</span><span class="p">()</span>
 <span class="n">primitives</span><span class="o">.</span><span class="n">add_nodes_from</span><span class="p">(</span>
@@ -142,7 +140,7 @@ functionality implemented in ReGraph.</p>
 <span class="go">[&#39;T&#39;, &#39;G&#39;]</span>
 </pre></div>
 </div>
-<p>Add graph typing (typing of <cite>‘G’</cite> by <cite>‘T’</cite>):</p>
+<p>Add graph typing of the graph <cite>G</cite> by <cite>T</cite>):</p>
 <div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">mapping</span> <span class="o">=</span> <span class="p">{</span>
         <span class="s2">&quot;protein&quot;</span><span class="p">:</span> <span class="s2">&quot;agent&quot;</span><span class="p">,</span>
         <span class="s2">&quot;region&quot;</span><span class="p">:</span> <span class="s2">&quot;agent&quot;</span><span class="p">,</span>
@@ -156,47 +154,46 @@ functionality implemented in ReGraph.</p>
 <span class="go">{&#39;activity&#39;: &#39;state&#39;, &#39;mod&#39;: &#39;action&#39;, &#39;protein&#39;: &#39;agent&#39;, &#39;region&#39;: &#39;agent&#39;}</span>
 </pre></div>
 </div>
+<p>You can check typing of a particular node of a graph, for example:</p>
 <div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">hierarchy</span><span class="o">.</span><span class="n">node_type</span><span class="p">(</span><span class="s2">&quot;G&quot;</span><span class="p">,</span> <span class="s2">&quot;region&quot;</span><span class="p">)</span>
 <span class="go">{&#39;T&#39;: &#39;agent&#39;}</span>
 </pre></div>
 </div>
-<p>Create another graph and type it by <cite>G</cite></p>
+<p>Create another graph, let’s call it <cite>model</cite>, and type it by <cite>G</cite></p>
 <div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">model</span> <span class="o">=</span> <span class="n">nx</span><span class="o">.</span><span class="n">DiGraph</span><span class="p">()</span>
 <span class="n">primitives</span><span class="o">.</span><span class="n">add_nodes_from</span><span class="p">(</span>
     <span class="n">model</span><span class="p">,</span>
-    <span class="p">[</span><span class="s2">&quot;A&quot;</span><span class="p">,</span> <span class="s2">&quot;R&quot;</span><span class="p">,</span> <span class="s2">&quot;B&quot;</span><span class="p">,</span> <span class="s2">&quot;C&quot;</span><span class="p">,</span> <span class="s2">&quot;B_activity&quot;</span><span class="p">,</span> <span class="s2">&quot;C_activity&quot;</span><span class="p">,</span> <span class="s2">&quot;activation&quot;</span><span class="p">])</span>
+    <span class="p">[</span><span class="s2">&quot;A&quot;</span><span class="p">,</span> <span class="s2">&quot;R&quot;</span><span class="p">,</span> <span class="s2">&quot;B&quot;</span><span class="p">,</span> <span class="s2">&quot;B_activity&quot;</span><span class="p">,</span>
+     <span class="s2">&quot;A_activity&quot;</span><span class="p">,</span> <span class="s2">&quot;activation&quot;</span><span class="p">])</span>
 <span class="n">primitives</span><span class="o">.</span><span class="n">add_edges_from</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="p">[</span>
     <span class="p">(</span><span class="s2">&quot;R&quot;</span><span class="p">,</span> <span class="s2">&quot;A&quot;</span><span class="p">),</span>
     <span class="p">(</span><span class="s2">&quot;R&quot;</span><span class="p">,</span> <span class="s2">&quot;activation&quot;</span><span class="p">),</span>
     <span class="p">(</span><span class="s2">&quot;activation&quot;</span><span class="p">,</span> <span class="s2">&quot;B_activity&quot;</span><span class="p">),</span>
     <span class="p">(</span><span class="s2">&quot;B_activity&quot;</span><span class="p">,</span> <span class="s2">&quot;B&quot;</span><span class="p">),</span>
-    <span class="p">(</span><span class="s2">&quot;activation&quot;</span><span class="p">,</span> <span class="s2">&quot;C_activity&quot;</span><span class="p">),</span>
-    <span class="p">(</span><span class="s2">&quot;C_activity&quot;</span><span class="p">,</span> <span class="s2">&quot;C&quot;</span><span class="p">)</span>
+    <span class="p">(</span><span class="s2">&quot;activation&quot;</span><span class="p">,</span> <span class="s2">&quot;A_activity&quot;</span><span class="p">),</span>
+    <span class="p">(</span><span class="s2">&quot;A_activity&quot;</span><span class="p">,</span> <span class="s2">&quot;A&quot;</span><span class="p">)</span>
 <span class="p">])</span>
 <span class="n">hierarchy</span><span class="o">.</span><span class="n">add_graph</span><span class="p">(</span><span class="s2">&quot;model&quot;</span><span class="p">,</span> <span class="n">model</span><span class="p">)</span>
-</pre></div>
-</div>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">plot_graph</span><span class="p">(</span><span class="n">hierarchy</span><span class="o">.</span><span class="n">graph</span><span class="p">[</span><span class="s2">&quot;model&quot;</span><span class="p">])</span>
-</pre></div>
-</div>
-<img alt="_images/ex1_model.png" src="_images/ex1_model.png" />
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">mapping</span> <span class="o">=</span> <span class="p">{</span>
+
+<span class="n">mapping</span> <span class="o">=</span> <span class="p">{</span>
         <span class="s2">&quot;A&quot;</span><span class="p">:</span> <span class="s2">&quot;protein&quot;</span><span class="p">,</span>
         <span class="s2">&quot;R&quot;</span><span class="p">:</span> <span class="s2">&quot;region&quot;</span><span class="p">,</span>
         <span class="s2">&quot;B&quot;</span><span class="p">:</span> <span class="s2">&quot;protein&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;C&quot;</span><span class="p">:</span> <span class="s2">&quot;protein&quot;</span><span class="p">,</span>
         <span class="s2">&quot;B_activity&quot;</span><span class="p">:</span> <span class="s2">&quot;activity&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;C_activity&quot;</span><span class="p">:</span> <span class="s2">&quot;activity&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;A_activity&quot;</span><span class="p">:</span> <span class="s2">&quot;activity&quot;</span><span class="p">,</span>
         <span class="s2">&quot;activation&quot;</span><span class="p">:</span> <span class="s2">&quot;mod&quot;</span>
 <span class="p">}</span>
 <span class="n">hierarchy</span><span class="o">.</span><span class="n">add_typing</span><span class="p">(</span><span class="s2">&quot;model&quot;</span><span class="p">,</span> <span class="s2">&quot;G&quot;</span><span class="p">,</span> <span class="n">mapping</span><span class="p">)</span>
+
+<span class="n">plot_graph</span><span class="p">(</span><span class="n">hierarchy</span><span class="o">.</span><span class="n">graph</span><span class="p">[</span><span class="s2">&quot;model&quot;</span><span class="p">])</span>
 </pre></div>
 </div>
+<img alt="_images/ex1_model.png" src="_images/ex1_model.png" />
 <div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">hierarchy</span><span class="o">.</span><span class="n">typings</span><span class="p">()</span>
 <span class="go">[(&#39;G&#39;, &#39;T&#39;), (&#39;model&#39;, &#39;G&#39;)]</span>
 </pre></div>
 </div>
-<p>Remove the node from the hierarchy and reconnect its predecessors with its successors:</p>
+<p>Remove a node from the hierarchy and reconnect its predecessors with its successors:</p>
 <div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">hierarchy</span><span class="o">.</span><span class="n">remove_node</span><span class="p">(</span><span class="s2">&quot;G&quot;</span><span class="p">,</span> <span class="n">reconnect</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">hierarchy</span><span class="o">.</span><span class="n">typings</span><span class="p">()</span>
 <span class="go">[(&#39;model&#39;, &#39;T&#39;)]</span>
@@ -204,14 +201,13 @@ functionality implemented in ReGraph.</p>
 <span class="go">{&#39;A&#39;: &#39;agent&#39;,</span>
 <span class="go"> &#39;B&#39;: &#39;agent&#39;,</span>
 <span class="go"> &#39;B_activity&#39;: &#39;state&#39;,</span>
-<span class="go"> &#39;C&#39;: &#39;agent&#39;,</span>
-<span class="go"> &#39;C_activity&#39;: &#39;state&#39;,</span>
+<span class="go"> &#39;A_activity&#39;: &#39;state&#39;,</span>
 <span class="go"> &#39;R&#39;: &#39;agent&#39;,</span>
 <span class="go"> &#39;activation&#39;: &#39;action&#39;}</span>
 </pre></div>
 </div>
-<p>Graph hierarchy is also able to accommodate binary symmetric relations on graphs.
-Consider the following graph</p>
+<p>Graph hierarchy allows to accommodate binary symmetric relations on graphs.
+Consider the following graph:</p>
 <div class="highlight-default"><div class="highlight"><pre><span></span>    <span class="n">catalysis</span> <span class="o">=</span> <span class="n">nx</span><span class="o">.</span><span class="n">DiGraph</span><span class="p">()</span>
     <span class="n">primitives</span><span class="o">.</span><span class="n">add_nodes_from</span><span class="p">(</span>
             <span class="n">catalysis</span><span class="p">,</span>
@@ -232,36 +228,34 @@ Consider the following graph</p>
 <img alt="_images/ex1_catalysis.png" src="_images/ex1_catalysis.png" />
 <p>Create a relation between graph <cite>model</cite> and graph <cite>catalysis</cite>:</p>
 <div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">relation</span> <span class="o">=</span> <span class="p">{</span>
-        <span class="s2">&quot;A&quot;</span><span class="p">:</span> <span class="s2">&quot;enzyme&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;B&quot;</span><span class="p">:</span> <span class="s2">&quot;substrate&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;C&quot;</span><span class="p">:</span> <span class="s2">&quot;substrate&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;B_activity&quot;</span><span class="p">:</span> <span class="s2">&quot;mod_state&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;C_activity&quot;</span><span class="p">:</span> <span class="s2">&quot;mod_state&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;activation&quot;</span><span class="p">:</span> <span class="s2">&quot;mod&quot;</span>
+    <span class="s2">&quot;A&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;enzyme&quot;</span><span class="p">,</span> <span class="s2">&quot;substrate&quot;</span><span class="p">},</span>
+    <span class="s2">&quot;B&quot;</span><span class="p">:</span> <span class="s2">&quot;substrate&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;B_activity&quot;</span><span class="p">:</span> <span class="s2">&quot;mod_state&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;A_activity&quot;</span><span class="p">:</span> <span class="s2">&quot;mod_state&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;activation&quot;</span><span class="p">:</span> <span class="s2">&quot;mod&quot;</span>
 <span class="p">}</span>
-<span class="n">hierarchy</span><span class="o">.</span><span class="n">add_relation</span><span class="p">(</span><span class="s1">&#39;model&#39;</span><span class="p">,</span> <span class="s1">&#39;catalysis&#39;</span><span class="p">)</span>
+<span class="n">hierarchy</span><span class="o">.</span><span class="n">add_relation</span><span class="p">(</span><span class="s1">&#39;model&#39;</span><span class="p">,</span> <span class="s1">&#39;catalysis&#39;</span><span class="p">,</span> <span class="n">relation</span><span class="p">)</span>
 </pre></div>
 </div>
+<p>Note that in a relation between two graphs a node from one graph can be related to a set of nodes
+from another graph (in our example node <cite>A</cite> in the graph <cite>model</cite> is related to both
+<cite>enzyme</cite> and <cite>substrate</cite> from the graph <cite>catalysis</cite>):</p>
 <div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">hierarchy</span><span class="o">.</span><span class="n">relation</span><span class="p">[</span><span class="s1">&#39;model&#39;</span><span class="p">][</span><span class="s1">&#39;catalysis&#39;</span><span class="p">]</span>
-<span class="go">{&#39;A&#39;: {&#39;enzyme&#39;},</span>
+<span class="go">{&#39;A&#39;: {&#39;enzyme&#39;, &#39;substrate&#39;},</span>
+<span class="go"> &#39;A_activity&#39;: {&#39;mod_state&#39;},</span>
 <span class="go"> &#39;B&#39;: {&#39;substrate&#39;},</span>
 <span class="go"> &#39;B_activity&#39;: {&#39;mod_state&#39;},</span>
-<span class="go"> &#39;C&#39;: {&#39;substrate&#39;},</span>
-<span class="go"> &#39;C_activity&#39;: {&#39;mod_state&#39;},</span>
 <span class="go"> &#39;activation&#39;: {&#39;mod&#39;}}</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">hierarchy</span><span class="o">.</span><span class="n">relation</span><span class="p">[</span><span class="s1">&#39;catalysis&#39;</span><span class="p">][</span><span class="s1">&#39;model&#39;</span><span class="p">]</span>
 <span class="go">{&#39;enzyme&#39;: {&#39;A&#39;},</span>
 <span class="go"> &#39;mod&#39;: {&#39;activation&#39;},</span>
-<span class="go"> &#39;mod_state&#39;: {&#39;B_activity&#39;, &#39;C_activity&#39;},</span>
-<span class="go"> &#39;substrate&#39;: {&#39;B&#39;, &#39;C&#39;}}</span>
+<span class="go"> &#39;mod_state&#39;: {&#39;A_activity&#39;, &#39;B_activity&#39;},</span>
+<span class="go"> &#39;substrate&#39;: {&#39;A&#39;, &#39;B&#39;}}</span>
 </pre></div>
 </div>
 </div>
 <div class="section" id="rewriting-in-the-hierarchy">
 <span id="rewriting-in-hierarchy"></span><h3>Rewriting in the hierarchy<a class="headerlink" href="#rewriting-in-the-hierarchy" title="Permalink to this headline">¶</a></h3>
-</div>
-<div class="section" id="propagation-in-the-hierarchy">
-<span id="propagation-in-hierarchy"></span><h3>Propagation in the hierarchy<a class="headerlink" href="#propagation-in-the-hierarchy" title="Permalink to this headline">¶</a></h3>
 </div>
 </div>
 </div>
