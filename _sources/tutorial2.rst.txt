@@ -367,14 +367,15 @@ defined below: ::
 .. image:: _static/ex2_rule.png
 .. image:: _static/ex2_n1_instance.png
 
-As can be seen on the figures below, our rule adds three new nodes to the `n1`
-(i.e., 'B_res_1', 'X', 'Y') and connects with an edge node 'B' (of the initial pattern)
+As can be seen on the figures below, our rule adds three new nodes to the graph `n1`
+(i.e., 'B_res_1', 'X', 'Y') and connects with an edge 'B' (of the initial pattern)
 and 'B_res_1'.
 
 We can also define a typing for new nodes that will be created by the rule, and it can be
 done by providing a typing of the right-hand side of the rule by hierarchy graphs:
 
 ::
+
     rhs_typing = {
         "mm": {"B_res_1": "residue"},
         "mmm": {"X": "component"},
@@ -383,4 +384,27 @@ done by providing a typing of the right-hand side of the rule by hierarchy graph
 
 Rewrite `n1` with the rule:
 
->>> hierarchy.rewrite("n1", rule, instance, rhs_typing=rhs_typing, strict=False)
+>>> _, rhs = hierarchy.rewrite("n1", rule, instance, rhs_typing=rhs_typing, strict=False)
+
+Let's have a look on the changes to the hierarchy that were triggered by the rewriting:
+
+>>> plotting.plot_instance(hierarchy.node["n1"].graph, rule.rhs, rhs_instance)
+
+.. image:: _static/ex2_n1_result1_instance.png
+
+On the figure above we can see that we successfully created new nodes in `n1`. Now let us 
+observe the changes in `ag`:
+
+>>> plotting.plot_graph(hierarchy.graph["ag"])
+
+.. image:: _static/ex2_ag_result1.png
+
+>>> hierarchy.typing["n1"]["ag"]
+{'A': 'A',
+ 'A_res_1': 'A_res_1',
+ 'B': 'B',
+ 'B_res_1': 'B_res_1',
+ 'X': 'X',
+ 'Y': 'Y',
+ 'mod': 'mod',
+ 'p': 'p'}
