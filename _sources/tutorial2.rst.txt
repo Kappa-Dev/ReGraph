@@ -552,5 +552,50 @@ instances in the graph `n1`: ::
 .. image:: _static/ex2_n1_rule3_instance2.png
 
 
+We can see that there were found exactly two instances of the left-hand side of the rule
+(i.e. the gene node 'B' together with the residue node 'B_res_1' connected to it and the gene node 'A' together with the residue node 'A_res_1'). Now, let's apply the merging rule to all the instances: ::
+
+    for instance in instances:
+        hierarchy.rewrite("n1", merging_rule, instance, rhs_typing=rhs_typing)
+
+    plot_graph(hierarchy.node["n1"].graph,
+           title="Graph 'n1' after rewriting with rule 3")
+
+.. image:: _static/ex2_n1_rule3_result.png
+
+Changes that were made to `ag`:
+
+.. image:: _static/ex2_ag_rule3_result.png
+
+>>> hierarchy.typing["n1"]["ag"]
+{'A': 'A1',
+ 'p': 'p',
+ 'mod': 'mod',
+ 'X': 'X',
+ 'Y': 'Y',
+ 'A1_A_res_1': 'A_res_1_A',
+ 'B_B_res_1': 'B_res_1_B'}
+
+This how our meta-model `mm` looks like after rewriting:
+
+.. image:: _static/ex2_mm_rule3_result.png
+
+Nodes 'residue' and 'gene' were merged in `mm`. Now updated typing
+of `ag` by `mm` is following:
+
+>>> hierarchy.typing["ag"]["mm"]
+{'p': 'state',
+ 'mod': 'mod',
+ 'A1': 'residue_gene',
+ 'X': 'X',
+ 'Y': 'Y',
+ 'A_res_1_A': 'residue_gene',
+ 'B_res_1_B': 'residue_gene'}
+
+The new 'hybrid' node (i.e. 'residue_gene') is typed by the node 'component' of `mmm`:
+
+>>> hierarchy.typing["mm"]["mmm"]["residue_gene"]
+'component'
+
 
 This example can be found in the following :download:`script <_static/tutorial2_ex2.py>`.

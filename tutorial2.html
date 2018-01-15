@@ -576,6 +576,47 @@ instances in the graph <cite>n1</cite>:</p>
 </div>
 <img alt="_images/ex2_n1_rule3_instance1.png" src="_images/ex2_n1_rule3_instance1.png" />
 <img alt="_images/ex2_n1_rule3_instance2.png" src="_images/ex2_n1_rule3_instance2.png" />
+<p>We can see that there were found exactly two instances of the left-hand side of the rule
+(i.e. the gene node ‘B’ together with the residue node ‘B_res_1’ connected to it and the gene node ‘A’ together with the residue node ‘A_res_1’). Now, let’s apply the merging rule to all the instances:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="k">for</span> <span class="n">instance</span> <span class="ow">in</span> <span class="n">instances</span><span class="p">:</span>
+    <span class="n">hierarchy</span><span class="o">.</span><span class="n">rewrite</span><span class="p">(</span><span class="s2">&quot;n1&quot;</span><span class="p">,</span> <span class="n">merging_rule</span><span class="p">,</span> <span class="n">instance</span><span class="p">,</span> <span class="n">rhs_typing</span><span class="o">=</span><span class="n">rhs_typing</span><span class="p">)</span>
+
+<span class="n">plot_graph</span><span class="p">(</span><span class="n">hierarchy</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="s2">&quot;n1&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">graph</span><span class="p">,</span>
+       <span class="n">title</span><span class="o">=</span><span class="s2">&quot;Graph &#39;n1&#39; after rewriting with rule 3&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<img alt="_images/ex2_n1_rule3_result.png" src="_images/ex2_n1_rule3_result.png" />
+<p>Changes that were made to <cite>ag</cite>:</p>
+<img alt="_images/ex2_ag_rule3_result.png" src="_images/ex2_ag_rule3_result.png" />
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">hierarchy</span><span class="o">.</span><span class="n">typing</span><span class="p">[</span><span class="s2">&quot;n1&quot;</span><span class="p">][</span><span class="s2">&quot;ag&quot;</span><span class="p">]</span>
+<span class="go">{&#39;A&#39;: &#39;A1&#39;,</span>
+<span class="go"> &#39;p&#39;: &#39;p&#39;,</span>
+<span class="go"> &#39;mod&#39;: &#39;mod&#39;,</span>
+<span class="go"> &#39;X&#39;: &#39;X&#39;,</span>
+<span class="go"> &#39;Y&#39;: &#39;Y&#39;,</span>
+<span class="go"> &#39;A1_A_res_1&#39;: &#39;A_res_1_A&#39;,</span>
+<span class="go"> &#39;B_B_res_1&#39;: &#39;B_res_1_B&#39;}</span>
+</pre></div>
+</div>
+<p>This how our meta-model <cite>mm</cite> looks like after rewriting:</p>
+<img alt="_images/ex2_mm_rule3_result.png" src="_images/ex2_mm_rule3_result.png" />
+<p>Nodes ‘residue’ and ‘gene’ were merged in <cite>mm</cite>. Now updated typing
+of <cite>ag</cite> by <cite>mm</cite> is following:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">hierarchy</span><span class="o">.</span><span class="n">typing</span><span class="p">[</span><span class="s2">&quot;ag&quot;</span><span class="p">][</span><span class="s2">&quot;mm&quot;</span><span class="p">]</span>
+<span class="go">{&#39;p&#39;: &#39;state&#39;,</span>
+<span class="go"> &#39;mod&#39;: &#39;mod&#39;,</span>
+<span class="go"> &#39;A1&#39;: &#39;residue_gene&#39;,</span>
+<span class="go"> &#39;X&#39;: &#39;X&#39;,</span>
+<span class="go"> &#39;Y&#39;: &#39;Y&#39;,</span>
+<span class="go"> &#39;A_res_1_A&#39;: &#39;residue_gene&#39;,</span>
+<span class="go"> &#39;B_res_1_B&#39;: &#39;residue_gene&#39;}</span>
+</pre></div>
+</div>
+<p>The new ‘hybrid’ node (i.e. ‘residue_gene’) is typed by the node ‘component’ of <cite>mmm</cite>:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">hierarchy</span><span class="o">.</span><span class="n">typing</span><span class="p">[</span><span class="s2">&quot;mm&quot;</span><span class="p">][</span><span class="s2">&quot;mmm&quot;</span><span class="p">][</span><span class="s2">&quot;residue_gene&quot;</span><span class="p">]</span>
+<span class="go">&#39;component&#39;</span>
+</pre></div>
+</div>
 <p>This example can be found in the following <a class="reference download internal" href="_downloads/tutorial2_ex2.py" download=""><code class="xref download docutils literal"><span class="pre">script</span></code></a>.</p>
 </div>
 </div>
