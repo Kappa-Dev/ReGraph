@@ -110,7 +110,7 @@ source to the same target commute.</p>
 <tr class="row-odd"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.adjacent_relations" title="regraph.hierarchy.Hierarchy.adjacent_relations"><code class="xref py py-obj docutils literal"><span class="pre">adjacent_relations</span></code></a>(g)</td>
 <td>Return a list of related graphs.</td>
 </tr>
-<tr class="row-even"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.apply_rule" title="regraph.hierarchy.Hierarchy.apply_rule"><code class="xref py py-obj docutils literal"><span class="pre">apply_rule</span></code></a>(graph_id,&nbsp;rule_id,&nbsp;instance[,&nbsp;…])</td>
+<tr class="row-even"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.apply_rule" title="regraph.hierarchy.Hierarchy.apply_rule"><code class="xref py py-obj docutils literal"><span class="pre">apply_rule</span></code></a>(graph_id,&nbsp;rule_id[,&nbsp;instance,&nbsp;…])</td>
 <td>Apply rule from the hierarchy.</td>
 </tr>
 <tr class="row-odd"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.child_rule_from_nodes" title="regraph.hierarchy.Hierarchy.child_rule_from_nodes"><code class="xref py py-obj docutils literal"><span class="pre">child_rule_from_nodes</span></code></a>(nodes,&nbsp;graph_id,&nbsp;…)</td>
@@ -487,8 +487,70 @@ the target given by <cite>mapping</cite> is not a valid homomorphism.</p>
 
 <dl class="method">
 <dt id="regraph.hierarchy.Hierarchy.apply_rule">
-<code class="descname">apply_rule</code><span class="sig-paren">(</span><em>graph_id</em>, <em>rule_id</em>, <em>instance</em>, <em>strong_typing=True</em>, <em>total=False</em>, <em>inplace=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/hierarchy.html#Hierarchy.apply_rule"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.hierarchy.Hierarchy.apply_rule" title="Permalink to this definition">¶</a></dt>
+<code class="descname">apply_rule</code><span class="sig-paren">(</span><em>graph_id</em>, <em>rule_id</em>, <em>instance=None</em>, <em>strict=False</em>, <em>inplace=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/hierarchy.html#Hierarchy.apply_rule"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.hierarchy.Hierarchy.apply_rule" title="Permalink to this definition">¶</a></dt>
 <dd><p>Apply rule from the hierarchy.</p>
+<p>Apply SqPO rewriting rule sitting in the hierarchy to
+the specified graph of the hierarchy. The lhs and the rhs
+typings of the rule are the ones given by the homomorphisms
+from the rule in the hierarchy.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>graph_id</strong></p>
+<blockquote>
+<div><p>Id of the graph in the hierarchy to rewrite</p>
+</div></blockquote>
+<p><strong>rule_id</strong></p>
+<blockquote>
+<div><p>Id of the rule in the hierarchy to apply</p>
+</div></blockquote>
+<p><strong>instance</strong> : dict, optional</p>
+<blockquote>
+<div><p>Dictionary containing an instance of the lhs of the rule in
+the graph subject to rewriting, by default, tries to construct
+identity morphism of the nodes of the pattern</p>
+</div></blockquote>
+<p><strong>strict</strong> : bool, optional</p>
+<blockquote>
+<div><p>If True, application of relaxing rules (the ones that
+add nodes/edges/attrs or merge nodes) causes an exception,
+otherwise, relaxing rules are allowed, default value – False.</p>
+</div></blockquote>
+<p><strong>inplace</strong> : bool, optional</p>
+<blockquote>
+<div><p>If True, all the changes to the hierarchy are performed in-place,
+otherwise, new hierarchy corresponding to the result of the
+rewriting is constructed.</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>new_hierarchy</strong> : regraph.hierarchy.Hierarchy</p>
+<blockquote>
+<div><p>Reference to the hierarchy corresponding to the result
+of rewriting (if the <cite>inpace</cite> argument was <cite>True</cite>, the
+reference is self)</p>
+</div></blockquote>
+<p><strong>r_g_prime</strong> : dict</p>
+<blockquote>
+<div><p>Dictionary containing the matching of the right-hand side of
+the rule in the graph subject to rewriting</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Raises:</th><td class="field-body"><p class="first"><strong>ReGraphError</strong></p>
+<blockquote>
+<div><p>If attempt to rewrite a rule in the hierarchy or <cite>rule</cite> is
+not a valid rule object</p>
+</div></blockquote>
+<p><strong>RewritingError</strong></p>
+<blockquote class="last">
+<div><p>For more details see regraph.Hierarchy.rewrite</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
 </dd></dl>
 
 <dl class="method">
@@ -939,25 +1001,97 @@ its predecessors</p>
 <dt id="regraph.hierarchy.Hierarchy.rewrite">
 <code class="descname">rewrite</code><span class="sig-paren">(</span><em>graph_id</em>, <em>rule</em>, <em>instance=None</em>, <em>lhs_typing=None</em>, <em>rhs_typing=None</em>, <em>strict=False</em>, <em>inplace=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/hierarchy.html#Hierarchy.rewrite"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.hierarchy.Hierarchy.rewrite" title="Permalink to this definition">¶</a></dt>
 <dd><p>Rewrite and propagate the changes up &amp; down.</p>
+<p>Rewriting in the hierarchy cosists of an application of the
+SqPO-rewriting rule (given by the <cite>rule</cite> parameter) to a
+graph in the hierarchy. Such rewriting often triggers a set of
+changes that are applied to other graphs and homomorphisms in the
+hierarchy, which are necessary to ensure that the hierarchy stays
+consistent. If the rule is restrictive (deletes nodes/edges/attrs
+or clones nodes), in general, the respective changes to all the graphs
+(transitively) typed by the graph subject to rewriting are made.
+On the other hand, if the rule is relaxing (adds nodes/edges/attrs
+or merges nodes), in general, the respective changes to all the graphs
+that (tansitively) type the graph subject to rewriting are made.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>graph_id</strong></p>
+<blockquote>
+<div><p>Id of the graph in the hierarchy to rewrite</p>
+</div></blockquote>
 <p><strong>rule</strong> : regraph.rule.Rule</p>
+<blockquote>
+<div><p>Rule object to apply</p>
+</div></blockquote>
 <p><strong>instance</strong> : dict, optional</p>
+<blockquote>
+<div><p>Dictionary containing an instance of the lhs of the rule in
+the graph subject to rewriting, by default, tries to construct
+identity morphism of the nodes of the pattern</p>
+</div></blockquote>
 <p><strong>lhs_typing</strong> : dict, optional</p>
+<blockquote>
+<div><p>Dictionary containing typing of the lhs by graphs of the hierarchy,
+keys are ids of hierarchy graphs, values are dictionaries
+containing the mapping of nodes from the lhs to the nodes of
+the typing graph given by the respective key of the value.</p>
+</div></blockquote>
 <p><strong>rhs_typing</strong> : dict, optional</p>
+<blockquote>
+<div><p>Dictionary containing typing of the rhs by graphs of the hierarchy,
+keys are ids of hierarchy graphs, values are dictionaries
+containing the mapping of nodes from the lhs to the nodes of
+the typing graph given by the respective key of the value
+(note that a node from the rhs can be typed by a set of nodes of
+some graph, e.g. if we want to perform merging of some types, etc).</p>
+</div></blockquote>
 <p><strong>strict</strong> : bool, optional</p>
+<blockquote>
+<div><p>If True, application of relaxing rules (the ones that
+add nodes/edges/attrs or merge nodes) causes an exception,
+otherwise, relaxing rules are allowed, default value – False.</p>
+</div></blockquote>
 <p><strong>inplace</strong> : bool, optional</p>
+<blockquote>
+<div><p>If True, all the changes to the hierarchy are performed in-place,
+otherwise, new hierarchy corresponding to the result of the
+rewriting is constructed.</p>
+</div></blockquote>
 </td>
 </tr>
 <tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>new_hierarchy</strong> : regraph.hierarchy.Hierarchy</p>
+<blockquote>
+<div><p>Reference to the hierarchy corresponding to the result
+of rewriting (if the <cite>inpace</cite> argument was <cite>True</cite>, the
+reference is self)</p>
+</div></blockquote>
 <p><strong>r_g_prime</strong> : dict</p>
+<blockquote>
+<div><p>Dictionary containing the matching of the right-hand side of
+the rule in the graph subject to rewriting</p>
+</div></blockquote>
 </td>
 </tr>
 <tr class="field-odd field"><th class="field-name">Raises:</th><td class="field-body"><p class="first"><strong>ReGraphError</strong></p>
-<p class="last"><strong>RewritingError</strong></p>
+<blockquote>
+<div><p>If attempt to rewrite a rule in the hierarchy or <cite>rule</cite> is
+not a valid rule object</p>
+</div></blockquote>
+<p><strong>RewritingError</strong></p>
+<blockquote class="last">
+<div><p>This error is raised in the following cases:</p>
+<blockquote>
+<div><ul class="simple">
+<li>The typing of either the lhs or the rhs is inconsistent</li>
+<li>The typing of the rhs is inconsistent with the typing of
+the lhs</li>
+<li>Specified instance is not valid for the given rule</li>
+<li>The rule requires some changes which are not allowed
+by the parameter <cite>strict</cite></li>
+</ul>
+</div></blockquote>
+</div></blockquote>
 </td>
 </tr>
 </tbody>
@@ -998,6 +1132,7 @@ its predecessors</p>
 <dt id="regraph.hierarchy.Hierarchy.to_nx_graph">
 <code class="descname">to_nx_graph</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/hierarchy.html#Hierarchy.to_nx_graph"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.hierarchy.Hierarchy.to_nx_graph" title="Permalink to this definition">¶</a></dt>
 <dd><p>Create a simple networkx graph representing the hierarchy.</p>
+<p>Note that the relation edges are ignored</p>
 </dd></dl>
 
 <dl class="attribute">

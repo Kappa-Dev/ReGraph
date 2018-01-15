@@ -1433,26 +1433,74 @@
                 <span class="n">lhs_typing</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">rhs_typing</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">strict</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Rewrite and propagate the changes up &amp; down.</span>
 
+<span class="sd">        Rewriting in the hierarchy cosists of an application of the</span>
+<span class="sd">        SqPO-rewriting rule (given by the `rule` parameter) to a</span>
+<span class="sd">        graph in the hierarchy. Such rewriting often triggers a set of</span>
+<span class="sd">        changes that are applied to other graphs and homomorphisms in the</span>
+<span class="sd">        hierarchy, which are necessary to ensure that the hierarchy stays</span>
+<span class="sd">        consistent. If the rule is restrictive (deletes nodes/edges/attrs</span>
+<span class="sd">        or clones nodes), in general, the respective changes to all the graphs</span>
+<span class="sd">        (transitively) typed by the graph subject to rewriting are made.</span>
+<span class="sd">        On the other hand, if the rule is relaxing (adds nodes/edges/attrs</span>
+<span class="sd">        or merges nodes), in general, the respective changes to all the graphs</span>
+<span class="sd">        that (tansitively) type the graph subject to rewriting are made.</span>
+
+
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
 <span class="sd">        graph_id</span>
+<span class="sd">            Id of the graph in the hierarchy to rewrite</span>
 <span class="sd">        rule : regraph.rule.Rule</span>
+<span class="sd">            Rule object to apply</span>
 <span class="sd">        instance : dict, optional</span>
+<span class="sd">            Dictionary containing an instance of the lhs of the rule in</span>
+<span class="sd">            the graph subject to rewriting, by default, tries to construct</span>
+<span class="sd">            identity morphism of the nodes of the pattern</span>
 <span class="sd">        lhs_typing : dict, optional</span>
+<span class="sd">            Dictionary containing typing of the lhs by graphs of the hierarchy,</span>
+<span class="sd">            keys are ids of hierarchy graphs, values are dictionaries</span>
+<span class="sd">            containing the mapping of nodes from the lhs to the nodes of</span>
+<span class="sd">            the typing graph given by the respective key of the value.</span>
 <span class="sd">        rhs_typing : dict, optional</span>
+<span class="sd">            Dictionary containing typing of the rhs by graphs of the hierarchy,</span>
+<span class="sd">            keys are ids of hierarchy graphs, values are dictionaries</span>
+<span class="sd">            containing the mapping of nodes from the lhs to the nodes of</span>
+<span class="sd">            the typing graph given by the respective key of the value</span>
+<span class="sd">            (note that a node from the rhs can be typed by a set of nodes of</span>
+<span class="sd">            some graph, e.g. if we want to perform merging of some types, etc).</span>
 <span class="sd">        strict : bool, optional</span>
+<span class="sd">            If True, application of relaxing rules (the ones that</span>
+<span class="sd">            add nodes/edges/attrs or merge nodes) causes an exception,</span>
+<span class="sd">            otherwise, relaxing rules are allowed, default value -- False.</span>
 <span class="sd">        inplace : bool, optional</span>
+<span class="sd">            If True, all the changes to the hierarchy are performed in-place,</span>
+<span class="sd">            otherwise, new hierarchy corresponding to the result of the</span>
+<span class="sd">            rewriting is constructed.</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
 <span class="sd">        new_hierarchy : regraph.hierarchy.Hierarchy</span>
+<span class="sd">            Reference to the hierarchy corresponding to the result</span>
+<span class="sd">            of rewriting (if the `inpace` argument was `True`, the</span>
+<span class="sd">            reference is self)</span>
 <span class="sd">        r_g_prime : dict</span>
+<span class="sd">            Dictionary containing the matching of the right-hand side of</span>
+<span class="sd">            the rule in the graph subject to rewriting</span>
 
 <span class="sd">        Raises</span>
 <span class="sd">        ------</span>
 <span class="sd">        ReGraphError</span>
+<span class="sd">            If attempt to rewrite a rule in the hierarchy or `rule` is</span>
+<span class="sd">            not a valid rule object</span>
 <span class="sd">        RewritingError</span>
+<span class="sd">            This error is raised in the following cases:</span>
 
+<span class="sd">                * The typing of either the lhs or the rhs is inconsistent</span>
+<span class="sd">                * The typing of the rhs is inconsistent with the typing of</span>
+<span class="sd">                  the lhs</span>
+<span class="sd">                * Specified instance is not valid for the given rule</span>
+<span class="sd">                * The rule requires some changes which are not allowed</span>
+<span class="sd">                  by the parameter `strict`</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">graph_id</span><span class="p">])</span> <span class="o">==</span> <span class="n">RuleNode</span><span class="p">:</span>
             <span class="k">raise</span> <span class="n">ReGraphError</span><span class="p">(</span><span class="s2">&quot;Rewriting of a rule is not implemented!&quot;</span><span class="p">)</span>
@@ -1548,9 +1596,53 @@
                 <span class="n">new_hierarchy</span><span class="p">,</span> <span class="n">upstream_changes</span><span class="p">,</span> <span class="n">downstream_changes</span><span class="p">)</span>
         <span class="k">return</span> <span class="p">(</span><span class="n">new_hierarchy</span><span class="p">,</span> <span class="n">r_g_prime</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="Hierarchy.apply_rule"><a class="viewcode-back" href="../../hierarchy.html#regraph.hierarchy.Hierarchy.apply_rule">[docs]</a>    <span class="k">def</span> <span class="nf">apply_rule</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">graph_id</span><span class="p">,</span> <span class="n">rule_id</span><span class="p">,</span> <span class="n">instance</span><span class="p">,</span>
-                   <span class="n">strong_typing</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">total</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Apply rule from the hierarchy.&quot;&quot;&quot;</span>
+<div class="viewcode-block" id="Hierarchy.apply_rule"><a class="viewcode-back" href="../../hierarchy.html#regraph.hierarchy.Hierarchy.apply_rule">[docs]</a>    <span class="k">def</span> <span class="nf">apply_rule</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">graph_id</span><span class="p">,</span> <span class="n">rule_id</span><span class="p">,</span> <span class="n">instance</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                   <span class="n">strict</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Apply rule from the hierarchy.</span>
+
+<span class="sd">        Apply SqPO rewriting rule sitting in the hierarchy to</span>
+<span class="sd">        the specified graph of the hierarchy. The lhs and the rhs</span>
+<span class="sd">        typings of the rule are the ones given by the homomorphisms</span>
+<span class="sd">        from the rule in the hierarchy.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        graph_id</span>
+<span class="sd">            Id of the graph in the hierarchy to rewrite</span>
+<span class="sd">        rule_id</span>
+<span class="sd">            Id of the rule in the hierarchy to apply</span>
+<span class="sd">        instance : dict, optional</span>
+<span class="sd">            Dictionary containing an instance of the lhs of the rule in</span>
+<span class="sd">            the graph subject to rewriting, by default, tries to construct</span>
+<span class="sd">            identity morphism of the nodes of the pattern</span>
+<span class="sd">        strict : bool, optional</span>
+<span class="sd">            If True, application of relaxing rules (the ones that</span>
+<span class="sd">            add nodes/edges/attrs or merge nodes) causes an exception,</span>
+<span class="sd">            otherwise, relaxing rules are allowed, default value -- False.</span>
+<span class="sd">        inplace : bool, optional</span>
+<span class="sd">            If True, all the changes to the hierarchy are performed in-place,</span>
+<span class="sd">            otherwise, new hierarchy corresponding to the result of the</span>
+<span class="sd">            rewriting is constructed.</span>
+
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        new_hierarchy : regraph.hierarchy.Hierarchy</span>
+<span class="sd">            Reference to the hierarchy corresponding to the result</span>
+<span class="sd">            of rewriting (if the `inpace` argument was `True`, the</span>
+<span class="sd">            reference is self)</span>
+<span class="sd">        r_g_prime : dict</span>
+<span class="sd">            Dictionary containing the matching of the right-hand side of</span>
+<span class="sd">            the rule in the graph subject to rewriting</span>
+
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        ReGraphError</span>
+<span class="sd">            If attempt to rewrite a rule in the hierarchy or `rule` is</span>
+<span class="sd">            not a valid rule object</span>
+<span class="sd">        RewritingError</span>
+<span class="sd">            For more details see regraph.Hierarchy.rewrite</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">graph_id</span><span class="p">])</span> <span class="o">==</span> <span class="n">RuleNode</span><span class="p">:</span>
             <span class="k">raise</span> <span class="n">ReGraphError</span><span class="p">(</span><span class="s2">&quot;Rewriting of a rule is not implemented!&quot;</span><span class="p">)</span>
 
@@ -1573,9 +1665,10 @@
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">rewrite</span><span class="p">(</span>
             <span class="n">graph_id</span><span class="p">,</span>
             <span class="n">rule</span><span class="p">,</span>
-            <span class="n">instance</span><span class="p">,</span>
-            <span class="n">lhs_typing</span><span class="p">,</span>
-            <span class="n">rhs_typing</span><span class="p">,</span>
+            <span class="n">instance</span><span class="o">=</span><span class="n">instance</span><span class="p">,</span>
+            <span class="n">lhs_typing</span><span class="o">=</span><span class="n">lhs_typing</span><span class="p">,</span>
+            <span class="n">rhs_typing</span><span class="o">=</span><span class="n">rhs_typing</span><span class="p">,</span>
+            <span class="n">strict</span><span class="o">=</span><span class="n">strict</span><span class="p">,</span>
             <span class="n">inplace</span><span class="o">=</span><span class="n">inplace</span><span class="p">)</span></div>
 
     <span class="k">def</span> <span class="nf">_path_from_rule</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">):</span>
@@ -1643,7 +1736,6 @@
             <span class="k">if</span> <span class="n">node_id</span> <span class="ow">in</span> <span class="n">mapping</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
                 <span class="n">types</span><span class="p">[</span><span class="n">typing</span><span class="p">]</span> <span class="o">=</span> <span class="n">mapping</span><span class="p">[</span><span class="n">node_id</span><span class="p">]</span>
         <span class="k">return</span> <span class="n">types</span></div>
-
 
 <div class="viewcode-block" id="Hierarchy.descendents"><a class="viewcode-back" href="../../hierarchy.html#regraph.hierarchy.Hierarchy.descendents">[docs]</a>    <span class="k">def</span> <span class="nf">descendents</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">graph_id</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Get descentants (TODO: reverse names).&quot;&quot;&quot;</span>
@@ -1756,7 +1848,10 @@
         <span class="k">return</span> <span class="n">ancestors</span></div>
 
 <div class="viewcode-block" id="Hierarchy.to_nx_graph"><a class="viewcode-back" href="../../hierarchy.html#regraph.hierarchy.Hierarchy.to_nx_graph">[docs]</a>    <span class="k">def</span> <span class="nf">to_nx_graph</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Create a simple networkx graph representing the hierarchy.&quot;&quot;&quot;</span>
+        <span class="sd">&quot;&quot;&quot;Create a simple networkx graph representing the hierarchy.</span>
+
+<span class="sd">        Note that the relation edges are ignored</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">g</span> <span class="o">=</span> <span class="n">nx</span><span class="o">.</span><span class="n">DiGraph</span><span class="p">()</span>
         <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
             <span class="n">g</span><span class="o">.</span><span class="n">add_node</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">node</span><span class="p">]</span><span class="o">.</span><span class="n">attrs</span><span class="p">)</span>

@@ -580,7 +580,7 @@ Changes that were made to `ag`:
  'A1_A_res_1': 'A_res_1_A',
  'B_B_res_1': 'B_res_1_B'}
 
-This how our meta-model `mm` looks like after rewriting:
+This is how our meta-model `mm` looks like after rewriting:
 
 .. image:: _static/ex2_mm_rule3_result.png
 
