@@ -358,7 +358,7 @@ defined below: ::
     plotting.plot_rule(cloning_rule)
 
 
-.. image:: _static/ex2_rule_cloning.png
+.. image:: _static/ex2_rule1.png
 
 This rule clones a node with id 'gene' of the pattern and removes
 an edge from the node 'residue' to the cloned node. Define a typing
