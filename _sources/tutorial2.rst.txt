@@ -412,9 +412,15 @@ adds three new respective nodes to `ag`, so that `n1` becomes typed by `ag` as f
  'mod': 'mod',
  'p': 'p'}
 
+Now what about the meta-model graph `mm`?
+
 >>> plotting.plot_graph(hierarchy.graph["mm"])
 
 .. image:: _static/ex2_mm_result1.png
+
+We can see that the nodes 'X' and 'Y' where added to `mm` as their typing by it was again not
+specified in `rhs_typing`. On the contrary, the node 'B_res_1' was typed by the node 'residue'
+in the meta-model, which can be seen in the updated typing of `ag` by `mm`:
 
 >>> hierarchy.typing["ag"]["mm"]
 {'A': 'gene',
@@ -425,3 +431,6 @@ adds three new respective nodes to `ag`, so that `n1` becomes typed by `ag` as f
  'Y': 'Y',
  'mod': 'mod',
  'p': 'state'}
+
+
+
