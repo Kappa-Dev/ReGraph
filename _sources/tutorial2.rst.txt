@@ -417,3 +417,11 @@ adds three new respective nodes to `ag`, so that `n1` becomes typed by `ag` as f
 .. image:: _static/ex2_mm_result1.png
 
 >>> hierarchy.typing["ag"]["mm"]
+{'A': 'gene',
+ 'A_res_1': 'residue',
+ 'B': 'gene',
+ 'B_res_1': 'residue',
+ 'X': 'X',
+ 'Y': 'Y',
+ 'mod': 'mod',
+ 'p': 'state'}
