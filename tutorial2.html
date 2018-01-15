@@ -88,7 +88,7 @@ homomorphisms representing graph typing in the system. This construction provide
 for mathematically robust procedures of propagation of changes (expressed through graph rewriting
 rules) on any level of the hierarchy, up to all the graphs which are transitively typed by the graph
 subject to rewriting. In the following section we give a simple example of such hierarchy and its
-functionality implemented in ReGraph.</p>
+functionality implemented in ReGraph (for more details see the module <a class="reference internal" href="hierarchy.html#hierarchy"><span class="std std-ref">Hierarchy</span></a>).</p>
 <div class="section" id="hierarchy-creation">
 <span id="id1"></span><h3>Hierarchy creation<a class="headerlink" href="#hierarchy-creation" title="Permalink to this headline">¶</a></h3>
 <p>Create an empty hierarchy and add graphs to the hierarchy:</p>
@@ -240,8 +240,8 @@ Consider the following graph:</p>
 </pre></div>
 </div>
 <p>Note that in a relation between two graphs a node from one graph can be related to a set of nodes
-from another graph (in our example node <cite>A</cite> in the graph <cite>model</cite> is related to both
-<cite>enzyme</cite> and <cite>substrate</cite> from the graph <cite>catalysis</cite>):</p>
+from another graph (in our example node ‘A’ in the graph <cite>model</cite> is related to both
+‘enzyme’ and ‘substrate’ from the graph <cite>catalysis</cite>):</p>
 <div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">hierarchy</span><span class="o">.</span><span class="n">relation</span><span class="p">[</span><span class="s1">&#39;model&#39;</span><span class="p">][</span><span class="s1">&#39;catalysis&#39;</span><span class="p">]</span>
 <span class="go">{&#39;A&#39;: {&#39;enzyme&#39;, &#39;substrate&#39;},</span>
 <span class="go"> &#39;A_activity&#39;: {&#39;mod_state&#39;},</span>
@@ -384,7 +384,7 @@ illustrate a usecase of such rewriting and how it can be peformed using ReGraph.
 </pre></div>
 </div>
 <img alt="_images/ex2_n1.png" src="_images/ex2_n1.png" />
-<p>Now, we would like to rewrite the graph <cite>ag</cite> with the rule and the instance
+<p>Now, we would like to rewrite the graph <cite>ag</cite> with the rule
 defined below:</p>
 <div class="highlight-default"><div class="highlight"><pre><span></span><span class="c1"># define a rule that clones nodes</span>
 <span class="n">pattern</span> <span class="o">=</span> <span class="n">nx</span><span class="o">.</span><span class="n">DiGraph</span><span class="p">()</span>
@@ -445,7 +445,7 @@ of the left-hand side of the rule and find all its matchings in <cite>ag</cite>:
 <span class="go"> &#39;A1&#39;: &#39;gene&#39;}</span>
 </pre></div>
 </div>
-<p>Now consider the following rule:</p>
+<p>Now consider the following rule and its instance in <cite>n1</cite>:</p>
 <div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">p</span> <span class="o">=</span> <span class="n">nx</span><span class="o">.</span><span class="n">DiGraph</span><span class="p">()</span>
 <span class="n">primitives</span><span class="o">.</span><span class="n">add_nodes_from</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="p">[</span><span class="s2">&quot;B&quot;</span><span class="p">])</span>
 
@@ -479,7 +479,9 @@ done by providing a typing of the right-hand side of the rule by hierarchy graph
 <span class="p">}</span>
 </pre></div>
 </div>
-<p>Rewrite <cite>n1</cite> with the rule using defaut non-strict rewriting:</p>
+<p>The typing defined by this dictionary can be interpreted as follows: “graph <cite>mm</cite> types the node ‘B_res_1’ from the right-hand side with the node ‘residue’, graph <cite>mmm</cite> types the node ‘X’ as ‘component’, and graph <cite>colors</cite> types ‘Y’ as ‘red”.</p>
+<p>By default rewriting in a hierarchy (implemented in the <cite>regraph.Hierarchy.rewrite</cite> method) is not strict, i.e. it is allowed to apply rewriting rules which perform <em>relaxing changes</em> to the hierarchy graphs (add nodes/edges/attrs or merge nodes). But the previously mentioned rewriting method allows to set its input argument <cite>strict=True</cite>, in which case an attempt to apply any relaxing rule will lead to an exception (<cite>regraph.RewritingError</cite>).</p>
+<p>Let’s rewrite <cite>n1</cite> with the rule using defaut non-strict rewriting:</p>
 <div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">_</span><span class="p">,</span> <span class="n">rhs</span> <span class="o">=</span> <span class="n">hierarchy</span><span class="o">.</span><span class="n">rewrite</span><span class="p">(</span><span class="s2">&quot;n1&quot;</span><span class="p">,</span> <span class="n">adding_rule</span><span class="p">,</span> <span class="n">instance</span><span class="p">,</span> <span class="n">rhs_typing</span><span class="o">=</span><span class="n">rhs_typing</span><span class="p">)</span>
 </pre></div>
 </div>
@@ -618,6 +620,10 @@ of <cite>ag</cite> by <cite>mm</cite> is following:</p>
 </pre></div>
 </div>
 <p>This example can be found in the following <a class="reference download internal" href="_downloads/tutorial2_ex2.py" download=""><code class="xref download docutils literal"><span class="pre">script</span></code></a>.</p>
+<div class="section" id="see-more">
+<h4>See more<a class="headerlink" href="#see-more" title="Permalink to this headline">¶</a></h4>
+<p>Module reference: <a class="reference internal" href="hierarchy.html#hierarchy"><span class="std std-ref">Hierarchy</span></a></p>
+</div>
 </div>
 </div>
 </div>
