@@ -382,9 +382,14 @@ done by providing a typing of the right-hand side of the rule by hierarchy graph
         "colors": {"Y": "red"}
     }
 
-Rewrite `n1` with the rule:
+Strict
 
->>> _, rhs = hierarchy.rewrite("n1", rule, instance, rhs_typing=rhs_typing, strict=False)
+>>> hierarchy.rewrite("n1", rule, instance, rhs_typing=rhs_typing, strict=True)
+RewritingError: Rewriting is strict (no propagation of types is allowed), typing of the node `B_res_1` in rhs is required (typing by the following graph stays unresolved: 'ag')!
+
+Rewrite `n1` with the rule using defaut non-strict rewriting:
+
+>>> _, rhs = hierarchy.rewrite("n1", rule, instance, rhs_typing=rhs_typing)
 
 Let's have a look on the changes to the hierarchy that were triggered by the rewriting:
 
@@ -399,8 +404,7 @@ observe the changes in `ag`:
 
 .. image:: _static/ex2_ag_result1.png
 
-As a typing by the nodes of `ag` of the new nodes in `n1` was not specified, ReGraph
-adds three new respective nodes to `ag`, so that `n1` becomes typed by `ag` as follows:
+As a typing by the nodes of `ag` of the new nodes in `n1` was not specified, three new respective nodes are added to `ag` by the rewriting procedure, so that `n1` becomes typed by `ag` as follows:
 
 >>> hierarchy.typing["n1"]["ag"]
 {'A': 'A',
@@ -418,7 +422,7 @@ Now what about the meta-model graph `mm`?
 
 .. image:: _static/ex2_mm_result1.png
 
-We can see that the nodes 'X' and 'Y' where added to `mm` as their typing by it was again not
+We can see that the nodes 'X' and 'Y' where added to `mm` as their typing by `mm` was again not
 specified in `rhs_typing`. On the contrary, the node 'B_res_1' was typed by the node 'residue'
 in the meta-model, which can be seen in the updated typing of `ag` by `mm`:
 
@@ -432,5 +436,9 @@ in the meta-model, which can be seen in the updated typing of `ag` by `mm`:
  'mod': 'mod',
  'p': 'state'}
 
+.. image:: _static/ex2_mmm_result1.png
+
+
+.. image:: _static/ex2_colors_result1.png
 
 

@@ -419,8 +419,13 @@ done by providing a typing of the right-hand side of the rule by hierarchy graph
 <span class="p">}</span>
 </pre></div>
 </div>
-<p>Rewrite <cite>n1</cite> with the rule:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">_</span><span class="p">,</span> <span class="n">rhs</span> <span class="o">=</span> <span class="n">hierarchy</span><span class="o">.</span><span class="n">rewrite</span><span class="p">(</span><span class="s2">&quot;n1&quot;</span><span class="p">,</span> <span class="n">rule</span><span class="p">,</span> <span class="n">instance</span><span class="p">,</span> <span class="n">rhs_typing</span><span class="o">=</span><span class="n">rhs_typing</span><span class="p">,</span> <span class="n">strict</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<p>Strict</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">hierarchy</span><span class="o">.</span><span class="n">rewrite</span><span class="p">(</span><span class="s2">&quot;n1&quot;</span><span class="p">,</span> <span class="n">rule</span><span class="p">,</span> <span class="n">instance</span><span class="p">,</span> <span class="n">rhs_typing</span><span class="o">=</span><span class="n">rhs_typing</span><span class="p">,</span> <span class="n">strict</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="go">RewritingError: Rewriting is strict (no propagation of types is allowed), typing of the node `B_res_1` in rhs is required (typing by the following graph stays unresolved: &#39;ag&#39;)!</span>
+</pre></div>
+</div>
+<p>Rewrite <cite>n1</cite> with the rule using defaut non-strict rewriting:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">_</span><span class="p">,</span> <span class="n">rhs</span> <span class="o">=</span> <span class="n">hierarchy</span><span class="o">.</span><span class="n">rewrite</span><span class="p">(</span><span class="s2">&quot;n1&quot;</span><span class="p">,</span> <span class="n">rule</span><span class="p">,</span> <span class="n">instance</span><span class="p">,</span> <span class="n">rhs_typing</span><span class="o">=</span><span class="n">rhs_typing</span><span class="p">)</span>
 </pre></div>
 </div>
 <p>Let’s have a look on the changes to the hierarchy that were triggered by the rewriting:</p>
@@ -434,8 +439,7 @@ observe the changes in <cite>ag</cite>:</p>
 </pre></div>
 </div>
 <img alt="_images/ex2_ag_result1.png" src="_images/ex2_ag_result1.png" />
-<p>As a typing by the nodes of <cite>ag</cite> of the new nodes in <cite>n1</cite> was not specified, ReGraph
-adds three new respective nodes to <cite>ag</cite>, so that <cite>n1</cite> becomes typed by <cite>ag</cite> as follows:</p>
+<p>As a typing by the nodes of <cite>ag</cite> of the new nodes in <cite>n1</cite> was not specified, three new respective nodes are added to <cite>ag</cite> by the rewriting procedure, so that <cite>n1</cite> becomes typed by <cite>ag</cite> as follows:</p>
 <div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">hierarchy</span><span class="o">.</span><span class="n">typing</span><span class="p">[</span><span class="s2">&quot;n1&quot;</span><span class="p">][</span><span class="s2">&quot;ag&quot;</span><span class="p">]</span>
 <span class="go">{&#39;A&#39;: &#39;A&#39;,</span>
 <span class="go"> &#39;A_res_1&#39;: &#39;A_res_1&#39;,</span>
@@ -452,7 +456,7 @@ adds three new respective nodes to <cite>ag</cite>, so that <cite>n1</cite> beco
 </pre></div>
 </div>
 <img alt="_images/ex2_mm_result1.png" src="_images/ex2_mm_result1.png" />
-<p>We can see that the nodes ‘X’ and ‘Y’ where added to <cite>mm</cite> as their typing by it was again not
+<p>We can see that the nodes ‘X’ and ‘Y’ where added to <cite>mm</cite> as their typing by <cite>mm</cite> was again not
 specified in <cite>rhs_typing</cite>. On the contrary, the node ‘B_res_1’ was typed by the node ‘residue’
 in the meta-model, which can be seen in the updated typing of <cite>ag</cite> by <cite>mm</cite>:</p>
 <div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">hierarchy</span><span class="o">.</span><span class="n">typing</span><span class="p">[</span><span class="s2">&quot;ag&quot;</span><span class="p">][</span><span class="s2">&quot;mm&quot;</span><span class="p">]</span>
@@ -466,6 +470,8 @@ in the meta-model, which can be seen in the updated typing of <cite>ag</cite> by
 <span class="go"> &#39;p&#39;: &#39;state&#39;}</span>
 </pre></div>
 </div>
+<img alt="_images/ex2_mmm_result1.png" src="_images/ex2_mmm_result1.png" />
+<img alt="_images/ex2_colors_result1.png" src="_images/ex2_colors_result1.png" />
 </div>
 </div>
 </div>
