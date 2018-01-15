@@ -1738,7 +1738,7 @@
         <span class="k">return</span> <span class="n">types</span></div>
 
 <div class="viewcode-block" id="Hierarchy.descendents"><a class="viewcode-back" href="../../hierarchy.html#regraph.hierarchy.Hierarchy.descendents">[docs]</a>    <span class="k">def</span> <span class="nf">descendents</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">graph_id</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Get descentants (TODO: reverse names).&quot;&quot;&quot;</span>
+        <span class="sd">&quot;&quot;&quot;Get descentants of a graph in the hierarchy.&quot;&quot;&quot;</span>
         <span class="n">desc</span> <span class="o">=</span> <span class="p">{</span><span class="n">graph_id</span><span class="p">}</span>
         <span class="k">for</span> <span class="n">source</span><span class="p">,</span> <span class="n">_</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">in_edges</span><span class="p">(</span><span class="n">graph_id</span><span class="p">):</span>
             <span class="n">desc</span> <span class="o">|=</span> <span class="bp">self</span><span class="o">.</span><span class="n">descendents</span><span class="p">(</span><span class="n">source</span><span class="p">)</span>
@@ -1850,7 +1850,13 @@
 <div class="viewcode-block" id="Hierarchy.to_nx_graph"><a class="viewcode-back" href="../../hierarchy.html#regraph.hierarchy.Hierarchy.to_nx_graph">[docs]</a>    <span class="k">def</span> <span class="nf">to_nx_graph</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Create a simple networkx graph representing the hierarchy.</span>
 
-<span class="sd">        Note that the relation edges are ignored</span>
+<span class="sd">        Note that the relation edges are ignored.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        g : nx.DiGraph</span>
+<span class="sd">            Simple NetworkX graph representing the structure of the</span>
+<span class="sd">            hierarchy</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">g</span> <span class="o">=</span> <span class="n">nx</span><span class="o">.</span><span class="n">DiGraph</span><span class="p">()</span>
         <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
@@ -1896,7 +1902,7 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">edge</span><span class="p">[</span><span class="n">source</span><span class="p">][</span><span class="n">graph_id</span><span class="p">]</span><span class="o">.</span><span class="n">rename_target</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="n">new_name</span><span class="p">)</span>
         <span class="k">for</span> <span class="p">(</span><span class="n">_</span><span class="p">,</span> <span class="n">target</span><span class="p">)</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">out_edges</span><span class="p">(</span><span class="n">graph_id</span><span class="p">):</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">edge</span><span class="p">[</span><span class="n">graph_id</span><span class="p">][</span><span class="n">target</span><span class="p">]</span><span class="o">.</span><span class="n">rename_source</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="n">new_name</span><span class="p">)</span></div>
- 
+
 <div class="viewcode-block" id="Hierarchy.unique_graph_id"><a class="viewcode-back" href="../../hierarchy.html#regraph.hierarchy.Hierarchy.unique_graph_id">[docs]</a>    <span class="k">def</span> <span class="nf">unique_graph_id</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">prefix</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Generate a new graph id starting with a prefix.&quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="n">prefix</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
@@ -1907,7 +1913,15 @@
         <span class="k">return</span> <span class="s2">&quot;</span><span class="si">{}</span><span class="s2">_</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">prefix</span><span class="p">,</span> <span class="n">i</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="Hierarchy.merge_by_id"><a class="viewcode-back" href="../../hierarchy.html#regraph.hierarchy.Hierarchy.merge_by_id">[docs]</a>    <span class="k">def</span> <span class="nf">merge_by_id</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">hierarchy</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Recursive merge with a hierarchy.&quot;&quot;&quot;</span>
+        <span class="sd">&quot;&quot;&quot;Recursive merge with another hierarchy.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        hierarchy : regraph.Hierarchy</span>
+<span class="sd">            Hierarchy object to merge into the hierarchy corresponding</span>
+<span class="sd">            to self</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">common_ids</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">())</span><span class="o">.</span><span class="n">intersection</span><span class="p">(</span>
             <span class="nb">set</span><span class="p">(</span><span class="n">hierarchy</span><span class="o">.</span><span class="n">nodes</span><span class="p">())</span>
         <span class="p">)</span>
@@ -2258,7 +2272,7 @@
 
 <div class="viewcode-block" id="Hierarchy.new_graph_from_nodes"><a class="viewcode-back" href="../../hierarchy.html#regraph.hierarchy.Hierarchy.new_graph_from_nodes">[docs]</a>    <span class="k">def</span> <span class="nf">new_graph_from_nodes</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">nodes</span><span class="p">,</span> <span class="n">graph_id</span><span class="p">,</span> <span class="n">new_name</span><span class="p">,</span> <span class="n">attrs</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Build a subgraph from nodes and type it by these nodes.&quot;&quot;&quot;</span>
-        <span class="n">new_graph</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">graph_id</span><span class="p">]</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">subgraph</span><span class="p">(</span><span class="n">nodes</span><span class="p">)</span>
+        <span class="n">new_graph</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="p">[</span><span class="n">graph_id</span><span class="p">]</span><span class="o">.</span><span class="n">subgraph</span><span class="p">(</span><span class="n">nodes</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">add_graph</span><span class="p">(</span><span class="n">new_name</span><span class="p">,</span> <span class="n">new_graph</span><span class="p">,</span> <span class="n">attrs</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">add_typing</span><span class="p">(</span><span class="n">new_name</span><span class="p">,</span> <span class="n">graph_id</span><span class="p">,</span> <span class="p">{</span><span class="n">n</span><span class="p">:</span> <span class="n">n</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">nodes</span><span class="p">})</span></div>
 

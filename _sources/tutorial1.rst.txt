@@ -255,6 +255,8 @@ As can be seen, the pattern has only one instance in the graph, as the edge betw
 no longer satisfies the condition of the presence of the attribute ``{"friends": {True}})``
 imposed in the pattern's edge from "x" to "y"
 
+This example can be found in the following :download:`script <_static/tutorial1_ex1.py>`.
+
 See more
 --------
 
@@ -319,7 +321,7 @@ Find the union of two `IntegerSet` objects:
 >>> a_or_ints = a.union(ints)
 >>> a_or_ints
 [0, 8], [11, inf]
->>> b_or_ints = b.unio(ints)
+>>> b_or_ints = b.union(ints)
 >>> b_or_ints
 [0, inf]
 
@@ -382,7 +384,7 @@ The result may be not extremely readable, but we can test it in the following wa
 >>> no_hi_bye = words.difference({"hi", "bye"})
 >>> no_hi_bye.match("hi")
 False
->>> no_hi_bye.matcch("bye")
+>>> no_hi_bye.match("bye")
 False
 >>> no_hi_bye.match("afternoon")
 True
@@ -414,7 +416,7 @@ Cosider a couple of examples illustrating the behaviour of `UniversalSet` and `E
 UniversalSet
 >>> univ.intersection(empty)
 EmptySet
->>> a = FiniteSet({1, 2, 3})
+>>> a = atsets.FiniteSet({1, 2, 3})
 >>> a.issubset(univ)
 True
 >>> a.issubset(empty)
@@ -429,6 +431,8 @@ UniversalSet
 .. >>> atsets.UniversalSet
 .. >>> atsets.EmptySet
 .. >>> fs = atsets.FiniteSet({1, 2, 3, 10})
+
+This example can be found in the following :download:`script <_static/tutorial1_ex2.py>`.
 
 
 See more

@@ -286,6 +286,7 @@ values are converted by primitives to <a class="reference internal" href="attrib
 <p>As can be seen, the pattern has only one instance in the graph, as the edge between “1_3” and 2
 no longer satisfies the condition of the presence of the attribute <code class="docutils literal"><span class="pre">{&quot;friends&quot;:</span> <span class="pre">{True}})</span></code>
 imposed in the pattern’s edge from “x” to “y”</p>
+<p>This example can be found in the following <a class="reference download internal" href="_downloads/tutorial1_ex1.py" download=""><code class="xref download docutils literal"><span class="pre">script</span></code></a>.</p>
 <div class="section" id="see-more">
 <h5>See more<a class="headerlink" href="#see-more" title="Permalink to this headline">¶</a></h5>
 <p>Module reference: <a class="reference internal" href="primitives.html#primitives"><span class="std std-ref">Primitives</span></a></p>
@@ -341,7 +342,7 @@ defined by a set of disjoint intervals.</li>
 <div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">a_or_ints</span> <span class="o">=</span> <span class="n">a</span><span class="o">.</span><span class="n">union</span><span class="p">(</span><span class="n">ints</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">a_or_ints</span>
 <span class="go">[0, 8], [11, inf]</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">b_or_ints</span> <span class="o">=</span> <span class="n">b</span><span class="o">.</span><span class="n">unio</span><span class="p">(</span><span class="n">ints</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">b_or_ints</span> <span class="o">=</span> <span class="n">b</span><span class="o">.</span><span class="n">union</span><span class="p">(</span><span class="n">ints</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">b_or_ints</span>
 <span class="go">[0, inf]</span>
 </pre></div>
@@ -403,7 +404,7 @@ ordinary Python sets, as long as these sets contain integer values:</p>
 <div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">no_hi_bye</span> <span class="o">=</span> <span class="n">words</span><span class="o">.</span><span class="n">difference</span><span class="p">({</span><span class="s2">&quot;hi&quot;</span><span class="p">,</span> <span class="s2">&quot;bye&quot;</span><span class="p">})</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">no_hi_bye</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="s2">&quot;hi&quot;</span><span class="p">)</span>
 <span class="go">False</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">no_hi_bye</span><span class="o">.</span><span class="n">matcch</span><span class="p">(</span><span class="s2">&quot;bye&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">no_hi_bye</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="s2">&quot;bye&quot;</span><span class="p">)</span>
 <span class="go">False</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">no_hi_bye</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="s2">&quot;afternoon&quot;</span><span class="p">)</span>
 <span class="go">True</span>
@@ -435,7 +436,7 @@ Cosider a couple of examples illustrating the behaviour of <cite>UniversalSet</c
 <span class="go">UniversalSet</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">univ</span><span class="o">.</span><span class="n">intersection</span><span class="p">(</span><span class="n">empty</span><span class="p">)</span>
 <span class="go">EmptySet</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">a</span> <span class="o">=</span> <span class="n">FiniteSet</span><span class="p">({</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">})</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">a</span> <span class="o">=</span> <span class="n">atsets</span><span class="o">.</span><span class="n">FiniteSet</span><span class="p">({</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">})</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">a</span><span class="o">.</span><span class="n">issubset</span><span class="p">(</span><span class="n">univ</span><span class="p">)</span>
 <span class="go">True</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">a</span><span class="o">.</span><span class="n">issubset</span><span class="p">(</span><span class="n">empty</span><span class="p">)</span>
@@ -446,6 +447,7 @@ Cosider a couple of examples illustrating the behaviour of <cite>UniversalSet</c
 <span class="go">UniversalSet</span>
 </pre></div>
 </div>
+<p>This example can be found in the following <a class="reference download internal" href="_downloads/tutorial1_ex2.py" download=""><code class="xref download docutils literal"><span class="pre">script</span></code></a>.</p>
 <div class="section" id="id4">
 <h5>See more<a class="headerlink" href="#id4" title="Permalink to this headline">¶</a></h5>
 <p>Module reference: <a class="reference internal" href="attribute_sets.html#attribute-sets"><span class="std std-ref">Attribute Sets</span></a></p>
