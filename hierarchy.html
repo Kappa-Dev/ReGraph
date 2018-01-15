@@ -95,101 +95,95 @@ source to the same target commute.</p>
 <tr class="row-even"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.add_graph" title="regraph.hierarchy.Hierarchy.add_graph"><code class="xref py py-obj docutils literal"><span class="pre">add_graph</span></code></a>(graph_id,&nbsp;graph[,&nbsp;graph_attrs])</td>
 <td>Add graph to the hierarchy.</td>
 </tr>
-<tr class="row-odd"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.add_node_type" title="regraph.hierarchy.Hierarchy.add_node_type"><code class="xref py py-obj docutils literal"><span class="pre">add_node_type</span></code></a>(graph_id,&nbsp;node_id,&nbsp;typing_dict)</td>
-<td>Type a node in a graph according to <cite>typing_dict</cite>.</td>
-</tr>
-<tr class="row-even"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.add_relation" title="regraph.hierarchy.Hierarchy.add_relation"><code class="xref py py-obj docutils literal"><span class="pre">add_relation</span></code></a>(left,&nbsp;right,&nbsp;relation[,&nbsp;attrs])</td>
+<tr class="row-odd"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.add_relation" title="regraph.hierarchy.Hierarchy.add_relation"><code class="xref py py-obj docutils literal"><span class="pre">add_relation</span></code></a>(left,&nbsp;right,&nbsp;relation[,&nbsp;attrs])</td>
 <td>Add relation to the hierarchy.</td>
 </tr>
-<tr class="row-odd"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.add_rule" title="regraph.hierarchy.Hierarchy.add_rule"><code class="xref py py-obj docutils literal"><span class="pre">add_rule</span></code></a>(rule_id,&nbsp;rule[,&nbsp;rule_attrs])</td>
+<tr class="row-even"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.add_rule" title="regraph.hierarchy.Hierarchy.add_rule"><code class="xref py py-obj docutils literal"><span class="pre">add_rule</span></code></a>(rule_id,&nbsp;rule[,&nbsp;rule_attrs])</td>
 <td>Add rule to the hierarchy.</td>
 </tr>
-<tr class="row-even"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.add_rule_typing" title="regraph.hierarchy.Hierarchy.add_rule_typing"><code class="xref py py-obj docutils literal"><span class="pre">add_rule_typing</span></code></a>(rule_id,&nbsp;graph_id,&nbsp;lhs_mapping)</td>
+<tr class="row-odd"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.add_rule_typing" title="regraph.hierarchy.Hierarchy.add_rule_typing"><code class="xref py py-obj docutils literal"><span class="pre">add_rule_typing</span></code></a>(rule_id,&nbsp;graph_id,&nbsp;lhs_mapping)</td>
 <td>Add typing of a rule.</td>
 </tr>
-<tr class="row-odd"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.add_typing" title="regraph.hierarchy.Hierarchy.add_typing"><code class="xref py py-obj docutils literal"><span class="pre">add_typing</span></code></a>(source,&nbsp;target,&nbsp;mapping[,&nbsp;total,&nbsp;…])</td>
+<tr class="row-even"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.add_typing" title="regraph.hierarchy.Hierarchy.add_typing"><code class="xref py py-obj docutils literal"><span class="pre">add_typing</span></code></a>(source,&nbsp;target,&nbsp;mapping[,&nbsp;attrs])</td>
 <td>Add homomorphism to the hierarchy.</td>
 </tr>
-<tr class="row-even"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.adjacent_relations" title="regraph.hierarchy.Hierarchy.adjacent_relations"><code class="xref py py-obj docutils literal"><span class="pre">adjacent_relations</span></code></a>(g)</td>
+<tr class="row-odd"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.adjacent_relations" title="regraph.hierarchy.Hierarchy.adjacent_relations"><code class="xref py py-obj docutils literal"><span class="pre">adjacent_relations</span></code></a>(g)</td>
 <td>Return a list of related graphs.</td>
 </tr>
-<tr class="row-odd"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.apply_rule" title="regraph.hierarchy.Hierarchy.apply_rule"><code class="xref py py-obj docutils literal"><span class="pre">apply_rule</span></code></a>(graph_id,&nbsp;rule_id,&nbsp;instance[,&nbsp;…])</td>
+<tr class="row-even"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.apply_rule" title="regraph.hierarchy.Hierarchy.apply_rule"><code class="xref py py-obj docutils literal"><span class="pre">apply_rule</span></code></a>(graph_id,&nbsp;rule_id,&nbsp;instance[,&nbsp;…])</td>
 <td>Apply rule from the hierarchy.</td>
 </tr>
-<tr class="row-even"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.child_rule_from_nodes" title="regraph.hierarchy.Hierarchy.child_rule_from_nodes"><code class="xref py py-obj docutils literal"><span class="pre">child_rule_from_nodes</span></code></a>(nodes,&nbsp;graph_id,&nbsp;…)</td>
+<tr class="row-odd"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.child_rule_from_nodes" title="regraph.hierarchy.Hierarchy.child_rule_from_nodes"><code class="xref py py-obj docutils literal"><span class="pre">child_rule_from_nodes</span></code></a>(nodes,&nbsp;graph_id,&nbsp;…)</td>
 <td>Build a subrule from nodes and type it by these nodes.</td>
 </tr>
-<tr class="row-odd"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.compose_path_typing" title="regraph.hierarchy.Hierarchy.compose_path_typing"><code class="xref py py-obj docutils literal"><span class="pre">compose_path_typing</span></code></a>(path)</td>
+<tr class="row-even"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.compose_path_typing" title="regraph.hierarchy.Hierarchy.compose_path_typing"><code class="xref py py-obj docutils literal"><span class="pre">compose_path_typing</span></code></a>(path)</td>
 <td>Compose homomorphisms along the path.</td>
 </tr>
-<tr class="row-even"><td><code class="xref py py-obj docutils literal"><span class="pre">delete_all_children</span></code>(graph_id)</td>
+<tr class="row-odd"><td><code class="xref py py-obj docutils literal"><span class="pre">delete_all_children</span></code>(graph_id)</td>
 <td></td>
 </tr>
-<tr class="row-odd"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.descendents" title="regraph.hierarchy.Hierarchy.descendents"><code class="xref py py-obj docutils literal"><span class="pre">descendents</span></code></a>(graph_id)</td>
+<tr class="row-even"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.descendents" title="regraph.hierarchy.Hierarchy.descendents"><code class="xref py py-obj docutils literal"><span class="pre">descendents</span></code></a>(graph_id)</td>
 <td>Get descentants (TODO: reverse names).</td>
 </tr>
-<tr class="row-even"><td><code class="xref py py-obj docutils literal"><span class="pre">duplicate_subgraph</span></code>(nodes,&nbsp;suffix)</td>
+<tr class="row-odd"><td><code class="xref py py-obj docutils literal"><span class="pre">duplicate_subgraph</span></code>(nodes,&nbsp;suffix)</td>
 <td></td>
 </tr>
-<tr class="row-odd"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.export" title="regraph.hierarchy.Hierarchy.export"><code class="xref py py-obj docutils literal"><span class="pre">export</span></code></a>(filename)</td>
+<tr class="row-even"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.export" title="regraph.hierarchy.Hierarchy.export"><code class="xref py py-obj docutils literal"><span class="pre">export</span></code></a>(filename)</td>
 <td>Export the hierarchy to a file.</td>
 </tr>
-<tr class="row-even"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.find_matching" title="regraph.hierarchy.Hierarchy.find_matching"><code class="xref py py-obj docutils literal"><span class="pre">find_matching</span></code></a>(graph_id,&nbsp;pattern[,&nbsp;…])</td>
+<tr class="row-odd"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.find_matching" title="regraph.hierarchy.Hierarchy.find_matching"><code class="xref py py-obj docutils literal"><span class="pre">find_matching</span></code></a>(graph_id,&nbsp;pattern[,&nbsp;…])</td>
 <td>Find an instance of a pattern in a specified graph.</td>
 </tr>
-<tr class="row-odd"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.find_rule_matching" title="regraph.hierarchy.Hierarchy.find_rule_matching"><code class="xref py py-obj docutils literal"><span class="pre">find_rule_matching</span></code></a>(graph_id,&nbsp;rule_id)</td>
+<tr class="row-even"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.find_rule_matching" title="regraph.hierarchy.Hierarchy.find_rule_matching"><code class="xref py py-obj docutils literal"><span class="pre">find_rule_matching</span></code></a>(graph_id,&nbsp;rule_id)</td>
 <td>Find matching of a rule <cite>rule_id</cite> form the hierarchy.</td>
 </tr>
-<tr class="row-even"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.from_json" title="regraph.hierarchy.Hierarchy.from_json"><code class="xref py py-obj docutils literal"><span class="pre">from_json</span></code></a>(json_data[,&nbsp;ignore,&nbsp;directed])</td>
-<td>Create hierarchy obj from json repr.</td>
+<tr class="row-odd"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.from_json" title="regraph.hierarchy.Hierarchy.from_json"><code class="xref py py-obj docutils literal"><span class="pre">from_json</span></code></a>(json_data[,&nbsp;ignore,&nbsp;directed])</td>
+<td>Create hierarchy object from JSON representation.</td>
 </tr>
-<tr class="row-odd"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.get_ancestors" title="regraph.hierarchy.Hierarchy.get_ancestors"><code class="xref py py-obj docutils literal"><span class="pre">get_ancestors</span></code></a>(graph_id[,&nbsp;maybe])</td>
+<tr class="row-even"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.get_ancestors" title="regraph.hierarchy.Hierarchy.get_ancestors"><code class="xref py py-obj docutils literal"><span class="pre">get_ancestors</span></code></a>(graph_id[,&nbsp;maybe])</td>
 <td>Return ancestors of a graph as well as the typing morphisms.</td>
 </tr>
-<tr class="row-even"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.get_rule_typing" title="regraph.hierarchy.Hierarchy.get_rule_typing"><code class="xref py py-obj docutils literal"><span class="pre">get_rule_typing</span></code></a>(source,&nbsp;target)</td>
+<tr class="row-odd"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.get_rule_typing" title="regraph.hierarchy.Hierarchy.get_rule_typing"><code class="xref py py-obj docutils literal"><span class="pre">get_rule_typing</span></code></a>(source,&nbsp;target)</td>
 <td>Get typing dict of <cite>source</cite> by <cite>target</cite> (<cite>source</cite> is rule).</td>
 </tr>
-<tr class="row-odd"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.get_typing" title="regraph.hierarchy.Hierarchy.get_typing"><code class="xref py py-obj docutils literal"><span class="pre">get_typing</span></code></a>(source,&nbsp;target)</td>
+<tr class="row-even"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.get_typing" title="regraph.hierarchy.Hierarchy.get_typing"><code class="xref py py-obj docutils literal"><span class="pre">get_typing</span></code></a>(source,&nbsp;target)</td>
 <td>Get typing dict of <cite>source</cite> by <cite>target</cite>.</td>
 </tr>
-<tr class="row-even"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.graph_dict_factory" title="regraph.hierarchy.Hierarchy.graph_dict_factory"><code class="xref py py-obj docutils literal"><span class="pre">graph_dict_factory</span></code></a></td>
+<tr class="row-odd"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.graph_dict_factory" title="regraph.hierarchy.Hierarchy.graph_dict_factory"><code class="xref py py-obj docutils literal"><span class="pre">graph_dict_factory</span></code></a></td>
 <td>alias of <code class="xref py py-class docutils literal"><span class="pre">dict</span></code></td>
 </tr>
-<tr class="row-odd"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.graphs" title="regraph.hierarchy.Hierarchy.graphs"><code class="xref py py-obj docutils literal"><span class="pre">graphs</span></code></a>()</td>
+<tr class="row-even"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.graphs" title="regraph.hierarchy.Hierarchy.graphs"><code class="xref py py-obj docutils literal"><span class="pre">graphs</span></code></a>()</td>
 <td>Return a list of graphs in the hierarchy.</td>
 </tr>
-<tr class="row-even"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.load" title="regraph.hierarchy.Hierarchy.load"><code class="xref py py-obj docutils literal"><span class="pre">load</span></code></a>(filename[,&nbsp;ignore,&nbsp;directed])</td>
+<tr class="row-odd"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.load" title="regraph.hierarchy.Hierarchy.load"><code class="xref py py-obj docutils literal"><span class="pre">load</span></code></a>(filename[,&nbsp;ignore,&nbsp;directed])</td>
 <td>Load the hierarchy from a file.</td>
 </tr>
-<tr class="row-odd"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.merge_by_attr" title="regraph.hierarchy.Hierarchy.merge_by_attr"><code class="xref py py-obj docutils literal"><span class="pre">merge_by_attr</span></code></a>(hierarchy,&nbsp;attr)</td>
+<tr class="row-even"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.merge_by_attr" title="regraph.hierarchy.Hierarchy.merge_by_attr"><code class="xref py py-obj docutils literal"><span class="pre">merge_by_attr</span></code></a>(hierarchy,&nbsp;attr)</td>
 <td>Merge with a hierarchy by nodes with matching attr.</td>
 </tr>
-<tr class="row-even"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.merge_by_id" title="regraph.hierarchy.Hierarchy.merge_by_id"><code class="xref py py-obj docutils literal"><span class="pre">merge_by_id</span></code></a>(hierarchy)</td>
+<tr class="row-odd"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.merge_by_id" title="regraph.hierarchy.Hierarchy.merge_by_id"><code class="xref py py-obj docutils literal"><span class="pre">merge_by_id</span></code></a>(hierarchy)</td>
 <td>Recursive merge with a hierarchy.</td>
 </tr>
-<tr class="row-odd"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.new_graph_from_nodes" title="regraph.hierarchy.Hierarchy.new_graph_from_nodes"><code class="xref py py-obj docutils literal"><span class="pre">new_graph_from_nodes</span></code></a>(nodes,&nbsp;graph_id,&nbsp;…)</td>
+<tr class="row-even"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.new_graph_from_nodes" title="regraph.hierarchy.Hierarchy.new_graph_from_nodes"><code class="xref py py-obj docutils literal"><span class="pre">new_graph_from_nodes</span></code></a>(nodes,&nbsp;graph_id,&nbsp;…)</td>
 <td>Build a subgraph from nodes and type it by these nodes.</td>
 </tr>
-<tr class="row-even"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.node_type" title="regraph.hierarchy.Hierarchy.node_type"><code class="xref py py-obj docutils literal"><span class="pre">node_type</span></code></a>(graph_id,&nbsp;node_id)</td>
+<tr class="row-odd"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.node_type" title="regraph.hierarchy.Hierarchy.node_type"><code class="xref py py-obj docutils literal"><span class="pre">node_type</span></code></a>(graph_id,&nbsp;node_id)</td>
 <td>Get a list of the immediate types of a node.</td>
 </tr>
-<tr class="row-odd"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.rel_dict_factory" title="regraph.hierarchy.Hierarchy.rel_dict_factory"><code class="xref py py-obj docutils literal"><span class="pre">rel_dict_factory</span></code></a></td>
+<tr class="row-even"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.rel_dict_factory" title="regraph.hierarchy.Hierarchy.rel_dict_factory"><code class="xref py py-obj docutils literal"><span class="pre">rel_dict_factory</span></code></a></td>
 <td>alias of <code class="xref py py-class docutils literal"><span class="pre">dict</span></code></td>
 </tr>
-<tr class="row-even"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.relation_to_span" title="regraph.hierarchy.Hierarchy.relation_to_span"><code class="xref py py-obj docutils literal"><span class="pre">relation_to_span</span></code></a>(left,&nbsp;right[,&nbsp;edges,&nbsp;attrs])</td>
+<tr class="row-odd"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.relation_to_span" title="regraph.hierarchy.Hierarchy.relation_to_span"><code class="xref py py-obj docutils literal"><span class="pre">relation_to_span</span></code></a>(left,&nbsp;right[,&nbsp;edges,&nbsp;attrs])</td>
 <td>Convert relation to a span.</td>
 </tr>
-<tr class="row-odd"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.relations" title="regraph.hierarchy.Hierarchy.relations"><code class="xref py py-obj docutils literal"><span class="pre">relations</span></code></a>()</td>
+<tr class="row-even"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.relations" title="regraph.hierarchy.Hierarchy.relations"><code class="xref py py-obj docutils literal"><span class="pre">relations</span></code></a>()</td>
 <td>Return a list of relations.</td>
 </tr>
-<tr class="row-even"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.remove_edge" title="regraph.hierarchy.Hierarchy.remove_edge"><code class="xref py py-obj docutils literal"><span class="pre">remove_edge</span></code></a>(u,&nbsp;v)</td>
+<tr class="row-odd"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.remove_edge" title="regraph.hierarchy.Hierarchy.remove_edge"><code class="xref py py-obj docutils literal"><span class="pre">remove_edge</span></code></a>(u,&nbsp;v)</td>
 <td>Remove an edge from the hierarchy.</td>
 </tr>
-<tr class="row-odd"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.remove_node" title="regraph.hierarchy.Hierarchy.remove_node"><code class="xref py py-obj docutils literal"><span class="pre">remove_node</span></code></a>(node_id[,&nbsp;reconnect])</td>
+<tr class="row-even"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.remove_node" title="regraph.hierarchy.Hierarchy.remove_node"><code class="xref py py-obj docutils literal"><span class="pre">remove_node</span></code></a>(node_id[,&nbsp;reconnect])</td>
 <td>Remove node from the hierarchy.</td>
-</tr>
-<tr class="row-even"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.remove_node_type" title="regraph.hierarchy.Hierarchy.remove_node_type"><code class="xref py py-obj docutils literal"><span class="pre">remove_node_type</span></code></a>(graph_id,&nbsp;typing_graph,&nbsp;node_id)</td>
-<td>Remove a type a node in a graph <cite>graph_id</cite>.</td>
 </tr>
 <tr class="row-odd"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.remove_relation" title="regraph.hierarchy.Hierarchy.remove_relation"><code class="xref py py-obj docutils literal"><span class="pre">remove_relation</span></code></a>(g1,&nbsp;g2)</td>
 <td>Remove relation from the hierarchy.</td>
@@ -221,16 +215,13 @@ source to the same target commute.</p>
 <tr class="row-even"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.to_nx_graph" title="regraph.hierarchy.Hierarchy.to_nx_graph"><code class="xref py py-obj docutils literal"><span class="pre">to_nx_graph</span></code></a>()</td>
 <td>Create a simple networkx graph representing the hierarchy.</td>
 </tr>
-<tr class="row-odd"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.to_total" title="regraph.hierarchy.Hierarchy.to_total"><code class="xref py py-obj docutils literal"><span class="pre">to_total</span></code></a>(source,&nbsp;target)</td>
-<td>Make a typing total (if mapping is total).</td>
-</tr>
-<tr class="row-even"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.typing_dict_factory" title="regraph.hierarchy.Hierarchy.typing_dict_factory"><code class="xref py py-obj docutils literal"><span class="pre">typing_dict_factory</span></code></a></td>
+<tr class="row-odd"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.typing_dict_factory" title="regraph.hierarchy.Hierarchy.typing_dict_factory"><code class="xref py py-obj docutils literal"><span class="pre">typing_dict_factory</span></code></a></td>
 <td>alias of <code class="xref py py-class docutils literal"><span class="pre">dict</span></code></td>
 </tr>
-<tr class="row-odd"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.typings" title="regraph.hierarchy.Hierarchy.typings"><code class="xref py py-obj docutils literal"><span class="pre">typings</span></code></a>()</td>
+<tr class="row-even"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.typings" title="regraph.hierarchy.Hierarchy.typings"><code class="xref py py-obj docutils literal"><span class="pre">typings</span></code></a>()</td>
 <td>Return a list of graph typing edges in the hierarchy.</td>
 </tr>
-<tr class="row-even"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.unique_graph_id" title="regraph.hierarchy.Hierarchy.unique_graph_id"><code class="xref py py-obj docutils literal"><span class="pre">unique_graph_id</span></code></a>(prefix)</td>
+<tr class="row-odd"><td><a class="reference internal" href="#regraph.hierarchy.Hierarchy.unique_graph_id" title="regraph.hierarchy.Hierarchy.unique_graph_id"><code class="xref py py-obj docutils literal"><span class="pre">unique_graph_id</span></code></a>(prefix)</td>
 <td>Generate a new graph id starting with a prefix.</td>
 </tr>
 </tbody>
@@ -275,12 +266,6 @@ if node with provided id already exists in the hierarchy</p>
 </tr>
 </tbody>
 </table>
-</dd></dl>
-
-<dl class="method">
-<dt id="regraph.hierarchy.Hierarchy.add_node_type">
-<code class="descname">add_node_type</code><span class="sig-paren">(</span><em>graph_id</em>, <em>node_id</em>, <em>typing_dict</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/hierarchy.html#Hierarchy.add_node_type"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.hierarchy.Hierarchy.add_node_type" title="Permalink to this definition">¶</a></dt>
-<dd><p>Type a node in a graph according to <cite>typing_dict</cite>.</p>
 </dd></dl>
 
 <dl class="method">
@@ -443,7 +428,7 @@ the target given by <cite>lhs(rhs)_mapping</cite> is not a valid homomorphism.</
 
 <dl class="method">
 <dt id="regraph.hierarchy.Hierarchy.add_typing">
-<code class="descname">add_typing</code><span class="sig-paren">(</span><em>source</em>, <em>target</em>, <em>mapping</em>, <em>total=True</em>, <em>attrs=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/hierarchy.html#Hierarchy.add_typing"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.hierarchy.Hierarchy.add_typing" title="Permalink to this definition">¶</a></dt>
+<code class="descname">add_typing</code><span class="sig-paren">(</span><em>source</em>, <em>target</em>, <em>mapping</em>, <em>attrs=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/hierarchy.html#Hierarchy.add_typing"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.hierarchy.Hierarchy.add_typing" title="Permalink to this definition">¶</a></dt>
 <dd><p>Add homomorphism to the hierarchy.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -461,10 +446,6 @@ the target given by <cite>lhs(rhs)_mapping</cite> is not a valid homomorphism.</
 <blockquote>
 <div><p>Dictionary representing a mapping of nodes
 from the source graph to target’s nodes</p>
-</div></blockquote>
-<p><strong>total</strong> : bool</p>
-<blockquote>
-<div><p>True if typing is total, False otherwise</p>
 </div></blockquote>
 <p><strong>attrs</strong> : dict</p>
 <blockquote>
@@ -572,24 +553,158 @@ of the path by the nodes of the target graph</p>
 <dt id="regraph.hierarchy.Hierarchy.find_matching">
 <code class="descname">find_matching</code><span class="sig-paren">(</span><em>graph_id</em>, <em>pattern</em>, <em>pattern_typing=None</em>, <em>nodes=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/hierarchy.html#Hierarchy.find_matching"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.hierarchy.Hierarchy.find_matching" title="Permalink to this definition">¶</a></dt>
 <dd><p>Find an instance of a pattern in a specified graph.</p>
-<p><cite>graph_id</cite> – id of a graph in the hierarchy to search for matches;
-<cite>pattern</cite> – nx.(Di)Graph object defining a pattern to match;
-<cite>pattern_typing</cite> – a dictionary that specifies a typing of a pattern,
-keys of the dictionary – graph id that types a pattern, this graph
-should be among parents of the <cite>graph_id</cite> graph; values are mappings
-of nodes from pattern to the typing graph;</p>
+<p>This function takes as an input a graph and a pattern graph,
+optionally, it also takes a dictionary specifying pattern typing
+and a collection of nodes specifying the subgraph of the
+original graph, where the matching should be searched in, then it
+searches for a matching of the pattern inside of the graph (or induced
+subragh), which corresponds to solving subgraph matching problem.
+The matching is defined by a map from the nodes of the pattern
+to the nodes of the graph such that:</p>
+<ul class="simple">
+<li>edges are preserved, i.e. if there is an edge between nodes <cite>n1</cite>
+and <cite>n2</cite> in the pattern, there is an edge between the nodes of
+the graph that correspond to the image of <cite>n1</cite> and <cite>n2</cite>, moreover,
+the attribute dictionary of the edge between <cite>n1</cite> and <cite>n2</cite> is the
+subdictiotary of the edge it corresponds to in the graph;</li>
+<li>the attribute dictionary of a pattern node is a subdictionary of
+its image in the graph;</li>
+<li>(if pattern typing is specified) if node <cite>n1</cite> of the pattern
+is typed by some node <cite>t</cite> in the graph <cite>T</cite> of the hierarchy,
+then its image is also typed by <cite>t</cite> from the graph <cite>T</cite>.</li>
+</ul>
+<p>Uses <cite>networkx.isomorphism.(Di)GraphMatcher</cite> class, which implements
+subgraph matching algorithm.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>graph_id</strong></p>
+<blockquote>
+<div><p>Id of the graph in the hierarchy to search for matches</p>
+</div></blockquote>
+<p><strong>pattern</strong> : nx.(Di)Graph</p>
+<blockquote>
+<div><p>Pattern graph to search for</p>
+</div></blockquote>
+<p><strong>pattern_typing</strong> : dict, optional</p>
+<blockquote>
+<div><p>Dictionary defining the (partial) pattern typing,
+where keys are graph nodes of the hierarchy and
+values are (partial) mappings from the nodes
+of the pattern to the nodes of its typing graph given
+by the respective key</p>
+</div></blockquote>
+<p><strong>nodes</strong> : iterable</p>
+<blockquote>
+<div><p>Subset of nodes to search for matching</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>instances</strong> : list of dict’s</p>
+<blockquote>
+<div><p>List of instances of matching found in the graph, every instance
+is represented with a dictionary where keys are nodes of the
+pattern, and values are corresponding nodes of the graph.</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Raises:</th><td class="field-body"><p class="first"><strong>ReGraphError</strong></p>
+<blockquote class="last">
+<div><p>If <cite>graph_id</cite> is a rule node or pattern is not valid under the
+provided <cite>pattern_typing</cite></p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
 </dd></dl>
 
 <dl class="method">
 <dt id="regraph.hierarchy.Hierarchy.find_rule_matching">
 <code class="descname">find_rule_matching</code><span class="sig-paren">(</span><em>graph_id</em>, <em>rule_id</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/hierarchy.html#Hierarchy.find_rule_matching"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.hierarchy.Hierarchy.find_rule_matching" title="Permalink to this definition">¶</a></dt>
 <dd><p>Find matching of a rule <cite>rule_id</cite> form the hierarchy.</p>
+<p>This method searches for an instance of the left-hand side
+of the rule at <cite>rule_id</cite> inside of the graph at <cite>graph_id</cite>
+in the hierarchy.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>graph_id</strong></p>
+<blockquote>
+<div><p>Id of the graph in the hierarchy to search for matches</p>
+</div></blockquote>
+<p><strong>rule_id</strong></p>
+<blockquote>
+<div><p>Id of the rule in the hierarchy whose lhs is the pattern to search</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>instances</strong> : list of dict’s</p>
+<blockquote class="last">
+<div><p>List of instances of matching found in the graph, every instance
+is represented with a dictionary where keys are nodes of the
+pattern, and values are corresponding nodes of the graph.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+<div class="admonition seealso">
+<p class="first admonition-title">See also</p>
+<p class="last"><a class="reference internal" href="#regraph.hierarchy.Hierarchy.find_matching" title="regraph.hierarchy.Hierarchy.find_matching"><code class="xref py py-obj docutils literal"><span class="pre">regraph.hierarchy.Hierarchy.find_matching</span></code></a></p>
+</div>
 </dd></dl>
 
 <dl class="classmethod">
 <dt id="regraph.hierarchy.Hierarchy.from_json">
 <em class="property">classmethod </em><code class="descname">from_json</code><span class="sig-paren">(</span><em>json_data</em>, <em>ignore=None</em>, <em>directed=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/hierarchy.html#Hierarchy.from_json"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.hierarchy.Hierarchy.from_json" title="Permalink to this definition">¶</a></dt>
-<dd><p>Create hierarchy obj from json repr.</p>
+<dd><p>Create hierarchy object from JSON representation.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>json_data</strong> : dict</p>
+<blockquote>
+<div><p>JSON-like dict containing representation of a hierarchy</p>
+</div></blockquote>
+<p><strong>ignore</strong> : dict, optional</p>
+<blockquote>
+<div><p>Dictionary containing components to ignore in the process
+of converting from JSON, dictionary should respect the
+following format:
+{</p>
+<blockquote>
+<div><p>“graphs”: &lt;collection of ids of graphs to ignore&gt;,
+“rules”: &lt;collection of ids of rules to ignore&gt;,
+“typing”: &lt;collection of tuples containing typing</p>
+<blockquote>
+<div><p>edges to ignore&gt;,</p>
+</div></blockquote>
+<dl class="docutils">
+<dt>“rule_typing”: &lt;collection of tuples containing rule </dt>
+<dd><p class="first last">typing edges to ignore&gt;&gt;,</p>
+</dd>
+<dt>“relations”: &lt;collection of tuples containing</dt>
+<dd><p class="first last">relations to ignore&gt;,</p>
+</dd>
+</dl>
+</div></blockquote>
+<p>}</p>
+</div></blockquote>
+<p><strong>directed</strong> : bool, optional</p>
+<blockquote>
+<div><p>True if graphs from JSON representation should be loaded as
+directed graphs, False otherwise, default value – True</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"><strong>hierarchy</strong> : regraph.hierarchy.Hierarchy</p>
+</td>
+</tr>
+</tbody>
+</table>
 </dd></dl>
 
 <dl class="method">
@@ -626,6 +741,18 @@ of nodes from pattern to the typing graph;</p>
 <dt id="regraph.hierarchy.Hierarchy.load">
 <em class="property">classmethod </em><code class="descname">load</code><span class="sig-paren">(</span><em>filename</em>, <em>ignore=None</em>, <em>directed=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/hierarchy.html#Hierarchy.load"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.hierarchy.Hierarchy.load" title="Permalink to this definition">¶</a></dt>
 <dd><p>Load the hierarchy from a file.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>Returns</strong></p>
+<p><strong>——-</strong></p>
+<p><strong>Raises</strong></p>
+<p class="last"><strong>——</strong></p>
+</td>
+</tr>
+</tbody>
+</table>
 </dd></dl>
 
 <dl class="method">
@@ -650,6 +777,27 @@ of nodes from pattern to the typing graph;</p>
 <dt id="regraph.hierarchy.Hierarchy.node_type">
 <code class="descname">node_type</code><span class="sig-paren">(</span><em>graph_id</em>, <em>node_id</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/hierarchy.html#Hierarchy.node_type"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.hierarchy.Hierarchy.node_type" title="Permalink to this definition">¶</a></dt>
 <dd><p>Get a list of the immediate types of a node.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>types</strong> : dict</p>
+<blockquote>
+<div><p>Dictionary whose keys are ids of the graphs in the
+hierarchy that type <cite>graph_id</cite> and values are the
+nodes typing <cite>node_id</cite> from <cite>graph_id</cite></p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Raises:</th><td class="field-body"><p class="first"><strong>HierarchyError</strong></p>
+<blockquote class="last">
+<div><p>If graph with a given id does not exist in the hierarchy or
+the node with <cite>node_id</cite> is not in the graph</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
 </dd></dl>
 
 <dl class="attribute">
@@ -770,12 +918,6 @@ its predecessors</p>
 </dd></dl>
 
 <dl class="method">
-<dt id="regraph.hierarchy.Hierarchy.remove_node_type">
-<code class="descname">remove_node_type</code><span class="sig-paren">(</span><em>graph_id</em>, <em>typing_graph</em>, <em>node_id</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/hierarchy.html#Hierarchy.remove_node_type"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.hierarchy.Hierarchy.remove_node_type" title="Permalink to this definition">¶</a></dt>
-<dd><p>Remove a type a node in a graph <cite>graph_id</cite>.</p>
-</dd></dl>
-
-<dl class="method">
 <dt id="regraph.hierarchy.Hierarchy.remove_relation">
 <code class="descname">remove_relation</code><span class="sig-paren">(</span><em>g1</em>, <em>g2</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/hierarchy.html#Hierarchy.remove_relation"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.hierarchy.Hierarchy.remove_relation" title="Permalink to this definition">¶</a></dt>
 <dd><p>Remove relation from the hierarchy.</p>
@@ -797,6 +939,29 @@ its predecessors</p>
 <dt id="regraph.hierarchy.Hierarchy.rewrite">
 <code class="descname">rewrite</code><span class="sig-paren">(</span><em>graph_id</em>, <em>rule</em>, <em>instance=None</em>, <em>lhs_typing=None</em>, <em>rhs_typing=None</em>, <em>strict=False</em>, <em>inplace=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/hierarchy.html#Hierarchy.rewrite"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.hierarchy.Hierarchy.rewrite" title="Permalink to this definition">¶</a></dt>
 <dd><p>Rewrite and propagate the changes up &amp; down.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>graph_id</strong></p>
+<p><strong>rule</strong> : regraph.rule.Rule</p>
+<p><strong>instance</strong> : dict, optional</p>
+<p><strong>lhs_typing</strong> : dict, optional</p>
+<p><strong>rhs_typing</strong> : dict, optional</p>
+<p><strong>strict</strong> : bool, optional</p>
+<p><strong>inplace</strong> : bool, optional</p>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>new_hierarchy</strong> : regraph.hierarchy.Hierarchy</p>
+<p><strong>r_g_prime</strong> : dict</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Raises:</th><td class="field-body"><p class="first"><strong>ReGraphError</strong></p>
+<p class="last"><strong>RewritingError</strong></p>
+</td>
+</tr>
+</tbody>
+</table>
 </dd></dl>
 
 <dl class="attribute">
@@ -833,12 +998,6 @@ its predecessors</p>
 <dt id="regraph.hierarchy.Hierarchy.to_nx_graph">
 <code class="descname">to_nx_graph</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/hierarchy.html#Hierarchy.to_nx_graph"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.hierarchy.Hierarchy.to_nx_graph" title="Permalink to this definition">¶</a></dt>
 <dd><p>Create a simple networkx graph representing the hierarchy.</p>
-</dd></dl>
-
-<dl class="method">
-<dt id="regraph.hierarchy.Hierarchy.to_total">
-<code class="descname">to_total</code><span class="sig-paren">(</span><em>source</em>, <em>target</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/hierarchy.html#Hierarchy.to_total"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.hierarchy.Hierarchy.to_total" title="Permalink to this definition">¶</a></dt>
-<dd><p>Make a typing total (if mapping is total).</p>
 </dd></dl>
 
 <dl class="attribute">
