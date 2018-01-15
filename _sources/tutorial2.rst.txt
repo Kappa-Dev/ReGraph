@@ -497,7 +497,7 @@ in the meta-model, which can be seen in the updated typing of `ag` by `mm`:
  'mod': 'mod',
  'p': 'state'}
 
-
+Similarly, we can observe in the graph `mmm` the new node 'Y' added (by `rhs_typing` the node 'X' was sent to the node 'component' of `mmm`).
 
 >>> plotting.plot_graph(hierarchy.graph["mmm"])
 
@@ -511,6 +511,8 @@ in the meta-model, which can be seen in the updated typing of `ag` by `mm`:
  'residue': 'component',
  'state': 'state'}
 
+Finally, in the graph `colors` the new node 'X' is added (again, by `rhs_typing` the node 'Y' was sent to the node 'red' of `colors`).
+
 >>> plotting.plot_graph(hierarchy.graph["colors"])
 
 .. image:: _static/ex2_colors_rul2_result.png
@@ -523,6 +525,31 @@ in the meta-model, which can be seen in the updated typing of `ag` by `mm`:
  'residue': 'red',
  'state': 'red'}
 
+Now consider yet another example of a rule and its application which leads to some propagation of changes. This time consider the following rule which performs merge of some nodes: ::
+
+    pattern = nx.DiGraph()
+    pattern.add_nodes_from([1, 2])
+    pattern.add_edges_from([(2, 1)])
+    merging_rule = Rule.from_transform(pattern)
+    merging_rule.inject_remove_edge(2, 1)
+    merging_rule.inject_merge_nodes([1, 2], "hybrid")
+
+    plotting.plot_rule(merging_rule, title="Rule 3: contains merge of nodes")
+
+.. image:: _static/ex2_rule3.png
+
+We define the typings of its left-hand side and its right-hand side, and we search for 
+instances in the graph `n1`: ::
+
+    lhs_typing = {"mm": {1: "gene", 2: "residue"}}
+    rhs_typing = {"mmm": {"hybrid": "component"}}
+    instances = hierarchy.find_matching("n1", merging_rule.lhs, lhs_typing)
+    for instance in instances:
+        plotting.plot_instance(hierarchy.graph["n1"], merging_rule.lhs, instance)
+
+.. image:: _static/ex2_n1_rule3_instance1.png
+
+.. image:: _static/ex2_n1_rule3_instance2.png
 
 
 
