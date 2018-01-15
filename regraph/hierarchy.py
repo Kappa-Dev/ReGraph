@@ -1696,7 +1696,7 @@ class Hierarchy(nx.DiGraph, AttributeContainter):
         return types
 
     def descendents(self, graph_id):
-        """Get descentants (TODO: reverse names)."""
+        """Get descentants of a graph in the hierarchy."""
         desc = {graph_id}
         for source, _ in self.in_edges(graph_id):
             desc |= self.descendents(source)
@@ -1808,7 +1808,13 @@ class Hierarchy(nx.DiGraph, AttributeContainter):
     def to_nx_graph(self):
         """Create a simple networkx graph representing the hierarchy.
 
-        Note that the relation edges are ignored
+        Note that the relation edges are ignored.
+
+        Returns
+        -------
+        g : nx.DiGraph
+            Simple NetworkX graph representing the structure of the
+            hierarchy
         """
         g = nx.DiGraph()
         for node in self.nodes():
@@ -1854,7 +1860,7 @@ class Hierarchy(nx.DiGraph, AttributeContainter):
             self.edge[source][graph_id].rename_target(node, new_name)
         for (_, target) in self.out_edges(graph_id):
             self.edge[graph_id][target].rename_source(node, new_name)
- 
+
     def unique_graph_id(self, prefix):
         """Generate a new graph id starting with a prefix."""
         if prefix not in self.nodes():
@@ -1865,7 +1871,15 @@ class Hierarchy(nx.DiGraph, AttributeContainter):
         return "{}_{}".format(prefix, i)
 
     def merge_by_id(self, hierarchy):
-        """Recursive merge with a hierarchy."""
+        """Recursive merge with another hierarchy.
+
+        Parameters
+        ----------
+        hierarchy : regraph.Hierarchy
+            Hierarchy object to merge into the hierarchy corresponding
+            to self
+
+        """
         common_ids = set(self.nodes()).intersection(
             set(hierarchy.nodes())
         )
@@ -2216,7 +2230,7 @@ class Hierarchy(nx.DiGraph, AttributeContainter):
 
     def new_graph_from_nodes(self, nodes, graph_id, new_name, attrs):
         """Build a subgraph from nodes and type it by these nodes."""
-        new_graph = self.node[graph_id].graph.subgraph(nodes)
+        new_graph = self.graph[graph_id].subgraph(nodes)
         self.add_graph(new_name, new_graph, attrs)
         self.add_typing(new_name, graph_id, {n: n for n in nodes})
 
