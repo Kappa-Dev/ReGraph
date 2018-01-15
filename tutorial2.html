@@ -384,8 +384,67 @@ illustrate a usecase of such rewriting and how it can be peformed using ReGraph.
 </pre></div>
 </div>
 <img alt="_images/ex2_n1.png" src="_images/ex2_n1.png" />
-<p>Now, we would like to rewrite the graph <cite>n1</cite> with the rule and the instance
+<p>Now, we would like to rewrite the graph <cite>ag</cite> with the rule and the instance
 defined below:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="c1"># define a rule that clones nodes</span>
+<span class="n">pattern</span> <span class="o">=</span> <span class="n">nx</span><span class="o">.</span><span class="n">DiGraph</span><span class="p">()</span>
+<span class="n">primitives</span><span class="o">.</span><span class="n">add_nodes_from</span><span class="p">(</span><span class="n">pattern</span><span class="p">,</span> <span class="p">[</span><span class="s2">&quot;gene&quot;</span><span class="p">,</span> <span class="s2">&quot;residue&quot;</span><span class="p">])</span>
+<span class="n">primitives</span><span class="o">.</span><span class="n">add_edges_from</span><span class="p">(</span><span class="n">pattern</span><span class="p">,</span> <span class="p">[(</span><span class="s2">&quot;residue&quot;</span><span class="p">,</span> <span class="s2">&quot;gene&quot;</span><span class="p">)])</span>
+
+<span class="n">cloning_rule</span> <span class="o">=</span> <span class="n">Rule</span><span class="o">.</span><span class="n">from_transform</span><span class="p">(</span><span class="n">pattern</span><span class="p">)</span>
+<span class="n">clone_name</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">cloning_rule</span><span class="o">.</span><span class="n">inject_clone_node</span><span class="p">(</span><span class="s2">&quot;gene&quot;</span><span class="p">)</span>
+<span class="n">cloning_rule</span><span class="o">.</span><span class="n">inject_remove_edge</span><span class="p">(</span><span class="s2">&quot;residue&quot;</span><span class="p">,</span> <span class="n">clone_name</span><span class="p">)</span>
+
+<span class="n">plotting</span><span class="o">.</span><span class="n">plot_rule</span><span class="p">(</span><span class="n">cloning_rule</span><span class="p">)</span>
+</pre></div>
+</div>
+<img alt="_static/ex2_rule_cloning.png" src="_static/ex2_rule_cloning.png" />
+<p>This rule clones a node with id ‘gene’ of the pattern and removes
+an edge from the node ‘residue’ to the cloned node. Define a typing
+of the left-hand side of the rule and find all its matchings in <cite>ag</cite>:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">lhs_typing</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;mm&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;gene&quot;</span><span class="p">:</span> <span class="s2">&quot;gene&quot;</span><span class="p">,</span> <span class="s2">&quot;residue&quot;</span><span class="p">:</span> <span class="s2">&quot;residue&quot;</span><span class="p">}</span>
+<span class="p">}</span>
+<span class="n">instances</span> <span class="o">=</span> <span class="n">hierarchy</span><span class="o">.</span><span class="n">find_matching</span><span class="p">(</span>
+    <span class="s2">&quot;ag&quot;</span><span class="p">,</span> <span class="n">cloning_rule</span><span class="o">.</span><span class="n">lhs</span><span class="p">,</span> <span class="n">lhs_typing</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">instance</span> <span class="ow">in</span> <span class="n">instances</span><span class="p">:</span>
+    <span class="n">plotting</span><span class="o">.</span><span class="n">plot_instance</span><span class="p">(</span>
+        <span class="n">hierarchy</span><span class="o">.</span><span class="n">graph</span><span class="p">[</span><span class="s2">&quot;ag&quot;</span><span class="p">],</span> <span class="n">cloning_rule</span><span class="o">.</span><span class="n">lhs</span><span class="p">,</span> <span class="n">instance</span><span class="p">)</span>
+</pre></div>
+</div>
+<img alt="_images/ex2_ag_rule1_instance.png" src="_images/ex2_ag_rule1_instance.png" />
+<p>Perform the rewriting:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">_</span><span class="p">,</span> <span class="n">rhs_instance</span> <span class="o">=</span> <span class="n">hierarchy</span><span class="o">.</span><span class="n">rewrite</span><span class="p">(</span><span class="s2">&quot;ag&quot;</span><span class="p">,</span> <span class="n">cloning_rule</span><span class="p">,</span> <span class="n">instances</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+</pre></div>
+</div>
+<p>Now, we can plot updated <cite>ag</cite>:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">plotting</span><span class="o">.</span><span class="n">plot_instance</span><span class="p">(</span><span class="n">hierarchy</span><span class="o">.</span><span class="n">graph</span><span class="p">[</span><span class="s2">&quot;ag&quot;</span><span class="p">],</span> <span class="n">cloning_rule</span><span class="o">.</span><span class="n">rhs</span><span class="p">,</span> <span class="n">rhs_instance</span><span class="p">,</span>
+<span class="go">              parent_pos=ag_pos)</span>
+</pre></div>
+</div>
+<img alt="_images/ex2_ag_rule1_result.png" src="_images/ex2_ag_rule1_result.png" />
+<p>As the result of the rewriting of <cite>ag</cite>, the graph <cite>n1</cite> typed by <cite>ag</cite> has changes
+(clones and removes were propagated to it as well):</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">plotting</span><span class="o">.</span><span class="n">plot_graph</span><span class="p">(</span><span class="n">hierarchy</span><span class="o">.</span><span class="n">graph</span><span class="p">[</span><span class="s2">&quot;n1&quot;</span><span class="p">],</span>
+<span class="go">           title=&quot;Graph &#39;n1&#39; after rewriting with rule 1&quot;, parent_pos=n1_pos)</span>
+</pre></div>
+</div>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">hierarchy</span><span class="o">.</span><span class="n">typing</span><span class="p">[</span><span class="s2">&quot;n1&quot;</span><span class="p">][</span><span class="s2">&quot;ag&quot;</span><span class="p">]</span>
+<span class="go">{&#39;A&#39;: &#39;A1&#39;,</span>
+<span class="go"> &#39;A_res_1&#39;: &#39;A_res_1&#39;,</span>
+<span class="go"> &#39;p&#39;: &#39;p&#39;,</span>
+<span class="go"> &#39;B&#39;: &#39;B&#39;,</span>
+<span class="go"> &#39;mod&#39;: &#39;mod&#39;,</span>
+<span class="go"> &#39;A1&#39;: &#39;A&#39;}</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">hierarchy</span><span class="o">.</span><span class="n">typing</span><span class="p">[</span><span class="s2">&quot;ag&quot;</span><span class="p">][</span><span class="s2">&quot;mm&quot;</span><span class="p">]</span>
+<span class="go">{&#39;A&#39;: &#39;gene&#39;,</span>
+<span class="go"> &#39;A_res_1&#39;: &#39;residue&#39;,</span>
+<span class="go"> &#39;p&#39;: &#39;state&#39;, &#39;B&#39;: &#39;gene&#39;,</span>
+<span class="go"> &#39;mod&#39;: &#39;mod&#39;,</span>
+<span class="go"> &#39;A1&#39;: &#39;gene&#39;}</span>
+</pre></div>
+</div>
+<p>Now consider the following rule:</p>
 <div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">p</span> <span class="o">=</span> <span class="n">nx</span><span class="o">.</span><span class="n">DiGraph</span><span class="p">()</span>
 <span class="n">primitives</span><span class="o">.</span><span class="n">add_nodes_from</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="p">[</span><span class="s2">&quot;B&quot;</span><span class="p">])</span>
 
@@ -396,18 +455,18 @@ defined below:</p>
 <span class="n">primitives</span><span class="o">.</span><span class="n">add_nodes_from</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="p">[</span><span class="s2">&quot;B&quot;</span><span class="p">,</span> <span class="s2">&quot;B_res_1&quot;</span><span class="p">,</span> <span class="s2">&quot;X&quot;</span><span class="p">,</span> <span class="s2">&quot;Y&quot;</span><span class="p">])</span>
 <span class="n">primitives</span><span class="o">.</span><span class="n">add_edge</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="s2">&quot;B_res_1&quot;</span><span class="p">,</span> <span class="s2">&quot;B&quot;</span><span class="p">)</span>
 
-<span class="n">rule</span> <span class="o">=</span> <span class="n">Rule</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">l</span><span class="p">,</span> <span class="n">r</span><span class="p">)</span>
-<span class="n">plotting</span><span class="o">.</span><span class="n">plot_rule</span><span class="p">(</span><span class="n">rule</span><span class="p">)</span>
+<span class="n">adding_rule</span> <span class="o">=</span> <span class="n">Rule</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">l</span><span class="p">,</span> <span class="n">r</span><span class="p">)</span>
+<span class="n">plotting</span><span class="o">.</span><span class="n">plot_rule</span><span class="p">(</span><span class="n">adding_rule</span><span class="p">)</span>
 
 <span class="n">instance</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;B&quot;</span><span class="p">:</span> <span class="s2">&quot;B&quot;</span><span class="p">}</span>
 <span class="n">plotting</span><span class="o">.</span><span class="n">plot_instance</span><span class="p">(</span>
-    <span class="n">hierarchy</span><span class="o">.</span><span class="n">graph</span><span class="p">[</span><span class="s2">&quot;n1&quot;</span><span class="p">],</span> <span class="n">rule</span><span class="o">.</span><span class="n">lhs</span><span class="p">,</span> <span class="n">instance</span><span class="p">,</span>
+    <span class="n">hierarchy</span><span class="o">.</span><span class="n">graph</span><span class="p">[</span><span class="s2">&quot;n1&quot;</span><span class="p">],</span> <span class="n">adding_rule</span><span class="o">.</span><span class="n">lhs</span><span class="p">,</span> <span class="n">instance</span><span class="p">,</span>
     <span class="n">title</span><span class="o">=</span><span class="s2">&quot;Graph &#39;n1&#39; with the instance of a pattern highlighted&quot;</span><span class="p">)</span>
 </pre></div>
 </div>
-<img alt="_images/ex2_rule.png" src="_images/ex2_rule.png" />
-<img alt="_images/ex2_n1_instance.png" src="_images/ex2_n1_instance.png" />
-<p>As can be seen on the figures below, our rule adds three new nodes to the graph <cite>n1</cite>
+<img alt="_images/ex2_rule2.png" src="_images/ex2_rule2.png" />
+<img alt="_images/ex2_n1_rule2_instance.png" src="_images/ex2_n1_rule2_instance.png" />
+<p>As can be seen on the figures above, our rule adds three new nodes to the graph <cite>n1</cite>
 (i.e., ‘B_res_1’, ‘X’, ‘Y’) and connects with an edge ‘B’ (of the initial pattern)
 and ‘B_res_1’.</p>
 <p>We can also define a typing for new nodes that will be created by the rule, and it can be
@@ -419,26 +478,21 @@ done by providing a typing of the right-hand side of the rule by hierarchy graph
 <span class="p">}</span>
 </pre></div>
 </div>
-<p>Strict</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">hierarchy</span><span class="o">.</span><span class="n">rewrite</span><span class="p">(</span><span class="s2">&quot;n1&quot;</span><span class="p">,</span> <span class="n">rule</span><span class="p">,</span> <span class="n">instance</span><span class="p">,</span> <span class="n">rhs_typing</span><span class="o">=</span><span class="n">rhs_typing</span><span class="p">,</span> <span class="n">strict</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-<span class="go">RewritingError: Rewriting is strict (no propagation of types is allowed), typing of the node `B_res_1` in rhs is required (typing by the following graph stays unresolved: &#39;ag&#39;)!</span>
-</pre></div>
-</div>
 <p>Rewrite <cite>n1</cite> with the rule using defaut non-strict rewriting:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">_</span><span class="p">,</span> <span class="n">rhs</span> <span class="o">=</span> <span class="n">hierarchy</span><span class="o">.</span><span class="n">rewrite</span><span class="p">(</span><span class="s2">&quot;n1&quot;</span><span class="p">,</span> <span class="n">rule</span><span class="p">,</span> <span class="n">instance</span><span class="p">,</span> <span class="n">rhs_typing</span><span class="o">=</span><span class="n">rhs_typing</span><span class="p">)</span>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">_</span><span class="p">,</span> <span class="n">rhs</span> <span class="o">=</span> <span class="n">hierarchy</span><span class="o">.</span><span class="n">rewrite</span><span class="p">(</span><span class="s2">&quot;n1&quot;</span><span class="p">,</span> <span class="n">adding_rule</span><span class="p">,</span> <span class="n">instance</span><span class="p">,</span> <span class="n">rhs_typing</span><span class="o">=</span><span class="n">rhs_typing</span><span class="p">)</span>
 </pre></div>
 </div>
 <p>Let’s have a look on the changes to the hierarchy that were triggered by the rewriting:</p>
 <div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">plotting</span><span class="o">.</span><span class="n">plot_instance</span><span class="p">(</span><span class="n">hierarchy</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="s2">&quot;n1&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">graph</span><span class="p">,</span> <span class="n">rule</span><span class="o">.</span><span class="n">rhs</span><span class="p">,</span> <span class="n">rhs_instance</span><span class="p">)</span>
 </pre></div>
 </div>
-<img alt="_images/ex2_n1_result1_instance.png" src="_images/ex2_n1_result1_instance.png" />
+<img alt="_images/ex2_n1_rule2_result_rhs_instance.png" src="_images/ex2_n1_rule2_result_rhs_instance.png" />
 <p>On the figure above we can see that we successfully created new nodes in <cite>n1</cite>. Now let us
 observe the changes in <cite>ag</cite>:</p>
 <div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">plotting</span><span class="o">.</span><span class="n">plot_graph</span><span class="p">(</span><span class="n">hierarchy</span><span class="o">.</span><span class="n">graph</span><span class="p">[</span><span class="s2">&quot;ag&quot;</span><span class="p">])</span>
 </pre></div>
 </div>
-<img alt="_images/ex2_ag_result1.png" src="_images/ex2_ag_result1.png" />
+<img alt="_images/ex2_ag_rule2_result.png" src="_images/ex2_ag_rule2_result.png" />
 <p>As a typing by the nodes of <cite>ag</cite> of the new nodes in <cite>n1</cite> was not specified, three new respective nodes are added to <cite>ag</cite> by the rewriting procedure, so that <cite>n1</cite> becomes typed by <cite>ag</cite> as follows:</p>
 <div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">hierarchy</span><span class="o">.</span><span class="n">typing</span><span class="p">[</span><span class="s2">&quot;n1&quot;</span><span class="p">][</span><span class="s2">&quot;ag&quot;</span><span class="p">]</span>
 <span class="go">{&#39;A&#39;: &#39;A&#39;,</span>
@@ -455,7 +509,7 @@ observe the changes in <cite>ag</cite>:</p>
 <div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">plotting</span><span class="o">.</span><span class="n">plot_graph</span><span class="p">(</span><span class="n">hierarchy</span><span class="o">.</span><span class="n">graph</span><span class="p">[</span><span class="s2">&quot;mm&quot;</span><span class="p">])</span>
 </pre></div>
 </div>
-<img alt="_images/ex2_mm_result1.png" src="_images/ex2_mm_result1.png" />
+<img alt="_images/ex2_mm_rule2_result.png" src="_images/ex2_mm_rule2_result.png" />
 <p>We can see that the nodes ‘X’ and ‘Y’ where added to <cite>mm</cite> as their typing by <cite>mm</cite> was again not
 specified in <cite>rhs_typing</cite>. On the contrary, the node ‘B_res_1’ was typed by the node ‘residue’
 in the meta-model, which can be seen in the updated typing of <cite>ag</cite> by <cite>mm</cite>:</p>
@@ -470,8 +524,33 @@ in the meta-model, which can be seen in the updated typing of <cite>ag</cite> by
 <span class="go"> &#39;p&#39;: &#39;state&#39;}</span>
 </pre></div>
 </div>
-<img alt="_images/ex2_mmm_result1.png" src="_images/ex2_mmm_result1.png" />
-<img alt="_images/ex2_colors_result1.png" src="_images/ex2_colors_result1.png" />
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">plotting</span><span class="o">.</span><span class="n">plot_graph</span><span class="p">(</span><span class="n">hierarchy</span><span class="o">.</span><span class="n">graph</span><span class="p">[</span><span class="s2">&quot;mmm&quot;</span><span class="p">])</span>
+</pre></div>
+</div>
+<img alt="_images/ex2_mmm_rule2_result.png" src="_images/ex2_mmm_rule2_result.png" />
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">hierarchy</span><span class="o">.</span><span class="n">typing</span><span class="p">[</span><span class="s2">&quot;mm&quot;</span><span class="p">][</span><span class="s2">&quot;mmm&quot;</span><span class="p">]</span>
+<span class="go">{&#39;X&#39;: &#39;component&#39;,</span>
+<span class="go"> &#39;Y&#39;: &#39;Y&#39;,</span>
+<span class="go"> &#39;gene&#39;: &#39;component&#39;,</span>
+<span class="go"> &#39;mod&#39;: &#39;action&#39;,</span>
+<span class="go"> &#39;residue&#39;: &#39;component&#39;,</span>
+<span class="go"> &#39;state&#39;: &#39;state&#39;}</span>
+</pre></div>
+</div>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">plotting</span><span class="o">.</span><span class="n">plot_graph</span><span class="p">(</span><span class="n">hierarchy</span><span class="o">.</span><span class="n">graph</span><span class="p">[</span><span class="s2">&quot;colors&quot;</span><span class="p">])</span>
+</pre></div>
+</div>
+<img alt="_static/ex2_colors_rul2_result.png" src="_static/ex2_colors_rul2_result.png" />
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">hierarchy</span><span class="o">.</span><span class="n">typing</span><span class="p">[</span><span class="s2">&quot;mm&quot;</span><span class="p">][</span><span class="s2">&quot;colors&quot;</span><span class="p">]</span>
+<span class="go">{&#39;X&#39;: &#39;X&#39;,</span>
+<span class="go"> &#39;Y&#39;: &#39;red&#39;,</span>
+<span class="go"> &#39;gene&#39;: &#39;red&#39;,</span>
+<span class="go"> &#39;mod&#39;: &#39;blue&#39;,</span>
+<span class="go"> &#39;residue&#39;: &#39;red&#39;,</span>
+<span class="go"> &#39;state&#39;: &#39;red&#39;}</span>
+</pre></div>
+</div>
+<p>This example can be found in the following <a class="reference download internal" href="_downloads/tutorial2_ex2.py" download=""><code class="xref download docutils literal"><span class="pre">script</span></code></a>.</p>
 </div>
 </div>
 </div>
