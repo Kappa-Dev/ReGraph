@@ -48,7 +48,7 @@ def _set_limits(nodes, labels, margin=0.1):
     return
 
 
-def plot_graph(graph, filename=None, parent_pos=None):
+def plot_graph(graph, filename=None, parent_pos=None, title=None):
     """Plot networkx graph.
 
     If `filename` is specified, saves the plot into the file,
@@ -65,10 +65,12 @@ def plot_graph(graph, filename=None, parent_pos=None):
         Graph object to plot
     filename : str, optional
         Path to file to save the plot
-    parent_pos : dict
+    parent_pos : dict, optional
         Dictionary containing positioning of a subset of nodes of
         the graph, keys are node ids and values are pairs of x/y
         coordinates
+    title : str, optional
+        Plot title
 
     Returns
     -------
@@ -103,6 +105,10 @@ def plot_graph(graph, filename=None, parent_pos=None):
 
     _ticks_off()
     _set_limits(pos, labels_pos)
+
+    if title is not None:
+        plt.title(title)
+
     # save to a file
     if filename is not None:
         plt.savefig(filename)
@@ -112,7 +118,8 @@ def plot_graph(graph, filename=None, parent_pos=None):
     return pos
 
 
-def plot_instance(graph, pattern, instance, filename=None, parent_pos=None):
+def plot_instance(graph, pattern, instance, filename=None,
+                  parent_pos=None, title=None):
     """Plot the graph with instance of pattern highlighted.
 
     This util plots a graph and highlights an instance of a pattern
@@ -140,6 +147,8 @@ def plot_instance(graph, pattern, instance, filename=None, parent_pos=None):
         Dictionary containing positioning of a subset of nodes of
         the graph, keys are node ids and values are pairs of x/y
         coordinates
+    title : str, optional
+        Plot title
 
     Returns
     -------
@@ -182,9 +191,13 @@ def plot_instance(graph, pattern, instance, filename=None, parent_pos=None):
     nx.draw_networkx_labels(graph, labels_pos, labels, font_size=11)
 
     # color the instances
-    # plt.title("Graph with instance of pattern highlighted")
+
     _ticks_off()
     _set_limits(pos, labels_pos)
+
+    if title is not None:
+        plt.title(title)
+
     if filename is not None:
         with open(filename, "w") as f:
             plt.savefig(f)
@@ -194,7 +207,7 @@ def plot_instance(graph, pattern, instance, filename=None, parent_pos=None):
     return
 
 
-def plot_rule(rule, filename=None):
+def plot_rule(rule, filename=None, title=None):
     """Plot ReGraph's rule object.
 
     This function plots a rule object, it produces three
@@ -210,7 +223,9 @@ def plot_rule(rule, filename=None):
     filename : str, optional
         Path to file to save the plot
     """
-    plt.figure(figsize=(14, 3))
+    fig = plt.figure(figsize=(14, 3))
+    if title is not None:
+        st = fig.suptitle(title, fontsize=14)
 
     # generate colors
     p_colors_dict = {}
@@ -323,6 +338,10 @@ def plot_rule(rule, filename=None):
     for p in rhs_pos:  # raise text positions
         rhs_label_pos[p][1] += offset
     nx.draw_networkx_labels(rule.rhs, rhs_label_pos, labels, font_size=11)
+
+    if title is not None:
+        st.set_y(0.95)
+        fig.subplots_adjust(top=0.75)
 
     if filename is not None:
         with open(filename, "w") as f:
