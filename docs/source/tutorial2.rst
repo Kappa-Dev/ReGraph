@@ -33,7 +33,7 @@ homomorphisms representing graph typing in the system. This construction provide
 for mathematically robust procedures of propagation of changes (expressed through graph rewriting
 rules) on any level of the hierarchy, up to all the graphs which are transitively typed by the graph
 subject to rewriting. In the following section we give a simple example of such hierarchy and its
-functionality implemented in ReGraph.
+functionality implemented in ReGraph (for more details see the module :ref:`hierarchy`). 
 
 .. _hierarchy_creation:
 
@@ -193,8 +193,8 @@ Create a relation between graph `model` and graph `catalysis`: ::
     hierarchy.add_relation('model', 'catalysis', relation)
 
 Note that in a relation between two graphs a node from one graph can be related to a set of nodes
-from another graph (in our example node `A` in the graph `model` is related to both
-`enzyme` and `substrate` from the graph `catalysis`):
+from another graph (in our example node 'A' in the graph `model` is related to both
+'enzyme' and 'substrate' from the graph `catalysis`):
 
 >>> hierarchy.relation['model']['catalysis']
 {'A': {'enzyme', 'substrate'},
@@ -343,7 +343,7 @@ Let's plot the graphs of the hierarchy that we've just created:
 
 .. image:: _static/ex2_n1.png
 
-Now, we would like to rewrite the graph `ag` with the rule and the instance
+Now, we would like to rewrite the graph `ag` with the rule
 defined below: ::
 
     # define a rule that clones nodes
@@ -408,7 +408,7 @@ As the result of the rewriting of `ag`, the graph `n1` typed by `ag` has changes
  'mod': 'mod',
  'A1': 'gene'}
 
-Now consider the following rule:
+Now consider the following rule and its instance in `n1`:
 
 ::
 
@@ -448,7 +448,11 @@ done by providing a typing of the right-hand side of the rule by hierarchy graph
         "colors": {"Y": "red"}
     }
 
-Rewrite `n1` with the rule using defaut non-strict rewriting:
+The typing defined by this dictionary can be interpreted as follows: "graph `mm` types the node 'B_res_1' from the right-hand side with the node 'residue', graph `mmm` types the node 'X' as 'component', and graph `colors` types 'Y' as 'red".
+
+By default rewriting in a hierarchy (implemented in the `regraph.Hierarchy.rewrite` method) is not strict, i.e. it is allowed to apply rewriting rules which perform *relaxing changes* to the hierarchy graphs (add nodes/edges/attrs or merge nodes). But the previously mentioned rewriting method allows to set its input argument `strict=True`, in which case an attempt to apply any relaxing rule will lead to an exception (`regraph.RewritingError`).
+
+Let's rewrite `n1` with the rule using defaut non-strict rewriting:
 
 >>> _, rhs = hierarchy.rewrite("n1", adding_rule, instance, rhs_typing=rhs_typing)
 
@@ -576,7 +580,7 @@ Changes that were made to `ag`:
  'A1_A_res_1': 'A_res_1_A',
  'B_B_res_1': 'B_res_1_B'}
 
-This how our meta-model `mm` looks like after rewriting:
+This is how our meta-model `mm` looks like after rewriting:
 
 .. image:: _static/ex2_mm_rule3_result.png
 
@@ -599,3 +603,9 @@ The new 'hybrid' node (i.e. 'residue_gene') is typed by the node 'component' of 
 
 
 This example can be found in the following :download:`script <_static/tutorial2_ex2.py>`.
+
+
+See more
+--------
+
+Module reference: :ref:`hierarchy`
