@@ -1,6 +1,6 @@
 # ReGraph
 
-A graph rewriting library. Documentation is available [here](http://dev.executableknowledge.org/ReGraph).
+A graph rewriting library. Documentation is available at http://dev.executableknowledge.org/ReGraph.
 
 ## About project
 
