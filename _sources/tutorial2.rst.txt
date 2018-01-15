@@ -344,9 +344,8 @@ Let's plot the graphs of the hierarchy that we've just created:
 .. image:: _static/ex2_n1.png
 
 Now, we would like to rewrite the graph `n1` with the rule and the instance
-defined below:
+defined below: ::
 
-::
     p = nx.DiGraph()
     primitives.add_nodes_from(p, ["B"])
 
