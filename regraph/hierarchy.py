@@ -1391,26 +1391,74 @@ class Hierarchy(nx.DiGraph, AttributeContainter):
                 lhs_typing=None, rhs_typing=None, strict=False, inplace=True):
         """Rewrite and propagate the changes up & down.
 
+        Rewriting in the hierarchy cosists of an application of the
+        SqPO-rewriting rule (given by the `rule` parameter) to a
+        graph in the hierarchy. Such rewriting often triggers a set of
+        changes that are applied to other graphs and homomorphisms in the
+        hierarchy, which are necessary to ensure that the hierarchy stays
+        consistent. If the rule is restrictive (deletes nodes/edges/attrs
+        or clones nodes), in general, the respective changes to all the graphs
+        (transitively) typed by the graph subject to rewriting are made.
+        On the other hand, if the rule is relaxing (adds nodes/edges/attrs
+        or merges nodes), in general, the respective changes to all the graphs
+        that (tansitively) type the graph subject to rewriting are made.
+
+
         Parameters
         ----------
         graph_id
+            Id of the graph in the hierarchy to rewrite
         rule : regraph.rule.Rule
+            Rule object to apply
         instance : dict, optional
+            Dictionary containing an instance of the lhs of the rule in
+            the graph subject to rewriting, by default, tries to construct
+            identity morphism of the nodes of the pattern
         lhs_typing : dict, optional
+            Dictionary containing typing of the lhs by graphs of the hierarchy,
+            keys are ids of hierarchy graphs, values are dictionaries
+            containing the mapping of nodes from the lhs to the nodes of
+            the typing graph given by the respective key of the value.
         rhs_typing : dict, optional
+            Dictionary containing typing of the rhs by graphs of the hierarchy,
+            keys are ids of hierarchy graphs, values are dictionaries
+            containing the mapping of nodes from the lhs to the nodes of
+            the typing graph given by the respective key of the value
+            (note that a node from the rhs can be typed by a set of nodes of
+            some graph, e.g. if we want to perform merging of some types, etc).
         strict : bool, optional
+            If True, application of relaxing rules (the ones that
+            add nodes/edges/attrs or merge nodes) causes an exception,
+            otherwise, relaxing rules are allowed, default value -- False.
         inplace : bool, optional
+            If True, all the changes to the hierarchy are performed in-place,
+            otherwise, new hierarchy corresponding to the result of the
+            rewriting is constructed.
 
         Returns
         -------
         new_hierarchy : regraph.hierarchy.Hierarchy
+            Reference to the hierarchy corresponding to the result
+            of rewriting (if the `inpace` argument was `True`, the
+            reference is self)
         r_g_prime : dict
+            Dictionary containing the matching of the right-hand side of
+            the rule in the graph subject to rewriting
 
         Raises
         ------
         ReGraphError
+            If attempt to rewrite a rule in the hierarchy or `rule` is
+            not a valid rule object
         RewritingError
+            This error is raised in the following cases:
 
+                * The typing of either the lhs or the rhs is inconsistent
+                * The typing of the rhs is inconsistent with the typing of
+                  the lhs
+                * Specified instance is not valid for the given rule
+                * The rule requires some changes which are not allowed
+                  by the parameter `strict`
         """
         if type(self.node[graph_id]) == RuleNode:
             raise ReGraphError("Rewriting of a rule is not implemented!")
@@ -1506,9 +1554,53 @@ class Hierarchy(nx.DiGraph, AttributeContainter):
                 new_hierarchy, upstream_changes, downstream_changes)
         return (new_hierarchy, r_g_prime)
 
-    def apply_rule(self, graph_id, rule_id, instance,
-                   strong_typing=True, total=False, inplace=True):
-        """Apply rule from the hierarchy."""
+    def apply_rule(self, graph_id, rule_id, instance=None,
+                   strict=False, inplace=True):
+        """Apply rule from the hierarchy.
+
+        Apply SqPO rewriting rule sitting in the hierarchy to
+        the specified graph of the hierarchy. The lhs and the rhs
+        typings of the rule are the ones given by the homomorphisms
+        from the rule in the hierarchy.
+
+        Parameters
+        ----------
+        graph_id
+            Id of the graph in the hierarchy to rewrite
+        rule_id
+            Id of the rule in the hierarchy to apply
+        instance : dict, optional
+            Dictionary containing an instance of the lhs of the rule in
+            the graph subject to rewriting, by default, tries to construct
+            identity morphism of the nodes of the pattern
+        strict : bool, optional
+            If True, application of relaxing rules (the ones that
+            add nodes/edges/attrs or merge nodes) causes an exception,
+            otherwise, relaxing rules are allowed, default value -- False.
+        inplace : bool, optional
+            If True, all the changes to the hierarchy are performed in-place,
+            otherwise, new hierarchy corresponding to the result of the
+            rewriting is constructed.
+
+
+        Returns
+        -------
+        new_hierarchy : regraph.hierarchy.Hierarchy
+            Reference to the hierarchy corresponding to the result
+            of rewriting (if the `inpace` argument was `True`, the
+            reference is self)
+        r_g_prime : dict
+            Dictionary containing the matching of the right-hand side of
+            the rule in the graph subject to rewriting
+
+        Raises
+        ------
+        ReGraphError
+            If attempt to rewrite a rule in the hierarchy or `rule` is
+            not a valid rule object
+        RewritingError
+            For more details see regraph.Hierarchy.rewrite
+        """
         if type(self.node[graph_id]) == RuleNode:
             raise ReGraphError("Rewriting of a rule is not implemented!")
 
@@ -1531,9 +1623,10 @@ class Hierarchy(nx.DiGraph, AttributeContainter):
         return self.rewrite(
             graph_id,
             rule,
-            instance,
-            lhs_typing,
-            rhs_typing,
+            instance=instance,
+            lhs_typing=lhs_typing,
+            rhs_typing=rhs_typing,
+            strict=strict,
             inplace=inplace)
 
     def _path_from_rule(self, path):
@@ -1601,7 +1694,6 @@ class Hierarchy(nx.DiGraph, AttributeContainter):
             if node_id in mapping.keys():
                 types[typing] = mapping[node_id]
         return types
-
 
     def descendents(self, graph_id):
         """Get descentants (TODO: reverse names)."""
@@ -1714,7 +1806,10 @@ class Hierarchy(nx.DiGraph, AttributeContainter):
         return ancestors
 
     def to_nx_graph(self):
-        """Create a simple networkx graph representing the hierarchy."""
+        """Create a simple networkx graph representing the hierarchy.
+
+        Note that the relation edges are ignored
+        """
         g = nx.DiGraph()
         for node in self.nodes():
             g.add_node(node, self.node[node].attrs)
