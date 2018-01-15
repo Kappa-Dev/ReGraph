@@ -399,6 +399,9 @@ observe the changes in `ag`:
 
 .. image:: _static/ex2_ag_result1.png
 
+As a typing by the nodes of `ag` of the new nodes in `n1` was not specified, ReGraph
+adds three new respective nodes to `ag`, so that `n1` becomes typed by `ag` as follows:
+
 >>> hierarchy.typing["n1"]["ag"]
 {'A': 'A',
  'A_res_1': 'A_res_1',
@@ -408,3 +411,9 @@ observe the changes in `ag`:
  'Y': 'Y',
  'mod': 'mod',
  'p': 'p'}
+
+>>> plotting.plot_graph(hierarchy.graph["mm"])
+
+.. image:: _static/ex2_mm_result1.png
+
+>>> hierarchy.typing["ag"]["mm"]
