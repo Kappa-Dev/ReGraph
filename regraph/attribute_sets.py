@@ -66,10 +66,6 @@ class AttributeSet(object):
         """Bool representation of attribute set."""
         return not self.is_empty()
 
-    def __repr__(self):
-        """Representation of attribute set."""
-        return str(self)
-
     def __len__(self):
         """Length of attribute set."""
         return len(self)
@@ -953,6 +949,10 @@ class EmptySet(AttributeSet):
     def __len__(self):
         """Return length."""
         return 0
+
+    def __str__(self):
+        """."""
+        return "EmptySet"
 
     def issubset(self, other):
         """Test if subset of another set."""
