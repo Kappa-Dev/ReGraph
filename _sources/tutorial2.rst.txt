@@ -320,3 +320,25 @@ First, let's start from creating another hierarchy similar to the one in the pre
     hierarchy.add_typing(
         "n1", "ag",
         dict((n, n) for n in nugget_1.nodes()))
+
+Let's plot the graphs of the hierarchy that we've just created:
+
+>>> plotting.plot_graph(hierarchy.graph["colors"])
+
+.. image:: _static/ex2_colors.png
+
+>>> plotting.plot_graph(hierarchy.graph["mmm"])
+
+.. image:: _static/ex2_mmm.png
+
+>>> plotting.plot_graph(hierarchy.graph["mm"])
+
+.. image:: _static/ex2_mm.png
+
+>>> plotting.plot_graph(hierarchy.graph["ag"])
+
+.. image:: _static/ex2_ag.png
+
+>>> plotting.plot_graph(hierarchy.graph["n1"])
+
+.. image:: _static/ex2_n1.png
