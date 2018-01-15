@@ -392,6 +392,8 @@ As the result of the rewriting of `ag`, the graph `n1` typed by `ag` has changes
 >>> plotting.plot_graph(hierarchy.graph["n1"],
            title="Graph 'n1' after rewriting with rule 1", parent_pos=n1_pos)
 
+.. image:: _static/ex2_n1_rule1_result.png
+
 >>> hierarchy.typing["n1"]["ag"]
 {'A': 'A1',
  'A_res_1': 'A_res_1',
