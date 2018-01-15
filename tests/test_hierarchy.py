@@ -71,8 +71,7 @@ class TestHierarchy(object):
              "black_square": "square",
              "white_square": "square",
              "black_triangle": "triangle",
-             "white_triangle": "triangle"},
-            total=True
+             "white_triangle": "triangle"}
         )
 
         self.hierarchy.add_typing(
@@ -84,8 +83,7 @@ class TestHierarchy(object):
                 "white_square": "white",
                 "white_circle": "white",
                 "white_triangle": "white"
-            },
-            total=True
+            }
         )
 
         g2 = nx.DiGraph()
@@ -117,8 +115,7 @@ class TestHierarchy(object):
              4: "white_circle",
              5: "white_square",
              6: "white_triangle",
-             7: "black_triangle"},
-            total=True
+             7: "black_triangle"}
         )
 
         g3 = nx.DiGraph()
@@ -153,8 +150,7 @@ class TestHierarchy(object):
              5: "black_square",
              4: "white_square",
              6: "white_triangle",
-             7: "black_triangle"},
-            total=True
+             7: "black_triangle"}
         )
 
         g4 = nx.DiGraph()
@@ -165,8 +161,8 @@ class TestHierarchy(object):
         ])
 
         self.hierarchy.add_graph("g4", g4)
-        self.hierarchy.add_typing("g4", "g2", {1: 2, 2: 3, 3: 6}, total=True)
-        self.hierarchy.add_typing("g4", "g3", {1: 1, 2: 5, 3: 6}, total=True)
+        self.hierarchy.add_typing("g4", "g2", {1: 2, 2: 3, 3: 6})
+        self.hierarchy.add_typing("g4", "g3", {1: 1, 2: 5, 3: 6})
 
         g5 = nx.DiGraph()
         prim.add_nodes_from(g5, [
@@ -194,8 +190,7 @@ class TestHierarchy(object):
             "g0", "g1",
             {"circle": "black_circle",
              "square": "white_square",
-             "triangle": "black_triangle"},
-            total=True)
+             "triangle": "black_triangle"})
 
     def test_remove_graph(self):
         h = copy.deepcopy(self.hierarchy)
@@ -310,16 +305,14 @@ class TestHierarchy(object):
             {"g00": "black", "g0": "square"}
         )
 
-    def test_add_partial_typing(self):
-        self.hierarchy.add_typing(
-            "g5",
-            "g1",
-            {"black_circle": "black_circle",
-             "black_square": "black_square",
-             "white_triangle": "white_triangle"},
-            total=False
-        )
-        return
+    # def test_add_partial_typing(self):
+    #     self.hierarchy.add_typing(
+    #         "g5",
+    #         "g1",
+    #         {"black_circle": "black_circle",
+    #          "black_square": "black_square",
+    #          "white_triangle": "white_triangle"})
+    #     return
 
     def test_rewrite_ignore_attrs(self):
         pass
@@ -582,7 +575,6 @@ class TestHierarchy(object):
              "1_b": "b",
              "2_a": "a",
              "2_b": "b"},
-            total=True
         )
 
         g7 = nx.DiGraph()
@@ -597,7 +589,6 @@ class TestHierarchy(object):
                 "y_a": "a",
                 "y_b": "b"
             },
-            total=True
         )
 
         g2 = nx.DiGraph()
@@ -611,9 +602,7 @@ class TestHierarchy(object):
                 "t_1_a": "1_a",
                 "s_1_b": "1_b",
                 "t_2_a": "2_a"
-            },
-            total=True
-        )
+            })
 
         g3 = nx.DiGraph()
         g3.add_nodes_from(["s_x_a", "t_x_a", "g_y_b"])
@@ -625,9 +614,7 @@ class TestHierarchy(object):
                 "s_x_a": "x_a",
                 "t_x_a": "x_a",
                 "g_y_b": "y_b"
-            },
-            total=True
-        )
+            })
 
         g4 = nx.DiGraph()
         g4.add_nodes_from(["a_x_a", "t_y_b"])
@@ -638,18 +625,14 @@ class TestHierarchy(object):
             {
                 "a_x_a": "s_x_a",
                 "t_y_b": "g_y_b"
-            },
-            total=True
-        )
+            })
 
         hierarchy.add_typing(
             4, 7,
             {
                 "a_x_a": "x_a",
                 "t_y_b": "y_b"
-            },
-            total=True
-        )
+            })
 
         g6 = nx.DiGraph()
         g6.add_nodes_from(["a_x_a", "b_x_a", "a_y_b", "b_y_a", "c_x_b"])
@@ -663,9 +646,7 @@ class TestHierarchy(object):
                 "a_y_b": "y_b",
                 "b_y_a": "y_a",
                 "c_x_b": "x_b"
-            },
-            total=True
-        )
+            })
 
         g5 = nx.DiGraph()
         g5.add_nodes_from(["1_a_x_a", "2_a_x_a", "1_a_y_b"])
@@ -677,9 +658,7 @@ class TestHierarchy(object):
                 "1_a_x_a": "a_x_a",
                 "2_a_x_a": "a_x_a",
                 "1_a_y_b": "a_y_b"
-            },
-            total=True
-        )
+            })
 
         hierarchy.add_typing(
             5, 4,
@@ -687,9 +666,7 @@ class TestHierarchy(object):
                 "1_a_x_a": "a_x_a",
                 "2_a_x_a": "a_x_a",
                 "1_a_y_b": "t_y_b"
-            },
-            total=True
-        )
+            })
 
         g1 = nx.DiGraph()
         g1.add_nodes_from(["1_s_1_a", "2_s_1_a", "1_s_1_b"])
@@ -701,9 +678,7 @@ class TestHierarchy(object):
                 "1_s_1_a": "s_1_a",
                 "2_s_1_a": "s_1_a",
                 "1_s_1_b": "s_1_b"
-            },
-            total=True
-        )
+            })
 
         hierarchy.add_typing(
             1, 3,
@@ -711,9 +686,7 @@ class TestHierarchy(object):
                 "1_s_1_a": "s_x_a",
                 "2_s_1_a": "t_x_a",
                 "1_s_1_b": "g_y_b"
-            },
-            total=True
-        )
+            })
         # start testing
         hierarchy.add_typing(
             3, 8,
@@ -721,9 +694,7 @@ class TestHierarchy(object):
                 "s_x_a": "1_a",
                 "t_x_a": "1_a",
                 "g_y_b": "1_b"
-            },
-            total=True
-        )
+            })
         hierarchy.add_typing(
             6, 9,
             {
@@ -732,9 +703,7 @@ class TestHierarchy(object):
                 "a_y_b": "b",
                 "b_y_a": "a",
                 "c_x_b": "b"
-            },
-            total=True
-        )
+            })
 
     def test_triangle_1(self):
         h = Hierarchy()
@@ -764,9 +733,7 @@ class TestHierarchy(object):
                 "1b": "1",
                 "2a": "2",
                 "2b": "2"
-            },
-            total=True
-        )
+            })
         h.add_typing(
             "g3", "g1",
             {
@@ -774,9 +741,7 @@ class TestHierarchy(object):
                 "1y": "1",
                 "2x": "2",
                 "2y": "2"
-            },
-            total=True
-        )
+            })
         h.add_typing(
             "g2", "g3",
             {
@@ -784,9 +749,7 @@ class TestHierarchy(object):
                 "1b": "1y",
                 "2a": "2y",
                 "2b": "2x"
-            },
-            total=True
-        )
+            })
 
         pattern = nx.DiGraph()
         pattern.add_nodes_from([

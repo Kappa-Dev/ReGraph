@@ -1,5 +1,4 @@
 """Test of the hierarchy functionality with all typings being partial."""
-import copy
 import networkx as nx
 
 from regraph.hierarchy import Hierarchy
@@ -109,7 +108,7 @@ class TestPropagation(object):
                 "residue": "component",
                 "state": "state",
                 "mod": "action"
-            }, total=True
+            }
         )
 
         hierarchy.add_typing(
@@ -133,7 +132,7 @@ class TestPropagation(object):
                 "activity": "state",
                 "p_c": "state",
                 "mod2": "mod"
-            }, total=True
+            }
         )
         hierarchy.add_typing(
             "n1", "ag",
@@ -143,7 +142,7 @@ class TestPropagation(object):
                 "A_res_1": "A_res_1",
                 "mod": "mod1",
                 "p": "p_a",
-            }, total=True
+            }
         )
 
         hierarchy.add_typing(
@@ -154,7 +153,7 @@ class TestPropagation(object):
                 "p": "p_c",
                 "activity": "activity",
                 "mod": "mod2",
-            }, total=True
+            }
         )
 
         self.hierarchy = hierarchy
