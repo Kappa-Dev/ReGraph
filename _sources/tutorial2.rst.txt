@@ -41,42 +41,40 @@ functionality implemented in ReGraph.
 Hierarchy creation
 ^^^^^^^^^^^^^^^^^^
 Create an empty hierarchy and add graphs to the hierarchy: ::
-	
-	import networkx as nx
+    
+    import networkx as nx
 
-	from regraph import Hierarchy
-	from regraph import plot_graph
-	from regraph import primitives
+    from regraph import Hierarchy, plot_graph, primitives
 
 
-	hierarchy = Hierarchy()
+    hierarchy = Hierarchy()
 
-	t = nx.DiGraph()
-	primitives.add_nodes_from(
-		["agent", "action", "state"])
-	primitives.add_edges_from([
-		("agent", "agent"),
-		("state", "agent"),
-		("agent", "action"),
-		("action", "state")
-	])
+    t = nx.DiGraph()
+    primitives.add_nodes_from(
+        ["agent", "action", "state"])
+    primitives.add_edges_from([
+        ("agent", "agent"),
+        ("state", "agent"),
+        ("agent", "action"),
+        ("action", "state")
+    ])
 
-	g = nx.DiGraph()
-	primitives.add_nodes_from(
-		["protein", "region",
-		 "activity", "mod"])
-	primitives.add_edges_from([
-		("region", "protein"),
-		("activity", "protein"),
-		("activity", "region"),
-		("protein", "mod"),
-		("region", "mod"),
-		("")
-	])
+    g = nx.DiGraph()
+    primitives.add_nodes_from(
+        ["protein", "region",
+         "activity", "mod"])
+    primitives.add_edges_from([
+        ("region", "protein"),
+        ("activity", "protein"),
+        ("activity", "region"),
+        ("protein", "mod"),
+        ("region", "mod"),
+        ("")
+    ])
 
-	hierarchy.add_graph("T", t)
-	hierarchy.add_graph("G", g)
-	
+    hierarchy.add_graph("T", t)
+    hierarchy.add_graph("G", g)
+    
 
 >>> plot_graph(hierarchy.graph["T"])
 
@@ -90,15 +88,15 @@ Create an empty hierarchy and add graphs to the hierarchy: ::
 >>> hierarchy.graphs()
 ['T', 'G']
 
-Add graph typing of the graph `G` by `T`): ::
-	
-	mapping = {
-		"protein": "agent",
-		"region": "agent",
-		"activity": "state",
-		"mod": "action"
-	}
-	hierarchy.add_typing("G", "T", mapping)
+Add typing of the graph `G` by `T`: ::
+    
+    mapping = {
+        "protein": "agent",
+        "region": "agent",
+        "activity": "state",
+        "mod": "action"
+    }
+    hierarchy.add_typing("G", "T", mapping)
 
 >>> hierarchy.typing["G"]["T"]
 {'activity': 'state', 'mod': 'action', 'protein': 'agent', 'region': 'agent'}
@@ -109,33 +107,33 @@ You can check typing of a particular node of a graph, for example:
 {'T': 'agent'}
 
 Create another graph, let's call it `model`, and type it by `G` ::
-	
-	model = nx.DiGraph()
-	primitives.add_nodes_from(
-	    model,
-	    ["A", "R", "B", "B_activity",
-	     "A_activity", "activation"])
-	primitives.add_edges_from(model, [
-	    ("R", "A"),
-	    ("R", "activation"),
-	    ("activation", "B_activity"),
-	    ("B_activity", "B"),
-	    ("activation", "A_activity"),
-	    ("A_activity", "A")
-	])
-	hierarchy.add_graph("model", model)
+    
+    model = nx.DiGraph()
+    primitives.add_nodes_from(
+        model,
+        ["A", "R", "B", "B_activity",
+         "A_activity", "activation"])
+    primitives.add_edges_from(model, [
+        ("R", "A"),
+        ("R", "activation"),
+        ("activation", "B_activity"),
+        ("B_activity", "B"),
+        ("activation", "A_activity"),
+        ("A_activity", "A")
+    ])
+    hierarchy.add_graph("model", model)
 
-	mapping = {
-		"A": "protein",
-		"R": "region",
-		"B": "protein",
-		"B_activity": "activity",
-		"A_activity": "activity",
-		"activation": "mod"
-	}
-	hierarchy.add_typing("model", "G", mapping)
+    mapping = {
+        "A": "protein",
+        "R": "region",
+        "B": "protein",
+        "B_activity": "activity",
+        "A_activity": "activity",
+        "activation": "mod"
+    }
+    hierarchy.add_typing("model", "G", mapping)
 
-	plot_graph(hierarchy.graph["model"])
+    plot_graph(hierarchy.graph["model"])
 
 .. image:: _static/ex1_model.png
 
@@ -160,19 +158,19 @@ Consider the following graph:
 
 ::
 
-	catalysis = nx.DiGraph()
-	primitives.add_nodes_from(
-		catalysis,
-		["enzyme", "substrate",
-		 "mod", "mod_state"]
-	)
-	primitives.add_edges_from(catalysis, [
-		("enzyme", "mod"),
-		("mod", "mod_state"),
-		("mod_state", "substrate")
-	])
+    catalysis = nx.DiGraph()
+    primitives.add_nodes_from(
+        catalysis,
+        ["enzyme", "substrate",
+         "mod", "mod_state"]
+    )
+    primitives.add_edges_from(catalysis, [
+        ("enzyme", "mod"),
+        ("mod", "mod_state"),
+        ("mod_state", "substrate")
+    ])
 
-	hierarchy.add_graph("catalysis", catalysis)
+    hierarchy.add_graph("catalysis", catalysis)
 
     plot_graph(hierarchy.graph["catalysis"])
 
@@ -181,14 +179,14 @@ Consider the following graph:
 
 Create a relation between graph `model` and graph `catalysis`: ::
 
-	relation = {
-	    "A": {"enzyme", "substrate"},
-	    "B": "substrate",
-	    "B_activity": "mod_state",
-	    "A_activity": "mod_state",
-	    "activation": "mod"
-	}
-	hierarchy.add_relation('model', 'catalysis', relation)
+    relation = {
+        "A": {"enzyme", "substrate"},
+        "B": "substrate",
+        "B_activity": "mod_state",
+        "A_activity": "mod_state",
+        "activation": "mod"
+    }
+    hierarchy.add_relation('model', 'catalysis', relation)
 
 Note that in a relation between two graphs a node from one graph can be related to a set of nodes
 from another graph (in our example node `A` in the graph `model` is related to both

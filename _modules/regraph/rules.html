@@ -51,17 +51,15 @@
 
 <span class="kn">from</span> <span class="nn">regraph.parser</span> <span class="k">import</span> <span class="n">parser</span>
 <span class="kn">from</span> <span class="nn">regraph.utils</span> <span class="k">import</span> <span class="p">(</span><span class="n">keys_by_value</span><span class="p">,</span>
-                           <span class="n">normalize_attrs</span><span class="p">,</span>
                            <span class="n">make_canonical_commands</span><span class="p">,</span>
                            <span class="n">dict_sub</span><span class="p">,</span>
                            <span class="n">attrs_union</span><span class="p">)</span>
-<span class="kn">from</span> <span class="nn">regraph.category_op</span> <span class="k">import</span> <span class="p">(</span><span class="n">identity</span><span class="p">,</span>
-                                 <span class="n">check_homomorphism</span><span class="p">,</span>
-                                 <span class="n">pullback_complement</span><span class="p">,</span>
-                                 <span class="n">pushout</span><span class="p">)</span>
+<span class="kn">from</span> <span class="nn">regraph.category_utils</span> <span class="k">import</span> <span class="p">(</span><span class="n">identity</span><span class="p">,</span>
+                                    <span class="n">check_homomorphism</span><span class="p">,</span>
+                                    <span class="n">pullback_complement</span><span class="p">,</span>
+                                    <span class="n">pushout</span><span class="p">)</span>
 <span class="kn">from</span> <span class="nn">regraph</span> <span class="k">import</span> <span class="n">primitives</span>
-<span class="kn">from</span> <span class="nn">regraph.exceptions</span> <span class="k">import</span> <span class="p">(</span><span class="n">ReGraphWarning</span><span class="p">,</span> <span class="n">ParsingError</span><span class="p">,</span> <span class="n">RuleError</span><span class="p">,</span>
-                                <span class="n">GraphError</span><span class="p">)</span>
+<span class="kn">from</span> <span class="nn">regraph.exceptions</span> <span class="k">import</span> <span class="p">(</span><span class="n">ReGraphWarning</span><span class="p">,</span> <span class="n">ParsingError</span><span class="p">,</span> <span class="n">RuleError</span><span class="p">)</span>
 
 
 <div class="viewcode-block" id="Rule"><a class="viewcode-back" href="../../rules.html#regraph.rules.Rule">[docs]</a><span class="k">class</span> <span class="nc">Rule</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>

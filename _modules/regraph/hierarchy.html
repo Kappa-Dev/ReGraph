@@ -42,40 +42,17 @@
   <h1>Source code for regraph.hierarchy</h1><div class="highlight"><pre>
 <span></span><span class="sd">&quot;&quot;&quot;Graph hierarchy related data structures.</span>
 
-<span class="sd">This module contains a collection of data structures implementing</span>
-<span class="sd">graph hierarchy and its various components.</span>
-<span class="sd">Graph hierarchy is a DAG, whose nodes can be graphs or rules of</span>
-<span class="sd">sesqui-pushout rewriting, and whose edges (directed) represent</span>
+<span class="sd">This module contains a data structure implementing</span>
+<span class="sd">graph hierarchy. Graph hierarchy is a DAG, whose nodes</span>
+<span class="sd">can be graphs or rules of sesqui-pushout rewriting,</span>
+<span class="sd">and whose edges (directed) represent</span>
 <span class="sd">homomorphisms between graphs. In addition, hierarchies are</span>
 <span class="sd">equipped with relations on graphs (which can be thought of as</span>
 <span class="sd">undirected edges or, alternatively, spans).</span>
 
-<span class="sd">The following data structures are implemented in this module:</span>
-
-<span class="sd">* `AttributeContainter` -- base class for objects containing</span>
-<span class="sd">  attributes, provides an interface for different operations</span>
-<span class="sd">  on attributes;</span>
-<span class="sd">* `GraphNode` -- class for graph nodes of a hierarchy;</span>
-<span class="sd">* `RuleNode` -- class for rule nodes of a hierarchy;</span>
-<span class="sd">* `Typing` -- class for graph typing edges of a hierarchy,</span>
-<span class="sd">  encapsulates graph homomorphism from a source graph node</span>
-<span class="sd">  to a target graph node;</span>
-<span class="sd">* `RuleTyping` -- class for rule typing edges of a hierarchy</span>
-<span class="sd">  (its source node is assumed to be a rule and its target -- a graph),</span>
-<span class="sd">  encapsulated two homomorphisms: from the left-hand side of the rule</span>
-<span class="sd">  to the target and from the right-hand side of the rule to the target;</span>
-<span class="sd">* `Relation` -- base class for relations in the hierarchy;</span>
-<span class="sd">* `GraphRelation` -- class for binary symmetric relations between</span>
-<span class="sd">  two graphs.</span>
-<span class="sd">* `Hierarchy` -- class for graph hierarchies (nodes: graphs or rules, edges:</span>
-<span class="sd">  graph/rule homomorphisms + relations: separate from edges, act as undirected</span>
-<span class="sd">  edges), based on `networkx.DiGraph`,</span>
+<span class="sd">* `Hierarchy` -- class for graph hierarchies, based on `networkx.DiGraph`,</span>
 <span class="sd">  additionally constrained to be acyclic and to respect the property of</span>
 <span class="sd">  commuting paths.</span>
-
-<span class="sd">TODO:</span>
-
-<span class="sd">* `RuleRelation`</span>
 <span class="sd">&quot;&quot;&quot;</span>
 <span class="kn">import</span> <span class="nn">copy</span>
 <span class="kn">import</span> <span class="nn">itertools</span>
@@ -89,13 +66,13 @@
 <span class="kn">from</span> <span class="nn">networkx.exception</span> <span class="k">import</span> <span class="n">NetworkXNoPath</span>
 
 <span class="kn">from</span> <span class="nn">regraph</span> <span class="k">import</span> <span class="n">rewriting_utils</span>
-<span class="kn">from</span> <span class="nn">regraph</span> <span class="k">import</span> <span class="n">rule_type_checking</span>
-<span class="kn">from</span> <span class="nn">regraph.attribute_sets</span> <span class="k">import</span> <span class="n">AttributeSet</span><span class="p">,</span> <span class="n">FiniteSet</span>
-<span class="kn">from</span> <span class="nn">regraph.category_op</span> <span class="k">import</span> <span class="p">(</span><span class="n">compose</span><span class="p">,</span>
-                                 <span class="n">check_homomorphism</span><span class="p">,</span>
-                                 <span class="n">is_total_homomorphism</span><span class="p">,</span>
-                                 <span class="n">relation_to_span</span><span class="p">,</span>
-                                 <span class="n">right_relation_dict</span><span class="p">)</span>
+<span class="kn">from</span> <span class="nn">regraph</span> <span class="k">import</span> <span class="n">type_checking</span>
+
+<span class="kn">from</span> <span class="nn">regraph.category_utils</span> <span class="k">import</span> <span class="p">(</span><span class="n">compose</span><span class="p">,</span>
+                                    <span class="n">check_homomorphism</span><span class="p">,</span>
+                                    <span class="n">is_total_homomorphism</span><span class="p">,</span>
+                                    <span class="n">relation_to_span</span><span class="p">,</span>
+                                    <span class="n">right_relation_dict</span><span class="p">)</span>
 <span class="kn">from</span> <span class="nn">regraph.primitives</span> <span class="k">import</span> <span class="p">(</span><span class="n">get_relabeled_graph</span><span class="p">,</span>
                                 <span class="n">relabel_node</span><span class="p">,</span>
                                 <span class="n">get_edge</span><span class="p">,</span>
@@ -105,9 +82,7 @@
 <span class="kn">from</span> <span class="nn">regraph.utils</span> <span class="k">import</span> <span class="p">(</span><span class="n">is_subdict</span><span class="p">,</span>
                            <span class="n">keys_by_value</span><span class="p">,</span>
                            <span class="n">normalize_attrs</span><span class="p">,</span>
-                           <span class="n">to_set</span><span class="p">,</span>
-                           <span class="n">replace_source</span><span class="p">,</span>
-                           <span class="n">replace_target</span><span class="p">)</span>
+                           <span class="p">)</span>
 <span class="kn">from</span> <span class="nn">regraph.rules</span> <span class="k">import</span> <span class="n">Rule</span>
 <span class="kn">from</span> <span class="nn">regraph.exceptions</span> <span class="k">import</span> <span class="p">(</span><span class="n">HierarchyError</span><span class="p">,</span>
                                 <span class="n">TotalityWarning</span><span class="p">,</span>
@@ -115,296 +90,12 @@
                                 <span class="n">RewritingError</span><span class="p">,</span>
                                 <span class="n">InvalidHomomorphism</span><span class="p">,</span>
                                 <span class="n">GraphError</span><span class="p">)</span>
-
-
-<div class="viewcode-block" id="AttributeContainter"><a class="viewcode-back" href="../../hierarchy.html#regraph.hierarchy.AttributeContainter">[docs]</a><span class="k">class</span> <span class="nc">AttributeContainter</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;Base class for containers of attributes.&quot;&quot;&quot;</span>
-
-<div class="viewcode-block" id="AttributeContainter.attrs_to_json"><a class="viewcode-back" href="../../hierarchy.html#regraph.hierarchy.AttributeContainter.attrs_to_json">[docs]</a>    <span class="k">def</span> <span class="nf">attrs_to_json</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Convert attributes to json.&quot;&quot;&quot;</span>
-        <span class="n">json_data</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
-        <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">attrs</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-            <span class="n">json_data</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span><span class="o">.</span><span class="n">to_json</span><span class="p">()</span>
-        <span class="k">return</span> <span class="n">json_data</span></div>
-
-<div class="viewcode-block" id="AttributeContainter.attrs_from_json"><a class="viewcode-back" href="../../hierarchy.html#regraph.hierarchy.AttributeContainter.attrs_from_json">[docs]</a>    <span class="nd">@staticmethod</span>
-    <span class="k">def</span> <span class="nf">attrs_from_json</span><span class="p">(</span><span class="n">json_data</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Retrieve attrs from json-like dict.&quot;&quot;&quot;</span>
-        <span class="n">attrs</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
-        <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">json_data</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-            <span class="n">attrs</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">AttributeSet</span><span class="o">.</span><span class="n">from_json</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">attrs</span></div>
-
-<div class="viewcode-block" id="AttributeContainter.add_attrs"><a class="viewcode-back" href="../../hierarchy.html#regraph.hierarchy.AttributeContainter.add_attrs">[docs]</a>    <span class="k">def</span> <span class="nf">add_attrs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">attrs</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Add attrs to the container.&quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="n">attrs</span><span class="p">:</span>
-            <span class="n">new_attrs</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">attrs</span><span class="p">)</span>
-            <span class="n">normalize_attrs</span><span class="p">(</span><span class="n">new_attrs</span><span class="p">)</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="n">new_attrs</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
-        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">attrs</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">attrs</span> <span class="o">=</span> <span class="n">new_attrs</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">new_attrs</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-                <span class="k">if</span> <span class="n">key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">attrs</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">FiniteSet</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
-                <span class="k">else</span><span class="p">:</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="o">.</span><span class="n">union</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
-        <span class="k">return</span></div>
-
-<div class="viewcode-block" id="AttributeContainter.remove_attrs"><a class="viewcode-back" href="../../hierarchy.html#regraph.hierarchy.AttributeContainter.remove_attrs">[docs]</a>    <span class="k">def</span> <span class="nf">remove_attrs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">attrs</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Remove attributes.&quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="n">attrs</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="k">pass</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="n">normalize_attrs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">attrs</span><span class="p">)</span>
-            <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">attrs</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-                <span class="k">if</span> <span class="n">key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">attrs</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
-                    <span class="k">pass</span>
-                <span class="k">else</span><span class="p">:</span>
-                    <span class="n">elements_to_remove</span> <span class="o">=</span> <span class="p">[]</span>
-                    <span class="k">for</span> <span class="n">el</span> <span class="ow">in</span> <span class="n">to_set</span><span class="p">(</span><span class="n">value</span><span class="p">):</span>
-                        <span class="k">if</span> <span class="n">el</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="n">key</span><span class="p">]:</span>
-                            <span class="n">elements_to_remove</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">el</span><span class="p">)</span>
-                        <span class="k">else</span><span class="p">:</span>
-                            <span class="k">pass</span>
-                    <span class="k">for</span> <span class="n">el</span> <span class="ow">in</span> <span class="n">elements_to_remove</span><span class="p">:</span>
-                        <span class="bp">self</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">el</span><span class="p">)</span></div>
-
-<div class="viewcode-block" id="AttributeContainter.update_attrs"><a class="viewcode-back" href="../../hierarchy.html#regraph.hierarchy.AttributeContainter.update_attrs">[docs]</a>    <span class="k">def</span> <span class="nf">update_attrs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">attrs</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Update attribures.&quot;&quot;&quot;</span>
-        <span class="n">new_attrs</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">attrs</span><span class="p">)</span>
-        <span class="k">if</span> <span class="n">new_attrs</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="k">pass</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="n">normalize_attrs</span><span class="p">(</span><span class="n">new_attrs</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">attrs</span> <span class="o">=</span> <span class="n">new_attrs</span></div></div>
-
-
-<div class="viewcode-block" id="GraphNode"><a class="viewcode-back" href="../../hierarchy.html#regraph.hierarchy.GraphNode">[docs]</a><span class="k">class</span> <span class="nc">GraphNode</span><span class="p">(</span><span class="n">AttributeContainter</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;Data structure incapsulating graph in the node of the hierarchy.</span>
-
-<span class="sd">    Attributes</span>
-<span class="sd">    ----------</span>
-<span class="sd">    graph : nx.(Di)Graph</span>
-<span class="sd">    attrs : dict</span>
-<span class="sd">        Dictionary with attrs of the graph node</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-
-    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">graph</span><span class="p">,</span> <span class="n">attrs</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Initialize graph node with graph object and attrs.&quot;&quot;&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">graph</span> <span class="o">=</span> <span class="n">graph</span>
-        <span class="k">if</span> <span class="n">attrs</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">attrs</span> <span class="o">=</span> <span class="n">attrs</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">attrs</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
-        <span class="k">return</span>
-
-    <span class="k">def</span> <span class="nf">__eq__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Equality of graph nodes.&quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">GraphNode</span><span class="p">)</span> <span class="ow">and</span> <span class="n">equal</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="p">,</span> <span class="n">other</span><span class="o">.</span><span class="n">graph</span><span class="p">)</span></div>
-
-
-<div class="viewcode-block" id="RuleNode"><a class="viewcode-back" href="../../hierarchy.html#regraph.hierarchy.RuleNode">[docs]</a><span class="k">class</span> <span class="nc">RuleNode</span><span class="p">(</span><span class="n">AttributeContainter</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;Data structure incapsulating a rule in the node of the hierarchy.</span>
-
-<span class="sd">    Attributes</span>
-<span class="sd">    ----------</span>
-<span class="sd">    rule : regraph.rules.Rule</span>
-<span class="sd">    attrs : dict</span>
-<span class="sd">        Dictionary with attrs of the rule node</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-
-    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">rule</span><span class="p">,</span> <span class="n">attrs</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Initialize rule with a Rule object.&quot;&quot;&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">rule</span> <span class="o">=</span> <span class="n">rule</span>
-        <span class="k">if</span> <span class="n">attrs</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">attrs</span> <span class="o">=</span> <span class="n">attrs</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">attrs</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
-        <span class="k">return</span>
-
-    <span class="k">def</span> <span class="nf">__eq__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Equality of rule nodes.&quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">RuleNode</span><span class="p">)</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">rule</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">rule</span>
-
-    <span class="k">def</span> <span class="nf">__ne__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Non-equality of the rule nodes.&quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="ow">not</span> <span class="p">(</span><span class="bp">self</span> <span class="o">==</span> <span class="n">other</span><span class="p">)</span></div>
-
-
-<div class="viewcode-block" id="Typing"><a class="viewcode-back" href="../../hierarchy.html#regraph.hierarchy.Typing">[docs]</a><span class="k">class</span> <span class="nc">Typing</span><span class="p">(</span><span class="n">AttributeContainter</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;Data structure incapsulating a homomorphism between graphs.</span>
-
-<span class="sd">    Attributes</span>
-<span class="sd">    ----------</span>
-<span class="sd">    mapping : dict</span>
-<span class="sd">        Dictionary containing a map from nodes of a source graph</span>
-<span class="sd">        to nodes of a target.</span>
-<span class="sd">    total : bool</span>
-<span class="sd">        Flag indication if the typing is forced to be total</span>
-<span class="sd">    attrs : dict</span>
-<span class="sd">        Dictionary with attrs of the typing</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-
-    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mapping</span><span class="p">,</span> <span class="n">total</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">attrs</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Initialize homomorphism.&quot;&quot;&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">mapping</span> <span class="o">=</span> <span class="n">mapping</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">total</span> <span class="o">=</span> <span class="n">total</span>
-        <span class="k">if</span> <span class="n">attrs</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">attrs</span> <span class="o">=</span> <span class="n">attrs</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">attrs</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
-        <span class="k">return</span>
-
-<div class="viewcode-block" id="Typing.is_total"><a class="viewcode-back" href="../../hierarchy.html#regraph.hierarchy.Typing.is_total">[docs]</a>    <span class="k">def</span> <span class="nf">is_total</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Test typing totality attribute.&quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">total</span></div>
-
-<div class="viewcode-block" id="Typing.rename_source"><a class="viewcode-back" href="../../hierarchy.html#regraph.hierarchy.Typing.rename_source">[docs]</a>    <span class="k">def</span> <span class="nf">rename_source</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">old_name</span><span class="p">,</span> <span class="n">new_name</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Rename source of typing.&quot;&quot;&quot;</span>
-        <span class="n">replace_source</span><span class="p">(</span><span class="n">old_name</span><span class="p">,</span> <span class="n">new_name</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">mapping</span><span class="p">)</span></div>
-
-<div class="viewcode-block" id="Typing.rename_target"><a class="viewcode-back" href="../../hierarchy.html#regraph.hierarchy.Typing.rename_target">[docs]</a>    <span class="k">def</span> <span class="nf">rename_target</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">old_name</span><span class="p">,</span> <span class="n">new_name</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Rename typing of typing.&quot;&quot;&quot;</span>
-        <span class="n">replace_target</span><span class="p">(</span><span class="n">old_name</span><span class="p">,</span> <span class="n">new_name</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">mapping</span><span class="p">)</span></div>
-
-    <span class="k">def</span> <span class="nf">__rmul__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Right multiplication operation.&quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">Typing</span><span class="p">):</span>
-            <span class="k">return</span> <span class="n">Typing</span><span class="p">(</span>
-                <span class="n">compose</span><span class="p">(</span><span class="n">other</span><span class="o">.</span><span class="n">mapping</span><span class="p">),</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">total</span> <span class="ow">and</span> <span class="n">other</span><span class="o">.</span><span class="n">total</span><span class="p">,</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">attrs</span><span class="p">)</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="k">return</span> <span class="bp">NotImplemented</span>
-
-    <span class="k">def</span> <span class="nf">__mul__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Multiplication operation.&quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">Typing</span><span class="p">):</span>
-            <span class="k">return</span> <span class="n">Typing</span><span class="p">(</span>
-                <span class="n">compose</span><span class="p">(</span><span class="n">other</span><span class="o">.</span><span class="n">mapping</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">mapping</span><span class="p">),</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">total</span> <span class="ow">and</span> <span class="n">other</span><span class="o">.</span><span class="n">total</span><span class="p">)</span>
-
-        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">RuleTyping</span><span class="p">):</span>
-            <span class="k">return</span> <span class="n">RuleTyping</span><span class="p">(</span>
-                <span class="n">compose</span><span class="p">(</span><span class="n">other</span><span class="o">.</span><span class="n">lhs_mapping</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">mapping</span><span class="p">),</span>
-                <span class="n">compose</span><span class="p">(</span><span class="n">other</span><span class="o">.</span><span class="n">rhs_mapping</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">mapping</span><span class="p">),</span>
-                <span class="n">other</span><span class="o">.</span><span class="n">lhs_total</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">total</span><span class="p">,</span>
-                <span class="n">other</span><span class="o">.</span><span class="n">rhs_total</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">total</span><span class="p">)</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="k">return</span> <span class="bp">NotImplemented</span></div>
-
-
-<div class="viewcode-block" id="RuleTyping"><a class="viewcode-back" href="../../hierarchy.html#regraph.hierarchy.RuleTyping">[docs]</a><span class="k">class</span> <span class="nc">RuleTyping</span><span class="p">(</span><span class="n">AttributeContainter</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;Data structure incapsulating rule typing.</span>
-
-<span class="sd">    A rule typing by a graph is defined by two homomorphisms:</span>
-<span class="sd">    lhs -&gt; graph and rhs -&gt; graph, such that they commute</span>
-<span class="sd">    (p -&gt; lhs -&gt; graph and p -&gt; rhs -&gt; graph commute).</span>
-
-<span class="sd">    Attributes</span>
-<span class="sd">    ----------</span>
-<span class="sd">    lhs_mapping : dict</span>
-<span class="sd">        Dictionary containing a map from nodes of the lhs of</span>
-<span class="sd">        the rule to nodes of a target graph.</span>
-<span class="sd">    rhs_mapping : dict</span>
-<span class="sd">        Dictionary containing a map from nodes of the rhs of</span>
-<span class="sd">        the rule to nodes of a target graph.</span>
-<span class="sd">    lhs_total : bool</span>
-<span class="sd">        Flag indication if the typing of the lhs is forced to be total</span>
-<span class="sd">    rhs_total : bool</span>
-<span class="sd">        Flag indication if the typing of the rhs is forced to be total</span>
-<span class="sd">    attrs : dict</span>
-<span class="sd">        Dictionary with attrs of the rule typing</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-
-    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">lhs_mapping</span><span class="p">,</span> <span class="n">rhs_mapping</span><span class="p">,</span>
-                 <span class="n">lhs_total</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">rhs_total</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">attrs</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Initialize homomorphism.&quot;&quot;&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">lhs_mapping</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">lhs_mapping</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">rhs_mapping</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">rhs_mapping</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">lhs_total</span> <span class="o">=</span> <span class="n">lhs_total</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">rhs_total</span> <span class="o">=</span> <span class="n">rhs_total</span>
-        <span class="k">if</span> <span class="n">attrs</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">attrs</span> <span class="o">=</span> <span class="n">attrs</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">attrs</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
-        <span class="k">return</span>
-
-<div class="viewcode-block" id="RuleTyping.rename_source"><a class="viewcode-back" href="../../hierarchy.html#regraph.hierarchy.RuleTyping.rename_source">[docs]</a>    <span class="k">def</span> <span class="nf">rename_source</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">old_name</span><span class="p">,</span> <span class="n">new_name</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Name the source of the rule typing.&quot;&quot;&quot;</span>
-        <span class="n">replace_source</span><span class="p">(</span><span class="n">old_name</span><span class="p">,</span> <span class="n">new_name</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">lhs_mapping</span><span class="p">)</span>
-        <span class="n">replace_source</span><span class="p">(</span><span class="n">old_name</span><span class="p">,</span> <span class="n">new_name</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">rhs_mapping</span><span class="p">)</span></div>
-
-<div class="viewcode-block" id="RuleTyping.rename_target"><a class="viewcode-back" href="../../hierarchy.html#regraph.hierarchy.RuleTyping.rename_target">[docs]</a>    <span class="k">def</span> <span class="nf">rename_target</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">old_name</span><span class="p">,</span> <span class="n">new_name</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Name the target of the rule typing.&quot;&quot;&quot;</span>
-        <span class="n">replace_target</span><span class="p">(</span><span class="n">old_name</span><span class="p">,</span> <span class="n">new_name</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">lhs_mapping</span><span class="p">)</span>
-        <span class="n">replace_target</span><span class="p">(</span><span class="n">old_name</span><span class="p">,</span> <span class="n">new_name</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">rhs_mapping</span><span class="p">)</span></div>
-
-<div class="viewcode-block" id="RuleTyping.all_total"><a class="viewcode-back" href="../../hierarchy.html#regraph.hierarchy.RuleTyping.all_total">[docs]</a>    <span class="k">def</span> <span class="nf">all_total</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;All the components of the rule are totally typed.&quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">lhs_total</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">rhs_total</span></div>
-
-    <span class="k">def</span> <span class="nf">__rmul__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Right multiplication.&quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">Typing</span><span class="p">):</span>
-            <span class="k">return</span> <span class="n">RuleTyping</span><span class="p">(</span>
-                <span class="n">compose</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">lhs_mapping</span><span class="p">,</span> <span class="n">other</span><span class="o">.</span><span class="n">mapping</span><span class="p">),</span>
-                <span class="n">compose</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rhs_mapping</span><span class="p">,</span> <span class="n">other</span><span class="o">.</span><span class="n">mapping</span><span class="p">),</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">lhs_total</span> <span class="ow">and</span> <span class="n">other</span><span class="o">.</span><span class="n">total</span><span class="p">,</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">rhs_total</span> <span class="ow">and</span> <span class="n">other</span><span class="o">.</span><span class="n">total</span><span class="p">,</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">attrs</span><span class="p">)</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="k">return</span> <span class="bp">NotImplemented</span></div>
-
-
-<div class="viewcode-block" id="Relation"><a class="viewcode-back" href="../../hierarchy.html#regraph.hierarchy.Relation">[docs]</a><span class="k">class</span> <span class="nc">Relation</span><span class="p">(</span><span class="n">AttributeContainter</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;Base class for relations equipped with attributes.&quot;&quot;&quot;</span></div>
-
-
-<div class="viewcode-block" id="GraphRelation"><a class="viewcode-back" href="../../hierarchy.html#regraph.hierarchy.GraphRelation">[docs]</a><span class="k">class</span> <span class="nc">GraphRelation</span><span class="p">(</span><span class="n">Relation</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;Data structure incapsulating relations on graphs.</span>
-
-<span class="sd">    Attributes</span>
-<span class="sd">    ----------</span>
-<span class="sd">    rel : dict</span>
-<span class="sd">        Dictionary represeting a relation between two graphs,</span>
-<span class="sd">        keys represent nodes of the left graph and values are</span>
-<span class="sd">        collections of nodes from the right graph to which they</span>
-<span class="sd">        are related.</span>
-<span class="sd">    attrs : dict</span>
-<span class="sd">        Dictionary containing attrs of graph relation.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-
-    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">relation_dict</span><span class="p">,</span> <span class="n">attrs</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Initialize graph relation.&quot;&quot;&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">rel</span> <span class="o">=</span> <span class="n">relation_dict</span>
-        <span class="k">if</span> <span class="n">attrs</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">attrs</span> <span class="o">=</span> <span class="n">attrs</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">attrs</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
-        <span class="k">return</span>
-
-<div class="viewcode-block" id="GraphRelation.left_domain"><a class="viewcode-back" href="../../hierarchy.html#regraph.hierarchy.GraphRelation.left_domain">[docs]</a>    <span class="k">def</span> <span class="nf">left_domain</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Return the definition domain of the left member of relation.&quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="nb">set</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rel</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span></div>
-
-<div class="viewcode-block" id="GraphRelation.right_domain"><a class="viewcode-back" href="../../hierarchy.html#regraph.hierarchy.GraphRelation.right_domain">[docs]</a>    <span class="k">def</span> <span class="nf">right_domain</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Return the definition domain of the right member of relation.&quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="nb">set</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rel</span><span class="o">.</span><span class="n">values</span><span class="p">())</span></div></div>
-
-
-<span class="c1"># class RuleGraphRelation(Relation):</span>
-<span class="c1">#     pass</span>
-
-
-<span class="c1"># class RuleRelation(Relation):</span>
-<span class="c1">#     &quot;&quot;&quot;Implements relations on rules.&quot;&quot;&quot;</span>
-
-<span class="c1">#     def __init__(self, lhs_pairs, p_pairs, rhs_pairs, attrs=None):</span>
-<span class="c1">#         &quot;&quot;&quot;Initialize graph relation.&quot;&quot;&quot;</span>
-<span class="c1">#         pass</span>
+<span class="kn">from</span> <span class="nn">regraph.components</span> <span class="k">import</span> <span class="p">(</span><span class="n">AttributeContainter</span><span class="p">,</span>
+                                <span class="n">GraphNode</span><span class="p">,</span>
+                                <span class="n">RuleNode</span><span class="p">,</span>
+                                <span class="n">Typing</span><span class="p">,</span>
+                                <span class="n">RuleTyping</span><span class="p">,</span>
+                                <span class="n">GraphRelation</span><span class="p">)</span>
 
 
 <div class="viewcode-block" id="Hierarchy"><a class="viewcode-back" href="../../hierarchy.html#regraph.hierarchy.Hierarchy">[docs]</a><span class="k">class</span> <span class="nc">Hierarchy</span><span class="p">(</span><span class="n">nx</span><span class="o">.</span><span class="n">DiGraph</span><span class="p">,</span> <span class="n">AttributeContainter</span><span class="p">):</span>
@@ -503,7 +194,7 @@
     <span class="k">def</span> <span class="nf">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;String representation of the hierarchy.&quot;&quot;&quot;</span>
         <span class="n">res</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
-        <span class="n">res</span> <span class="o">+=</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Graphs (directed == </span><span class="si">%s</span><span class="s2">): </span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">directed</span>
+        <span class="n">res</span> <span class="o">+=</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Graphs (directed == </span><span class="si">{}</span><span class="s2">): </span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">directed</span><span class="p">)</span>
         <span class="n">res</span> <span class="o">+=</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Nodes:</span><span class="se">\n</span><span class="s2">&quot;</span>
         <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
             <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">n</span><span class="p">],</span> <span class="n">GraphNode</span><span class="p">):</span>
@@ -512,37 +203,32 @@
                 <span class="n">res</span> <span class="o">+=</span> <span class="s2">&quot;Rule:&quot;</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="k">raise</span> <span class="n">HierarchyError</span><span class="p">(</span>
-                    <span class="s2">&quot;Hierarchy error: unknown type &#39;</span><span class="si">%s</span><span class="s2">&#39; of the node &#39;</span><span class="si">%s</span><span class="s2">&#39;!&quot;</span> <span class="o">%</span>
-                    <span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">n</span><span class="p">]),</span> <span class="n">n</span><span class="p">)</span>
-                <span class="p">)</span>
-            <span class="n">res</span> <span class="o">+=</span> <span class="s2">&quot; &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">n</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot; &quot;</span> <span class="o">+</span>\
-                <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">n</span><span class="p">]</span><span class="o">.</span><span class="n">attrs</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span>
-        <span class="n">res</span> <span class="o">+=</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span>
-        <span class="n">res</span> <span class="o">+=</span> <span class="s2">&quot;Typing homomorphisms: </span><span class="se">\n</span><span class="s2">&quot;</span>
+                    <span class="s2">&quot;Hierarchy error: unknown type &#39;</span><span class="si">{}</span><span class="s2">&#39; of &quot;</span>
+                    <span class="s2">&quot;the node &#39;</span><span class="si">{}</span><span class="s2">&#39;&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">n</span><span class="p">]),</span> <span class="n">n</span><span class="p">))</span>
+            <span class="n">res</span> <span class="o">+=</span> <span class="s2">&quot; </span><span class="si">{}</span><span class="s2"> </span><span class="si">{}</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">n</span><span class="p">]</span><span class="o">.</span><span class="n">attrs</span><span class="p">)</span>
+        <span class="n">res</span> <span class="o">+=</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Typing homomorphisms: </span><span class="se">\n</span><span class="s2">&quot;</span>
         <span class="k">for</span> <span class="n">n1</span><span class="p">,</span> <span class="n">n2</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">edges</span><span class="p">():</span>
             <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">edge</span><span class="p">[</span><span class="n">n1</span><span class="p">][</span><span class="n">n2</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph_typing_cls</span><span class="p">):</span>
-                <span class="n">res</span> <span class="o">+=</span> <span class="s2">&quot;</span><span class="si">%s</span><span class="s2"> -&gt; </span><span class="si">%s</span><span class="s2">: total == </span><span class="si">%s</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">%</span>\
-                    <span class="p">(</span><span class="n">n1</span><span class="p">,</span> <span class="n">n2</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">edge</span><span class="p">[</span><span class="n">n1</span><span class="p">][</span><span class="n">n2</span><span class="p">]</span><span class="o">.</span><span class="n">total</span><span class="p">)</span>
+                <span class="n">res</span> <span class="o">+=</span> <span class="s2">&quot;</span><span class="si">{}</span><span class="s2"> -&gt; </span><span class="si">{}</span><span class="s2">: total == </span><span class="si">{}</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                    <span class="n">n1</span><span class="p">,</span> <span class="n">n2</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">edge</span><span class="p">[</span><span class="n">n1</span><span class="p">][</span><span class="n">n2</span><span class="p">]</span><span class="o">.</span><span class="n">total</span><span class="p">)</span>
 
             <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">edge</span><span class="p">[</span><span class="n">n1</span><span class="p">][</span><span class="n">n2</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">rule_typing_cls</span><span class="p">):</span>
                 <span class="n">res</span> <span class="o">+=</span>\
-                    <span class="p">(</span><span class="s2">&quot;</span><span class="si">%s</span><span class="s2"> -&gt; </span><span class="si">%s</span><span class="s2">: lhs_total == </span><span class="si">%s</span><span class="s2">, rhs_total == </span><span class="si">%s</span><span class="s2">,&quot;</span><span class="p">)</span> <span class="o">%</span>\
-                    <span class="p">(</span><span class="n">n1</span><span class="p">,</span> <span class="n">n2</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">edge</span><span class="p">[</span><span class="n">n1</span><span class="p">][</span><span class="n">n2</span><span class="p">]</span><span class="o">.</span><span class="n">lhs_total</span><span class="p">,</span>
-                     <span class="bp">self</span><span class="o">.</span><span class="n">edge</span><span class="p">[</span><span class="n">n1</span><span class="p">][</span><span class="n">n2</span><span class="p">]</span><span class="o">.</span><span class="n">rhs_total</span><span class="p">)</span>
+                    <span class="p">(</span><span class="s2">&quot;</span><span class="si">{}</span><span class="s2"> -&gt; </span><span class="si">{}</span><span class="s2">: lhs_total == </span><span class="si">{}</span><span class="s2">, rhs_total == </span><span class="si">{}</span><span class="s2">,&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                        <span class="n">n1</span><span class="p">,</span> <span class="n">n2</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">edge</span><span class="p">[</span><span class="n">n1</span><span class="p">][</span><span class="n">n2</span><span class="p">]</span><span class="o">.</span><span class="n">lhs_total</span><span class="p">,</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">edge</span><span class="p">[</span><span class="n">n1</span><span class="p">][</span><span class="n">n2</span><span class="p">]</span><span class="o">.</span><span class="n">rhs_total</span><span class="p">)</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="k">raise</span> <span class="n">HierarchyError</span><span class="p">(</span>
-                    <span class="s2">&quot;Hierarchy error: unknown type &#39;</span><span class="si">%s</span><span class="s2">&#39; of the edge &#39;</span><span class="si">%s</span><span class="s2">-&gt;</span><span class="si">%s</span><span class="s2">&#39;!&quot;</span> <span class="o">%</span>
-                    <span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">edge</span><span class="p">[</span><span class="n">n1</span><span class="p">][</span><span class="n">n2</span><span class="p">]),</span> <span class="n">n1</span><span class="p">,</span> <span class="n">n2</span><span class="p">))</span>
+                    <span class="s2">&quot;Hierarchy error: unknown type &#39;</span><span class="si">{}</span><span class="s2">&#39; &quot;</span>
+                    <span class="s2">&quot;of the edge &#39;</span><span class="si">{}</span><span class="s2">-&gt;</span><span class="si">{}</span><span class="s2">&#39;&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                        <span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">edge</span><span class="p">[</span><span class="n">n1</span><span class="p">][</span><span class="n">n2</span><span class="p">]),</span> <span class="n">n1</span><span class="p">,</span> <span class="n">n2</span><span class="p">))</span>
 
         <span class="n">res</span> <span class="o">+=</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Relations:</span><span class="se">\n</span><span class="s2">&quot;</span>
         <span class="k">for</span> <span class="n">n1</span><span class="p">,</span> <span class="n">n2</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">relations</span><span class="p">():</span>
-            <span class="n">res</span> <span class="o">+=</span> <span class="s2">&quot;</span><span class="si">%s</span><span class="s2">-</span><span class="si">%s</span><span class="s2">: </span><span class="si">%s</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">n1</span><span class="p">,</span> <span class="n">n2</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">relation_edge</span><span class="p">[</span><span class="n">n1</span><span class="p">][</span><span class="n">n2</span><span class="p">]</span><span class="o">.</span><span class="n">attrs</span><span class="p">))</span>
+            <span class="n">res</span> <span class="o">+=</span> <span class="s2">&quot;</span><span class="si">{}</span><span class="s2">-</span><span class="si">{}</span><span class="s2">: </span><span class="si">{}</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                <span class="n">n1</span><span class="p">,</span> <span class="n">n2</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">relation_edge</span><span class="p">[</span><span class="n">n1</span><span class="p">][</span><span class="n">n2</span><span class="p">]</span><span class="o">.</span><span class="n">attrs</span><span class="p">))</span>
 
-        <span class="n">res</span> <span class="o">+=</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span>
-        <span class="n">res</span> <span class="o">+=</span> <span class="s2">&quot;attributes : </span><span class="se">\n</span><span class="s2">&quot;</span>
-        <span class="n">res</span> <span class="o">+=</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">attrs</span><span class="p">)</span>
-        <span class="n">res</span> <span class="o">+=</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span>
-
+        <span class="n">res</span> <span class="o">+=</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">attributes : </span><span class="se">\n</span><span class="si">{}</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">attrs</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">res</span>
 
     <span class="k">def</span> <span class="nf">__eq__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">hie</span><span class="p">):</span>
@@ -646,17 +332,14 @@
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">directed</span> <span class="o">!=</span> <span class="n">graph</span><span class="o">.</span><span class="n">is_directed</span><span class="p">():</span>
             <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">directed</span><span class="p">:</span>
                 <span class="k">raise</span> <span class="n">HierarchyError</span><span class="p">(</span>
-                    <span class="s2">&quot;Hierarchy is defined for directed == </span><span class="si">%s</span><span class="s2"> graphs!&quot;</span> <span class="o">%</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">directed</span>
-                <span class="p">)</span>
+                    <span class="s2">&quot;Hierarchy is defined for directed == </span><span class="si">{}</span><span class="s2"> graphs!&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">directed</span><span class="p">))</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="k">raise</span> <span class="n">HierarchyError</span><span class="p">(</span>
                     <span class="s2">&quot;Hierarchy is defined for undirected graphs!&quot;</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">graph_id</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
             <span class="k">raise</span> <span class="n">HierarchyError</span><span class="p">(</span>
-                <span class="s2">&quot;Node &#39;</span><span class="si">%s</span><span class="s2">&#39; already exists in the hierarchy!&quot;</span> <span class="o">%</span>
-                <span class="n">graph_id</span>
-            <span class="p">)</span>
+                <span class="s2">&quot;Node &#39;</span><span class="si">{}</span><span class="s2">&#39; already exists in the hierarchy!&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">graph_id</span><span class="p">))</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">add_node</span><span class="p">(</span><span class="n">graph_id</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">graph_attrs</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">normalize_attrs</span><span class="p">(</span><span class="n">graph_attrs</span><span class="p">)</span>
@@ -727,8 +410,7 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">rule_rhs_typing</span><span class="p">[</span><span class="n">rule_id</span><span class="p">]</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
         <span class="k">return</span></div>
 
-<div class="viewcode-block" id="Hierarchy.add_typing"><a class="viewcode-back" href="../../hierarchy.html#regraph.hierarchy.Hierarchy.add_typing">[docs]</a>    <span class="k">def</span> <span class="nf">add_typing</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">source</span><span class="p">,</span> <span class="n">target</span><span class="p">,</span> <span class="n">mapping</span><span class="p">,</span>
-                   <span class="n">total</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">attrs</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<div class="viewcode-block" id="Hierarchy.add_typing"><a class="viewcode-back" href="../../hierarchy.html#regraph.hierarchy.Hierarchy.add_typing">[docs]</a>    <span class="k">def</span> <span class="nf">add_typing</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">source</span><span class="p">,</span> <span class="n">target</span><span class="p">,</span> <span class="n">mapping</span><span class="p">,</span> <span class="n">total</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">attrs</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Add homomorphism to the hierarchy.</span>
 
 <span class="sd">        Parameters</span>
@@ -812,7 +494,7 @@
         <span class="p">)</span>
 
         <span class="c1"># check if newly created path commutes with existing shortest paths</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_check_consistency</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="n">target</span><span class="p">,</span> <span class="n">mapping</span><span class="p">)</span>
+        <span class="n">type_checking</span><span class="o">.</span><span class="n">_check_consistency</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">source</span><span class="p">,</span> <span class="n">target</span><span class="p">,</span> <span class="n">mapping</span><span class="p">)</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">add_edge</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="n">target</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">attrs</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
@@ -877,9 +559,10 @@
             <span class="p">)</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">graph_id</span><span class="p">],</span> <span class="n">GraphNode</span><span class="p">):</span>
             <span class="k">raise</span> <span class="n">HierarchyError</span><span class="p">(</span>
-                <span class="s2">&quot;Target of a rule typing should be a graph, `</span><span class="si">%s</span><span class="s2">` is provided!&quot;</span> <span class="o">%</span>
-                <span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">graph_id</span><span class="p">])</span>
-            <span class="p">)</span>
+                <span class="s2">&quot;Target of a rule typing should be a graph, &quot;</span>
+                <span class="s2">&quot;&#39;</span><span class="si">{}</span><span class="s2">&#39; is provided!&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                    <span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">graph_id</span><span class="p">])))</span>
+
         <span class="c1"># check if an lhs typing is valid</span>
         <span class="n">check_homomorphism</span><span class="p">(</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">rule_id</span><span class="p">]</span><span class="o">.</span><span class="n">rule</span><span class="o">.</span><span class="n">lhs</span><span class="p">,</span>
@@ -922,8 +605,8 @@
         <span class="p">)</span>
 
         <span class="c1"># check if newly created path commutes with existing shortest paths</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_check_rule_typing</span><span class="p">(</span>
-            <span class="n">rule_id</span><span class="p">,</span> <span class="n">graph_id</span><span class="p">,</span> <span class="n">lhs_mapping</span><span class="p">,</span> <span class="n">new_rhs_mapping</span><span class="p">)</span>
+        <span class="n">type_checking</span><span class="o">.</span><span class="n">_check_rule_typing</span><span class="p">(</span>
+            <span class="bp">self</span><span class="p">,</span> <span class="n">rule_id</span><span class="p">,</span> <span class="n">graph_id</span><span class="p">,</span> <span class="n">lhs_mapping</span><span class="p">,</span> <span class="n">new_rhs_mapping</span><span class="p">)</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">add_edge</span><span class="p">(</span><span class="n">rule_id</span><span class="p">,</span> <span class="n">graph_id</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">attrs</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
@@ -1067,6 +750,10 @@
             <span class="p">{</span><span class="n">left</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">relation_edge</span><span class="p">[</span><span class="n">right</span><span class="p">][</span><span class="n">left</span><span class="p">]</span><span class="o">.</span><span class="n">rel</span><span class="p">})</span>
         <span class="k">return</span></div>
 
+<div class="viewcode-block" id="Hierarchy.add_cycle"><a class="viewcode-back" href="../../hierarchy.html#regraph.hierarchy.Hierarchy.add_cycle">[docs]</a>    <span class="k">def</span> <span class="nf">add_cycle</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">nodes</span><span class="p">,</span> <span class="o">**</span><span class="n">attr</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Method of adding cycle to the graph hierarchy.&quot;&quot;&quot;</span>
+        <span class="k">raise</span> <span class="n">HierarchyError</span><span class="p">(</span><span class="s2">&quot;Cycles are not allowed in graph hierarchy&quot;</span><span class="p">)</span></div>
+
 <div class="viewcode-block" id="Hierarchy.remove_node"><a class="viewcode-back" href="../../hierarchy.html#regraph.hierarchy.Hierarchy.remove_node">[docs]</a>    <span class="k">def</span> <span class="nf">remove_node</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node_id</span><span class="p">,</span> <span class="n">reconnect</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Remove node from the hierarchy.</span>
 
@@ -1182,9 +869,22 @@
                 <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">rule_rhs_typing</span><span class="p">[</span><span class="n">k</span><span class="p">][</span><span class="n">node_id</span><span class="p">]</span>
         <span class="k">return</span></div>
 
-<div class="viewcode-block" id="Hierarchy.add_cycle"><a class="viewcode-back" href="../../hierarchy.html#regraph.hierarchy.Hierarchy.add_cycle">[docs]</a>    <span class="k">def</span> <span class="nf">add_cycle</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">nodes</span><span class="p">,</span> <span class="o">**</span><span class="n">attr</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Method of adding cycle to the graph hierarchy.&quot;&quot;&quot;</span>
-        <span class="k">raise</span> <span class="n">HierarchyError</span><span class="p">(</span><span class="s2">&quot;Cycles are not allowed in graph hierarchy&quot;</span><span class="p">)</span></div>
+<div class="viewcode-block" id="Hierarchy.remove_edge"><a class="viewcode-back" href="../../hierarchy.html#regraph.hierarchy.Hierarchy.remove_edge">[docs]</a>    <span class="k">def</span> <span class="nf">remove_edge</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">u</span><span class="p">,</span> <span class="n">v</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Remove an edge from the hierarchy.&quot;&quot;&quot;</span>
+        <span class="n">nx</span><span class="o">.</span><span class="n">DiGraph</span><span class="o">.</span><span class="n">remove_edge</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">u</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">u</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">typing</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">v</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">typing</span><span class="p">[</span><span class="n">u</span><span class="p">]</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">typing</span><span class="p">[</span><span class="n">u</span><span class="p">][</span><span class="n">v</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">v</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">typing</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">u</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">typing</span><span class="p">[</span><span class="n">v</span><span class="p">]</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">typing</span><span class="p">[</span><span class="n">v</span><span class="p">][</span><span class="n">u</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">u</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">rule_lhs_typing</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">v</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">rule_lhs_typing</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">rule_lhs_typing</span><span class="p">[</span><span class="n">u</span><span class="p">][</span><span class="n">v</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">v</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">rule_rhs_typing</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">u</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">rule_rhs_typing</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">rule_rhs_typing</span><span class="p">[</span><span class="n">v</span><span class="p">][</span><span class="n">u</span><span class="p">]</span>
+        <span class="k">return</span></div>
 
 <div class="viewcode-block" id="Hierarchy.remove_relation"><a class="viewcode-back" href="../../hierarchy.html#regraph.hierarchy.Hierarchy.remove_relation">[docs]</a>    <span class="k">def</span> <span class="nf">remove_relation</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">g1</span><span class="p">,</span> <span class="n">g2</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Remove relation from the hierarchy.&quot;&quot;&quot;</span>
@@ -1209,22 +909,42 @@
 <div class="viewcode-block" id="Hierarchy.relation_to_span"><a class="viewcode-back" href="../../hierarchy.html#regraph.hierarchy.Hierarchy.relation_to_span">[docs]</a>    <span class="k">def</span> <span class="nf">relation_to_span</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">left</span><span class="p">,</span> <span class="n">right</span><span class="p">,</span> <span class="n">edges</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">attrs</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Convert relation to a span.</span>
 
+<span class="sd">        This method computes the span of the form</span>
+<span class="sd">        `left` &lt;- `common` -&gt; `right` from a binary</span>
+<span class="sd">        symmetric relation between two graphs in</span>
+<span class="sd">        the hierarchy.</span>
+
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
 <span class="sd">        left</span>
+<span class="sd">            Id of the hierarchy&#39;s node represening the `left` graph</span>
 <span class="sd">        right</span>
-<span class="sd">        edges</span>
-<span class="sd">        attrs</span>
+<span class="sd">            Id of the hierarchy&#39;s node represening the `right` graph</span>
+<span class="sd">        edges : bool, optional</span>
+<span class="sd">            If True, maximal set of edges is added to the common</span>
+<span class="sd">            part graph</span>
+<span class="sd">        attrs : bool, optional</span>
+<span class="sd">            If True, maximal dict of attrs is added to the nodes of</span>
+<span class="sd">            the common part graph</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
-<span class="sd">        new_graph : nx.(Di)Graph</span>
+<span class="sd">        common : nx.(Di)Graph</span>
+<span class="sd">            Graph representing the common part graph induced</span>
+<span class="sd">            by the relation</span>
 <span class="sd">        left_h : dict</span>
+<span class="sd">            Homomorphism from the common part graph to the left</span>
+<span class="sd">            graph of the relation</span>
 <span class="sd">        right_h : dict</span>
+<span class="sd">            Homomorphism from the common part graph to the right</span>
+<span class="sd">            graph of the relation</span>
 
 <span class="sd">        Raises</span>
 <span class="sd">        ------</span>
 <span class="sd">        HierarchyError</span>
+<span class="sd">            If nodes corresponding to either `left` or `right` ids</span>
+<span class="sd">            do not exist in the hierarchy, or there is no relation</span>
+<span class="sd">            between them.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="n">left</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
             <span class="k">raise</span> <span class="n">HierarchyError</span><span class="p">(</span>
@@ -1239,14 +959,14 @@
                 <span class="s2">&quot;Relation between graphs &#39;</span><span class="si">%s</span><span class="s2">&#39; and &#39;</span><span class="si">%s</span><span class="s2">&#39; is not defined&quot;</span> <span class="o">%</span>
                 <span class="p">(</span><span class="n">left</span><span class="p">,</span> <span class="n">right</span><span class="p">)</span>
             <span class="p">)</span>
-        <span class="n">new_graph</span><span class="p">,</span> <span class="n">left_h</span><span class="p">,</span> <span class="n">right_h</span> <span class="o">=</span> <span class="n">relation_to_span</span><span class="p">(</span>
+        <span class="n">common</span><span class="p">,</span> <span class="n">left_h</span><span class="p">,</span> <span class="n">right_h</span> <span class="o">=</span> <span class="n">relation_to_span</span><span class="p">(</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">left</span><span class="p">]</span><span class="o">.</span><span class="n">graph</span><span class="p">,</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">right</span><span class="p">]</span><span class="o">.</span><span class="n">graph</span><span class="p">,</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">relation</span><span class="p">[</span><span class="n">left</span><span class="p">][</span><span class="n">right</span><span class="p">],</span>
             <span class="n">edges</span><span class="p">,</span>
             <span class="n">attrs</span><span class="p">,</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">directed</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">new_graph</span><span class="p">,</span> <span class="n">left_h</span><span class="p">,</span> <span class="n">right_h</span></div>
+        <span class="k">return</span> <span class="n">common</span><span class="p">,</span> <span class="n">left_h</span><span class="p">,</span> <span class="n">right_h</span></div>
 
 <div class="viewcode-block" id="Hierarchy.node_type"><a class="viewcode-back" href="../../hierarchy.html#regraph.hierarchy.Hierarchy.node_type">[docs]</a>    <span class="k">def</span> <span class="nf">node_type</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">graph_id</span><span class="p">,</span> <span class="n">node_id</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Get a list of the immediate types of a node.&quot;&quot;&quot;</span>
@@ -1315,7 +1035,33 @@
         <span class="k">return</span></div>
 
 <div class="viewcode-block" id="Hierarchy.compose_path_typing"><a class="viewcode-back" href="../../hierarchy.html#regraph.hierarchy.Hierarchy.compose_path_typing">[docs]</a>    <span class="k">def</span> <span class="nf">compose_path_typing</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Compose homomorphisms along the path.&quot;&quot;&quot;</span>
+        <span class="sd">&quot;&quot;&quot;Compose homomorphisms along the path.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        path : list</span>
+<span class="sd">            List of nodes of the hierarchy forming a path</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        If source node of the path is a graph</span>
+
+<span class="sd">        homomorphism : dict</span>
+<span class="sd">            Dictionary containg the typing of the nodes</span>
+<span class="sd">            from the source graph of the path by the nodes</span>
+<span class="sd">            of the target graph</span>
+
+<span class="sd">        if source node of the path is a rule</span>
+
+<span class="sd">        lhs_homomorphism : dict</span>
+<span class="sd">            Dictionary containg the typing of the nodes</span>
+<span class="sd">            from the left-hand side of the source rule</span>
+<span class="sd">            of the path by the nodes of the target graph</span>
+<span class="sd">        rhs_homomorphism : dict</span>
+<span class="sd">            Dictionary containg the typing of the nodes</span>
+<span class="sd">            from the right-hand side of the source rule</span>
+<span class="sd">            of the path by the nodes of the target graph</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">s</span> <span class="o">=</span> <span class="n">path</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">s</span><span class="p">],</span> <span class="n">GraphNode</span><span class="p">):</span>
             <span class="n">t</span> <span class="o">=</span> <span class="n">path</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
@@ -1344,128 +1090,6 @@
     <span class="k">def</span> <span class="nf">_path_from_rule</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">):</span>
         <span class="n">s</span> <span class="o">=</span> <span class="n">path</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
         <span class="k">return</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">s</span><span class="p">],</span> <span class="n">RuleNode</span><span class="p">)</span>
-
-    <span class="k">def</span> <span class="nf">_check_rule_typing</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">rule_id</span><span class="p">,</span> <span class="n">graph_id</span><span class="p">,</span> <span class="n">lhs_mapping</span><span class="p">,</span> <span class="n">rhs_mapping</span><span class="p">):</span>
-        <span class="n">all_paths</span> <span class="o">=</span> <span class="n">nx</span><span class="o">.</span><span class="n">all_pairs_shortest_path</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
-
-        <span class="n">paths_from_target</span> <span class="o">=</span> <span class="p">{}</span>
-        <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
-            <span class="k">if</span> <span class="n">s</span> <span class="o">==</span> <span class="n">graph_id</span><span class="p">:</span>
-                <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">all_paths</span><span class="p">[</span><span class="n">graph_id</span><span class="p">]</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
-                    <span class="n">paths_from_target</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">all_paths</span><span class="p">[</span><span class="n">graph_id</span><span class="p">][</span><span class="n">key</span><span class="p">]</span>
-
-        <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">paths_from_target</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
-            <span class="k">if</span> <span class="n">t</span> <span class="o">!=</span> <span class="n">graph_id</span><span class="p">:</span>
-                <span class="n">new_lhs_h</span> <span class="o">=</span> <span class="n">compose</span><span class="p">(</span>
-                    <span class="n">lhs_mapping</span><span class="p">,</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">compose_path_typing</span><span class="p">(</span><span class="n">paths_from_target</span><span class="p">[</span><span class="n">t</span><span class="p">]))</span>
-                <span class="n">new_rhs_h</span> <span class="o">=</span> <span class="n">compose</span><span class="p">(</span>
-                    <span class="n">rhs_mapping</span><span class="p">,</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">compose_path_typing</span><span class="p">(</span><span class="n">paths_from_target</span><span class="p">[</span><span class="n">t</span><span class="p">]))</span>
-                <span class="k">try</span><span class="p">:</span>
-                    <span class="c1"># find homomorphisms from s to t via other paths</span>
-                    <span class="n">s_t_paths</span> <span class="o">=</span> <span class="n">nx</span><span class="o">.</span><span class="n">all_shortest_paths</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">rule_id</span><span class="p">,</span> <span class="n">t</span><span class="p">)</span>
-                    <span class="k">for</span> <span class="n">path</span> <span class="ow">in</span> <span class="n">s_t_paths</span><span class="p">:</span>
-                        <span class="n">lhs_h</span><span class="p">,</span> <span class="n">rhs_h</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">compose_path_typing</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
-                        <span class="k">if</span> <span class="n">lhs_h</span> <span class="o">!=</span> <span class="n">new_lhs_h</span><span class="p">:</span>
-                            <span class="k">raise</span> <span class="n">HierarchyError</span><span class="p">(</span>
-                                <span class="s2">&quot;Invalid lhs typing: homomorphism does not &quot;</span>
-                                <span class="s2">&quot;commute with an existing &quot;</span>
-                                <span class="s2">&quot;path from &#39;</span><span class="si">%s</span><span class="s2">&#39; to &#39;</span><span class="si">%s</span><span class="s2">&#39;!&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">t</span><span class="p">)</span>
-                            <span class="p">)</span>
-                        <span class="k">if</span> <span class="n">rhs_h</span> <span class="o">!=</span> <span class="n">new_rhs_h</span><span class="p">:</span>
-                            <span class="k">raise</span> <span class="n">HierarchyError</span><span class="p">(</span>
-                                <span class="s2">&quot;Invalid rhs typing: homomorphism does not &quot;</span>
-                                <span class="s2">&quot;commute with an existing &quot;</span> <span class="o">+</span>
-                                <span class="s2">&quot;path from &#39;</span><span class="si">%s</span><span class="s2">&#39; to &#39;</span><span class="si">%s</span><span class="s2">&#39;!&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">t</span><span class="p">)</span>
-                            <span class="p">)</span>
-                <span class="k">except</span><span class="p">(</span><span class="n">nx</span><span class="o">.</span><span class="n">NetworkXNoPath</span><span class="p">):</span>
-                    <span class="k">pass</span>
-        <span class="k">return</span>
-
-    <span class="k">def</span> <span class="nf">_check_consistency</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">source</span><span class="p">,</span> <span class="n">target</span><span class="p">,</span> <span class="n">mapping</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-        <span class="n">all_paths</span> <span class="o">=</span> <span class="n">nx</span><span class="o">.</span><span class="n">all_pairs_shortest_path</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
-
-        <span class="n">paths_to_source</span> <span class="o">=</span> <span class="p">{}</span>
-        <span class="n">paths_from_target</span> <span class="o">=</span> <span class="p">{}</span>
-        <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
-            <span class="k">if</span> <span class="n">source</span> <span class="ow">in</span> <span class="n">all_paths</span><span class="p">[</span><span class="n">s</span><span class="p">]</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
-                <span class="n">paths_to_source</span><span class="p">[</span><span class="n">s</span><span class="p">]</span> <span class="o">=</span> <span class="n">all_paths</span><span class="p">[</span><span class="n">s</span><span class="p">][</span><span class="n">source</span><span class="p">]</span>
-            <span class="k">if</span> <span class="n">s</span> <span class="o">==</span> <span class="n">target</span><span class="p">:</span>
-                <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">all_paths</span><span class="p">[</span><span class="n">target</span><span class="p">]</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
-                    <span class="n">paths_from_target</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">all_paths</span><span class="p">[</span><span class="n">target</span><span class="p">][</span><span class="n">key</span><span class="p">]</span>
-
-        <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">paths_to_source</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
-            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_path_from_rule</span><span class="p">(</span><span class="n">paths_to_source</span><span class="p">[</span><span class="n">s</span><span class="p">]):</span>
-                <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">paths_from_target</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
-                    <span class="c1"># find homomorphism from s to t via new path</span>
-                    <span class="k">if</span> <span class="n">s</span> <span class="o">==</span> <span class="n">source</span><span class="p">:</span>
-                        <span class="k">raise</span> <span class="n">HierarchyError</span><span class="p">(</span>
-                            <span class="s2">&quot;Found a rule typing some node in the hierarchy!&quot;</span>
-                        <span class="p">)</span>
-                    <span class="n">new_lhs_h</span><span class="p">,</span> <span class="n">new_rhs_h</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">compose_path_typing</span><span class="p">(</span>
-                        <span class="n">paths_to_source</span><span class="p">[</span><span class="n">s</span><span class="p">])</span>
-                    <span class="n">new_lhs_h</span> <span class="o">=</span> <span class="n">compose</span><span class="p">(</span><span class="n">new_lhs_h</span><span class="p">,</span> <span class="n">mapping</span><span class="p">)</span>
-                    <span class="n">new_rhs_h</span> <span class="o">=</span> <span class="n">compose</span><span class="p">(</span><span class="n">new_rhs_h</span><span class="p">,</span> <span class="n">mapping</span><span class="p">)</span>
-
-                    <span class="k">if</span> <span class="n">t</span> <span class="o">!=</span> <span class="n">target</span><span class="p">:</span>
-                        <span class="n">new_lhs_h</span> <span class="o">=</span> <span class="n">compose</span><span class="p">(</span>
-                            <span class="n">new_lhs_h</span><span class="p">,</span>
-                            <span class="bp">self</span><span class="o">.</span><span class="n">compose_path_typing</span><span class="p">(</span><span class="n">paths_from_target</span><span class="p">[</span><span class="n">t</span><span class="p">])</span>
-                        <span class="p">)</span>
-                        <span class="n">new_rhs_h</span> <span class="o">=</span> <span class="n">compose</span><span class="p">(</span>
-                            <span class="n">new_rhs_h</span><span class="p">,</span>
-                            <span class="bp">self</span><span class="o">.</span><span class="n">compose_path_typing</span><span class="p">(</span><span class="n">paths_from_target</span><span class="p">[</span><span class="n">t</span><span class="p">]),</span>
-                        <span class="p">)</span>
-                    <span class="k">try</span><span class="p">:</span>
-                        <span class="c1"># find homomorphisms from s to t via other paths</span>
-                        <span class="n">s_t_paths</span> <span class="o">=</span> <span class="n">nx</span><span class="o">.</span><span class="n">all_shortest_paths</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">s</span><span class="p">,</span> <span class="n">t</span><span class="p">)</span>
-                        <span class="k">for</span> <span class="n">path</span> <span class="ow">in</span> <span class="n">s_t_paths</span><span class="p">:</span>
-                            <span class="n">lhs_h</span><span class="p">,</span> <span class="n">rhs_h</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">compose_path_typing</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
-                            <span class="k">if</span> <span class="n">lhs_h</span> <span class="o">!=</span> <span class="n">new_lhs_h</span><span class="p">:</span>
-                                <span class="k">raise</span> <span class="n">HierarchyError</span><span class="p">(</span>
-                                    <span class="s2">&quot;Invalid lhs typing: homomorphism does &quot;</span>
-                                    <span class="s2">&quot;not commute with an existing &quot;</span> <span class="o">+</span>
-                                    <span class="s2">&quot;path from &#39;</span><span class="si">%s</span><span class="s2">&#39; to &#39;</span><span class="si">%s</span><span class="s2">&#39;!&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">t</span><span class="p">)</span>
-                                <span class="p">)</span>
-                            <span class="k">if</span> <span class="n">rhs_h</span> <span class="o">!=</span> <span class="n">new_rhs_h</span><span class="p">:</span>
-                                <span class="k">raise</span> <span class="n">HierarchyError</span><span class="p">(</span>
-                                    <span class="s2">&quot;Invalid rhs typing: homomorphism does &quot;</span>
-                                    <span class="s2">&quot;not commute with an existing &quot;</span> <span class="o">+</span>
-                                    <span class="s2">&quot;path from &#39;</span><span class="si">%s</span><span class="s2">&#39; to &#39;</span><span class="si">%s</span><span class="s2">&#39;!&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">t</span><span class="p">)</span>
-                                <span class="p">)</span>
-                    <span class="k">except</span><span class="p">(</span><span class="n">nx</span><span class="o">.</span><span class="n">NetworkXNoPath</span><span class="p">):</span>
-                        <span class="k">pass</span>
-            <span class="k">else</span><span class="p">:</span>
-                <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">paths_from_target</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
-                    <span class="c1"># find homomorphism from s to t via new path</span>
-                    <span class="k">if</span> <span class="n">s</span> <span class="o">!=</span> <span class="n">source</span><span class="p">:</span>
-                        <span class="n">new_homomorphism</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">compose_path_typing</span><span class="p">(</span>
-                            <span class="n">paths_to_source</span><span class="p">[</span><span class="n">s</span><span class="p">])</span>
-                    <span class="k">else</span><span class="p">:</span>
-                        <span class="n">new_homomorphism</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">([(</span><span class="n">key</span><span class="p">,</span> <span class="n">key</span><span class="p">)</span>
-                                                 <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">mapping</span><span class="o">.</span><span class="n">items</span><span class="p">()])</span>
-                    <span class="n">new_homomorphism</span> <span class="o">=</span> <span class="n">compose</span><span class="p">(</span>
-                        <span class="n">new_homomorphism</span><span class="p">,</span> <span class="n">mapping</span><span class="p">)</span>
-                    <span class="k">if</span> <span class="n">t</span> <span class="o">!=</span> <span class="n">target</span><span class="p">:</span>
-                        <span class="n">new_homomorphism</span> <span class="o">=</span> <span class="n">compose</span><span class="p">(</span>
-                            <span class="n">new_homomorphism</span><span class="p">,</span>
-                            <span class="bp">self</span><span class="o">.</span><span class="n">compose_path_typing</span><span class="p">(</span><span class="n">paths_from_target</span><span class="p">[</span><span class="n">t</span><span class="p">])</span>
-                        <span class="p">)</span>
-
-                    <span class="c1"># find homomorphisms from s to t via other paths</span>
-                    <span class="n">s_t_paths</span> <span class="o">=</span> <span class="n">nx</span><span class="o">.</span><span class="n">all_shortest_paths</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">s</span><span class="p">,</span> <span class="n">t</span><span class="p">)</span>
-                    <span class="k">try</span><span class="p">:</span>
-                        <span class="c1"># check only the first path</span>
-                        <span class="k">for</span> <span class="n">path</span> <span class="ow">in</span> <span class="n">s_t_paths</span><span class="p">:</span>
-                            <span class="n">path_homomorphism</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">compose_path_typing</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
-                            <span class="k">if</span> <span class="n">path_homomorphism</span> <span class="o">!=</span> <span class="n">new_homomorphism</span><span class="p">:</span>
-                                <span class="k">raise</span> <span class="n">HierarchyError</span><span class="p">(</span>
-                                    <span class="s2">&quot;Homomorphism does not commute with an &quot;</span> <span class="o">+</span>
-                                    <span class="s2">&quot;existing path from &#39;</span><span class="si">%s</span><span class="s2">&#39; to &#39;</span><span class="si">%s</span><span class="s2">&#39;!&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">t</span><span class="p">)</span>
-                                <span class="p">)</span>
-                    <span class="k">except</span><span class="p">(</span><span class="n">nx</span><span class="o">.</span><span class="n">NetworkXNoPath</span><span class="p">):</span>
-                        <span class="k">pass</span>
 
     <span class="k">def</span> <span class="nf">_get_ancestors_paths</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">graph_id</span><span class="p">):</span>
         <span class="n">ancestors</span> <span class="o">=</span> <span class="p">{}</span>
@@ -1826,7 +1450,6 @@
 <div class="viewcode-block" id="Hierarchy.rewrite"><a class="viewcode-back" href="../../hierarchy.html#regraph.hierarchy.Hierarchy.rewrite">[docs]</a>    <span class="k">def</span> <span class="nf">rewrite</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">graph_id</span><span class="p">,</span> <span class="n">rule</span><span class="p">,</span> <span class="n">instance</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
                 <span class="n">lhs_typing</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">rhs_typing</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">strict</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Rewrite and propagate the changes up &amp; down.&quot;&quot;&quot;</span>
-
         <span class="c1"># start = time.time()</span>
         <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">graph_id</span><span class="p">])</span> <span class="o">==</span> <span class="n">RuleNode</span><span class="p">:</span>
             <span class="k">raise</span> <span class="n">ReGraphError</span><span class="p">(</span><span class="s2">&quot;Rewriting of a rule is not implemented!&quot;</span><span class="p">)</span>
@@ -1840,38 +1463,38 @@
         <span class="c1"># 1a. Autocomplete typing</span>
 
         <span class="n">new_lhs_typing</span><span class="p">,</span> <span class="n">new_rhs_typing</span> <span class="o">=</span>\
-            <span class="n">rule_type_checking</span><span class="o">.</span><span class="n">_autocomplete_typing</span><span class="p">(</span>
+            <span class="n">type_checking</span><span class="o">.</span><span class="n">_autocomplete_typing</span><span class="p">(</span>
                 <span class="bp">self</span><span class="p">,</span> <span class="n">graph_id</span><span class="p">,</span> <span class="n">instance</span><span class="p">,</span> <span class="n">lhs_typing</span><span class="p">,</span>
                 <span class="n">rhs_typing</span><span class="p">,</span> <span class="n">rule</span><span class="o">.</span><span class="n">p_lhs</span><span class="p">,</span> <span class="n">rule</span><span class="o">.</span><span class="n">p_rhs</span><span class="p">)</span>
 
         <span class="c1"># 1b. Check that instance is consistent with lhs &amp; rhs typing</span>
-        <span class="n">rule_type_checking</span><span class="o">.</span><span class="n">_check_instance</span><span class="p">(</span>
+        <span class="n">type_checking</span><span class="o">.</span><span class="n">_check_instance</span><span class="p">(</span>
             <span class="bp">self</span><span class="p">,</span> <span class="n">graph_id</span><span class="p">,</span> <span class="n">rule</span><span class="o">.</span><span class="n">lhs</span><span class="p">,</span> <span class="n">instance</span><span class="p">,</span> <span class="n">new_lhs_typing</span><span class="p">)</span>
 
         <span class="c1"># 1c. Check consistency of the (autocompleted) rhs &amp; lhs typings</span>
         <span class="k">if</span> <span class="n">new_lhs_typing</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">new_rhs_typing</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">try</span><span class="p">:</span>
-                <span class="n">rule_type_checking</span><span class="o">.</span><span class="n">_check_self_consistency</span><span class="p">(</span>
+                <span class="n">type_checking</span><span class="o">.</span><span class="n">_check_self_consistency</span><span class="p">(</span>
                     <span class="bp">self</span><span class="p">,</span> <span class="n">new_lhs_typing</span><span class="p">)</span>
             <span class="k">except</span> <span class="n">ReGraphError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
                 <span class="k">raise</span> <span class="n">RewritingError</span><span class="p">(</span>
                     <span class="s2">&quot;Typing of the lhs is self inconsistent: </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>
                 <span class="p">)</span>
             <span class="k">try</span><span class="p">:</span>
-                <span class="n">rule_type_checking</span><span class="o">.</span><span class="n">_check_self_consistency</span><span class="p">(</span>
+                <span class="n">type_checking</span><span class="o">.</span><span class="n">_check_self_consistency</span><span class="p">(</span>
                     <span class="bp">self</span><span class="p">,</span> <span class="n">new_rhs_typing</span><span class="p">,</span> <span class="n">strict</span><span class="p">)</span>
             <span class="k">except</span> <span class="n">ReGraphError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
                 <span class="k">raise</span> <span class="n">RewritingError</span><span class="p">(</span>
                     <span class="s2">&quot;Typing of the rhs is self inconsistent: </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>
                 <span class="p">)</span>
 
-            <span class="n">rule_type_checking</span><span class="o">.</span><span class="n">_check_lhs_rhs_consistency</span><span class="p">(</span>
+            <span class="n">type_checking</span><span class="o">.</span><span class="n">_check_lhs_rhs_consistency</span><span class="p">(</span>
                 <span class="bp">self</span><span class="p">,</span> <span class="n">graph_id</span><span class="p">,</span> <span class="n">rule</span><span class="p">,</span> <span class="n">instance</span><span class="p">,</span>
                 <span class="n">new_lhs_typing</span><span class="p">,</span> <span class="n">new_rhs_typing</span><span class="p">,</span>
                 <span class="n">strict</span><span class="p">)</span>
 
             <span class="k">if</span> <span class="n">strict</span> <span class="ow">is</span> <span class="kc">True</span><span class="p">:</span>
-                <span class="n">rule_type_checking</span><span class="o">.</span><span class="n">_check_totality</span><span class="p">(</span>
+                <span class="n">type_checking</span><span class="o">.</span><span class="n">_check_totality</span><span class="p">(</span>
                     <span class="bp">self</span><span class="p">,</span> <span class="n">graph_id</span><span class="p">,</span> <span class="n">rule</span><span class="p">,</span> <span class="n">instance</span><span class="p">,</span>
                     <span class="n">new_lhs_typing</span><span class="p">,</span> <span class="n">new_rhs_typing</span><span class="p">)</span>
 
@@ -2273,13 +1896,14 @@
         <span class="n">mapping</span> <span class="o">=</span> <span class="p">{</span><span class="n">n</span><span class="p">:</span> <span class="n">n</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">nodes</span><span class="p">}</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">add_rule_typing</span><span class="p">(</span><span class="n">new_name</span><span class="p">,</span> <span class="n">graph_id</span><span class="p">,</span> <span class="n">mapping</span><span class="p">,</span> <span class="n">mapping</span><span class="p">,</span> <span class="n">attrs</span><span class="o">=</span><span class="n">attrs</span><span class="p">)</span></div>
 
-    <span class="k">def</span> <span class="nf">_generate_new_name</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">):</span>
-        <span class="n">i</span> <span class="o">=</span> <span class="mi">1</span>
-        <span class="n">new_name</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">%s</span><span class="s2">_</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="n">i</span><span class="p">)</span>
-        <span class="k">while</span> <span class="n">new_name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
+<div class="viewcode-block" id="Hierarchy.unique_graph_id"><a class="viewcode-back" href="../../hierarchy.html#regraph.hierarchy.Hierarchy.unique_graph_id">[docs]</a>    <span class="k">def</span> <span class="nf">unique_graph_id</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">prefix</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Generate a new graph id starting with a prefix.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">prefix</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
+            <span class="k">return</span> <span class="n">prefix</span>
+        <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">while</span> <span class="s2">&quot;</span><span class="si">{}</span><span class="s2">_</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">prefix</span><span class="p">,</span> <span class="n">i</span><span class="p">)</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
             <span class="n">i</span> <span class="o">+=</span> <span class="mi">1</span>
-            <span class="n">new_name</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">%s</span><span class="s2">_</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="n">i</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">new_name</span>
+        <span class="k">return</span> <span class="s2">&quot;</span><span class="si">{}</span><span class="s2">_</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">prefix</span><span class="p">,</span> <span class="n">i</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="Hierarchy.merge_by_id"><a class="viewcode-back" href="../../hierarchy.html#regraph.hierarchy.Hierarchy.merge_by_id">[docs]</a>    <span class="k">def</span> <span class="nf">merge_by_id</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">hierarchy</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Recursive merge with a hierarchy.&quot;&quot;&quot;</span>
@@ -2294,17 +1918,17 @@
                 <span class="k">if</span> <span class="n">equal</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">node</span><span class="p">]</span><span class="o">.</span><span class="n">graph</span><span class="p">,</span> <span class="n">hierarchy</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">node</span><span class="p">]</span><span class="o">.</span><span class="n">graph</span><span class="p">):</span>
                     <span class="n">to_merge</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">node</span><span class="p">)</span>
                 <span class="k">else</span><span class="p">:</span>
-                    <span class="n">new_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_generate_new_name</span><span class="p">(</span><span class="n">node</span><span class="p">)</span>
+                    <span class="n">new_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">unique_graph_id</span><span class="p">(</span><span class="n">node</span><span class="p">)</span>
                     <span class="n">to_rename</span><span class="p">[</span><span class="n">node</span><span class="p">]</span> <span class="o">=</span> <span class="n">new_name</span>
             <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">node</span><span class="p">],</span> <span class="n">RuleNode</span><span class="p">)</span> <span class="ow">and</span>\
                     <span class="nb">isinstance</span><span class="p">(</span><span class="n">hierarchy</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">node</span><span class="p">],</span> <span class="n">RuleNode</span><span class="p">):</span>
                 <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">node</span><span class="p">]</span><span class="o">.</span><span class="n">rule</span> <span class="o">==</span> <span class="n">hierarchy</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">node</span><span class="p">]</span><span class="o">.</span><span class="n">rule</span><span class="p">:</span>
                     <span class="n">to_merge</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">node</span><span class="p">)</span>
                 <span class="k">else</span><span class="p">:</span>
-                    <span class="n">new_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_generate_new_name</span><span class="p">(</span><span class="n">node</span><span class="p">)</span>
+                    <span class="n">new_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">unique_graph_id</span><span class="p">(</span><span class="n">node</span><span class="p">)</span>
                     <span class="n">to_rename</span><span class="p">[</span><span class="n">node</span><span class="p">]</span> <span class="o">=</span> <span class="n">new_name</span>
             <span class="k">else</span><span class="p">:</span>
-                <span class="n">new_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__generate_new_name</span><span class="p">(</span><span class="n">node</span><span class="p">)</span>
+                <span class="n">new_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">unique_graph_id</span><span class="p">(</span><span class="n">node</span><span class="p">)</span>
                 <span class="n">to_rename</span><span class="p">[</span><span class="n">node</span><span class="p">]</span> <span class="o">=</span> <span class="n">new_name</span>
 
         <span class="n">visited</span> <span class="o">=</span> <span class="p">[]</span>
@@ -2456,7 +2080,7 @@
 
         <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">hierarchy</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
             <span class="k">if</span> <span class="n">n</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">to_merge</span><span class="o">.</span><span class="n">values</span><span class="p">()</span> <span class="ow">and</span> <span class="n">n</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
-                <span class="n">to_rename</span><span class="p">[</span><span class="n">n</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_generate_new_name</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
+                <span class="n">to_rename</span><span class="p">[</span><span class="n">n</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">unique_graph_id</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
 
         <span class="c1"># Check consistency of the mappings to be merged</span>
         <span class="k">for</span> <span class="n">n1</span><span class="p">,</span> <span class="n">n2</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">edges</span><span class="p">():</span>
@@ -2602,15 +2226,6 @@
             <span class="n">_merge_node</span><span class="p">(</span><span class="n">node</span><span class="p">)</span>
 
         <span class="k">return</span> <span class="n">new_names</span></div>
-
-<div class="viewcode-block" id="Hierarchy.unique_graph_id"><a class="viewcode-back" href="../../hierarchy.html#regraph.hierarchy.Hierarchy.unique_graph_id">[docs]</a>    <span class="k">def</span> <span class="nf">unique_graph_id</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">prefix</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Generate a new graph id.&quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="n">prefix</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
-            <span class="k">return</span> <span class="n">prefix</span>
-        <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span>
-        <span class="k">while</span> <span class="s2">&quot;</span><span class="si">{}</span><span class="s2">_</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">prefix</span><span class="p">,</span> <span class="n">i</span><span class="p">)</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
-            <span class="n">i</span> <span class="o">+=</span> <span class="mi">1</span>
-        <span class="k">return</span> <span class="s2">&quot;</span><span class="si">{}</span><span class="s2">_</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">prefix</span><span class="p">,</span> <span class="n">i</span><span class="p">)</span></div>
 
     <span class="k">def</span> <span class="nf">duplicate_subgraph</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">nodes</span><span class="p">,</span> <span class="n">suffix</span><span class="p">):</span>
         <span class="n">new</span> <span class="o">=</span> <span class="p">{}</span>

@@ -94,34 +94,32 @@ functionality implemented in ReGraph.</p>
 <p>Create an empty hierarchy and add graphs to the hierarchy:</p>
 <div class="highlight-default"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">networkx</span> <span class="k">as</span> <span class="nn">nx</span>
 
-<span class="kn">from</span> <span class="nn">regraph</span> <span class="k">import</span> <span class="n">Hierarchy</span>
-<span class="kn">from</span> <span class="nn">regraph</span> <span class="k">import</span> <span class="n">plot_graph</span>
-<span class="kn">from</span> <span class="nn">regraph</span> <span class="k">import</span> <span class="n">primitives</span>
+<span class="kn">from</span> <span class="nn">regraph</span> <span class="k">import</span> <span class="n">Hierarchy</span><span class="p">,</span> <span class="n">plot_graph</span><span class="p">,</span> <span class="n">primitives</span>
 
 
 <span class="n">hierarchy</span> <span class="o">=</span> <span class="n">Hierarchy</span><span class="p">()</span>
 
 <span class="n">t</span> <span class="o">=</span> <span class="n">nx</span><span class="o">.</span><span class="n">DiGraph</span><span class="p">()</span>
 <span class="n">primitives</span><span class="o">.</span><span class="n">add_nodes_from</span><span class="p">(</span>
-        <span class="p">[</span><span class="s2">&quot;agent&quot;</span><span class="p">,</span> <span class="s2">&quot;action&quot;</span><span class="p">,</span> <span class="s2">&quot;state&quot;</span><span class="p">])</span>
+    <span class="p">[</span><span class="s2">&quot;agent&quot;</span><span class="p">,</span> <span class="s2">&quot;action&quot;</span><span class="p">,</span> <span class="s2">&quot;state&quot;</span><span class="p">])</span>
 <span class="n">primitives</span><span class="o">.</span><span class="n">add_edges_from</span><span class="p">([</span>
-        <span class="p">(</span><span class="s2">&quot;agent&quot;</span><span class="p">,</span> <span class="s2">&quot;agent&quot;</span><span class="p">),</span>
-        <span class="p">(</span><span class="s2">&quot;state&quot;</span><span class="p">,</span> <span class="s2">&quot;agent&quot;</span><span class="p">),</span>
-        <span class="p">(</span><span class="s2">&quot;agent&quot;</span><span class="p">,</span> <span class="s2">&quot;action&quot;</span><span class="p">),</span>
-        <span class="p">(</span><span class="s2">&quot;action&quot;</span><span class="p">,</span> <span class="s2">&quot;state&quot;</span><span class="p">)</span>
+    <span class="p">(</span><span class="s2">&quot;agent&quot;</span><span class="p">,</span> <span class="s2">&quot;agent&quot;</span><span class="p">),</span>
+    <span class="p">(</span><span class="s2">&quot;state&quot;</span><span class="p">,</span> <span class="s2">&quot;agent&quot;</span><span class="p">),</span>
+    <span class="p">(</span><span class="s2">&quot;agent&quot;</span><span class="p">,</span> <span class="s2">&quot;action&quot;</span><span class="p">),</span>
+    <span class="p">(</span><span class="s2">&quot;action&quot;</span><span class="p">,</span> <span class="s2">&quot;state&quot;</span><span class="p">)</span>
 <span class="p">])</span>
 
 <span class="n">g</span> <span class="o">=</span> <span class="n">nx</span><span class="o">.</span><span class="n">DiGraph</span><span class="p">()</span>
 <span class="n">primitives</span><span class="o">.</span><span class="n">add_nodes_from</span><span class="p">(</span>
-        <span class="p">[</span><span class="s2">&quot;protein&quot;</span><span class="p">,</span> <span class="s2">&quot;region&quot;</span><span class="p">,</span>
-         <span class="s2">&quot;activity&quot;</span><span class="p">,</span> <span class="s2">&quot;mod&quot;</span><span class="p">])</span>
+    <span class="p">[</span><span class="s2">&quot;protein&quot;</span><span class="p">,</span> <span class="s2">&quot;region&quot;</span><span class="p">,</span>
+     <span class="s2">&quot;activity&quot;</span><span class="p">,</span> <span class="s2">&quot;mod&quot;</span><span class="p">])</span>
 <span class="n">primitives</span><span class="o">.</span><span class="n">add_edges_from</span><span class="p">([</span>
-        <span class="p">(</span><span class="s2">&quot;region&quot;</span><span class="p">,</span> <span class="s2">&quot;protein&quot;</span><span class="p">),</span>
-        <span class="p">(</span><span class="s2">&quot;activity&quot;</span><span class="p">,</span> <span class="s2">&quot;protein&quot;</span><span class="p">),</span>
-        <span class="p">(</span><span class="s2">&quot;activity&quot;</span><span class="p">,</span> <span class="s2">&quot;region&quot;</span><span class="p">),</span>
-        <span class="p">(</span><span class="s2">&quot;protein&quot;</span><span class="p">,</span> <span class="s2">&quot;mod&quot;</span><span class="p">),</span>
-        <span class="p">(</span><span class="s2">&quot;region&quot;</span><span class="p">,</span> <span class="s2">&quot;mod&quot;</span><span class="p">),</span>
-        <span class="p">(</span><span class="s2">&quot;&quot;</span><span class="p">)</span>
+    <span class="p">(</span><span class="s2">&quot;region&quot;</span><span class="p">,</span> <span class="s2">&quot;protein&quot;</span><span class="p">),</span>
+    <span class="p">(</span><span class="s2">&quot;activity&quot;</span><span class="p">,</span> <span class="s2">&quot;protein&quot;</span><span class="p">),</span>
+    <span class="p">(</span><span class="s2">&quot;activity&quot;</span><span class="p">,</span> <span class="s2">&quot;region&quot;</span><span class="p">),</span>
+    <span class="p">(</span><span class="s2">&quot;protein&quot;</span><span class="p">,</span> <span class="s2">&quot;mod&quot;</span><span class="p">),</span>
+    <span class="p">(</span><span class="s2">&quot;region&quot;</span><span class="p">,</span> <span class="s2">&quot;mod&quot;</span><span class="p">),</span>
+    <span class="p">(</span><span class="s2">&quot;&quot;</span><span class="p">)</span>
 <span class="p">])</span>
 
 <span class="n">hierarchy</span><span class="o">.</span><span class="n">add_graph</span><span class="p">(</span><span class="s2">&quot;T&quot;</span><span class="p">,</span> <span class="n">t</span><span class="p">)</span>
@@ -140,12 +138,12 @@ functionality implemented in ReGraph.</p>
 <span class="go">[&#39;T&#39;, &#39;G&#39;]</span>
 </pre></div>
 </div>
-<p>Add graph typing of the graph <cite>G</cite> by <cite>T</cite>):</p>
+<p>Add typing of the graph <cite>G</cite> by <cite>T</cite>:</p>
 <div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">mapping</span> <span class="o">=</span> <span class="p">{</span>
-        <span class="s2">&quot;protein&quot;</span><span class="p">:</span> <span class="s2">&quot;agent&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;region&quot;</span><span class="p">:</span> <span class="s2">&quot;agent&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;activity&quot;</span><span class="p">:</span> <span class="s2">&quot;state&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;mod&quot;</span><span class="p">:</span> <span class="s2">&quot;action&quot;</span>
+    <span class="s2">&quot;protein&quot;</span><span class="p">:</span> <span class="s2">&quot;agent&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;region&quot;</span><span class="p">:</span> <span class="s2">&quot;agent&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;activity&quot;</span><span class="p">:</span> <span class="s2">&quot;state&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;mod&quot;</span><span class="p">:</span> <span class="s2">&quot;action&quot;</span>
 <span class="p">}</span>
 <span class="n">hierarchy</span><span class="o">.</span><span class="n">add_typing</span><span class="p">(</span><span class="s2">&quot;G&quot;</span><span class="p">,</span> <span class="s2">&quot;T&quot;</span><span class="p">,</span> <span class="n">mapping</span><span class="p">)</span>
 </pre></div>
@@ -176,12 +174,12 @@ functionality implemented in ReGraph.</p>
 <span class="n">hierarchy</span><span class="o">.</span><span class="n">add_graph</span><span class="p">(</span><span class="s2">&quot;model&quot;</span><span class="p">,</span> <span class="n">model</span><span class="p">)</span>
 
 <span class="n">mapping</span> <span class="o">=</span> <span class="p">{</span>
-        <span class="s2">&quot;A&quot;</span><span class="p">:</span> <span class="s2">&quot;protein&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;R&quot;</span><span class="p">:</span> <span class="s2">&quot;region&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;B&quot;</span><span class="p">:</span> <span class="s2">&quot;protein&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;B_activity&quot;</span><span class="p">:</span> <span class="s2">&quot;activity&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;A_activity&quot;</span><span class="p">:</span> <span class="s2">&quot;activity&quot;</span><span class="p">,</span>
-        <span class="s2">&quot;activation&quot;</span><span class="p">:</span> <span class="s2">&quot;mod&quot;</span>
+    <span class="s2">&quot;A&quot;</span><span class="p">:</span> <span class="s2">&quot;protein&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;R&quot;</span><span class="p">:</span> <span class="s2">&quot;region&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;B&quot;</span><span class="p">:</span> <span class="s2">&quot;protein&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;B_activity&quot;</span><span class="p">:</span> <span class="s2">&quot;activity&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;A_activity&quot;</span><span class="p">:</span> <span class="s2">&quot;activity&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;activation&quot;</span><span class="p">:</span> <span class="s2">&quot;mod&quot;</span>
 <span class="p">}</span>
 <span class="n">hierarchy</span><span class="o">.</span><span class="n">add_typing</span><span class="p">(</span><span class="s2">&quot;model&quot;</span><span class="p">,</span> <span class="s2">&quot;G&quot;</span><span class="p">,</span> <span class="n">mapping</span><span class="p">)</span>
 
@@ -208,19 +206,19 @@ functionality implemented in ReGraph.</p>
 </div>
 <p>Graph hierarchy allows to accommodate binary symmetric relations on graphs.
 Consider the following graph:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span>    <span class="n">catalysis</span> <span class="o">=</span> <span class="n">nx</span><span class="o">.</span><span class="n">DiGraph</span><span class="p">()</span>
-    <span class="n">primitives</span><span class="o">.</span><span class="n">add_nodes_from</span><span class="p">(</span>
-            <span class="n">catalysis</span><span class="p">,</span>
-            <span class="p">[</span><span class="s2">&quot;enzyme&quot;</span><span class="p">,</span> <span class="s2">&quot;substrate&quot;</span><span class="p">,</span>
-             <span class="s2">&quot;mod&quot;</span><span class="p">,</span> <span class="s2">&quot;mod_state&quot;</span><span class="p">]</span>
-    <span class="p">)</span>
-    <span class="n">primitives</span><span class="o">.</span><span class="n">add_edges_from</span><span class="p">(</span><span class="n">catalysis</span><span class="p">,</span> <span class="p">[</span>
-            <span class="p">(</span><span class="s2">&quot;enzyme&quot;</span><span class="p">,</span> <span class="s2">&quot;mod&quot;</span><span class="p">),</span>
-            <span class="p">(</span><span class="s2">&quot;mod&quot;</span><span class="p">,</span> <span class="s2">&quot;mod_state&quot;</span><span class="p">),</span>
-            <span class="p">(</span><span class="s2">&quot;mod_state&quot;</span><span class="p">,</span> <span class="s2">&quot;substrate&quot;</span><span class="p">)</span>
-    <span class="p">])</span>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">catalysis</span> <span class="o">=</span> <span class="n">nx</span><span class="o">.</span><span class="n">DiGraph</span><span class="p">()</span>
+<span class="n">primitives</span><span class="o">.</span><span class="n">add_nodes_from</span><span class="p">(</span>
+    <span class="n">catalysis</span><span class="p">,</span>
+    <span class="p">[</span><span class="s2">&quot;enzyme&quot;</span><span class="p">,</span> <span class="s2">&quot;substrate&quot;</span><span class="p">,</span>
+     <span class="s2">&quot;mod&quot;</span><span class="p">,</span> <span class="s2">&quot;mod_state&quot;</span><span class="p">]</span>
+<span class="p">)</span>
+<span class="n">primitives</span><span class="o">.</span><span class="n">add_edges_from</span><span class="p">(</span><span class="n">catalysis</span><span class="p">,</span> <span class="p">[</span>
+    <span class="p">(</span><span class="s2">&quot;enzyme&quot;</span><span class="p">,</span> <span class="s2">&quot;mod&quot;</span><span class="p">),</span>
+    <span class="p">(</span><span class="s2">&quot;mod&quot;</span><span class="p">,</span> <span class="s2">&quot;mod_state&quot;</span><span class="p">),</span>
+    <span class="p">(</span><span class="s2">&quot;mod_state&quot;</span><span class="p">,</span> <span class="s2">&quot;substrate&quot;</span><span class="p">)</span>
+<span class="p">])</span>
 
-    <span class="n">hierarchy</span><span class="o">.</span><span class="n">add_graph</span><span class="p">(</span><span class="s2">&quot;catalysis&quot;</span><span class="p">,</span> <span class="n">catalysis</span><span class="p">)</span>
+<span class="n">hierarchy</span><span class="o">.</span><span class="n">add_graph</span><span class="p">(</span><span class="s2">&quot;catalysis&quot;</span><span class="p">,</span> <span class="n">catalysis</span><span class="p">)</span>
 
 <span class="n">plot_graph</span><span class="p">(</span><span class="n">hierarchy</span><span class="o">.</span><span class="n">graph</span><span class="p">[</span><span class="s2">&quot;catalysis&quot;</span><span class="p">])</span>
 </pre></div>

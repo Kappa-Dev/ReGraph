@@ -29,7 +29,6 @@ ReGraph contains a collection of utilities for graph rewriting on `NetworkX (ver
     * :ref:`hierarchy_tutorial`
         * :ref:`hierarchy_creation`
         * :ref:`rewriting_in_hierarchy`
-        * :ref:`propagation_in_hierarchy`
 
 
 
