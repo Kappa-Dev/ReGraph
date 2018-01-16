@@ -1,4 +1,4 @@
-""" mu calculus """
+"""Collection of utils for mu-calculus on graph."""
 
 
 # import regraph
@@ -9,31 +9,8 @@ from lrparsing import Keyword, List, Prio, Ref, Token
 from regraph.exceptions import ParsingError, FormulaError
 
 
-class MuParser(lrparsing.Grammar):
-    '''Parse a mu-calculus formula'''
-
-    class T(lrparsing.TokenRegistry):
-        integer = Token(re="[0-9]+")
-        integer["key"] = "I'm a mapping!"
-        ident = Token(re="[A-Z][A-Za-z_0-9]*")
-        operator = Token(re="[a-z][A-Za-z_0-9]*")
-
-    r_expr = Ref("r_expr")
-    r_mu = Keyword("mu") + " " + T.ident + "(" + r_expr + ")"
-    r_not = Keyword("not")+" " + r_expr
-    r_or = Keyword('or')+'(' + List(r_expr, ',') + ')'
-    r_var = Keyword('var')+"(" + T.ident + ")"
-    r_cnt = Keyword("cnt") + "(" + T.ident + ")"
-    r_geq = "<" + T.integer + "<=" + T.ident + ">" + r_expr
-    r_next = "<" + T.ident + ">" + r_expr
-
-    r_expr = Prio(r_mu | r_not | r_or | r_var | r_cnt | r_geq | r_next)
-    START = r_expr
-
-
 def parsed_tree_to_formula(parsed_tree):
-    """ build a Formula object from the result of parsing """
-
+    """Build a formula object from the result of parsing."""
     if parsed_tree[0].name == "START" or parsed_tree[0].name == "r_expr":
         rep = parsed_tree_to_formula(parsed_tree[1])
     elif parsed_tree[0].name == "r_mu":
@@ -70,6 +47,28 @@ def parsed_tree_to_formula(parsed_tree):
 def parse_formula(string_formula):
     """parse a string and return a Formula object"""
     return parsed_tree_to_formula(MuParser.parse(string_formula))
+
+
+class MuParser(lrparsing.Grammar):
+    """Class implementing parsing of mu-calculus formulae."""
+
+    class T(lrparsing.TokenRegistry):
+        integer = Token(re="[0-9]+")
+        integer["key"] = "I'm a mapping!"
+        ident = Token(re="[A-Z][A-Za-z_0-9]*")
+        operator = Token(re="[a-z][A-Za-z_0-9]*")
+
+    r_expr = Ref("r_expr")
+    r_mu = Keyword("mu") + " " + T.ident + "(" + r_expr + ")"
+    r_not = Keyword("not") + " " + r_expr
+    r_or = Keyword('or') + '(' + List(r_expr, ',') + ')'
+    r_var = Keyword('var') + "(" + T.ident + ")"
+    r_cnt = Keyword("cnt") + "(" + T.ident + ")"
+    r_geq = "<" + T.integer + "<=" + T.ident + ">" + r_expr
+    r_next = "<" + T.ident + ">" + r_expr
+
+    r_expr = Prio(r_mu | r_not | r_or | r_var | r_cnt | r_geq | r_next)
+    START = r_expr
 
 
 class Formula():
@@ -137,8 +136,8 @@ class Mu(Formula):
         change_happended = True
         while change_happended:
             env[self.name] = old
-            new = self.sub_formulas[0].evaluate_aux(env, nodes, relations,
-                                                constants)
+            new = self.sub_formulas[0].evaluate_aux(
+                env, nodes, relations, constants)
             change_happended = old != new
             old = new
         return old

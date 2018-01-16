@@ -26,7 +26,7 @@ class TestHierarchy(object):
             ("square", "circle", {"new_attrs": {2}}),
             ("square", "triangle", {"new_attrs": {3, 4}})
         ])
-        self.hierarchy.add_graph("g0", g0, {"name": "Shapes"})
+        self.hierarchy.add_graph("g0", g0, attrs={"name": "Shapes"})
 
         g00 = nx.DiGraph()
         prim.add_node(g00, 'black', {"a": {1, 2, 3}, "new_attrs": {1}})
@@ -37,7 +37,7 @@ class TestHierarchy(object):
             ('black', 'black'),
             ('black', 'white')
         ])
-        self.hierarchy.add_graph("g00", g00, {"name": "Colors"})
+        self.hierarchy.add_graph("g00", g00, attrs={"name": "Colors"})
 
         g1 = nx.DiGraph()
         prim.add_nodes_from(g1, [

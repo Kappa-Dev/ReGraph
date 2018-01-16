@@ -18,10 +18,7 @@ class TestMuHierarchy(object):
 
         self.hierarchy.add_graph(
             "g1", g1,
-            {"formulae":
-             [("f1", "or(not cnt(Region),<1<=Adj>cnt(Agent))")]
-             }
-        )
+            formulae={"f1": "or(not cnt(Region),<1<=Adj>cnt(Agent))"})
 
         g2 = nx.DiGraph()
         g2.add_node("a1")
