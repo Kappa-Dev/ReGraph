@@ -34,8 +34,6 @@ from regraph.category_utils import (compose,
 from regraph.primitives import (get_relabeled_graph,
                                 relabel_node,
                                 get_edge,
-                                graph_to_json,
-                                graph_from_json,
                                 equal)
 from regraph.utils import (is_subdict,
                            keys_by_value,
@@ -265,7 +263,7 @@ class Hierarchy(nx.DiGraph, AttributeContainter):
                         rel.append((k, v))
         return rel
 
-    def add_graph(self, graph_id, graph, graph_attrs=None):
+    def add_graph(self, graph_id, graph, **kwargs):
         """Add graph to the hierarchy.
 
         Parameters
@@ -299,9 +297,7 @@ class Hierarchy(nx.DiGraph, AttributeContainter):
             raise HierarchyError(
                 "Node '{}' already exists in the hierarchy!".format(graph_id))
         self.add_node(graph_id)
-        if graph_attrs is not None:
-            normalize_attrs(graph_attrs)
-        self.node[graph_id] = self.graph_node_cls(graph, graph_attrs)
+        self.node[graph_id] = self.graph_node_cls(graph, **kwargs)
         if graph_id not in self.relation_edge.keys():
             self.relation_edge.update({graph_id: dict()})
         if graph_id not in self.relation.keys():
@@ -416,7 +412,7 @@ class Hierarchy(nx.DiGraph, AttributeContainter):
                 "no muliple edges allowed!" %
                 (source, target)
             )
-        if not isinstance(self.node[source], GraphNode):
+        if not isinstance(self.node[source], self.graph_node_cls):
             if type(self.node[source]) == RuleNode:
                 raise HierarchyError(
                     "Source node is a rule, use `add_rule_typing` "
@@ -427,7 +423,7 @@ class Hierarchy(nx.DiGraph, AttributeContainter):
                     "Source of a typing should be a graph, `%s` is provided!" %
                     type(self.node[source])
                 )
-        if not isinstance(self.node[target], GraphNode):
+        if not isinstance(self.node[target], self.graph_node_cls):
             raise HierarchyError(
                 "Target of a typing should be a graph, `%s` is provided!" %
                 type(self.node[target])
@@ -1563,51 +1559,36 @@ class Hierarchy(nx.DiGraph, AttributeContainter):
             "relations": []
         }
         for node in self.nodes():
-            if isinstance(self.node[node], RuleNode):
-                json_data["rules"].append({
-                    "id": node,
-                    "rule": self.node[node].rule.to_json(),
-                    "attrs": self.node[node].attrs_to_json()
-                })
-            elif isinstance(self.node[node], GraphNode):
-                json_data["graphs"].append({
-                    "id": node,
-                    "graph": graph_to_json(self.node[node].graph),
-                    "attrs": self.node[node].attrs_to_json()
-                })
-
+            if isinstance(self.node[node], self.rule_node_cls):
+                rule_json = self.node[node].to_json()
+                rule_json["id"] = node
+                json_data["rules"].append(rule_json)
+            elif isinstance(self.node[node], self.graph_node_cls):
+                graph_json = self.node[node].to_json()
+                graph_json["id"] = node
+                json_data["graphs"].append(graph_json)
             else:
                 raise HierarchyError("Unknown type of the node '%s'!" % node)
         for s, t in self.edges():
             if isinstance(self.edge[s][t], self.graph_typing_cls):
-                json_data["typing"].append({
-                    "from": s,
-                    "to": t,
-                    "mapping": self.edge[s][t].mapping,
-                    "total": self.edge[s][t].total,
-                    "attrs": self.edge[s][t].attrs_to_json()
-                })
+                typing_json = self.edge[s][t].to_json()
+                typing_json["from"] = s
+                typing_json["to"] = t
+                json_data["typing"].append(typing_json)
             elif isinstance(self.edge[s][t], self.rule_typing_cls):
-                json_data["rule_typing"].append({
-                    "from": s,
-                    "to": t,
-                    "lhs_mapping": self.edge[s][t].lhs_mapping,
-                    "rhs_mapping": self.edge[s][t].rhs_mapping,
-                    "lhs_total": self.edge[s][t].lhs_total,
-                    "rhs_total": self.edge[s][t].rhs_total,
-                    "attrs": self.edge[s][t].attrs_to_json()
-                })
+                rule_typing_json = self.edge[s][t].to_json()
+                rule_typing_json["from"] = s
+                rule_typing_json["to"] = t
+                json_data["rule_typing"].append(rule_typing_json)
             else:
                 raise HierarchyError(
                     "Unknown type of the edge '%s->%s'!" % (s, t)
                 )
         for u, v in self.relations():
-            json_data["relations"].append({
-                "from": u,
-                "to": v,
-                "rel": {a: list(b) for a, b in self.relation[u][v].items()},
-                "attrs": self.relation_edge[u][v].attrs_to_json()
-            })
+            relation_json = self.relation_edge[u][v].to_json()
+            relation_json["from"] = u
+            relation_json["to"] = v
+            json_data["relations"].append(relation_json)
         return json_data
 
     @classmethod
@@ -1622,18 +1603,9 @@ class Hierarchy(nx.DiGraph, AttributeContainter):
                graph_data["id"] in ignore["graphs"]:
                 pass
             else:
-                graph = graph_from_json(graph_data["graph"], directed)
-                if "attrs" not in graph_data.keys():
-                    attrs = dict()
-                else:
-                    attrs = AttributeContainter.attrs_from_json(
-                        graph_data["attrs"])
-
-                hierarchy.add_graph(
-                    graph_data["id"],
-                    graph,
-                    attrs
-                )
+                graph, attrs = hierarchy.graph_node_cls.process_json(
+                    json_data, directed)
+                hierarchy.add_graph(graph_data["id"], graph, attrs)
 
         # add rules
         for rule_data in json_data["rules"]:
@@ -1642,17 +1614,9 @@ class Hierarchy(nx.DiGraph, AttributeContainter):
                rule_data["id"] in ignore["rules"]:
                 pass
             else:
-                rule = Rule.from_json(rule_data["rule"])
-                if "attrs" not in rule_data.keys():
-                    attrs = dict()
-                else:
-                    attrs = AttributeContainter.attrs_from_json(
-                        rule_data["attrs"])
-                hierarchy.add_rule(
-                    rule_data["id"],
-                    rule,
-                    attrs
-                )
+                rule, attrs = hierarchy.rule_node_cls.process_json(
+                    json_data, directed)
+                hierarchy.add_rule(rule_data["id"], rule, attrs)
 
         # add typing
         for typing_data in json_data["typing"]:
@@ -1661,18 +1625,12 @@ class Hierarchy(nx.DiGraph, AttributeContainter):
                (typing_data["from"], typing_data["to"]) in ignore["typing"]:
                 pass
             else:
-                if "attrs" not in typing_data.keys():
-                    attrs = dict()
-                else:
-                    attrs = AttributeContainter.attrs_from_json(
-                        typing_data["attrs"])
+                mapping, total, attrs =\
+                    hierarchy.graph_typing_cls.process_json(json_data)
                 hierarchy.add_typing(
                     typing_data["from"],
                     typing_data["to"],
-                    typing_data["mapping"],
-                    typing_data["total"],
-                    attrs
-                )
+                    mapping, total, attrs)
 
         # add rule typing
         for rule_typing_data in json_data["rule_typing"]:
@@ -1682,20 +1640,12 @@ class Hierarchy(nx.DiGraph, AttributeContainter):
                     "rule_typing"]:
                 pass
             else:
-                if "attrs" not in rule_typing_data.keys():
-                    attrs = dict()
-                else:
-                    attrs = AttributeContainter.attrs_from_json(
-                        rule_typing_data["attrs"])
+                lhs_map, rhs_map, lhs_total, rhs_total, attrs =\
+                    hierarchy.rule_typing_cls.process_json(rule_typing_data)
                 hierarchy.add_rule_typing(
                     rule_typing_data["from"],
                     rule_typing_data["to"],
-                    rule_typing_data["lhs_mapping"],
-                    rule_typing_data["rhs_mapping"],
-                    rule_typing_data["lhs_total"],
-                    rule_typing_data["rhs_total"],
-                    attrs
-                )
+                    lhs_map, rhs_map, lhs_total, rhs_total, attrs)
 
         # add relations
         for relation_data in json_data["relations"]:
@@ -1706,17 +1656,12 @@ class Hierarchy(nx.DiGraph, AttributeContainter):
                                      relation_data["from"]) in ignore["relations"]):
                 pass
             else:
-                if "attrs" not in relation_data.keys():
-                    attrs = dict()
-                else:
-                    attrs = AttributeContainter.attrs_from_json(
-                        relation_data["attrs"])
+                rel, attrs = hierarchy.relation_cls.process_json(relation_data)
                 hierarchy.add_relation(
                     relation_data["from"],
                     relation_data["to"],
-                    {a: set(b) for a, b in relation_data["rel"].items()},
-                    attrs
-                )
+                    rel, attrs)
+
         return hierarchy
 
     @classmethod
