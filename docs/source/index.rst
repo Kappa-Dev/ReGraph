@@ -6,7 +6,7 @@
 Welcome to ReGraph's documentation!
 ===================================
 
-The ReGraph library is a generic framework for modelling graph-based systems, where models are viewed as graphs and graph transformations are viewed as a tool to describe both the system evolution and the model evolution.
+The ReGraph Python library is a generic framework for modelling graph-based systems.
 
 ReGraph provides various utilities for graph rewriting (based on the sesqui-pushout rewriting procedure). It enables a user to define a typing for models (graphs) that gives specifications for the structure of the models. This later functionality allows both to preserve the specified structure during rewriting and to propagate the changes to the specifications to the models.
 
