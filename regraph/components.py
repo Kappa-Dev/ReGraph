@@ -213,10 +213,9 @@ class Typing(AttributeContainter):
         Dictionary with attrs of the typing
     """
 
-    def __init__(self, mapping, total=False, attrs=None):
+    def __init__(self, mapping, attrs=None):
         """Initialize homomorphism."""
         self.mapping = mapping
-        self.total = total
         if attrs:
             self.attrs = attrs
         else:
@@ -240,7 +239,6 @@ class Typing(AttributeContainter):
         if isinstance(other, Typing):
             return Typing(
                 compose(other.mapping),
-                self.total and other.total,
                 self.attrs)
         else:
             return NotImplemented
@@ -249,40 +247,37 @@ class Typing(AttributeContainter):
         """Multiplication operation."""
         if isinstance(other, Typing):
             return Typing(
-                compose(other.mapping, self.mapping),
-                self.total and other.total)
+                compose(other.mapping, self.mapping))
 
         elif isinstance(other, RuleTyping):
             return RuleTyping(
                 compose(other.lhs_mapping, self.mapping),
                 compose(other.rhs_mapping, self.mapping),
-                other.lhs_total and self.total,
-                other.rhs_total and self.total)
+                other.lhs_total,
+                other.rhs_total)
         else:
             return NotImplemented
 
     def to_json(self):
         return {
             "mapping": self.mapping,
-            "total": self.total,
             "attrs": self.attrs_to_json()
         }
 
     @classmethod
     def from_json(cls, json_data):
-        mapping, total, attrs = cls.process_json(json_data)
-        return cls(mapping, total, attrs)
+        mapping, attrs = cls.process_json(json_data)
+        return cls(mapping, attrs)
 
     @staticmethod
     def process_json(json_data):
         mapping = json_data["mapping"]
-        total = json_data["total"]
         if "attrs" not in json_data.keys():
             attrs = dict()
         else:
             attrs = AttributeContainter.attrs_from_json(
                 json_data["attrs"])
-        return mapping, total, attrs
+        return mapping, attrs
 
 
 class RuleTyping(AttributeContainter):

@@ -559,19 +559,8 @@ def _apply_changes(hierarchy, upstream_changes, downstream_changes):
         updated_homomorphisms.update(downstream_changes["homomorphisms"])
 
     for (s, t), mapping in updated_homomorphisms.items():
-        total = False
-
-        if hierarchy.edge[s][t].total:
-            if not is_total_homomorphism(hierarchy.node[s].graph.nodes(), mapping):
-                warnings.warn(
-                    "Total typing '%s->%s' became partial after rewriting!" %
-                    (s, t),
-                    TotalityWarning
-                )
-            else:
-                total = True
         hierarchy.edge[s][t] = hierarchy.graph_typing_cls(
-            mapping, total, hierarchy.edge[s][t].attrs
+            mapping, hierarchy.edge[s][t].attrs
         )
         hierarchy.typing[s][t] = hierarchy.edge[s][t].mapping
     # update rules & rule homomorphisms

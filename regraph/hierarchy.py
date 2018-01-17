@@ -165,8 +165,7 @@ class Hierarchy(nx.DiGraph, AttributeContainter):
         res += "\nTyping homomorphisms: \n"
         for n1, n2 in self.edges():
             if isinstance(self.edge[n1][n2], self.graph_typing_cls):
-                res += "{} -> {}: total == {}\n".format(
-                    n1, n2, self.edge[n1][n2].total)
+                res += "{} -> {}\n".format(n1, n2,)
 
             elif isinstance(self.edge[n1][n2], self.rule_typing_cls):
                 res +=\
@@ -219,8 +218,6 @@ class Hierarchy(nx.DiGraph, AttributeContainter):
                isinstance(hie.edge[s][t], self.graph_typing_cls):
 
                 if self.edge[s][t].mapping != hie.edge[s][t].mapping:
-                    return False
-                if self.edge[s][t].total != hie.edge[s][t].total:
                     return False
             elif isinstance(self.edge[s][t], self.rule_typing_cls) and\
                     isinstance(hie.edge[s][t], self.rule_typing_cls):
@@ -364,7 +361,7 @@ class Hierarchy(nx.DiGraph, AttributeContainter):
             self.rule_rhs_typing[rule_id] = dict()
         return
 
-    def add_typing(self, source, target, mapping, total=True, attrs=None):
+    def add_typing(self, source, target, mapping, attrs=None):
         """Add homomorphism to the hierarchy.
 
         Parameters
@@ -376,8 +373,6 @@ class Hierarchy(nx.DiGraph, AttributeContainter):
         mapping : dict
             Dictionary representing a mapping of nodes
             from the source graph to target's nodes
-        total : bool
-            True if typing is total, False otherwise
         attrs : dict
             Dictionary containing attributes of the new
             typing edge
@@ -444,7 +439,7 @@ class Hierarchy(nx.DiGraph, AttributeContainter):
             self.node[source].graph,
             self.node[target].graph,
             mapping,
-            total=total
+            total=True
         )
 
         # check if newly created path commutes with existing shortest paths
@@ -453,8 +448,7 @@ class Hierarchy(nx.DiGraph, AttributeContainter):
         self.add_edge(source, target)
         if attrs is not None:
             normalize_attrs(attrs)
-        self.edge[source][target] = self.graph_typing_cls(
-            mapping, total, attrs)
+        self.edge[source][target] = self.graph_typing_cls(mapping, attrs=attrs)
         self.typing[source][target] = self.edge[source][target].mapping
         return
 
@@ -775,12 +769,7 @@ class Hierarchy(nx.DiGraph, AttributeContainter):
 
                         if (source, target) not in self.edges():
                             self.add_typing(
-                                source,
-                                target,
-                                mapping,
-                                self.edge[source][node_id].total and
-                                self.edge[node_id][target].total
-                            )
+                                source, target, mapping)
 
         nx.DiGraph.remove_node(self, node_id)
 
@@ -941,52 +930,52 @@ class Hierarchy(nx.DiGraph, AttributeContainter):
                 types[typing] = mapping[node_id]
         return types
 
-    def to_total(self, source, target):
-        """Make a typing total (if mapping is total)."""
-        if source not in self.nodes():
-            raise HierarchyError(
-                "Node '%s' is not defined in the hierarchy!" % source)
-        if (source, target) not in self.edges():
-            raise HierarchyError(
-                "Typing `%s->%s` does not exist!" %
-                (source, target)
-            )
-        if isinstance(self.node[source], GraphNode):
-            nodes = self.node[source].graph.nodes()
-            typing = self.edge[source][target]
-            if is_total_homomorphism(nodes, typing.mapping):
-                typing.total = True
-            else:
-                untyped_nodes = [
-                    node for node in nodes if node not in typing.mapping.keys()
-                ]
-                raise HierarchyError(
-                    "Cannot make `%s->%s` typing total: nodes [%s] "
-                    "do not have types, please type them first!" %
-                    (source, target, ", ".join(untyped_nodes))
-                )
-        elif isinstance(self.node[source], RuleNode):
-            lhs_nodes = self.node[source].rule.lhs.nodes()
-            rhs_nodes = self.node[target].rule.rhs.nodes()
-            lhs_typing = self.edge[source][target].lhs_mapping
-            rhs_typing = self.edge[source][target].rhs_mapping
-            if is_total_homomorphism(lhs_nodes, lhs_typing) and\
-               is_total_homomorphism(rhs_nodes, rhs_typing):
-                self.edge[source][target].total = True
-            else:
-                untyped_lhs_nodes = [
-                    node for node in lhs_nodes if node not in lhs_typing.keys()
-                ]
-                untyped_rhs_nodes = [
-                    node for node in rhs_nodes if node not in rhs_typing.keys()
-                ]
-                raise HierarchyError(
-                    "Cannot make `%s->%s` typing total: lhs nodes [%s] "
-                    "and rhs nodes [%s] do not have types, please type them first!" %
-                    (source, target, ", ".join(untyped_lhs_nodes),
-                     ", ".join(untyped_rhs_nodes))
-                )
-        return
+    # def to_total(self, source, target):
+    #     """Make a typing total (if mapping is total)."""
+    #     if source not in self.nodes():
+    #         raise HierarchyError(
+    #             "Node '%s' is not defined in the hierarchy!" % source)
+    #     if (source, target) not in self.edges():
+    #         raise HierarchyError(
+    #             "Typing `%s->%s` does not exist!" %
+    #             (source, target)
+    #         )
+    #     if isinstance(self.node[source], GraphNode):
+    #         nodes = self.node[source].graph.nodes()
+    #         typing = self.edge[source][target]
+    #         if is_total_homomorphism(nodes, typing.mapping):
+    #             typing.total = True
+    #         else:
+    #             untyped_nodes = [
+    #                 node for node in nodes if node not in typing.mapping.keys()
+    #             ]
+    #             raise HierarchyError(
+    #                 "Cannot make `%s->%s` typing total: nodes [%s] "
+    #                 "do not have types, please type them first!" %
+    #                 (source, target, ", ".join(untyped_nodes))
+    #             )
+    #     elif isinstance(self.node[source], RuleNode):
+    #         lhs_nodes = self.node[source].rule.lhs.nodes()
+    #         rhs_nodes = self.node[target].rule.rhs.nodes()
+    #         lhs_typing = self.edge[source][target].lhs_mapping
+    #         rhs_typing = self.edge[source][target].rhs_mapping
+    #         if is_total_homomorphism(lhs_nodes, lhs_typing) and\
+    #            is_total_homomorphism(rhs_nodes, rhs_typing):
+    #             self.edge[source][target].total = True
+    #         else:
+    #             untyped_lhs_nodes = [
+    #                 node for node in lhs_nodes if node not in lhs_typing.keys()
+    #             ]
+    #             untyped_rhs_nodes = [
+    #                 node for node in rhs_nodes if node not in rhs_typing.keys()
+    #             ]
+    #             raise HierarchyError(
+    #                 "Cannot make `%s->%s` typing total: lhs nodes [%s] "
+    #                 "and rhs nodes [%s] do not have types, please type them first!" %
+    #                 (source, target, ", ".join(untyped_lhs_nodes),
+    #                  ", ".join(untyped_rhs_nodes))
+    #             )
+    #     return
 
     def compose_path_typing(self, path):
         """Compose homomorphisms along the path.
@@ -1134,39 +1123,39 @@ class Hierarchy(nx.DiGraph, AttributeContainter):
             })
         return
 
-    def remove_node_type(self, graph_id, typing_graph, node_id):
-        """Remove a type a node in a graph `graph_id`."""
-        if (graph_id, typing_graph) not in self.edges():
-            raise HierarchyError(
-                "Typing `%s->%s` does not exist!" %
-                (graph_id, typing_graph)
-            )
+    # def remove_node_type(self, graph_id, typing_graph, node_id):
+    #     """Remove a type a node in a graph `graph_id`."""
+    #     if (graph_id, typing_graph) not in self.edges():
+    #         raise HierarchyError(
+    #             "Typing `%s->%s` does not exist!" %
+    #             (graph_id, typing_graph)
+    #         )
 
-        # find types that will be removed  as a side effect
-        types_to_remove = set()
-        # 1. find pairs of successors that have common ancestors
-        ancestors = {}
-        for n in self.successors(graph_id):
-            ancestors[n] = self._get_ancestors_paths(n)
+    #     # find types that will be removed  as a side effect
+    #     types_to_remove = set()
+    #     # 1. find pairs of successors that have common ancestors
+    #     ancestors = {}
+    #     for n in self.successors(graph_id):
+    #         ancestors[n] = self._get_ancestors_paths(n)
 
-        for s in self.successors(graph_id):
-            c_anc = set(ancestors[s].keys()).intersection(
-                set(ancestors[typing_graph].keys())
-            )
-            if len(c_anc) > 0:
-                types_to_remove.add(s)
+    #     for s in self.successors(graph_id):
+    #         c_anc = set(ancestors[s].keys()).intersection(
+    #             set(ancestors[typing_graph].keys())
+    #         )
+    #         if len(c_anc) > 0:
+    #             types_to_remove.add(s)
 
-        if self.edge[graph_id][typing_graph].total:
-            warnings.warn(
-                "Total typing '%s->%s' became partial!" %
-                (graph_id, typing_graph),
-                TotalityWarning
-            )
+    #     if self.edge[graph_id][typing_graph].total:
+    #         warnings.warn(
+    #             "Total typing '%s->%s' became partial!" %
+    #             (graph_id, typing_graph),
+    #             TotalityWarning
+    #         )
 
-        # remove typing
-        for t in types_to_remove:
-            del self.edge[graph_id][t].mapping[node_id]
-        return
+    #     # remove typing
+    #     for t in types_to_remove:
+    #         del self.edge[graph_id][t].mapping[node_id]
+    #     return
 
     # def find_matching2(self, graph_id, pattern, pattern_typings=None):
     #     """find matchings of pattern in graph_id"""
@@ -1520,7 +1509,7 @@ class Hierarchy(nx.DiGraph, AttributeContainter):
             return (new_graph, r_g_prime)
 
     def apply_rule(self, graph_id, rule_id, instance,
-                   strong_typing=True, total=False, inplace=True):
+                   strong_typing=True, inplace=True):
         """Apply rule from the hierarchy."""
         if type(self.node[graph_id]) == RuleNode:
             raise ReGraphError("Rewriting of a rule is not implemented!")
@@ -1625,12 +1614,12 @@ class Hierarchy(nx.DiGraph, AttributeContainter):
                (typing_data["from"], typing_data["to"]) in ignore["typing"]:
                 pass
             else:
-                mapping, total, attrs =\
+                mapping, attrs =\
                     hierarchy.graph_typing_cls.process_json(typing_data)
                 hierarchy.add_typing(
                     typing_data["from"],
                     typing_data["to"],
-                    mapping, total, attrs)
+                    mapping, attrs)
 
         # add rule typing
         for rule_typing_data in json_data["rule_typing"]:
