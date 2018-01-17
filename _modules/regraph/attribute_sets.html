@@ -265,16 +265,19 @@
         <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">RegexSet</span><span class="p">):</span>
             <span class="k">return</span> <span class="n">RegexSet</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fset</span><span class="p">)</span><span class="o">.</span><span class="n">union</span><span class="p">(</span><span class="n">other</span><span class="p">)</span>
         <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">IntegerSet</span><span class="p">):</span>
+            <span class="n">int_elements</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
             <span class="k">for</span> <span class="n">element</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">fset</span><span class="p">:</span>
                 <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">element</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">int</span><span class="p">:</span>
                     <span class="k">try</span><span class="p">:</span>
-                        <span class="n">element</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">element</span><span class="p">)</span>
+                        <span class="n">int_elements</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">element</span><span class="p">))</span>
                     <span class="k">except</span><span class="p">:</span>
                         <span class="k">raise</span> <span class="n">AttributeSetError</span><span class="p">(</span>
                             <span class="s2">&quot;Element &#39;</span><span class="si">%s</span><span class="s2">&#39; of a finite set is not an &quot;</span>
                             <span class="s2">&quot;integer (</span><span class="si">%s</span><span class="s2">)&quot;</span> <span class="o">%</span>
                             <span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">element</span><span class="p">),</span> <span class="nb">str</span><span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="n">element</span><span class="p">)))</span>
                         <span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">int_elements</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">element</span><span class="p">)</span>
             <span class="k">return</span> <span class="n">IntegerSet</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fset</span><span class="p">)</span><span class="o">.</span><span class="n">union</span><span class="p">(</span><span class="n">other</span><span class="p">)</span>
         <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">EmptySet</span><span class="p">):</span>
             <span class="k">return</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
@@ -813,30 +816,33 @@
         <span class="sd">&quot;&quot;&quot;Union of two integer sets.&quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">IntegerSet</span><span class="p">):</span>
             <span class="k">return</span> <span class="n">IntegerSet</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">intervals</span> <span class="o">+</span> <span class="n">other</span><span class="o">.</span><span class="n">intervals</span><span class="p">)</span>
+
         <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="nb">set</span><span class="p">):</span>
             <span class="n">other_intervals</span> <span class="o">=</span> <span class="p">[]</span>
-            <span class="k">try</span><span class="p">:</span>
-                <span class="k">for</span> <span class="n">element</span> <span class="ow">in</span> <span class="n">other</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">element</span> <span class="ow">in</span> <span class="n">other</span><span class="p">:</span>
+                <span class="k">try</span><span class="p">:</span>
                     <span class="n">int_element</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">element</span><span class="p">)</span>
-                    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">contains</span><span class="p">(</span><span class="n">int_element</span><span class="p">):</span>
-                        <span class="n">other_intervals</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">int_element</span><span class="p">,</span> <span class="n">int_element</span><span class="p">))</span>
-                <span class="k">return</span> <span class="n">IntegerSet</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">intervals</span> <span class="o">+</span> <span class="n">other_intervals</span><span class="p">)</span>
-            <span class="k">except</span><span class="p">:</span>
-                <span class="k">raise</span> <span class="n">AttributeSetError</span><span class="p">(</span>
-                    <span class="s2">&quot;Set &#39;</span><span class="si">%s</span><span class="s2">&#39; contains non-integer elements!&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">other</span><span class="p">)</span>
-                <span class="p">)</span>
+                <span class="k">except</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="n">AttributeSetError</span><span class="p">(</span>
+                        <span class="s2">&quot;Set &#39;</span><span class="si">{}</span><span class="s2">&#39; contains non-integer element &#39;</span><span class="si">{}</span><span class="s2">&#39;&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                            <span class="nb">str</span><span class="p">(</span><span class="n">other</span><span class="p">),</span> <span class="n">element</span><span class="p">))</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">contains</span><span class="p">(</span><span class="n">int_element</span><span class="p">):</span>
+                    <span class="n">other_intervals</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">int_element</span><span class="p">,</span> <span class="n">int_element</span><span class="p">))</span>
+            <span class="k">return</span> <span class="n">IntegerSet</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">intervals</span> <span class="o">+</span> <span class="n">other_intervals</span><span class="p">)</span>
+
         <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">FiniteSet</span><span class="p">):</span>
             <span class="n">other_intervals</span> <span class="o">=</span> <span class="p">[]</span>
-            <span class="k">try</span><span class="p">:</span>
-                <span class="k">for</span> <span class="n">element</span> <span class="ow">in</span> <span class="n">other</span><span class="o">.</span><span class="n">fset</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">element</span> <span class="ow">in</span> <span class="n">other</span><span class="o">.</span><span class="n">fset</span><span class="p">:</span>
+                <span class="k">try</span><span class="p">:</span>
                     <span class="n">int_element</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">element</span><span class="p">)</span>
-                    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">contains</span><span class="p">(</span><span class="n">int_element</span><span class="p">):</span>
-                        <span class="n">other_intervals</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">int_element</span><span class="p">,</span> <span class="n">int_element</span><span class="p">))</span>
-                <span class="k">return</span> <span class="n">IntegerSet</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">intervals</span> <span class="o">+</span> <span class="n">other_intervals</span><span class="p">)</span>
-            <span class="k">except</span><span class="p">:</span>
-                <span class="k">raise</span> <span class="n">AttributeSetError</span><span class="p">(</span>
-                    <span class="s2">&quot;Set &#39;</span><span class="si">%s</span><span class="s2">&#39; contains non-integer elements!&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">other</span><span class="p">)</span>
-                <span class="p">)</span>
+                <span class="k">except</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="n">AttributeSetError</span><span class="p">(</span>
+                        <span class="s2">&quot;Set &#39;</span><span class="si">{}</span><span class="s2">&#39; contains non-integer element &#39;</span><span class="si">{}</span><span class="s2">&#39;&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                            <span class="nb">str</span><span class="p">(</span><span class="n">other</span><span class="p">),</span> <span class="n">element</span><span class="p">))</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">contains</span><span class="p">(</span><span class="n">int_element</span><span class="p">):</span>
+                    <span class="n">other_intervals</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">int_element</span><span class="p">,</span> <span class="n">int_element</span><span class="p">))</span>
+            <span class="k">return</span> <span class="n">IntegerSet</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">intervals</span> <span class="o">+</span> <span class="n">other_intervals</span><span class="p">)</span>
+
         <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">UniversalSet</span><span class="p">):</span>
             <span class="k">return</span> <span class="n">UniversalSet</span><span class="p">()</span>
         <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">EmptySet</span><span class="p">):</span>
@@ -993,8 +999,12 @@
         <span class="k">return</span> <span class="mi">0</span>
 
     <span class="k">def</span> <span class="nf">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;.&quot;&quot;&quot;</span>
+        <span class="sd">&quot;&quot;&quot;String representation of an empty set.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="s2">&quot;EmptySet&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Representation of an empty set.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="s2">&quot;regraph.attribute_set.EmptySet&quot;</span>
 
 <div class="viewcode-block" id="EmptySet.issubset"><a class="viewcode-back" href="../../attribute_sets.html#regraph.attribute_sets.EmptySet.issubset">[docs]</a>    <span class="k">def</span> <span class="nf">issubset</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Test if subset of another set.&quot;&quot;&quot;</span>

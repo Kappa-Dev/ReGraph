@@ -386,7 +386,7 @@ ordinary Python sets, as long as these sets contain integer values:</p>
 <p>Find the intersection of two regex sets:</p>
 <div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">integers</span><span class="o">.</span><span class="n">intersection</span><span class="p">(</span><span class="n">words</span><span class="p">)</span>
 <span class="go">[]</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">integers</span><span class="o">.</span><span class="n">intersection</span><span class="p">(</span><span class="n">words</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">integers</span><span class="o">.</span><span class="n">intersection</span><span class="p">(</span><span class="n">alphanums</span><span class="p">)</span>
 <span class="go">\d+</span>
 </pre></div>
 </div>
@@ -429,7 +429,7 @@ attribute sets. For example:</p>
 which in their essence are static classes. These classes contain all standard
 set theoretic operations and follow the common interface defined in the base class
 <cite>AttributeSet</cite> (as all previously presented attribute set classes).
-Cosider a couple of examples illustrating the behaviour of <cite>UniversalSet</cite> and <cite>EmptySet</cite>:</p>
+Consider a couple of examples illustrating the behaviour of <cite>UniversalSet</cite> and <cite>EmptySet</cite>:</p>
 <div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">univ</span> <span class="o">=</span> <span class="n">atsets</span><span class="o">.</span><span class="n">UniversalSet</span><span class="p">()</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">empty</span> <span class="o">=</span> <span class="n">atsets</span><span class="o">.</span><span class="n">EmptySet</span><span class="p">()</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">univ</span><span class="o">.</span><span class="n">union</span><span class="p">(</span><span class="n">empty</span><span class="p">)</span>
@@ -455,7 +455,7 @@ Cosider a couple of examples illustrating the behaviour of <cite>UniversalSet</c
 </div>
 <div class="section" id="rewriting-rules">
 <span id="rewiting-rules"></span><h4>Rewriting rules<a class="headerlink" href="#rewriting-rules" title="Permalink to this headline">¶</a></h4>
-<p>In the contex of ReGraph, by rewriting rules we mean the rules of
+<p>In the context of ReGraph, by rewriting rules we mean the rules of
 <em>sesqui-pushout rewriting</em> (see more details <a class="reference external" href="https://link.springer.com/chapter/10.1007/11841883_4">here</a>).
 A rewriting rule consists of the three graphs: <cite>p</cite> – preserved part, <cite>lhs</cite> – left hand side, <cite>rhs</cite> – right hand side, and two mappings: from <cite>p</cite> to <cite>lhs</cite> and from <cite>p</cite> to <cite>rhs</cite>.</p>
 <p>Informally, <cite>lhs</cite> represents a pattern to match in a graph, subject to rewriting. <cite>p</cite> together with <cite>p</cite> -&gt; <cite>lhs</cite> mapping specifies a part of the pattern which stays preseved during rewriting, i.e. all the nodes/edges/attributes present in <cite>lhs</cite> but not <cite>p</cite> will be removed. <cite>rhs</cite> and <cite>p</cite> -&gt; <cite>rhs</cite> specify
@@ -499,14 +499,15 @@ the corresponding two nodes will be merged.</p>
 <p>From this plot we can see that the node <cite>1</cite> is cloned and its clone is represented with the node <cite>1_clone</cite>,
 then the edge between the nodes <cite>2</cite> and <cite>3</cite> is removed, and finally, the new node (with id <cite>new_node</cite>) is created and attached with an edge to the <cite>1_clone</cite> node.</p>
 <p>Now, let’s try to apply this rule and rewrite some graph, for example the following one:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">graph</span> <span class="o">=</span> <span class="n">nx</span><span class="o">.</span><span class="n">DiGraph</span><span class="p">()</span>
-<span class="n">nodes</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;a&quot;</span><span class="p">,</span> <span class="s2">&quot;b&quot;</span><span class="p">,</span> <span class="s2">&quot;c&quot;</span><span class="p">,</span> <span class="s2">&quot;d&quot;</span><span class="p">]</span>
-<span class="n">edges</span> <span class="o">=</span> <span class="p">[(</span><span class="s2">&quot;a&quot;</span><span class="p">,</span> <span class="s2">&quot;b&quot;</span><span class="p">),</span> <span class="p">(</span><span class="s2">&quot;a, c&quot;</span><span class="p">),</span> <span class="p">(</span><span class="s2">&quot;c&quot;</span><span class="p">,</span> <span class="s2">&quot;d&quot;</span><span class="p">)]</span>
-<span class="n">primitives</span><span class="o">.</span><span class="n">add_nodes_from</span><span class="p">(</span><span class="n">graph</span><span class="p">,</span> <span class="n">nodes</span><span class="p">)</span>
-<span class="n">primitives</span><span class="o">.</span><span class="n">add_edges_from</span><span class="p">(</span><span class="n">graph</span><span class="p">,</span> <span class="n">edges</span><span class="p">)</span>
-<span class="n">pos</span> <span class="o">=</span> <span class="n">plot_graph</span><span class="p">(</span><span class="n">graph</span><span class="p">)</span>
-</pre></div>
-</div>
+<dl class="docutils">
+<dt>::</dt>
+<dd>graph = nx.DiGraph()
+nodes = [“a”, “b”, “c”, “d”]
+edges = [(“a”, “b”), (“a”, “c”), (“c”, “d”)]
+primitives.add_nodes_from(graph, nodes)
+primitives.add_edges_from(graph, edges)
+pos = rg.plot_graph(graph)</dd>
+</dl>
 <img alt="_images/graph_to_rewrite.png" src="_images/graph_to_rewrite.png" />
 <p>First, we need to find instances of the <cite>lhs</cite> of the rule in this graph,
 which can be done by <cite>regraph.primitives.find_matching</cite> function presented above:</p>

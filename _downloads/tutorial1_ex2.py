@@ -30,7 +30,6 @@ print("Union of 'a' with 'ints' :", a_or_ints)
 b_or_ints = b.union(ints)
 print("Union of 'b' with 'ints' :", b_or_ints)
 
-
 print("Union of 'a' with a set {} of type '{}': ".format(
     {13, 14}, type({13, 14})), a.union({13, 14}))
 

@@ -365,7 +365,7 @@ Find the intersection of two regex sets:
 
 >>> integers.intersection(words)
 []
->>> integers.intersection(words)
+>>> integers.intersection(alphanums)
 \d+
 
 Find the union of two regex sets:
@@ -408,7 +408,7 @@ ReGraph provides two special classes of attribute sets: `UniversalSet` and `Empt
 which in their essence are static classes. These classes contain all standard
 set theoretic operations and follow the common interface defined in the base class
 `AttributeSet` (as all previously presented attribute set classes).
-Cosider a couple of examples illustrating the behaviour of `UniversalSet` and `EmptySet`:
+Consider a couple of examples illustrating the behaviour of `UniversalSet` and `EmptySet`:
 
 >>> univ = atsets.UniversalSet()
 >>> empty = atsets.EmptySet()
@@ -447,7 +447,7 @@ Module reference: :ref:`attribute_sets`
 Rewriting rules
 ^^^^^^^^^^^^^^^
 
-In the contex of ReGraph, by rewriting rules we mean the rules of
+In the context of ReGraph, by rewriting rules we mean the rules of
 *sesqui-pushout rewriting* (see more details `here <https://link.springer.com/chapter/10.1007/11841883_4>`_).
 A rewriting rule consists of the three graphs: `p` -- preserved part, `lhs` -- left hand side, `rhs` -- right hand side, and two mappings: from `p` to `lhs` and from `p` to `rhs`.
     
@@ -500,13 +500,12 @@ then the edge between the nodes `2` and `3` is removed, and finally, the new nod
 Now, let's try to apply this rule and rewrite some graph, for example the following one:
 
 ::
-
     graph = nx.DiGraph()
     nodes = ["a", "b", "c", "d"]
-    edges = [("a", "b"), ("a, c"), ("c", "d")]
+    edges = [("a", "b"), ("a", "c"), ("c", "d")]
     primitives.add_nodes_from(graph, nodes)
     primitives.add_edges_from(graph, edges)
-    pos = plot_graph(graph)
+    pos = rg.plot_graph(graph)
 
 
 .. image:: _images/graph_to_rewrite.png
