@@ -223,16 +223,19 @@ class FiniteSet(AttributeSet):
         elif isinstance(other, RegexSet):
             return RegexSet(self.fset).union(other)
         elif isinstance(other, IntegerSet):
+            int_elements = set()
             for element in self.fset:
                 if type(element) != int:
                     try:
-                        element = int(element)
+                        int_elements.add(int(element))
                     except:
                         raise AttributeSetError(
                             "Element '%s' of a finite set is not an "
                             "integer (%s)" %
                             (str(element), str(type(element)))
                         )
+                else:
+                    int_elements.add(element)
             return IntegerSet(self.fset).union(other)
         elif isinstance(other, EmptySet):
             return copy.deepcopy(self)
@@ -771,30 +774,33 @@ class IntegerSet(AttributeSet):
         """Union of two integer sets."""
         if isinstance(other, IntegerSet):
             return IntegerSet(self.intervals + other.intervals)
+
         elif isinstance(other, set):
             other_intervals = []
-            try:
-                for element in other:
+            for element in other:
+                try:
                     int_element = int(element)
-                    if self.contains(int_element):
-                        other_intervals.append((int_element, int_element))
-                return IntegerSet(self.intervals + other_intervals)
-            except:
-                raise AttributeSetError(
-                    "Set '%s' contains non-integer elements!" % str(other)
-                )
+                except:
+                    raise AttributeSetError(
+                        "Set '{}' contains non-integer element '{}'".format(
+                            str(other), element))
+                if not self.contains(int_element):
+                    other_intervals.append((int_element, int_element))
+            return IntegerSet(self.intervals + other_intervals)
+
         elif isinstance(other, FiniteSet):
             other_intervals = []
-            try:
-                for element in other.fset:
+            for element in other.fset:
+                try:
                     int_element = int(element)
-                    if self.contains(int_element):
-                        other_intervals.append((int_element, int_element))
-                return IntegerSet(self.intervals + other_intervals)
-            except:
-                raise AttributeSetError(
-                    "Set '%s' contains non-integer elements!" % str(other)
-                )
+                except:
+                    raise AttributeSetError(
+                        "Set '{}' contains non-integer element '{}'".format(
+                            str(other), element))
+                if not self.contains(int_element):
+                    other_intervals.append((int_element, int_element))
+            return IntegerSet(self.intervals + other_intervals)
+
         elif isinstance(other, UniversalSet):
             return UniversalSet()
         elif isinstance(other, EmptySet):
@@ -951,8 +957,12 @@ class EmptySet(AttributeSet):
         return 0
 
     def __str__(self):
-        """."""
+        """String representation of an empty set."""
         return "EmptySet"
+
+    def __repr__(self):
+        """Representation of an empty set."""
+        return "regraph.attribute_set.EmptySet"
 
     def issubset(self, other):
         """Test if subset of another set."""
