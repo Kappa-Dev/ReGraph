@@ -27,7 +27,10 @@ import copy
 
 from regraph.attribute_sets import AttributeSet, FiniteSet
 from regraph.category_utils import compose
-from regraph.primitives import equal
+from regraph.primitives import (equal,
+                                graph_to_json,
+                                graph_from_json)
+from regraph.rules import Rule
 from regraph.utils import (to_set,
                            replace_source,
                            replace_target,
@@ -112,6 +115,8 @@ class GraphNode(AttributeContainter):
         """Initialize graph node with graph object and attrs."""
         self.graph = graph
         if attrs:
+            if attrs is not None:
+                normalize_attrs(attrs)
             self.attrs = attrs
         else:
             self.attrs = dict()
@@ -120,6 +125,28 @@ class GraphNode(AttributeContainter):
     def __eq__(self, other):
         """Equality of graph nodes."""
         return isinstance(other, GraphNode) and equal(self.graph, other.graph)
+
+    def to_json(self):
+        """Create a JSON representation of the object."""
+        return {
+            "graph": graph_to_json(self.graph),
+            "attrs": self.attrs_to_json()
+        }
+
+    @classmethod
+    def from_json(cls, json_data, directed=True):
+        graph, attrs = cls.process_json(json_data["graph"], directed)
+        return cls(graph, attrs)
+
+    @staticmethod
+    def process_json(json_data, directed=True):
+        graph = graph_from_json(json_data["graph"], directed)
+        if "attrs" not in json_data.keys():
+            attrs = dict()
+        else:
+            attrs = AttributeContainter.attrs_from_json(
+                json_data["attrs"])
+        return graph, attrs
 
 
 class RuleNode(AttributeContainter):
@@ -148,6 +175,28 @@ class RuleNode(AttributeContainter):
     def __ne__(self, other):
         """Non-equality of the rule nodes."""
         return not (self == other)
+
+    def to_json(self):
+        """Create a JSON representation of the object."""
+        return {
+            "rule": self.rule.to_json(),
+            "attrs": self.attrs_to_json()
+        }
+
+    @classmethod
+    def from_json(cls, json_data, directed=True):
+        rule, attrs = cls.process_json(json_data, directed)
+        return cls(rule, attrs)
+
+    @staticmethod
+    def process_json(json_data, directed=True):
+        rule = Rule.from_json(json_data["rule"], directed)
+        if "attrs" not in json_data.keys():
+            attrs = dict()
+        else:
+            attrs = AttributeContainter.attrs_from_json(
+                json_data["attrs"])
+        return rule, attrs
 
 
 class Typing(AttributeContainter):
@@ -212,6 +261,29 @@ class Typing(AttributeContainter):
         else:
             return NotImplemented
 
+    def to_json(self):
+        return {
+            "mapping": self.mapping,
+            "total": self.total,
+            "attrs": self.attrs_to_json()
+        }
+
+    @classmethod
+    def from_json(cls, json_data):
+        mapping, total, attrs = cls.process_json(json_data)
+        return cls(mapping, total, attrs)
+
+    @staticmethod
+    def process_json(json_data):
+        mapping = json_data["mapping"]
+        total = json_data["total"]
+        if "attrs" not in json_data.keys():
+            attrs = dict()
+        else:
+            attrs = AttributeContainter.attrs_from_json(
+                json_data["attrs"])
+        return mapping, total, attrs
+
 
 class RuleTyping(AttributeContainter):
     """Data structure incapsulating rule typing.
@@ -275,6 +347,34 @@ class RuleTyping(AttributeContainter):
         else:
             return NotImplemented
 
+    def to_json(self):
+        return {
+            "lhs_mapping": self.lhs_mapping,
+            "rhs_mapping": self.rhs_mapping,
+            "lhs_total": self.lhs_total,
+            "rhs_total": self.rhs_total,
+            "attrs": self.attrs_to_json()
+        }
+
+    @classmethod
+    def from_json(cls, json_data):
+        lhs_map, rhs_map, lhs_total, rhs_total, attrs =\
+            cls.process_json(json_data)
+        return cls(lhs_map, rhs_map, lhs_total, rhs_total, attrs)
+
+    @staticmethod
+    def process_json(json_data):
+        lhs_map = json_data["lhs_mapping"]
+        rhs_map = json_data["rhs_mapping"]
+        lhs_total = json_data["lhs_total"]
+        rhs_total = json_data["rhs_total"]
+        if "attrs" not in json_data.keys():
+            attrs = dict()
+        else:
+            attrs = AttributeContainter.attrs_from_json(
+                json_data["attrs"])
+        return lhs_map, rhs_map, lhs_total, rhs_total, attrs
+
 
 class Relation(AttributeContainter):
     """Base class for relations equipped with attributes."""
@@ -311,6 +411,26 @@ class GraphRelation(Relation):
         """Return the definition domain of the right member of relation."""
         return set(self.rel.values())
 
+    def to_json(self):
+        return {
+            "rel": {a: list(b) for a, b in self.rel.items()},
+            "attrs": self.attrs_to_json()
+        }
+
+    @classmethod
+    def from_json(cls, json_data):
+        rel, attrs = cls.process_json(json_data)
+        return cls(rel, attrs)
+
+    @staticmethod
+    def process_json(json_data):
+        rel = {a: set(b) for a, b in json_data["rel"].items()}
+        if "attrs" not in json_data.keys():
+            attrs = dict()
+        else:
+            attrs = AttributeContainter.attrs_from_json(
+                json_data["attrs"])
+        return rel, attrs
 
 # class RuleGraphRelation(Relation):
 #     pass
