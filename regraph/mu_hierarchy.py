@@ -74,11 +74,13 @@ class MuGraphNode(AttributeContainter):
 
     @classmethod
     def from_json(cls, json_data, directed=True):
+        """Create an object from json representation."""
         graph, attrs, formulae = cls.process_json(json_data)
         return cls(graph, attrs, formulae)
 
     @staticmethod
     def process_json(json_data, directed=True):
+        """Get data from json representation."""
         graph = graph_from_json(json_data["graph"], directed)
         if "attrs" not in json_data.keys():
             attrs = dict()

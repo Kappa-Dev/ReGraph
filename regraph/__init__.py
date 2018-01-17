@@ -1,4 +1,4 @@
-"""."""
+"""Init of regraph module."""
 
 from regraph.hierarchy import Hierarchy
 

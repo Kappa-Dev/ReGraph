@@ -135,13 +135,12 @@ class GraphNode(AttributeContainter):
 
     @classmethod
     def from_json(cls, json_data, directed=True):
-        print(json_data)
         graph, attrs = cls.process_json(json_data["graph"], directed)
         return cls(graph, attrs)
 
     @staticmethod
     def process_json(json_data, directed=True):
-        graph = graph_from_json(json_data, directed)
+        graph = graph_from_json(json_data["graph"], directed)
         if "attrs" not in json_data.keys():
             attrs = dict()
         else:
@@ -191,7 +190,7 @@ class RuleNode(AttributeContainter):
 
     @staticmethod
     def process_json(json_data, directed=True):
-        rule = Rule.from_json(json_data, directed)
+        rule = Rule.from_json(json_data["rule"], directed)
         if "attrs" not in json_data.keys():
             attrs = dict()
         else:
