@@ -22,35 +22,35 @@ import os
 from networkx.algorithms import isomorphism
 from networkx.exception import NetworkXNoPath
 
-from regraph import rewriting_utils
-from regraph import type_checking
+from regraph.default import rewriting_utils
+from regraph.default import type_checking
 
-from regraph.category_utils import (compose,
-                                    check_homomorphism,
-                                    relation_to_span,
-                                    right_relation_dict)
-from regraph.primitives import (get_relabeled_graph,
-                                relabel_node,
-                                get_edge,
-                                graph_to_json,
-                                graph_from_json,
-                                equal)
-from regraph.utils import (is_subdict,
-                           keys_by_value,
-                           normalize_attrs,
-                           )
-from regraph.rules import Rule
-from regraph.exceptions import (HierarchyError,
-                                ReGraphError,
-                                RewritingError,
-                                InvalidHomomorphism,
-                                GraphError)
-from regraph.components import (AttributeContainter,
-                                GraphNode,
-                                RuleNode,
-                                Typing,
-                                RuleTyping,
-                                GraphRelation)
+from regraph.default.category_utils import (compose,
+                                            check_homomorphism,
+                                            relation_to_span,
+                                            right_relation_dict)
+from regraph.default.primitives import (get_relabeled_graph,
+                                        relabel_node,
+                                        get_edge,
+                                        graph_to_json,
+                                        graph_from_json,
+                                        equal)
+from regraph.default.utils import (is_subdict,
+                                   keys_by_value,
+                                   normalize_attrs,
+                                   )
+from regraph.default.rules import Rule
+from regraph.default.exceptions import (HierarchyError,
+                                        ReGraphError,
+                                        RewritingError,
+                                        InvalidHomomorphism,
+                                        GraphError)
+from regraph.default.components import (AttributeContainter,
+                                        GraphNode,
+                                        RuleNode,
+                                        Typing,
+                                        RuleTyping,
+                                        GraphRelation)
 
 
 class Hierarchy(nx.DiGraph, AttributeContainter):

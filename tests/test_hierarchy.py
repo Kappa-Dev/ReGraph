@@ -5,10 +5,10 @@ import networkx as nx
 
 from nose.tools import raises
 
-from regraph.rules import Rule
-from regraph.hierarchy import Hierarchy
-from regraph.exceptions import (HierarchyError)
-import regraph.primitives as prim
+from regraph import Rule
+from regraph import Hierarchy
+from regraph import (HierarchyError)
+import regraph.default.primitives as prim
 
 
 class TestHierarchy(object):

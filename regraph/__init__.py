@@ -1,11 +1,13 @@
 """."""
 
-from regraph.hierarchy import Hierarchy
+from regraph.default.hierarchy import Hierarchy
 
-from regraph.rules import Rule
+from regraph.default.rules import Rule
 
-from regraph.exceptions import *
+from regraph.default.exceptions import *
 
-from regraph.plotting import *
+from regraph.default.plotting import *
 
-from regraph.primitives import *
+from regraph.default.primitives import *
+
+from regraph.default.attribute_sets import *

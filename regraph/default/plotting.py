@@ -4,7 +4,7 @@ import copy
 import networkx as nx
 import numpy as np
 
-from regraph.utils import keys_by_value
+from regraph.default.utils import keys_by_value
 from matplotlib import pyplot as plt
 
 

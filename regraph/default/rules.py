@@ -7,17 +7,17 @@ https://link.springer.com/chapter/10.1007/11841883_4).
 import copy
 import warnings
 
-from regraph.parser import parser
-from regraph.utils import (keys_by_value,
-                           make_canonical_commands,
-                           dict_sub,
-                           attrs_union)
-from regraph.category_utils import (identity,
-                                    check_homomorphism,
-                                    pullback_complement,
-                                    pushout)
-from regraph import primitives
-from regraph.exceptions import (ReGraphWarning, ParsingError, RuleError)
+from regraph.default.parser import parser
+from regraph.default.utils import (keys_by_value,
+                                   make_canonical_commands,
+                                   dict_sub,
+                                   attrs_union)
+from regraph.default.category_utils import (identity,
+                                            check_homomorphism,
+                                            pullback_complement,
+                                            pushout)
+from regraph.default import primitives
+from regraph.default.exceptions import (ReGraphWarning, ParsingError, RuleError)
 
 
 class Rule(object):

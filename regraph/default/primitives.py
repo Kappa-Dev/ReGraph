@@ -14,15 +14,15 @@ import networkx as nx
 from copy import deepcopy
 from networkx.algorithms import isomorphism
 
-from regraph.utils import (merge_attributes,
-                           normalize_attrs,
-                           valid_attributes,
-                           keys_by_value,
-                           json_dict_to_attrs)
-from regraph.exceptions import (ReGraphError,
-                                GraphError,
-                                GraphAttrsWarning)
-from regraph.attribute_sets import FiniteSet
+from regraph.default.utils import (merge_attributes,
+                                   normalize_attrs,
+                                   valid_attributes,
+                                   keys_by_value,
+                                   json_dict_to_attrs)
+from regraph.default.exceptions import (ReGraphError,
+                                        GraphError,
+                                        GraphAttrsWarning)
+from regraph.default.attribute_sets import FiniteSet
 
 
 def add_node(graph, node_id, attrs=None):

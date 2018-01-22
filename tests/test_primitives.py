@@ -1,11 +1,11 @@
 import networkx as nx
 
-from regraph.rules import Rule
-from regraph.utils import (valid_attributes,
-                           normalize_attrs)
-from regraph.category_utils import identity
-from regraph.primitives import *
-import regraph.primitives as prim
+from regraph import Rule
+from regraph.default.utils import (valid_attributes,
+                                   normalize_attrs)
+from regraph.default.category_utils import identity
+from regraph.default.primitives import *
+import regraph.default.primitives as prim
 
 
 class TestPrimitives(object):

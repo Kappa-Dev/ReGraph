@@ -1,9 +1,10 @@
 import networkx as nx
-from regraph.rules import Rule
-from regraph.utils import keys_by_value
-from regraph.exceptions import RuleError
-from regraph.category_utils import check_homomorphism
-import regraph.primitives as prim
+
+from regraph import Rule
+from regraph import keys_by_value
+from regraph import RuleError
+from regraph.default.category_utils import check_homomorphism
+import regraph.default.primitives as prim
 
 
 class TestRule(object):

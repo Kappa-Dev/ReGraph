@@ -1,10 +1,10 @@
 """Test of the hierarchy functionality with all typings being partial."""
 import networkx as nx
 
-from regraph.hierarchy import Hierarchy
-from regraph.rules import Rule
-from regraph.exceptions import RewritingError
-from regraph import primitives
+from regraph import Hierarchy
+from regraph import Rule
+from regraph import RewritingError
+from regraph.default import primitives
 
 
 class TestPropagation(object):
