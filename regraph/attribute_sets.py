@@ -154,6 +154,10 @@ class FiniteSet(AttributeSet):
         """String represenation of FiniteSet."""
         return str(self.fset)
 
+    def __repr__(self):
+        """Repr represenation of FiniteSet."""
+        return str(self.fset)
+
     def __iter__(self):
         """Iterator over FiniteSet."""
         for element in self.fset:

@@ -1229,7 +1229,7 @@ class Hierarchy(nx.DiGraph, AttributeContainter):
             pattern_typing = new_pattern_typing
 
         if nodes is not None:
-            g = self.node[graph_id].graph.subgraph(nodes)
+            g = self.graph[graph_id].subgraph(nodes)
         else:
             g = self.node[graph_id].graph
         labels_mapping = dict(
@@ -1241,7 +1241,6 @@ class Hierarchy(nx.DiGraph, AttributeContainter):
         inverse_mapping = dict(
             [(value, key) for key, value in labels_mapping.items()]
         )
-
         if pattern_typing:
             try:
                 g_typing = dict([
@@ -1249,7 +1248,7 @@ class Hierarchy(nx.DiGraph, AttributeContainter):
                         (labels_mapping[k], v) for k, v in
                         self.compose_path_typing(
                             nx.shortest_path(self, graph_id, typing_graph)
-                        ).items()
+                        ).items() if nodes is not None and k in nodes
                     ])) for typing_graph in pattern_typing.keys()
                 ])
             except NetworkXNoPath:
