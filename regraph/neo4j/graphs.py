@@ -7,7 +7,9 @@ from regraph.neo4j.cypher_utils import (clear_graph,
                                         add_nodes_from,
                                         add_edges_from,
                                         remove_node,
-                                        remove_edge)
+                                        remove_edge,
+                                        nodes,
+                                        edges)
 
 
 class Neo4jGraph(object):
@@ -69,3 +71,13 @@ class Neo4jGraph(object):
         query = remove_edge(source, target)
         result = self.execute(query)
         print(result)
+
+    def nodes(self):
+        query = nodes()
+        result = self.execute(query)
+        return [list(d.values())[0] for d in result]
+
+    def edges(self):
+        query = edges()
+        result = self.execute(query)
+        return [(d["n.id"], d["m.id"]) for d in result]

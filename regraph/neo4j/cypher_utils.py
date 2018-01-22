@@ -2,35 +2,49 @@
 
 
 def add_node(node, attrs=None):
-    query = "CREATE ({}:node {{ id : '{}' }})".format(node, node)
-    return query
+    return add_nodes_from([node])
 
-def add_edge(node, attrs=None):
-    pass
+def add_edge(source, target, attrs=None):
+    return add_edges_from([(source, target)])
 
 
 def remove_node(node):
-    pass
+    query = "MATCH {} WHERE {} DELETE {}".format(
+            "({})".format(n),
+            "{}.id = '{}'".format(n, n),
+            n
+        )
+    return query
 
 
-def remove_edge(node):
-    pass
-
+def remove_edge(source, target):
+    query = "MATCH {} WHERE {} DELETE r".format(
+        "({})-[r]->({})".format(source, target),
+        "{}.id = '{}' and {}.id = '{}'".format(source, source, target, target)
+    )
+    return query
 
 def add_nodes_from(nodes):
-    pass
-
+    nodes_statement = "CREATE {}".format(
+        ", ".join("({}:node {{ id : '{}' }})".format(n, n) for n in nodes))
+    return nodes_statement
 
 def add_edges_from(edges):
-    pass
+    nodes = set(list(sum(edges, ())))
+    match_nodes = "MATCH {} WHERE {} ".format(
+        ", ".join("({})".format(n) for n in nodes),
+        " and ".join("{}.id = '{}'".format(n, n) for n in nodes)
+    )
+    edges_statement = "CREATE " + ", ".join(
+        "({})-[:edge]->({})".format(u, v) for u, v in edges)
+    print(match_nodes + edges_statement)
+    return match_nodes + edges_statement
 
 
 def create_graph(nodes, edges=None):
     """Generate Cypher query for graph creation."""
-    nodes_statement = "CREATE {}".format(
-        ", ".join("({}:node {{ id : '{}' }})".format(n, n) for n in nodes))
-    edges_statement = ", ".join(
-        "({})-[:edge]->({})".format(u, v) for u, v in edges)
+    
+   
     query = nodes_statement
     if edges is not None and len(edges) > 0:
         query += ", " + edges_statement
@@ -43,4 +57,12 @@ def clear_graph():
         "OPTIONAL MATCH (n)-[r]-()"
         "DELETE n, r"
     )
+    return query
+
+def nodes():
+    query = "MATCH (n) RETURN n.id"
+    return query
+
+def edges():
+    query = "MATCH (n)-[r]->(m) RETURN n.id, m.id"
     return query
