@@ -2,8 +2,8 @@
 
 
 def add_node(node, attrs=None):
-    pass
-
+    query = "CREATE ({}:node {{ id : '{}' }})".format(node, node)
+    return query
 
 def add_edge(node, attrs=None):
     pass
@@ -34,7 +34,6 @@ def create_graph(nodes, edges=None):
     query = nodes_statement
     if edges is not None and len(edges) > 0:
         query += ", " + edges_statement
-    print(query)
     return query
 
 
@@ -42,6 +41,6 @@ def clear_graph():
     (query) = (
         "MATCH (n)"
         "OPTIONAL MATCH (n)-[r]-()"
-        "DELETE n,r"
+        "DELETE n, r"
     )
     return query
