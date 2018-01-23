@@ -281,15 +281,17 @@ class Rule(object):
             self.p_rhs[p_new_node_id] = rhs_new_node_id
             # reconnect the new rhs node with necessary edges
             for pred in self.p.predecessors(p_new_node_id):
-                primitives.add_edge(
-                    self.rhs,
-                    self.p_rhs[pred], rhs_new_node_id,
-                    self.p.edge[pred][p_new_node_id])
+                if (self.p_rhs[pred], rhs_new_node_id) not in self.rhs.edges():
+                    primitives.add_edge(
+                        self.rhs,
+                        self.p_rhs[pred], rhs_new_node_id,
+                        self.p.edge[pred][p_new_node_id])
             for suc in self.p.successors(p_new_node_id):
-                primitives.add_edge(
-                    self.rhs,
-                    rhs_new_node_id, self.p_rhs[suc],
-                    self.p.edge[p_new_node_id][suc])
+                if (rhs_new_node_id, self.p_rhs[suc]) not in self.rhs.edges():
+                    primitives.add_edge(
+                        self.rhs,
+                        rhs_new_node_id, self.p_rhs[suc],
+                        self.p.edge[p_new_node_id][suc])
 
         return (p_new_node_id, rhs_new_node_id)
 
