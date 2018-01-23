@@ -286,10 +286,11 @@ class Rule(object):
                     self.p_rhs[pred], rhs_new_node_id,
                     self.p.edge[pred][p_new_node_id])
             for suc in self.p.successors(p_new_node_id):
-                primitives.add_edge(
-                    self.rhs,
-                    rhs_new_node_id, self.p_rhs[suc],
-                    self.p.edge[p_new_node_id][suc])
+                if (rhs_new_node_id, self.p_rhs[suc]) not in self.rhs.edges():
+                    primitives.add_edge(
+                        self.rhs,
+                        rhs_new_node_id, self.p_rhs[suc],
+                        self.p.edge[p_new_node_id][suc])
 
         return (p_new_node_id, rhs_new_node_id)
 
@@ -1157,16 +1158,16 @@ class Rule(object):
 
         """
         commands = ""
-        for node in self.removed_nodes():
-            commands += "DELETE_NODE %s.\n" % node
-        for u, v in self.removed_edges():
-            commands += "DELETE_EDGE %s %s.\n" % (u, v)
         for lhs_node, p_nodes in self.cloned_nodes().items():
             new_name = set()
             for p_node in p_nodes:
                 if p_node != lhs_node:
                     new_name.add(p_node)
             commands += "CLONE %s AS %s.\n" % (lhs_node, new_name.pop())
+        for node in self.removed_nodes():
+            commands += "DELETE_NODE %s.\n" % node
+        for u, v in self.removed_edges():
+            commands += "DELETE_EDGE %s %s.\n" % (u, v)
         for node, attrs in self.removed_node_attrs().items():
             commands += "DELETE_NODE_ATTRS %s %s.\n" % (node, attrs)
         for (u, v), attrs in self.removed_edge_attrs().items():
