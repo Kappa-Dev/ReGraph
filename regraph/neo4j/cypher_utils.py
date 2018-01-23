@@ -43,8 +43,6 @@ def add_edges_from(edges):
 
 def create_graph(nodes, edges=None):
     """Generate Cypher query for graph creation."""
-    
-   
     query = nodes_statement
     if edges is not None and len(edges) > 0:
         query += ", " + edges_statement

@@ -34,7 +34,7 @@ class Neo4jGraph(object):
         """Clear graph database."""
         query = clear_graph()
         result = self.execute(query)
-        print(result)
+        return result
 
     def add_nodes_from(self, nodes):
         """Add nodes to the graph db."""
