@@ -8,8 +8,9 @@ from regraph.neo4j.cypher_utils import (clear_graph,
                                         add_edges_from,
                                         remove_node,
                                         remove_edge,
-                                        nodes,
-                                        edges)
+                                        get_nodes,
+                                        get_edges,
+                                        clone_node)
 
 
 class Neo4jGraph(object):
@@ -73,11 +74,15 @@ class Neo4jGraph(object):
         print(result)
 
     def nodes(self):
-        query = nodes()
+        query = get_nodes()
         result = self.execute(query)
         return [list(d.values())[0] for d in result]
 
     def edges(self):
-        query = edges()
+        query = get_edges()
         result = self.execute(query)
         return [(d["n.id"], d["m.id"]) for d in result]
+
+    def clone_node(self, node, name=None):
+        result = self.execute(clone_node(node, name))
+        return result

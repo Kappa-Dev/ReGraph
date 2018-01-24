@@ -4,16 +4,15 @@
 def add_node(node, attrs=None):
     return add_nodes_from([node])
 
+
 def add_edge(source, target, attrs=None):
     return add_edges_from([(source, target)])
 
 
 def remove_node(node):
-    query = "MATCH {} WHERE {} DELETE {}".format(
-            "({})".format(n),
-            "{}.id = '{}'".format(n, n),
-            n
-        )
+    query = ("MATCH (n:node) WHERE n.id='{}' "
+             "OPTIONAL MATCH (n)-[r:edge]->(m)"
+             "DELETE n, r".format(node))
     return query
 
 
@@ -24,10 +23,12 @@ def remove_edge(source, target):
     )
     return query
 
+
 def add_nodes_from(nodes):
     nodes_statement = "CREATE {}".format(
         ", ".join("({}:node {{ id : '{}' }})".format(n, n) for n in nodes))
     return nodes_statement
+
 
 def add_edges_from(edges):
     nodes = set(list(sum(edges, ())))
@@ -41,14 +42,6 @@ def add_edges_from(edges):
     return match_nodes + edges_statement
 
 
-def create_graph(nodes, edges=None):
-    """Generate Cypher query for graph creation."""
-    query = nodes_statement
-    if edges is not None and len(edges) > 0:
-        query += ", " + edges_statement
-    return query
-
-
 def clear_graph():
     (query) = (
         "MATCH (n)"
@@ -57,10 +50,80 @@ def clear_graph():
     )
     return query
 
-def nodes():
+
+def get_nodes():
     query = "MATCH (n) RETURN n.id"
     return query
 
-def edges():
+
+def get_edges():
     query = "MATCH (n)-[r]->(m) RETURN n.id, m.id"
     return query
+
+
+def copy_node(node):
+    """Copy node in the persistent graph."""
+    pass
+
+
+def relabel_node(node_id, new_id):
+    """Relabel a node in the graph."""
+    i = 1
+    new_node = str(node_id) + str(i)
+    while new_node in graph.nodes():
+        i += 1
+        new_node = str(node_id) + str(i)
+
+
+def generate_new_name(prefix=None):
+    pass
+
+
+def clone_node(node, name=None):
+    """Clone node in the persistent graph."""
+    if name is None:
+        # Generate new id
+        (create_clone) = (
+            "MATCH (x:node {{ id : '{}' }}) "
+            "SET x.count = coalesce(x.count, 0) + 1 "
+            "WITH '{}' + x.count AS uid, x "
+            "CREATE (new_node:node {{ id : uid }}) "
+            "WITH new_node, x "
+            "OPTIONAL MATCH (x)-[:edge]->(m:node), "
+            "(o:node)-[:edge]->(x) "
+            "CREATE UNIQUE (new_node)-[:edge]->(m), "
+            "(o)-[:edge]->(new_node) ".format(node, node, node)
+        )
+    else:
+        (create_clone) = (
+            "MATCH (original:node) WHERE original.id = '{}' "
+            "OPTIONAL MATCH (original)-[:edge]->(m:node), "
+            "(o:node)-[:edge]->(original) "
+            "WITH COLLECT(m) as sucs, COLLECT(o) as preds "
+            "OPTIONAL MATCH (x:node) WHERE x.id = '{}' "
+            "FOREACH(new_count IN CASE WHEN x IS NOT NULL "
+            "THEN [coalesce(x.count, 0) + 1] "
+            "ELSE [] END | "
+            "SET x.count=coalesce(x.count, 0) + 1 ) "
+            "FOREACH(new_id IN CASE WHEN x IS NOT NULL "
+            "THEN ['{}' + x.count] "
+            "ELSE ['{}'] END | "
+            "CREATE  (new_node:node {{id : new_id}}) "
+            "FOREACH(p in preds | "
+            "CREATE UNIQUE (p)-[:edge]->(new_node)) "
+            "FOREACH(s in sucs | "
+            "CREATE UNIQUE (new_node)-[:edge]->(s))"
+            ") ".format(
+                node, name, name, name))
+    reconnect_edges = ""
+    query = create_clone + reconnect_edges
+    return query
+
+
+def merge_nodes(node_list, name=None):
+    """Merge nodes in the persistent graph."""
+    pass
+
+
+def find_matching(pattern, nodes=None):
+    pass
