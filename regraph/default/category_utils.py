@@ -366,6 +366,9 @@ def partial_pushout(a, b, c, a_b, a_c):
 
 def pushout(a, b, c, a_b, a_c, inplace=False):
     """Find the pushour of the span b <- a -> c."""
+    def get_classes_to_merge():
+        pass
+
     check_homomorphism(a, b, a_b)
     check_homomorphism(a, c, a_c)
 
@@ -378,6 +381,7 @@ def pushout(a, b, c, a_b, a_c, inplace=False):
     c_d = dict()
 
     # Add/merge nodes
+    merged_nodes = dict()
     for c_n in c.nodes():
         a_keys = keys_by_value(a_c, c_n)
         # Add nodes
@@ -389,12 +393,47 @@ def pushout(a, b, c, a_b, a_c, inplace=False):
             c_d[a_c[a_keys[0]]] = a_b[a_keys[0]]
         # Merge nodes
         else:
-            nodes_to_merge = []
+            nodes_to_merge = set()
+            print(nodes_to_merge)
+            # find the nodes that need to be merged
             for k in a_keys:
-                nodes_to_merge.append(a_b[k])
-            new_name = merge_nodes(d, nodes_to_merge)
-            c_d[c_n] = new_name
+                nodes_to_merge.add(a_b[k])
+
+            # find if exists already some merged node to
+            # which the new node should be merged
+            groups_to_remove = set()
+            new_groups = set()
+            merge_done = False
+            for k in merged_nodes.keys():
+                if nodes_to_merge.issubset(merged_nodes[k]):
+                    merge_done = True
+                else:
+                    intersect_with_group = nodes_to_merge.intersection(
+                        merged_nodes[k])
+                    if len(intersect_with_group) > 0:
+                        new_nodes_to_merge =\
+                            nodes_to_merge.difference(merged_nodes[k])
+                        if len(new_nodes_to_merge) > 0:
+                            new_nodes_to_merge.add(k)
+                            new_name = merge_nodes(d, new_nodes_to_merge)
+                            merged_nodes[new_name] = merged_nodes[k].union(
+                                nodes_to_merge)
+                            groups_to_remove.add(k)
+                            new_groups.add(new_name)
+
+            if len(groups_to_remove) > 0:
+                new_name = merged_nodes(d, new_groups)
+                merged_nodes[new_name] = set()
+                for g in new_groups:
+                    merge_nodes[new_name] = merge_nodes[new_name].union(
+                        merged_nodes[g])
+                for group in groups_to_remove:
+                    del merged_nodes[group]
+            elif not merge_done:
+                new_name = merge_nodes(d, nodes_to_merge)
+                merged_nodes[new_name] = nodes_to_merge
             for node in nodes_to_merge:
+                c_d[c_n] = new_name
                 b_d[node] = new_name
 
     # Add edges
