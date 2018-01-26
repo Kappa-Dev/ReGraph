@@ -394,7 +394,6 @@ def pushout(a, b, c, a_b, a_c, inplace=False):
         # Merge nodes
         else:
             nodes_to_merge = set()
-            print(nodes_to_merge)
             # find the nodes that need to be merged
             for k in a_keys:
                 nodes_to_merge.add(a_b[k])
