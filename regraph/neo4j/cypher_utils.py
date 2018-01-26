@@ -122,7 +122,38 @@ def clone_node(node, name=None):
 
 def merge_nodes(node_list, name=None):
     """Merge nodes in the persistent graph."""
-    pass
+    match_nodes =\
+        " ".join("MATCH ({}:node {{ id : '{}' }})".format(n, n) for n in node_list) + " "
+    match_edges =\
+        " ".join(
+            "OPTIONAL MATCH ({})-[:edge]->({}) "
+            "OPTIONAL MATCH ({})-[:edge]->({})".format(
+                n, "suc_" + n, "pred_" + n, n) for n in node_list) + " " +\
+        " WITH " + ", ".join(n for n in node_list) + ", " + ", ".join(
+            "COLLECT({}) as sucs_{}, COLLECT({}) as preds_{}".format(
+                "suc_" + n, n, "pred_" + n, n) for n in node_list) + " "
+    new_node = "CREATE ({}:node {{ id: '{}' }}) ".format(name, name)
+    reconnect_edges = (
+        " ".join(
+            "FOREACH(s IN sucs_{} | "
+            "CREATE UNIQUE ({})-[:edge]->(s)) ".format(
+                n, name) for n in node_list) +\
+        " ".join(
+            "FOREACH(p IN preds_{} | CREATE UNIQUE (p)-[:edge]->({})) ".format(
+                n, name) for n in node_list) +\
+        "FOREACH(n IN {} | "
+        "FOREACH(x IN CASE WHEN n IN [{}] THEN ['dummy'] ELSE [] END | "
+        "CREATE UNIQUE ({})-[:edge]->({})) "
+        ")".format(
+            " + ".join("sucs_{} + preds_{}".format(n, n) for n in node_list),
+            ", ".join(n for n in node_list),
+            name, name) + " "
+    )
+    delete_nodes =\
+        " DETACH DELETE " + ", ".join(n for n in node_list)
+    query = match_nodes + match_edges +\
+        new_node + reconnect_edges + delete_nodes
+    return query
 
 
 def find_matching(pattern, nodes=None):
