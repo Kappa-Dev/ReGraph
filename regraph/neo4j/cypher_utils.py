@@ -1,4 +1,4 @@
-"""Collection of Cypher utils."""
+"""Collection of utils for Cypher generation."""
 
 
 def add_node(node, attrs=None):
@@ -88,11 +88,15 @@ def clone_node(node, name=None):
             "SET x.count = coalesce(x.count, 0) + 1 "
             "WITH '{}' + x.count AS uid, x "
             "CREATE (new_node:node {{ id : uid }}) "
-            "WITH new_node, x "
+            "WITH new_node, x, uid "
             "OPTIONAL MATCH (x)-[:edge]->(m:node), "
             "(o:node)-[:edge]->(x) "
-            "CREATE UNIQUE (new_node)-[:edge]->(m), "
-            "(o)-[:edge]->(new_node) ".format(node, node, node)
+            "WITH new_node, x, uid, COLLECT(m) AS ms, COLLECT(o) AS os "
+            "FOREACH(o in os | "
+            "CREATE UNIQUE (o)-[:edge]->(new_node) )"
+            "FOREACH(m in ms | "
+            "CREATE UNIQUE (new_node)-[:edge]->(m) )"
+            "RETURN uid".format(node, node, node)
         )
     else:
         (create_clone) = (
@@ -105,15 +109,16 @@ def clone_node(node, name=None):
             "THEN [coalesce(x.count, 0) + 1] "
             "ELSE [] END | "
             "SET x.count=coalesce(x.count, 0) + 1 ) "
-            "FOREACH(new_id IN CASE WHEN x IS NOT NULL "
+            "WITH x, preds, sucs "
+            "UNWIND CASE WHEN x IS NOT NULL "
             "THEN ['{}' + x.count] "
-            "ELSE ['{}'] END | "
+            "ELSE ['{}'] END AS new_id "
             "CREATE  (new_node:node {{id : new_id}}) "
             "FOREACH(p in preds | "
             "CREATE UNIQUE (p)-[:edge]->(new_node)) "
             "FOREACH(s in sucs | "
-            "CREATE UNIQUE (new_node)-[:edge]->(s))"
-            ") ".format(
+            "CREATE UNIQUE (new_node)-[:edge]->(s)) "
+            "RETURN new_id ".format(
                 node, name, name, name))
     reconnect_edges = ""
     query = create_clone + reconnect_edges
@@ -121,7 +126,15 @@ def clone_node(node, name=None):
 
 
 def merge_nodes(node_list, name=None):
-    """Merge nodes in the persistent graph."""
+    """Merge nodes in the persistent graph.
+
+    TODO: solve unique id issue as before!
+    """
+    if name is not None:
+        pass
+    else:
+        name = "_".join(node_list)
+
     match_nodes =\
         " ".join("MATCH ({}:node {{ id : '{}' }})".format(n, n) for n in node_list) + " "
     match_edges =\
@@ -132,29 +145,48 @@ def merge_nodes(node_list, name=None):
         " WITH " + ", ".join(n for n in node_list) + ", " + ", ".join(
             "COLLECT({}) as sucs_{}, COLLECT({}) as preds_{}".format(
                 "suc_" + n, n, "pred_" + n, n) for n in node_list) + " "
-    new_node = "CREATE ({}:node {{ id: '{}' }}) ".format(name, name)
+
+    new_node = (
+        "OPTIONAL MATCH (x:node) WHERE x.id = '{}' ".format(name) +\
+        "FOREACH(new_count IN CASE WHEN x IS NOT NULL AND NOT x.id IN [{}] ".format(
+            ", ".join("'{}'".format(n) for n in node_list)) +\
+        "THEN [coalesce(x.count, 0) + 1] " +\
+        "ELSE [] END | " +\
+        "SET x.count=coalesce(x.count, 0) + 1 ) " +\
+        "WITH x, " + ", ".join(n for n in node_list) + ", " + ", ".join(
+            "sucs_{}, preds_{}".format(n, n) for n in node_list) + " " +\
+        "UNWIND CASE WHEN x IS NOT NULL "
+        "THEN ['{}' + x.count] ".format(name) +\
+        "ELSE ['{}'] END AS new_id ".format(name) +\
+        "CREATE (new_node:node { id: new_id }) "
+    )
     reconnect_edges = (
         " ".join(
             "FOREACH(s IN sucs_{} | "
-            "CREATE UNIQUE ({})-[:edge]->(s)) ".format(
-                n, name) for n in node_list) +\
+            "CREATE UNIQUE (new_node)-[:edge]->(s)) ".format(n) for n in node_list) +\
         " ".join(
-            "FOREACH(p IN preds_{} | CREATE UNIQUE (p)-[:edge]->({})) ".format(
-                n, name) for n in node_list) +\
+            "FOREACH(p IN preds_{} | CREATE UNIQUE (p)-[:edge]->(new_node)) ".format(
+                n) for n in node_list) +\
         "FOREACH(n IN {} | "
         "FOREACH(x IN CASE WHEN n IN [{}] THEN ['dummy'] ELSE [] END | "
-        "CREATE UNIQUE ({})-[:edge]->({})) "
+        "CREATE UNIQUE (new_node)-[:edge]->(new_node)) "
         ")".format(
             " + ".join("sucs_{} + preds_{}".format(n, n) for n in node_list),
-            ", ".join(n for n in node_list),
-            name, name) + " "
+            ", ".join(n for n in node_list)) + " "
     )
     delete_nodes =\
         " DETACH DELETE " + ", ".join(n for n in node_list)
     query = match_nodes + match_edges +\
-        new_node + reconnect_edges + delete_nodes
+        new_node + reconnect_edges + delete_nodes + " RETURN new_id"
     return query
 
 
 def find_matching(pattern, nodes=None):
-    pass
+    query = (
+        "MATCH {}, {} RETURN {}".format(
+            ", ".join("({}:node)".format(n) for n in pattern.nodes()),
+            ", ".join("({})-[:edge]->({})".format(u, v) for u, v in pattern.edges()),
+            ", ".join(pattern.nodes())
+        )
+    )
+    return query

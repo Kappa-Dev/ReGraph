@@ -11,7 +11,8 @@ from regraph.neo4j.cypher_utils import (clear_graph,
                                         get_nodes,
                                         get_edges,
                                         clone_node,
-                                        merge_nodes)
+                                        merge_nodes,
+                                        find_matching)
 
 
 class Neo4jGraph(object):
@@ -86,8 +87,19 @@ class Neo4jGraph(object):
 
     def clone_node(self, node, name=None):
         result = self.execute(clone_node(node, name))
-        return result
+        return result.single().value()
 
     def merge_nodes(self, node_list, name=None):
         result = self.execute(merge_nodes(node_list, name))
-        return result
+        return result.single().value()
+
+    def find_matching(self, pattern, nodes=None):
+        result = self.execute(find_matching(pattern, nodes))
+        instances = list()
+
+        for record in result:
+            instance = dict()
+            for k, v in record.items():
+                instance[k] = v.properties["id"]
+            instances.append(instance)
+        return instances
