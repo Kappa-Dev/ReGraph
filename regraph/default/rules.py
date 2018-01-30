@@ -348,16 +348,16 @@ class Rule(object):
                 p_keys_1 = [n1]
             else:
                 raise RuleError(
-                    "Node '%s' is not found in neither left-hand "
-                    "side nor preserved part" % n2)
+                    "Node '{}' is not found in neither left-hand "
+                    "side nor preserved part".format(1))
 
         if len(p_keys_2) == 0:
             if n2 in self.p.nodes():
                 p_keys_2 = [n2]
             else:
                 raise RuleError(
-                    "Node '%s' is not found in neither left-hand "
-                    "side nor preserved part" % str(n2))
+                    "Node '{}' is not found in neither left-hand "
+                    "side nor preserved part".format(n2))
 
         for k1 in p_keys_1:
             for k2 in p_keys_2:
@@ -366,8 +366,7 @@ class Rule(object):
                     primitives.remove_edge(self.rhs, self.p_rhs[k1], self.p_rhs[k2])
                 else:
                     raise RuleError(
-                        "Edge '%s->%s' does not exist in the preserved part"
-                        % (k1, k2))
+                        "Edge '{}->{}' does not exist in the preserved part".format(k1, k2))
 
         return
 
@@ -1173,13 +1172,13 @@ class Rule(object):
         for (u, v), attrs in self.removed_edge_attrs().items():
             commands += "DELETE_EDGE_ATTRS %s %s %s.\n" % (u, v, attrs)
 
+        for node, p_nodes in self.merged_nodes().items():
+            commands += "MERGE [%s] AS '%s'.\n" %\
+                (", ".join([str(n) for n in p_nodes]), str(node))
         for node in self.added_nodes():
             commands += "ADD_NODE %s %s.\n" % (node, self.rhs.node[node])
         for (u, v) in self.added_edges():
             commands += "ADD_EDGE %s %s %s.\n" % (u, v, self.rhs.edge[u][v])
-        for node, p_nodes in self.merged_nodes().items():
-            commands += "MERGE [%s] AS '%s'.\n" %\
-                (", ".join([str(n) for n in p_nodes]), str(node))
         for node, attrs in self.added_node_attrs().items():
             commands += "ADD_NODE_ATTRS %s %s.\n" % (node, attrs)
         for (u, v), attrs in self.added_edge_attrs().items():
