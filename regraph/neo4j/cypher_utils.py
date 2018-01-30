@@ -37,7 +37,6 @@ def add_edges_from(edges):
     )
     edges_statement = "CREATE " + ", ".join(
         "({})-[:edge]->({})".format(u, v) for u, v in edges)
-    print(match_nodes + edges_statement)
     return match_nodes + edges_statement
 
 
@@ -82,15 +81,41 @@ def match_nodes(id_var_dict):
     return query
 
 
-def create_node(var_name, node_id, literal_id=True):
+def create_node(var_name, node_id, new_id_var,
+                literal_id=True, carry_vars=None):
+    """Util for creating a node with a unique id."""
     if literal_id:
         node_id = "'{}'".format(node_id)
-    return "CREATE ({}:node {{ id : {} }}) ".format(
-        var_name, node_id)
+
+    if carry_vars is None:
+        carry_vars = set()
+
+    query = (
+        " OPTIONAL MATCH (same_id_node:node) " +
+        "WHERE same_id_node.id = {} ".format(node_id) +
+        "FOREACH(new_count IN CASE WHEN same_id_node IS NOT NULL "
+        "THEN [coalesce(same_id_node.count, 0) + 1] "
+        "ELSE [] END | "
+        "SET same_id_node.count=coalesce(same_id_node.count, 0) + 1 ) "
+        "WITH same_id_node "
+    )
+    if len(carry_vars) > 0:
+        query += ", " + ", ".join(carry_vars) + " "
+    else:
+        query += " "
+    query += (
+        "UNWIND CASE WHEN same_id_node IS NOT NULL "
+        "THEN [{} + same_id_node.count] ".format(node_id) +
+        "ELSE [{}] END AS {} ".format(node_id, new_id_var) +
+        "CREATE ({}:node {{ id : {} }}) ".format(var_name, new_id_var)
+    )
+    carry_vars.add(new_id_var)
+    carry_vars.add(var_name)
+    return query, carry_vars
 
 
 def create_edge(u_var, v_var):
-    return "CREATE ({})-[:edge]->({}) ".format(u_var, v_var)
+    return "CREATE UNIQUE ({})-[:edge]->({}) ".format(u_var, v_var)
 
 
 def delete_nodes_var(var_names):
@@ -110,7 +135,8 @@ def return_vars(var_list):
     return "RETURN {} ".format(", ".join(var_list))
 
 
-def clonning_query(original_var, clone_var, new_id_var,
+def clonning_query(original_var, clone_var,
+                   clone_name, new_id_var,
                    sucs_to_ignore=None, preds_to_ignore=None,
                    carry_vars=None):
     if carry_vars is None:
@@ -120,13 +146,11 @@ def clonning_query(original_var, clone_var, new_id_var,
     if preds_to_ignore is None:
         preds_to_ignore = set()
     carry_vars.add(original_var)
-    query =\
-        "SET {}.count = coalesce({}.count, 0) + 1 ".format(
-            original_var, original_var) +\
-        "WITH {}.id + {}.count AS {}, {} ".format(
-            original_var, original_var, new_id_var, ", ".join(carry_vars)) +\
-        "CREATE ({}:node {{ id : {} }}) ".format(clone_var, new_id_var)
-    carry_vars.add(clone_var)
+    query, carry_vars =\
+        create_node(clone_var, clone_name, new_id_var,
+                    literal_id=True, carry_vars=carry_vars)
+    # carry_vars.add(clone_var)
+    print(new_id_var)
     carry_vars.add(new_id_var)
     query +=\
         "WITH {} ".format(", ".join(carry_vars)) +\
@@ -204,33 +228,18 @@ def merging_query(original_vars, merged_var, new_id_var, merged_id=None, carry_v
 def clone_node(node, name=None,
                node_variable=False, clone_variable=None):
     """Clone node in the persistent graph."""
-
     if name is None:
-        query =\
-            match_node('x', node) + clonning_query('x', 'new_node', 'uid')[0] +\
-            return_vars(['uid'])
-    else:
-        (query) = (
-            "MATCH (original:node) WHERE original.id = '{}' "
-            "OPTIONAL MATCH (original)-[:edge]->(m:node), "
-            "(o:node)-[:edge]->(original) "
-            "WITH COLLECT(m) as sucs, COLLECT(o) as preds "
-            "OPTIONAL MATCH (x:node) WHERE x.id = '{}' "
-            "FOREACH(new_count IN CASE WHEN x IS NOT NULL "
-            "THEN [coalesce(x.count, 0) + 1] "
-            "ELSE [] END | "
-            "SET x.count=coalesce(x.count, 0) + 1 ) "
-            "WITH x, preds, sucs "
-            "UNWIND CASE WHEN x IS NOT NULL "
-            "THEN ['{}' + x.count] "
-            "ELSE ['{}'] END AS new_id "
-            "CREATE  (new_node:node {{id : new_id}}) "
-            "FOREACH(p in preds | "
-            "CREATE UNIQUE (p)-[:edge]->(new_node)) "
-            "FOREACH(s in sucs | "
-            "CREATE UNIQUE (new_node)-[:edge]->(s)) "
-            "RETURN new_id ".format(
-                node, name, name, name))
+        name = node
+
+    query =\
+        match_node('x', node) +\
+        clonning_query(
+            original_var='x',
+            clone_var='new_node',
+            clone_name=name,
+            new_id_var='uid')[0] +\
+        return_vars(['uid'])
+    print(query)
     return query
 
 

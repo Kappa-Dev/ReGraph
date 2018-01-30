@@ -117,11 +117,12 @@ class Neo4jGraph(object):
             clone_ids = set()
             for n in clones:
                 q, carry_variables = clonning_query(
-                    lhs_node, n, n + "_clone_id",
+                    lhs_node, n, n, n + "_clone_id",
                     sucs_to_ignore[n], preds_to_ignore[n],
                     carry_variables)
                 clone_ids.add(lhs_node + "_clone_id")
                 query += q
+                query += with_vars(carry_variables)
 
         for node in rule.removed_nodes():
             query += delete_nodes_var(node)
@@ -146,8 +147,9 @@ class Neo4jGraph(object):
             query += with_vars(carry_variables)
 
         for rhs_node in rule.added_nodes():
-            query += create_node(rhs_node, rhs_node)
-            carry_variables.add(rhs_node)
+            q, carry_variables = create_node(
+                rhs_node, rhs_node, rhs_node + "_id", carry_vars=carry_variables)
+            query += q
 
         for u, v in rule.added_edges():
             query += create_edge(u, v)
