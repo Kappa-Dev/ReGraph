@@ -39,7 +39,7 @@ FOREACH(m IN ms |
 WITH y, x, y1_clone_id, y1, a, z  
 //-------------------------------------------------
 
-//------------- Clone node 'y' as 'y1'
+//------------- Clone node 'y' as 'y2'
 OPTIONAL MATCH (same_id_node:node) 
 WHERE same_id_node.id = 'y2' 
 FOREACH(
