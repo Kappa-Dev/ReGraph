@@ -1,5 +1,73 @@
 """Collection of utils for Cypher generation."""
 
+def create_node(var_name, node_id, new_id_var,
+                literal_id=True, carry_vars=None):
+    """Util for creating a node with a unique id.
+
+    Parameters
+    ----------
+    var_name
+    node_id
+    new_id_var
+    literal_id : bool
+    carry_vars : iterable
+
+    Returns
+    -------
+    query
+    carry_vars
+    """
+    if literal_id:
+        node_id = "'{}'".format(node_id)
+
+    if carry_vars is None:
+        carry_vars = set()
+
+    query = (
+        " OPTIONAL MATCH (same_id_node:node) " +
+        "WHERE same_id_node.id = {} ".format(node_id) +
+        "FOREACH(new_count IN CASE WHEN same_id_node IS NOT NULL "
+        "THEN [coalesce(same_id_node.count, 0) + 1] "
+        "ELSE [] END | "
+        "SET same_id_node.count=coalesce(same_id_node.count, 0) + 1 ) "
+        "WITH same_id_node "
+    )
+    if len(carry_vars) > 0:
+        query += ", " + ", ".join(carry_vars) + " "
+    else:
+        query += " "
+    query += (
+        "UNWIND CASE WHEN same_id_node IS NOT NULL "
+        "THEN [{} + same_id_node.count] ".format(node_id) +
+        "ELSE [{}] END AS {} ".format(node_id, new_id_var) +
+        "CREATE ({}:node {{ id : {} }}) ".format(var_name, new_id_var)
+    )
+    carry_vars.add(new_id_var)
+    carry_vars.add(var_name)
+    return query, carry_vars
+
+
+def create_edge(u_var, v_var):
+    return "CREATE UNIQUE ({})-[:edge]->({}) ".format(u_var, v_var)
+
+
+def delete_nodes_var(var_names):
+    return "DETACH DELETE {} ".format(
+        ', '.join(v for v in var_names))
+
+
+def delete_edge_var(edge_var):
+    return "DELETE {} ".format(edge_var)
+
+
+def with_vars(carry_vars):
+    return "WITH {} ".format(", ".join(carry_vars))
+
+
+def return_vars(var_list):
+    return "RETURN {} ".format(", ".join(var_list))
+
+
 
 def add_node(node, attrs=None):
     return add_nodes_from([node])
@@ -81,60 +149,6 @@ def match_nodes(id_var_dict):
     return query
 
 
-def create_node(var_name, node_id, new_id_var,
-                literal_id=True, carry_vars=None):
-    """Util for creating a node with a unique id."""
-    if literal_id:
-        node_id = "'{}'".format(node_id)
-
-    if carry_vars is None:
-        carry_vars = set()
-
-    query = (
-        " OPTIONAL MATCH (same_id_node:node) " +
-        "WHERE same_id_node.id = {} ".format(node_id) +
-        "FOREACH(new_count IN CASE WHEN same_id_node IS NOT NULL "
-        "THEN [coalesce(same_id_node.count, 0) + 1] "
-        "ELSE [] END | "
-        "SET same_id_node.count=coalesce(same_id_node.count, 0) + 1 ) "
-        "WITH same_id_node "
-    )
-    if len(carry_vars) > 0:
-        query += ", " + ", ".join(carry_vars) + " "
-    else:
-        query += " "
-    query += (
-        "UNWIND CASE WHEN same_id_node IS NOT NULL "
-        "THEN [{} + same_id_node.count] ".format(node_id) +
-        "ELSE [{}] END AS {} ".format(node_id, new_id_var) +
-        "CREATE ({}:node {{ id : {} }}) ".format(var_name, new_id_var)
-    )
-    carry_vars.add(new_id_var)
-    carry_vars.add(var_name)
-    return query, carry_vars
-
-
-def create_edge(u_var, v_var):
-    return "CREATE UNIQUE ({})-[:edge]->({}) ".format(u_var, v_var)
-
-
-def delete_nodes_var(var_names):
-    return "DETACH DELETE {} ".format(
-        ', '.join(v for v in var_names))
-
-
-def delete_edge_var(edge_var):
-    return "DELETE {} ".format(edge_var)
-
-
-def with_vars(carry_vars):
-    return "WITH {} ".format(", ".join(carry_vars))
-
-
-def return_vars(var_list):
-    return "RETURN {} ".format(", ".join(var_list))
-
-
 def clonning_query(original_var, clone_var,
                    clone_name, new_id_var,
                    sucs_to_ignore=None, preds_to_ignore=None,
@@ -149,8 +163,7 @@ def clonning_query(original_var, clone_var,
     query, carry_vars =\
         create_node(clone_var, clone_name, new_id_var,
                     literal_id=True, carry_vars=carry_vars)
-    # carry_vars.add(clone_var)
-    print(new_id_var)
+
     carry_vars.add(new_id_var)
     query +=\
         "WITH {} ".format(", ".join(carry_vars)) +\
@@ -175,7 +188,7 @@ def merging_query(original_vars, merged_var, new_id_var, merged_id=None, carry_v
     if merged_id is None:
         merged_id = "_".join(original_vars)
     if carry_vars is None:
-        carry_vars = set()
+        carry_vars = set(original_vars)
 
     match_edges =\
         " ".join(
@@ -184,22 +197,21 @@ def merging_query(original_vars, merged_var, new_id_var, merged_id=None, carry_v
                 n, "suc_" + n, "pred_" + n, n) for n in original_vars) + " " +\
         " WITH " + ", ".join(
             "COLLECT({}) as sucs_{}, COLLECT({}) as preds_{}".format(
-                "suc_" + n, n, "pred_" + n, n) for n in original_vars) + ", " + ", ".join(
-                    carry_vars) + " "
+                "suc_" + n, n, "pred_" + n, n) for n in original_vars)
 
-    new_node =\
-        "OPTIONAL MATCH (same_id_node:node) WHERE same_id_node.id = '{}' ".format(merged_id) +\
-        "FOREACH(new_count IN CASE WHEN same_id_node IS NOT NULL AND NOT same_id_node.id IN [{}] ".format(
-            ", ".join("{}.id".format(n) for n in original_vars)) +\
-        "THEN [coalesce(same_id_node.count, 0) + 1] " +\
-        "ELSE [] END | " +\
-        "SET same_id_node.count=coalesce(same_id_node.count, 0) + 1 ) " +\
-        "WITH same_id_node, " + ", ".join(
-            "sucs_{}, preds_{}".format(n, n) for n in original_vars) + ", " + ", ".join(carry_vars) + " " +\
-        "UNWIND CASE WHEN same_id_node IS NOT NULL " +\
-        "THEN ['{}' + same_id_node.count] ".format(merged_id) +\
-        "ELSE ['{}'] END AS {} ".format(merged_id, new_id_var) +\
-        "CREATE ({}:node {{ id: {} }}) ".format(merged_var, new_id_var)
+    if len(carry_vars) > 0:
+        match_edges += ", " + ", ".join(
+                    carry_vars) + " "
+    else:
+        match_edges += " "
+
+    for n in original_vars:
+        carry_vars.add("sucs_{}".format(n))
+        carry_vars.add("preds_{}".format(n))
+
+    new_node, carry_vars = create_node(
+        merged_var, merged_id, new_id_var,
+        carry_vars=carry_vars)
 
     reconnect_edges =\
         " ".join(
@@ -214,10 +226,11 @@ def merging_query(original_vars, merged_var, new_id_var, merged_id=None, carry_v
             ", ".join(n for n in original_vars)) +\
         "CREATE UNIQUE ({})-[:edge]->({})) )".format(merged_var, merged_var) + " "
 
+
     delete_nodes =\
         " DETACH DELETE " + ", ".join(n for n in original_vars) + " "
     for n in original_vars:
-        if n != merged_id:
+        if n in carry_vars and n != merged_id:
             carry_vars.remove(n)
     carry_vars.add(merged_var)
 
@@ -239,63 +252,21 @@ def clone_node(node, name=None,
             clone_name=name,
             new_id_var='uid')[0] +\
         return_vars(['uid'])
-    print(query)
     return query
 
 
 def merge_nodes(node_list, name=None):
-    """Merge nodes in the persistent graph.
-
-    TODO: solve unique id issue as before!
-    """
+    """Merge nodes in the persistent graph."""
     if name is not None:
         pass
     else:
         name = "_".join(node_list)
 
-    match_nodes =\
-        " ".join("MATCH ({}:node {{ id : '{}' }})".format(n, n) for n in node_list) + " "
-    match_edges =\
-        " ".join(
-            "OPTIONAL MATCH ({})-[:edge]->({}) "
-            "OPTIONAL MATCH ({})-[:edge]->({})".format(
-                n, "suc_" + n, "pred_" + n, n) for n in node_list) + " " +\
-        " WITH " + ", ".join(n for n in node_list) + ", " + ", ".join(
-            "COLLECT({}) as sucs_{}, COLLECT({}) as preds_{}".format(
-                "suc_" + n, n, "pred_" + n, n) for n in node_list) + " "
-
-    new_node = (
-        "OPTIONAL MATCH (x:node) WHERE x.id = '{}' ".format(name) +
-        "FOREACH(new_count IN CASE WHEN x IS NOT NULL AND NOT x.id IN [{}] ".format(
-            ", ".join("'{}'".format(n) for n in node_list)) +
-        "THEN [coalesce(x.count, 0) + 1] " +
-        "ELSE [] END | " +
-        "SET x.count=coalesce(x.count, 0) + 1 ) " +
-        "WITH x, " + ", ".join(n for n in node_list) + ", " + ", ".join(
-            "sucs_{}, preds_{}".format(n, n) for n in node_list) + " " +
-        "UNWIND CASE WHEN x IS NOT NULL "
-        "THEN ['{}' + x.count] ".format(name) +
-        "ELSE ['{}'] END AS new_id ".format(name) +
-        "CREATE (new_node:node { id: new_id }) "
-    )
-    reconnect_edges = (
-        " ".join(
-            "FOREACH(s IN sucs_{} | "
-            "CREATE UNIQUE (new_node)-[:edge]->(s)) ".format(n) for n in node_list) +\
-        " ".join(
-            "FOREACH(p IN preds_{} | CREATE UNIQUE (p)-[:edge]->(new_node)) ".format(
-                n) for n in node_list) +
-        "FOREACH(n IN {} | "
-        "FOREACH(x IN CASE WHEN n IN [{}] THEN ['dummy'] ELSE [] END | "
-        "CREATE UNIQUE (new_node)-[:edge]->(new_node)) "
-        ")".format(
-            " + ".join("sucs_{} + preds_{}".format(n, n) for n in node_list),
-            ", ".join(n for n in node_list)) + " "
-    )
-    delete_nodes =\
-        " DETACH DELETE " + ", ".join(n for n in node_list)
-    query = match_nodes + match_edges +\
-        new_node + reconnect_edges + delete_nodes + " RETURN new_id"
+    query =\
+        match_nodes({n: n for n in node_list}) +\
+        merging_query(node_list, 'merged_node',
+                      'new_id', merged_id=name)[0] +\
+        return_vars(['new_id'])
     return query
 
 
