@@ -1,5 +1,8 @@
 // ------------- Match an instance of a pattern
-MATCH (x:node { id : 'e'}), (y:node { id : 'a1'}), (z:node { id : 'a_b'}), (a:node { id : 'c'}) , (x)-[x_y:edge]->(y), (y)-[y_z:edge]->(z), (z)-[z_z:edge]->(z), (z)-[z_a:edge]->(a) 
+MATCH (x:node { id : 'e'}), (y:node { id : 'a1'}),
+(z:node { id : 'a_b'}), (a:node { id : 'c'}),
+(x)-[x_y:edge]->(y), (y)-[y_z:edge]->(z),
+(z)-[z_z:edge]->(z), (z)-[z_a:edge]->(a) 
 //-------------------------------------------------------
 
 // -------------- Clone node 'y' as 'y1'
