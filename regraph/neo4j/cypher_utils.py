@@ -1,21 +1,87 @@
-"""Collection of utils for Cypher generation."""
+"""Collection of utils for Cypher queries generation."""
 
-def create_node(var_name, node_id, new_id_var,
-                literal_id=True, carry_vars=None):
-    """Util for creating a node with a unique id.
+
+def match_node(var_name, node_id):
+    """Query for match a node into the variable.
 
     Parameters
     ----------
     var_name
+        Variable name to use for the matched node
     node_id
-    new_id_var
+        Id of the node to match
+    """
+    return "MATCH ({}:node {{ id : '{}' }}) ".format(
+        var_name, node_id)
+
+
+def match_nodes(var_id_dict):
+    """Match a collection of nodes by their id.
+
+    Parameters
+    ----------
+    id_var_dict : dict
+        Dictionary whose keys are names of the variables to use for
+        the matched nodes and whose values are the ids of the nodes
+        to match
+    """
+    query =\
+        "MATCH " +\
+        ", ".join("({}:node {{ id : '{}'}})".format(var_name, node_id)
+                  for var_name, node_id in var_id_dict.items()) + " "
+    return query
+
+
+def match_edge(u_var, v_var, u_id, v_id, edge_var):
+    """Query for matching an edge.
+
+    Parameters
+    ----------
+    u_var
+        Name of the variable corresponding to the source of
+        the edge
+    v_var
+        Name of the variable corresponding to the target of
+        the edge
+    u_id
+        Id of the source node
+    v_id
+        Id of the target node
+    edge_var
+        Name of the variable to use for the matched edge
+    """
+    query =\
+        match_nodes({u_var: u_id, v_var: v_id}) + ", " +\
+        "({})-[{}:edge]->({})".format(u_var, edge_var, v_var) + " "
+    return query
+
+
+def create_node(var_name, node_id, node_id_var,
+                literal_id=True, carry_vars=None):
+    """Generate query for node creation.
+
+    Parameters
+    ----------
+    var_name
+        Name of the variable corresponding to the created
+        node in the query
+    node_id
+        Id of the node to create
+    node_id_var
+        Variable corresponding to the new id of the node to create
     literal_id : bool
+        True if parameter `node_id` is a literal, otherwise it is
+        treated as the variable name
     carry_vars : iterable
+        Collection of variables to carry
 
     Returns
     -------
-    query
-    carry_vars
+    query : str
+        String containing generated Cypher query
+    carry_vars : set
+        Set of updated variables to carry
+
     """
     if literal_id:
         node_id = "'{}'".format(node_id)
@@ -39,76 +105,62 @@ def create_node(var_name, node_id, new_id_var,
     query += (
         "UNWIND CASE WHEN same_id_node IS NOT NULL "
         "THEN [{} + same_id_node.count] ".format(node_id) +
-        "ELSE [{}] END AS {} ".format(node_id, new_id_var) +
-        "CREATE ({}:node {{ id : {} }}) ".format(var_name, new_id_var)
+        "ELSE [{}] END AS {} ".format(node_id, node_id_var) +
+        "CREATE ({}:node {{ id : {} }}) ".format(var_name, node_id_var)
     )
-    carry_vars.add(new_id_var)
+    carry_vars.add(node_id_var)
     carry_vars.add(var_name)
     return query, carry_vars
 
 
 def create_edge(u_var, v_var):
+    """Generate query for edge creation.
+
+    u_var
+        Name of the variable corresponding to the source
+        of the edge
+    v_var
+        Name of the variable corresponding to the source
+        of the edge
+    """
     return "CREATE UNIQUE ({})-[:edge]->({}) ".format(u_var, v_var)
 
 
 def delete_nodes_var(var_names):
+    """Query for deleting nodes corresponding to the input variables.
+
+    Parameters
+    ----------
+    var_names : iterable
+        Collection of variables corresponding to nodes to remove
+    """
     return "DETACH DELETE {} ".format(
         ', '.join(v for v in var_names))
 
 
 def delete_edge_var(edge_var):
+    """Query for deleting an edge corresponding to the input variable.
+
+    Parameters
+    ----------
+    edge_var
+        Name of the variable corresponding to the edge to remove
+    """
     return "DELETE {} ".format(edge_var)
 
 
 def with_vars(carry_vars):
+    """Generate with statement with input variables to carry."""
     return "WITH {} ".format(", ".join(carry_vars))
 
 
 def return_vars(var_list):
+    """Generate return query with variables in the list."""
     return "RETURN {} ".format(", ".join(var_list))
 
 
-
-def add_node(node, attrs=None):
-    return add_nodes_from([node])
-
-
-def add_edge(source, target, attrs=None):
-    return add_edges_from([(source, target)])
-
-
-def remove_node(node):
-    query = ("MATCH (n:node) WHERE n.id='{}'"
-             "DETACH DELETE n, r".format(node))
-    return query
-
-
-def remove_edge(source, target):
-    query = "MATCH {} WHERE {} DELETE r".format(
-        "({})-[r]->({})".format(source, target),
-        "{}.id = '{}' and {}.id = '{}'".format(source, source, target, target)
-    )
-    return query
-
-
-def add_nodes_from(nodes):
-    nodes_statement = "CREATE {}".format(
-        ", ".join("({}:node {{ id : '{}' }})".format(n, n) for n in nodes))
-    return nodes_statement
-
-
-def add_edges_from(edges):
-    nodes = set(list(sum(edges, ())))
-    match_nodes = "MATCH {} WHERE {} ".format(
-        ", ".join("({})".format(n) for n in nodes),
-        " and ".join("{}.id = '{}'".format(n, n) for n in nodes)
-    )
-    edges_statement = "CREATE " + ", ".join(
-        "({})-[:edge]->({})".format(u, v) for u, v in edges)
-    return match_nodes + edges_statement
-
-
 def clear_graph():
+    """Generate query for removing everything from the graph."""
     (query) = (
         "MATCH (n)"
         "OPTIONAL MATCH (n)-[r]-()"
@@ -117,42 +169,50 @@ def clear_graph():
     return query
 
 
-def nodes():
+def get_nodes():
+    """Generate query returning ids of all nodes of the graph."""
     query = "MATCH (n:node) RETURN n.id"
     return query
 
 
-def edges():
+def get_edges():
+    """Generate query for getting all the edges of the graph."""
     query = "MATCH (n)-[r]->(m) RETURN n.id, m.id"
     return query
 
 
-def copy_node(node):
-    """Copy node in the persistent graph."""
-    pass
-
-
-def generate_new_name(prefix=None):
-    pass
-
-
-def match_node(var_name, node_id):
-    return "MATCH ({}:node {{ id : '{}' }}) ".format(
-        var_name, node_id)
-
-
-def match_nodes(id_var_dict):
-    query =\
-        "MATCH " +\
-        ", ".join("({}:node {{ id : '{}'}})".format(var_name, node_id)
-                  for var_name, node_id in id_var_dict.items()) + " "
-    return query
-
-
 def clonning_query(original_var, clone_var,
-                   clone_name, new_id_var,
+                   clone_id, clone_id_var,
                    sucs_to_ignore=None, preds_to_ignore=None,
                    carry_vars=None):
+    """Generate query for cloning a node.
+
+    Parameters
+    ----------
+    original_var : str
+        Name of the variable corresponding to the original node to clone
+    clone_var : str
+        Name of the variable corresponding to the new clone node
+    clone_id : str
+        Id to use for the new node that corresponds to the clone
+    clone_id_var : str
+        Name of the variable for the id of the new clone node
+    sucs_to_ignore : iterable
+        List of ids of successors of the original node to ignore
+        while reconnecting edges to the new clone node
+    preds_to_ignore : iterable
+        List of ids of predecessors of the original node to ignore
+        while reconnecting edges to the new clone node
+    carry_vars : iterable
+        Collection of variables to carry
+
+    Returns
+    -------
+    query : str
+        Generated query
+    carry_vars : set
+        Updated collection of variables to carry
+    """
     if carry_vars is None:
         carry_vars = set()
     if sucs_to_ignore is None:
@@ -161,10 +221,10 @@ def clonning_query(original_var, clone_var,
         preds_to_ignore = set()
     carry_vars.add(original_var)
     query, carry_vars =\
-        create_node(clone_var, clone_name, new_id_var,
+        create_node(clone_var, clone_id, clone_id_var,
                     literal_id=True, carry_vars=carry_vars)
 
-    carry_vars.add(new_id_var)
+    carry_vars.add(clone_id_var)
     query +=\
         "WITH {} ".format(", ".join(carry_vars)) +\
         "OPTIONAL MATCH ({})-[:edge]->(m:node), ".format(original_var) +\
@@ -184,9 +244,31 @@ def clonning_query(original_var, clone_var,
     return query, carry_vars
 
 
-def merging_query(original_vars, merged_var, new_id_var, merged_id=None, carry_vars=None):
-    if merged_id is None:
-        merged_id = "_".join(original_vars)
+def merging_query(original_vars, merged_var, merged_id,
+                  merged_id_var, carry_vars=None):
+    """Generate query for merging nodes.
+
+    Parameters
+    ----------
+    original_vars : iterable
+        Collection of names of the variables corresponding
+        to the nodes to merge
+    merged_var : str
+        Name of the variable corresponding to the new merged node
+    merged_id : str
+        Id to use for the new node that corresponds to the merged node
+    merged_id_var : str
+        Name of the variable for the id of the new merged node
+    carry_vars : str
+        Collection of variables to carry
+
+    Returns
+    -------
+    query : str
+        Generated query
+    carry_vars : set
+        Updated collection of variables to carry
+    """
     if carry_vars is None:
         carry_vars = set(original_vars)
 
@@ -200,8 +282,7 @@ def merging_query(original_vars, merged_var, new_id_var, merged_id=None, carry_v
                 "suc_" + n, n, "pred_" + n, n) for n in original_vars)
 
     if len(carry_vars) > 0:
-        match_edges += ", " + ", ".join(
-                    carry_vars) + " "
+        match_edges += ", " + ", ".join(carry_vars) + " "
     else:
         match_edges += " "
 
@@ -210,7 +291,7 @@ def merging_query(original_vars, merged_var, new_id_var, merged_id=None, carry_v
         carry_vars.add("preds_{}".format(n))
 
     new_node, carry_vars = create_node(
-        merged_var, merged_id, new_id_var,
+        merged_var, merged_id, merged_id_var,
         carry_vars=carry_vars)
 
     reconnect_edges =\
@@ -226,9 +307,8 @@ def merging_query(original_vars, merged_var, new_id_var, merged_id=None, carry_v
             ", ".join(n for n in original_vars)) +\
         "CREATE UNIQUE ({})-[:edge]->({})) )".format(merged_var, merged_var) + " "
 
+    delete_nodes = delete_nodes_var(original_vars)
 
-    delete_nodes =\
-        " DETACH DELETE " + ", ".join(n for n in original_vars) + " "
     for n in original_vars:
         if n in carry_vars and n != merged_id:
             carry_vars.remove(n)
@@ -238,53 +318,53 @@ def merging_query(original_vars, merged_var, new_id_var, merged_id=None, carry_v
     return query, carry_vars
 
 
-def clone_node(node, name=None,
-               node_variable=False, clone_variable=None):
-    """Clone node in the persistent graph."""
-    if name is None:
-        name = node
+def find_matching(pattern, nodes=None):
+    """Query that performs pattern match in the graph.
 
+    Parameters
+    ----------
+    pattern : nx.(Di)Graph
+        Graph object representing a pattern to search for
+    nodes : iterable, optional
+        Collection of ids of nodes to constraint the search space of matching
+    """
     query =\
-        match_node('x', node) +\
-        clonning_query(
-            original_var='x',
-            clone_var='new_node',
-            clone_name=name,
-            new_id_var='uid')[0] +\
-        return_vars(['uid'])
-    return query
-
-
-def merge_nodes(node_list, name=None):
-    """Merge nodes in the persistent graph."""
-    if name is not None:
-        pass
+        "MATCH {}".format(
+            ", ".join("({}:node)".format(n) for n in pattern.nodes()))
+    if len(pattern.edges()) > 0:
+        query += ", {}".format(
+            ", ".join("({})-[:edge]->({})".format(u, v) for u, v in pattern.edges())) + " "
     else:
-        name = "_".join(node_list)
+        query += " "
 
-    query =\
-        match_nodes({n: n for n in node_list}) +\
-        merging_query(node_list, 'merged_node',
-                      'new_id', merged_id=name)[0] +\
-        return_vars(['new_id'])
+    if nodes is not None:
+        query +=\
+            " WHERE " + " AND ".join(
+                "{}.id IN [{}]".format(
+                    pattern_n,
+                    ", ".join("'{}'".format(n) for n in nodes))
+                for pattern_n in pattern.nodes()) + " "
+
+    query += "RETURN {}".format(", ".join(pattern.nodes()))
+
     return query
 
 
-def match(pattern, instance, nodes=None):
+def match_pattern_instance(pattern, instance):
+    """Query to match an instance of the pattern.
+
+    Parameters
+    ----------
+    pattern : nx.(Di)Graph
+        Graph object representing a pattern
+    instance : dict
+        Instance of the pattern in the graph, dictionary
+        whose keys are node ids of the pattern and whose
+        values are ids of the nodes of the graph
+    """
     query =\
         match_nodes(instance) + ", " +\
         ", ".join("({})-[{}:edge]->({})".format(u, str(u) + "_" + str(v), v)
                   for u, v in pattern.edges())
 
-    return query
-
-
-def find_matching(pattern, nodes=None):
-    query = (
-        "MATCH {}, {} RETURN {}".format(
-            ", ".join("({}:node)".format(n) for n in pattern.nodes()),
-            ", ".join("({})-[:edge]->({})".format(u, v) for u, v in pattern.edges()),
-            ", ".join(pattern.nodes())
-        )
-    )
     return query
