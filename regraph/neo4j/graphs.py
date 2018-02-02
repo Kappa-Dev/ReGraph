@@ -105,12 +105,13 @@ class Neo4jGraph(object):
             name = node
         query =\
             match_node('x', node) +\
-            clonning_query(
+            cloning_query(
                 original_var='x',
                 clone_var='new_node',
                 clone_id=name,
                 clone_id_var='uid')[0] +\
             return_vars(['uid'])
+        print(query)
         result = self.execute(query)
         return result.single().value()
 
@@ -165,13 +166,12 @@ class Neo4jGraph(object):
 
             clone_ids = set()
             for n in clones:
-                q, carry_variables = clonning_query(
+                q, carry_variables = cloning_query(
                     original_var=lhs_node,
                     clone_var=n,
                     clone_id=n,
                     clone_id_var=n + "_clone_id",
-                    sucs_to_ignore=sucs_to_ignore[n],
-                    preds_to_ignore=preds_to_ignore[n],
+                    neighbours_to_ignore=sucs_to_ignore[n].union(preds_to_ignore[n]),
                     carry_vars=carry_variables)
                 clone_ids.add(lhs_node + "_clone_id")
                 query += q

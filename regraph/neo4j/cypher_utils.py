@@ -181,10 +181,71 @@ def get_edges():
     return query
 
 
-def clonning_query(original_var, clone_var,
-                   clone_id, clone_id_var,
-                   sucs_to_ignore=None, preds_to_ignore=None,
-                   carry_vars=None):
+# def clonning_query(original_var, clone_var,
+#                    clone_id, clone_id_var,
+#                    sucs_to_ignore=None, preds_to_ignore=None,
+#                    carry_vars=None):
+#     """Generate query for cloning a node.
+
+#     Parameters
+#     ----------
+#     original_var : str
+#         Name of the variable corresponding to the original node to clone
+#     clone_var : str
+#         Name of the variable corresponding to the new clone node
+#     clone_id : str
+#         Id to use for the new node that corresponds to the clone
+#     clone_id_var : str
+#         Name of the variable for the id of the new clone node
+#     sucs_to_ignore : iterable
+#         List of ids of successors of the original node to ignore
+#         while reconnecting edges to the new clone node
+#     preds_to_ignore : iterable
+#         List of ids of predecessors of the original node to ignore
+#         while reconnecting edges to the new clone node
+#     carry_vars : iterable
+#         Collection of variables to carry
+
+#     Returns
+#     -------
+#     query : str
+#         Generated query
+#     carry_vars : set
+#         Updated collection of variables to carry
+#     """
+#     if carry_vars is None:
+#         carry_vars = set()
+#     if sucs_to_ignore is None:
+#         sucs_to_ignore = set()
+#     if preds_to_ignore is None:
+#         preds_to_ignore = set()
+#     carry_vars.add(original_var)
+#     query, carry_vars =\
+#         create_node(clone_var, clone_id, clone_id_var,
+#                     literal_id=True, carry_vars=carry_vars)
+
+#     carry_vars.add(clone_id_var)
+#     query +=\
+#         "WITH {} ".format(", ".join(carry_vars)) +\
+#         "OPTIONAL MATCH ({})-[:edge]->(m:node), ".format(original_var) +\
+#         "(o:node)-[:edge]->({}) ".format(original_var) +\
+#         "WITH COLLECT(m) AS ms, COLLECT(o) AS os, {} ".format(
+#             ", ".join(carry_vars)) +\
+#         "FOREACH(o IN os | " +\
+#         "FOREACH(p IN CASE WHEN NOT o.id IN {} THEN [o] ELSE [] END | ".format(
+#             "[{}]".format(", ".join(
+#                 "'{}'".format(p) for p in preds_to_ignore))) +\
+#         "CREATE UNIQUE (p)-[:edge]->({}) )) ".format(clone_var) +\
+#         "FOREACH(m IN ms | " +\
+#         "FOREACH(p IN CASE WHEN NOT m.id IN {} THEN [m] ELSE [] END | ".format(
+#             "[{}]".format(", ".join(
+#                 "'{}'".format(s) for s in sucs_to_ignore))) +\
+#         "CREATE UNIQUE ({})-[:edge]->(m) )) ".format(clone_var)
+#     return query, carry_vars
+
+
+def cloning_query(original_var, clone_var, clone_id, clone_id_var,
+                  neighbours_to_ignore=None, carry_vars=None):
     """Generate query for cloning a node.
 
     Parameters
@@ -214,33 +275,41 @@ def clonning_query(original_var, clone_var,
         Updated collection of variables to carry
     """
     if carry_vars is None:
-        carry_vars = set()
-    if sucs_to_ignore is None:
-        sucs_to_ignore = set()
-    if preds_to_ignore is None:
-        preds_to_ignore = set()
+            carry_vars = set()
+    if neighbours_to_ignore is None:
+        neighbours_to_ignore = set()
+
     carry_vars.add(original_var)
-    query, carry_vars =\
-        create_node(clone_var, clone_id, clone_id_var,
-                    literal_id=True, carry_vars=carry_vars)
+    query =\
+        "WITH [{}] as ignoredNodes".format(", ".join("'{}'".format(n) for n in neighbours_to_ignore)) +\
+        ", " + ", ".join(carry_vars) + " "
+    query +=\
+        "OPTIONAL MATCH ({})-[:edge]->(succ) ".format(original_var) +\
+        "OPTIONAL MATCH (pred)-[:edge]->({}) ".format(original_var) +\
+        "WITH collect(succ) as listSucc, collect(pred) as listPred, ignoredNodes as ig" +\
+        ", " + ", ".join(carry_vars) + " "
+
+    query +=\
+        "OPTIONAL MATCH (same_id_node:node {{ id : '{}'}}) ".format(clone_id) +\
+        "WITH same_id_node, listSucc, listPred, ig,  " +\
+        "CASE WHEN same_id_node IS NOT NULL THEN (coalesce(same_id_node.count, 0) + 1) " +\
+        "ELSE 0 END AS same_id_node_new_count, " + ", ".join(carry_vars) + " " +\
+        "WITH same_id_node, same_id_node_new_count, " +\
+        "'{}' + CASE WHEN same_id_node_new_count <> 0 ".format(clone_id) +\
+        "THEN toString(same_id_node_new_count) ELSE '' END as {}, ".format(
+            clone_id_var) +\
+        "filter(varNode in listSucc WHERE NOT (varNode.id in ig)) AS filtSucc, " +\
+        "filter(varNode in listPred WHERE NOT (varNode.id in ig)) AS filtPred, " +\
+        ", ".join(carry_vars) + " "
 
     carry_vars.add(clone_id_var)
     query +=\
-        "WITH {} ".format(", ".join(carry_vars)) +\
-        "OPTIONAL MATCH ({})-[:edge]->(m:node), ".format(original_var) +\
-        "(o:node)-[:edge]->({}) ".format(original_var) +\
-        "WITH COLLECT(m) AS ms, COLLECT(o) AS os, {} ".format(
-            ", ".join(carry_vars)) +\
-        "FOREACH(o IN os | " +\
-        "FOREACH(p IN CASE WHEN NOT o.id IN {} THEN [o] ELSE [] END | ".format(
-            "[{}]".format(", ".join(
-                "'{}'".format(p) for p in preds_to_ignore))) +\
-        "CREATE UNIQUE (p)-[:edge]->({}) )) ".format(clone_var) +\
-        "FOREACH(m IN ms | " +\
-        "FOREACH(p IN CASE WHEN NOT m.id IN {} THEN [m] ELSE [] END | ".format(
-            "[{}]".format(", ".join(
-                "'{}'".format(s) for s in sucs_to_ignore))) +\
-        "CREATE UNIQUE ({})-[:edge]->(m) )) ".format(clone_var)
+        "MERGE ({}:node {{id : {} }}) ".format(
+            clone_var, clone_id_var) +\
+        "SET same_id_node.count = same_id_node_new_count + 1 " +\
+        "FOREACH (succ in filtSucc | MERGE ({})-[:edge]->(succ)) ".format(clone_var) +\
+        "FOREACH (pred in filtPred | MERGE (pred)-[:edge]->({})) ".format(clone_var)
+
     return query, carry_vars
 
 
