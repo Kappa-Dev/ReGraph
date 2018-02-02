@@ -710,9 +710,21 @@ class IntegerSet(AttributeSet):
                         (str(start), str(end))
                     )
                 else:
+                    try:
+                        start = int(start)
+                    except OverflowError:
+                        pass
                     starts.append(start)
+                    try:
+                        end = int(end)
+                    except OverflowError:
+                        pass
                     ends.append(end)
-            except TypeError:
+            except (TypeError, ValueError):
+                try:
+                    interval = int(interval)
+                except OverflowError:
+                    pass
                 starts.append(interval)
                 ends.append(interval)
 
