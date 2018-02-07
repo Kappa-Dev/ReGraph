@@ -1158,11 +1158,12 @@ class Rule(object):
         """
         commands = ""
         for lhs_node, p_nodes in self.cloned_nodes().items():
-            new_name = set()
+            new_names = set()
             for p_node in p_nodes:
                 if p_node != lhs_node:
-                    new_name.add(p_node)
-            commands += "CLONE %s AS %s.\n" % (lhs_node, new_name.pop())
+                    new_names.add(p_node)
+            for name in new_names:
+                commands += "CLONE %s AS %s.\n" % (lhs_node, name)
         for node in self.removed_nodes():
             commands += "DELETE_NODE %s.\n" % node
         for u, v in self.removed_edges():
