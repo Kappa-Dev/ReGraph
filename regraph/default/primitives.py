@@ -153,7 +153,8 @@ def add_edge(graph, s, t, attrs=None, **attr):
                 "Edge '%s'->'%s' already exists!" %
                 (s, t)
             )
-        graph.add_edge(s, t, new_attrs)
+        # print(s, t, type(s), type(t), new_attrs, type(new_attrs))
+        graph.add_edge(s, t, attr_dict=new_attrs)
     else:
         if (s, t) in graph.edges() or (t, s) in graph.edges():
             raise GraphError(
@@ -583,10 +584,12 @@ def clone_node(graph, node_id, name=None):
     if graph.is_directed():
         add_edges_from(
             graph,
-            [(n, new_node) for n, _ in graph.in_edges(node_id)])
+            set([(n, new_node) for n, _ in graph.in_edges(node_id)
+             if (n, new_node) not in graph.edges()]))
         add_edges_from(
             graph,
-            [(new_node, n) for _, n in graph.out_edges(node_id)])
+            set([(new_node, n) for _, n in graph.out_edges(node_id)
+             if (new_node, n) not in graph.edges()]))
 
         # Copy the attributes of the edges
         for s, t in graph.in_edges(node_id):
@@ -596,7 +599,9 @@ def clone_node(graph, node_id, name=None):
     else:
         add_edges_from(
             graph,
-            [(n, new_node) for n in graph.neighbors(node_id)]
+            set([(n, new_node) for n in graph.neighbors(node_id)
+             if (n, new_node) not in graph.edges() and\
+                (new_node, n) not in graph.edges()])
         )
 
         # Copy the attributes of the edges
