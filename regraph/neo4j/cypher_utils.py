@@ -245,7 +245,8 @@ def get_edges():
 
 
 def cloning_query(original_var, clone_var, clone_id, clone_id_var,
-                  neighbours_to_ignore=None, carry_vars=None):
+                  neighbours_to_ignore=None, carry_vars=None,
+                  ignore_naming=False):
     """Generate query for cloning a node.
 
     Parameters
@@ -288,27 +289,40 @@ def cloning_query(original_var, clone_var, clone_id, clone_id_var,
         "OPTIONAL MATCH (pred)-[:edge]->({}) ".format(original_var) +\
         "WITH collect(succ) as listSucc, collect(pred) as listPred, ignoredNodes as ig" +\
         ", " + ", ".join(carry_vars) + " "
+    if ignore_naming is True:
+        query +=\
+            "WITH filter(varNode in listSucc WHERE NOT (varNode.id in ig)) AS filtSucc, " +\
+            "filter(varNode in listPred WHERE NOT (varNode.id in ig)) AS filtPred, " +\
+            ", ".join(carry_vars) + " "
+        query +=\
+            "CREATE ({}:node) ".format(
+                clone_var, clone_var) +\
+            "SET {}.id = toString(id({})) ".format(clone_var, clone_var) +\
+            "WITH {}, filtPred, filtSucc, toString(id({})) as {}, ".format(clone_var, clone_var, clone_id_var) +\
+            ", ".join(carry_vars) + " " +\
+            "FOREACH (succ in filtSucc | MERGE ({})-[:edge]->(succ)) ".format(clone_var) +\
+            "FOREACH (pred in filtPred | MERGE (pred)-[:edge]->({})) ".format(clone_var)
+    else:
+        query +=\
+            "OPTIONAL MATCH (same_id_node:node {{ id : '{}'}}) ".format(clone_id) +\
+            "WITH same_id_node, listSucc, listPred, ig,  " +\
+            "CASE WHEN same_id_node IS NOT NULL THEN (coalesce(same_id_node.count, 0) + 1) " +\
+            "ELSE 0 END AS same_id_node_new_count, " + ", ".join(carry_vars) + " " +\
+            "WITH same_id_node, same_id_node_new_count, " +\
+            "'{}' + CASE WHEN same_id_node_new_count <> 0 ".format(clone_id) +\
+            "THEN toString(same_id_node_new_count) ELSE '' END as {}, ".format(
+                clone_id_var) +\
+            "filter(varNode in listSucc WHERE NOT (varNode.id in ig)) AS filtSucc, " +\
+            "filter(varNode in listPred WHERE NOT (varNode.id in ig)) AS filtPred, " +\
+            ", ".join(carry_vars) + " "
 
-    query +=\
-        "OPTIONAL MATCH (same_id_node:node {{ id : '{}'}}) ".format(clone_id) +\
-        "WITH same_id_node, listSucc, listPred, ig,  " +\
-        "CASE WHEN same_id_node IS NOT NULL THEN (coalesce(same_id_node.count, 0) + 1) " +\
-        "ELSE 0 END AS same_id_node_new_count, " + ", ".join(carry_vars) + " " +\
-        "WITH same_id_node, same_id_node_new_count, " +\
-        "'{}' + CASE WHEN same_id_node_new_count <> 0 ".format(clone_id) +\
-        "THEN toString(same_id_node_new_count) ELSE '' END as {}, ".format(
-            clone_id_var) +\
-        "filter(varNode in listSucc WHERE NOT (varNode.id in ig)) AS filtSucc, " +\
-        "filter(varNode in listPred WHERE NOT (varNode.id in ig)) AS filtPred, " +\
-        ", ".join(carry_vars) + " "
-
-    carry_vars.add(clone_id_var)
-    query +=\
-        "MERGE ({}:node {{id : {} }}) ".format(
-            clone_var, clone_id_var) +\
-        "SET same_id_node.count = same_id_node_new_count + 1 " +\
-        "FOREACH (succ in filtSucc | MERGE ({})-[:edge]->(succ)) ".format(clone_var) +\
-        "FOREACH (pred in filtPred | MERGE (pred)-[:edge]->({})) ".format(clone_var)
+        carry_vars.add(clone_id_var)
+        query +=\
+            "MERGE ({}:node {{id : {} }}) ".format(
+                clone_var, clone_id_var) +\
+            "SET same_id_node.count = same_id_node_new_count + 1 " +\
+            "FOREACH (succ in filtSucc | MERGE ({})-[:edge]->(succ)) ".format(clone_var) +\
+            "FOREACH (pred in filtPred | MERGE (pred)-[:edge]->({})) ".format(clone_var)
 
     return query, carry_vars
 

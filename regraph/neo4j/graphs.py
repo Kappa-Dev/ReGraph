@@ -99,7 +99,7 @@ class Neo4jGraph(object):
         result = self.execute(query)
         return [(d["n.id"], d["m.id"]) for d in result]
 
-    def clone_node(self, node, name=None):
+    def clone_node(self, node, name=None, ignore_naming=False):
         """Clone a node of the graph."""
         if name is None:
             name = node
@@ -109,9 +109,9 @@ class Neo4jGraph(object):
                 original_var='x',
                 clone_var='new_node',
                 clone_id=name,
-                clone_id_var='uid')[0] +\
+                clone_id_var='uid',
+                ignore_naming=ignore_naming)[0] +\
             return_vars(['uid'])
-        print(query)
         result = self.execute(query)
         return result.single().value()
 
