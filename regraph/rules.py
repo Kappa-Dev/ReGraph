@@ -1205,6 +1205,28 @@ class Rule(object):
                 "Node '%s' already exists in the left-hand side "
                 "of the rule" % node_id)
 
+    def _add_edge_lhs(self, source, target, attrs=None):
+        if (source, target) not in self.lhs.edges():
+            if source in self.lhs.nodes() and target in self.rhs.nodes():
+                primitives.add_edge(self.lhs, source, target, attrs)
+                p_sources = keys_by_value(self.p_lhs, source)
+                p_targets = keys_by_value(self.p_lhs, target)
+                if len(p_sources) > 0 and len(p_targets) > 0:
+                    for p_s in p_sources:
+                        for p_t in p_targets:
+                            primitives.add_edge(self.p, p_s, p_t, attrs)
+                            primitives.add_edge(
+                                self.rhs, self.p_rhs[p_s],
+                                self.p_rhs[p_t], attrs)
+            else:
+                raise RuleError(
+                    "Cannot add an edge between nodes '{}' and '{}': "
+                    "one of the nodes does not exist".format(source, target))
+        else:
+            raise RuleError(
+                "Edge '{}'->'{}' already exists in the left-hand side "
+                "of the rule".format(source, target))
+
     def _remove_node_rhs(self, node_id):
         """Remove a node from the `rhs`.
 
