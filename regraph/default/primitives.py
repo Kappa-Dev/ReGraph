@@ -913,6 +913,8 @@ def merge_nodes(graph, nodes, node_id=None, method="union", edge_method="union")
             graph.remove_node(node)
             all_neighbors -= {node}
 
+        if node_id in graph.nodes():
+            node_id = unique_node_id(graph, node_id)
         add_node(graph, node_id, attr_accumulator)
         all_neighbors.add(node_id)
 

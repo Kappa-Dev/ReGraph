@@ -386,8 +386,12 @@ def pushout(a, b, c, a_b, a_c, inplace=False):
         a_keys = keys_by_value(a_c, c_n)
         # Add nodes
         if len(a_keys) == 0:
-            add_node(d, c_n, c.node[c_n])
-            c_d[c_n] = c_n
+            if c_n not in d.nodes():
+                new_name = c_n
+            else:
+                new_name = unique_node_id(d, c_n)
+            add_node(d, new_name, c.node[c_n])
+            c_d[c_n] = new_name
         # Keep nodes
         elif len(a_keys) == 1:
             c_d[a_c[a_keys[0]]] = a_b[a_keys[0]]
