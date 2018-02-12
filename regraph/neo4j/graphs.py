@@ -1,4 +1,6 @@
 """Neo4j driver for regraph."""
+import networkx as nx
+
 from neo4j.v1 import GraphDatabase
 
 from regraph.neo4j.cypher_utils import *
@@ -37,7 +39,7 @@ class Neo4jGraph(object):
             return_vars(['new_id'])
 
         result = self.execute(query)
-        print(result)
+        # print(result)
 
     def add_edge(self, source, target, attrs=None):
         """Add an edge to the graph db."""
@@ -47,7 +49,7 @@ class Neo4jGraph(object):
         })
         query += create_edge(source, target)
         result = self.execute(query)
-        print(result)
+        # print(result)
 
     def add_nodes_from(self, nodes):
         """Add nodes to the graph db."""
@@ -60,7 +62,7 @@ class Neo4jGraph(object):
             query += q + with_vars(carry_variables)
         query += return_vars(carry_variables)
         result = self.execute(query)
-        print(result)
+        # print(result)
 
     def add_edges_from(self, edges):
         """Add edges to the graph db."""
@@ -69,7 +71,7 @@ class Neo4jGraph(object):
         for u, v in edges:
             query += create_edge(u, v)
         result = self.execute(query)
-        print(result)
+        # print(result)
 
     def remove_node(self, node):
         """Remove a node from the graph db."""
@@ -77,7 +79,7 @@ class Neo4jGraph(object):
             match_node(node, node) +\
             delete_nodes_var([node])
         result = self.execute(query)
-        print(result)
+        # print(result)
 
     def remove_edge(self, source, target):
         """Remove an edge from the graph db."""
@@ -85,7 +87,7 @@ class Neo4jGraph(object):
             match_edge(source, target, source, target, 'edge_var') +\
             delete_edge_var('edge_var')
         result = self.execute(query)
-        print(result)
+        # print(result)
 
     def nodes(self):
         """Return a list of nodes of the graph."""
@@ -146,7 +148,56 @@ class Neo4jGraph(object):
 
     def rewrite(self, rule, instance):
         """Perform SqPO rewiting of the graph with a rule."""
-        query = match_pattern_instance(rule.lhs, instance)
+
+        lhs_relabel = {}
+        for node in rule.lhs.nodes():
+            new_name = node.replace(" ", "_").replace(
+                "-", "_").replace(",", "_").replace("/", "_")
+            lhs_relabel[node] = new_name
+            matching_node = instance[node]
+            del instance[node]
+            instance[new_name] = matching_node.replace(" ", "_").replace(
+                "-", "_").replace(",", "_").replace("/", "_")
+
+        p_relabel = {}
+        for node in rule.p.nodes():
+            new_name = node.replace(" ", "_").replace(
+                "-", "_").replace(",", "_").replace("/", "_")
+            p_relabel[node] = new_name
+
+        rhs_relabel = {}
+        for node in rule.rhs.nodes():
+            new_name = node.replace(" ", "_").replace(
+                "-", "_").replace(",", "_").replace("/", "_")
+            rhs_relabel[node] = new_name
+
+        nx.relabel_nodes(rule.lhs, lhs_relabel, copy=False)
+        nx.relabel_nodes(rule.p, p_relabel, copy=False)
+        nx.relabel_nodes(rule.rhs, rhs_relabel, copy=False)
+
+        new_p_lhs = dict()
+        for k, v in rule.p_lhs.items():
+            new_key = k.replace(" ", "_").replace(
+                "-", "_").replace(",", "_").replace("/", "_")
+            new_v = v.replace(" ", "_").replace(
+                "-", "_").replace(",", "_").replace("/", "_")
+            new_p_lhs[new_key] = new_v
+
+        new_p_rhs = dict()
+        for k, v in rule.p_rhs.items():
+            new_key = k.replace(" ", "_").replace(
+                "-", "_").replace(",", "_").replace("/", "_")
+            new_v = v.replace(" ", "_").replace(
+                "-", "_").replace(",", "_").replace("/", "_")
+            new_p_rhs[new_key] = new_v
+
+        rule.p_lhs = new_p_lhs
+        rule.p_rhs = new_p_rhs
+
+        query = ""
+        if len(instance) > 0:
+            query += match_pattern_instance(rule.lhs, instance)
+
         carry_variables = set(instance.keys())
         for lhs_node, p_nodes in rule.cloned_nodes().items():
             # generate query for clonning
@@ -197,14 +248,13 @@ class Neo4jGraph(object):
                 merged_id_var=str(rhs_key) + "_id",
                 carry_vars=carry_variables)
             query += q
-
-        if len(rule.merged_nodes()) > 0:
             query += with_vars(carry_variables)
 
         for rhs_node in rule.added_nodes():
             q, carry_variables = create_node(
                 rhs_node, rhs_node, rhs_node + "_id", carry_vars=carry_variables)
             query += q
+            query += with_vars(carry_variables)
 
         for u, v in rule.added_edges():
             query += create_edge(u, v)
@@ -212,7 +262,7 @@ class Neo4jGraph(object):
         query += return_vars(carry_variables)
 
         result = self.execute(query)
-        print(query)
+        # print(query)
         rhs_g = dict()
         for record in result:
             for k, v in record.items():

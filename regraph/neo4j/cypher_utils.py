@@ -373,6 +373,7 @@ def merging_query(original_vars, merged_var, merged_id,
         carry_vars.add("sucs_{}".format(n))
         carry_vars.add("preds_{}".format(n))
 
+    merged_var += "_merged_var"
     new_node, carry_vars = create_node(
         merged_var, merged_id, merged_id_var,
         carry_vars=carry_vars)
@@ -398,6 +399,7 @@ def merging_query(original_vars, merged_var, merged_id,
     carry_vars.add(merged_var)
 
     query = match_edges + new_node + reconnect_edges + delete_nodes
+
     return query, carry_vars
 
 
@@ -446,8 +448,13 @@ def match_pattern_instance(pattern, instance):
         values are ids of the nodes of the graph
     """
     query =\
-        match_nodes(instance) + ", " +\
-        ", ".join("({})-[{}:edge]->({})".format(u, str(u) + "_" + str(v), v)
-                  for u, v in pattern.edges())
+        match_nodes(instance)
 
+    if len(pattern.edges()) > 0:
+        query +=\
+            ", " +\
+            ", ".join("({})-[{}:edge]->({})".format(u, str(u) + "_" + str(v), v)
+                      for u, v in pattern.edges())
+    else:
+        query += " "
     return query
