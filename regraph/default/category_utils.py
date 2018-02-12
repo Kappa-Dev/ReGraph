@@ -421,7 +421,7 @@ def pushout(a, b, c, a_b, a_c, inplace=False):
                             new_groups.add(new_name)
 
             if len(groups_to_remove) > 0:
-                new_name = merged_nodes(d, new_groups)
+                new_name = merge_nodes(d, new_groups)
                 merged_nodes[new_name] = set()
                 for g in new_groups:
                     merge_nodes[new_name] = merge_nodes[new_name].union(
