@@ -789,7 +789,7 @@ def merge_nodes(graph, nodes, node_id=None, method="union", edge_method="union")
 
         # Generate name for new node
         if node_id is None:
-            node_id = "_".join([str(n) for n in nodes])
+            node_id = "_".join([str(n) for n in sorted(nodes)])
             if node_id in graph.nodes():
                 node_id = unique_node_id(graph, node_id)
         elif node_id in graph.nodes() and (node_id not in nodes):
