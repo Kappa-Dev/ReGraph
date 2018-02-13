@@ -1315,3 +1315,18 @@ class Rule(object):
         p_nodes = keys_by_value(self.p_rhs, n)
         for p_node in p_nodes:
             primitives.add_node_attrs(self.p, p_node, attrs)
+
+    def _remove_attrs(self):
+        for n in self.lhs.nodes():
+            self.lhs.node[n] = dict()
+        for n in self.p.nodes():
+            self.p.node[n] = dict()
+        for n in self.rhs.nodes():
+            self.rhs.node[n] = dict()
+
+        for u, v in self.lhs.edges():
+            self.lhs.edge[u][v] = dict()
+        for u, v in self.p.edges():
+            self.p.edge[u][v] = dict()
+        for u, v in self.rhs.edges():
+            self.rhs.edge[u][v] = dict()
