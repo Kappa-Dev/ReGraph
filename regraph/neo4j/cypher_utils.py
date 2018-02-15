@@ -20,7 +20,7 @@ def match_nodes(var_id_dict):
 
     Parameters
     ----------
-    id_var_dict : dict
+    var_id_dict : dict
         Dictionary whose keys are names of the variables to use for
         the matched nodes and whose values are the ids of the nodes
         to match
@@ -57,7 +57,8 @@ def match_edge(u_var, v_var, u_id, v_id, edge_var):
 
 
 def create_node(var_name, node_id, node_id_var,
-                literal_id=True, carry_vars=None):
+                literal_id=True, carry_vars=None,
+                ignore_naming=False):
     """Generate query for node creation.
 
     Parameters
@@ -83,33 +84,43 @@ def create_node(var_name, node_id, node_id_var,
         Set of updated variables to carry
 
     """
+
     if literal_id:
         node_id = "'{}'".format(node_id)
 
     if carry_vars is None:
         carry_vars = set()
-
-    query = (
-        " OPTIONAL MATCH (same_id_node:node) " +
-        "WHERE same_id_node.id = {} ".format(node_id) +
-        "FOREACH(new_count IN CASE WHEN same_id_node IS NOT NULL "
-        "THEN [coalesce(same_id_node.count, 0) + 1] "
-        "ELSE [] END | "
-        "SET same_id_node.count=coalesce(same_id_node.count, 0) + 1 ) "
-        "WITH same_id_node "
-    )
-    if len(carry_vars) > 0:
-        query += ", " + ", ".join(carry_vars) + " "
+    if not ignore_naming:
+        query = (
+            " OPTIONAL MATCH (same_id_node:node) " +
+            "WHERE same_id_node.id = {} ".format(node_id) +
+            "FOREACH(new_count IN CASE WHEN same_id_node IS NOT NULL "
+            "THEN [coalesce(same_id_node.count, 0) + 1] "
+            "ELSE [] END | "
+            "SET same_id_node.count = new_count) "
+            "WITH same_id_node "
+        )
+        if len(carry_vars) > 0:
+            query += ", " + ", ".join(carry_vars) + " "
+        else:
+            query += " "
+        query += (
+            "UNWIND CASE WHEN same_id_node IS NOT NULL "
+            "THEN [{} + same_id_node.count] ".format(node_id) +
+            "ELSE [{}] END AS {} ".format(node_id, node_id_var) +
+            "CREATE ({}:node {{ id : {} }}) ".format(var_name, node_id_var)
+        )
     else:
-        query += " "
-    query += (
-        "UNWIND CASE WHEN same_id_node IS NOT NULL "
-        "THEN [{} + same_id_node.count] ".format(node_id) +
-        "ELSE [{}] END AS {} ".format(node_id, node_id_var) +
-        "CREATE ({}:node {{ id : {} }}) ".format(var_name, node_id_var)
-    )
+        query =\
+            "CREATE ({}:node) ".format(var_name) +\
+            "SET {}.id=toString(id({})) ".format(var_name, var_name)
+        query += "WITH toString(id({})) as {} ".format(var_name, node_id_var)
+        carry_vars.add(var_name)
+        query += ", " + ", ".join(carry_vars) + " "
+
     carry_vars.add(node_id_var)
     carry_vars.add(var_name)
+    print(query)
     return query, carry_vars
 
 
@@ -302,6 +313,7 @@ def cloning_query(original_var, clone_var, clone_id, clone_id_var,
             ", ".join(carry_vars) + " " +\
             "FOREACH (succ in filtSucc | MERGE ({})-[:edge]->(succ)) ".format(clone_var) +\
             "FOREACH (pred in filtPred | MERGE (pred)-[:edge]->({})) ".format(clone_var)
+        carry_vars.add(clone_var)
     else:
         query +=\
             "OPTIONAL MATCH (same_id_node:node {{ id : '{}'}}) ".format(clone_id) +\
@@ -316,19 +328,18 @@ def cloning_query(original_var, clone_var, clone_id, clone_id_var,
             "filter(varNode in listPred WHERE NOT (varNode.id in ig)) AS filtPred, " +\
             ", ".join(carry_vars) + " "
 
-        carry_vars.add(clone_id_var)
         query +=\
             "MERGE ({}:node {{id : {} }}) ".format(
                 clone_var, clone_id_var) +\
             "SET same_id_node.count = same_id_node_new_count + 1 " +\
             "FOREACH (succ in filtSucc | MERGE ({})-[:edge]->(succ)) ".format(clone_var) +\
             "FOREACH (pred in filtPred | MERGE (pred)-[:edge]->({})) ".format(clone_var)
-
+        carry_vars.add(clone_var)
     return query, carry_vars
 
 
 def merging_query(original_vars, merged_var, merged_id,
-                  merged_id_var, carry_vars=None):
+                  merged_id_var, carry_vars=None, ignore_naming=False):
     """Generate query for merging nodes.
 
     Parameters
@@ -352,6 +363,7 @@ def merging_query(original_vars, merged_var, merged_id,
     carry_vars : set
         Updated collection of variables to carry
     """
+
     if carry_vars is None:
         carry_vars = set(original_vars)
 
@@ -373,10 +385,10 @@ def merging_query(original_vars, merged_var, merged_id,
         carry_vars.add("sucs_{}".format(n))
         carry_vars.add("preds_{}".format(n))
 
-    merged_var += "_merged_var"
+    # merged_var += "_merged_var"
     new_node, carry_vars = create_node(
         merged_var, merged_id, merged_id_var,
-        carry_vars=carry_vars)
+        carry_vars=carry_vars, ignore_naming=ignore_naming)
 
     reconnect_edges =\
         " ".join(
@@ -396,6 +408,9 @@ def merging_query(original_vars, merged_var, merged_id,
     for n in original_vars:
         if n in carry_vars and n != merged_id:
             carry_vars.remove(n)
+        carry_vars.remove("sucs_{}".format(n))
+        carry_vars.remove("preds_{}".format(n))
+        # carry_vars.remove(merged_id_var)
     carry_vars.add(merged_var)
 
     query = match_edges + new_node + reconnect_edges + delete_nodes
@@ -435,7 +450,7 @@ def find_matching(pattern, nodes=None):
     return query
 
 
-def match_pattern_instance(pattern, instance):
+def match_pattern_instance(pattern, pattern_vars, instance):
     """Query to match an instance of the pattern.
 
     Parameters
@@ -453,7 +468,10 @@ def match_pattern_instance(pattern, instance):
     if len(pattern.edges()) > 0:
         query +=\
             ", " +\
-            ", ".join("({})-[{}:edge]->({})".format(u, str(u) + "_" + str(v), v)
+            ", ".join("({})-[{}:edge]->({})".format(
+                pattern_vars[u], 
+                str(pattern_vars[u]) + "_" + str(pattern_vars[v]), 
+                pattern_vars[v])
                       for u, v in pattern.edges())
     else:
         query += " "

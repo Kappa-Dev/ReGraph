@@ -930,3 +930,8 @@ def recursive_merge(dict1, dict2):
             recursive_merge(dict1[k], v)
         else:
             dict1[k] = v
+
+def remove_forbidden(string):
+            return string.replace(" ", "_").replace(
+                "-", "_").replace(",", "_").replace(
+                "/", "_").replace(".", "_")

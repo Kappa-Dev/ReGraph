@@ -7,11 +7,14 @@ https://link.springer.com/chapter/10.1007/11841883_4).
 import copy
 import warnings
 
+import networkx as nx
+
 from regraph.default.parser import parser
 from regraph.default.utils import (keys_by_value,
                                    make_canonical_commands,
                                    dict_sub,
-                                   attrs_union)
+                                   attrs_union,
+                                   remove_forbidden)
 from regraph.default.category_utils import (identity,
                                             check_homomorphism,
                                             pullback_complement,
@@ -1330,3 +1333,39 @@ class Rule(object):
             self.p.edge[u][v] = dict()
         for u, v in self.rhs.edges():
             self.rhs.edge[u][v] = dict()
+
+    def _escape(self):
+
+        lhs_relabel = {}
+        for node in self.lhs.nodes():
+            new_name = remove_forbidden(node)
+            lhs_relabel[node] = new_name
+
+        p_relabel = {}
+        for node in self.p.nodes():
+            new_name = remove_forbidden(node)
+            p_relabel[node] = new_name
+
+        rhs_relabel = {}
+        for node in self.rhs.nodes():
+            new_name = remove_forbidden(node)
+            rhs_relabel[node] = new_name
+
+        nx.relabel_nodes(self.lhs, lhs_relabel, copy=False)
+        nx.relabel_nodes(self.p, p_relabel, copy=False)
+        nx.relabel_nodes(self.rhs, rhs_relabel, copy=False)
+
+        new_p_lhs = dict()
+        for k, v in self.p_lhs.items():
+            new_key = remove_forbidden(k)
+            new_v = remove_forbidden(v)
+            new_p_lhs[new_key] = new_v
+
+        new_p_rhs = dict()
+        for k, v in self.p_rhs.items():
+            new_key = remove_forbidden(k)
+            new_v = remove_forbidden(v)
+            new_p_rhs[new_key] = new_v
+
+        self.p_lhs = new_p_lhs
+        self.p_rhs = new_p_rhs

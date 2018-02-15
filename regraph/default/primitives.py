@@ -1421,3 +1421,92 @@ def unique_node_id(graph, prefix):
         idx += 1
         new_id = "{}_{}".format(prefix, idx)
     return new_id
+
+
+def new_merge_nodes(graph, nodes, node_id=None, method="union", edge_method="union"):
+    """Merge a list of nodes.
+
+    Parameters
+    ----------
+
+    graph : nx.(Di)Graph
+    nodes : list
+        List of of node id's to merge.
+    node_id : hashable, optional
+        Id of a new node corresponding to the result of merge.
+    method : optional
+        Method of node attributes merge: if `"union"` the resulting node
+        will contain the union of all attributes of the merged nodes,
+        if `"intersection"`, the resulting node will contain their
+        intersection. Default value is `"union"`.
+    edge_method : optional
+        Method of edge attributes merge: if `"union"` the edges that were
+        merged will contain the union of all attributes,
+        if `"intersection"` -- their ntersection. Default value is `"union"`.
+
+    Returns
+    -------
+    node_id : hashable
+        Id of a new node corresponding to the result of merge.
+
+    Raises
+    ------
+    ReGraphError
+        If unknown merging method is provided
+    GraphError
+        If some nodes from `nodes` do not exist in the graph.
+
+    Examples
+    --------
+
+    >>> g = nx.DiGraph()
+    >>> add_nodes_from(g, [(1, {"a": 1, "b": 1}), 2, (3, {"a": 3, "c": 3})])
+    >>> add_edges_from(g, [(1, 3), (1, 2), (2, 3)])
+    >>> merge_nodes(g, [1, 3], "merged_node")
+    >>> g.nodes()
+    ["merged_node", 2]
+    >>> g.edges()
+    [("merged_node", "merged_node"), ("merged_node", 2), (2, "merged_node")]
+    >>> g.node["merged_node"]
+    {"a": {1, 3}, "b": {1}, "c": {3}}
+
+    """
+    # choose a node to which we merge all others
+
+    if len(nodes) == 1:
+        if node_id is not None:
+            relabel_node(graph, nodes[0], node_id)
+    elif len(nodes) > 1:
+
+        if method is None:
+            method = "union"
+
+        if edge_method is None:
+            method = "union"
+
+        # Generate name for new node
+        if node_id is None:
+            node_id = "_".join([str(n) for n in sorted(nodes)])
+        elif node_id in graph.nodes() and (node_id not in nodes):
+            raise GraphError(
+                "New name for merged node is not valid: "
+                "node with name '%s' already exists!" % node_id
+            )
+
+        # Merge data attached to node according to the method specified
+        # restore proper connectivity
+        if method == "union":
+            attr_accumulator = {}
+        elif method == "intersection":
+            attr_accumulator = deepcopy(graph.node[nodes[0]])
+        else:
+            raise ReGraphError("Merging method '%s' is not defined!" % method)
+
+        # Start merge
+        invariant_node = nodes[0]
+        other_nodes = nodes[1:]
+        # Reconnect_edges
+        for 
+
+    else:
+        raise ReGraphError("Cannot merge an empty set of nodes!")
