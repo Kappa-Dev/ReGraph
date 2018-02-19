@@ -1506,7 +1506,7 @@ def new_merge_nodes(graph, nodes, node_id=None, method="union", edge_method="uni
         invariant_node = nodes[0]
         other_nodes = nodes[1:]
         # Reconnect_edges
-        for 
+
 
     else:
         raise ReGraphError("Cannot merge an empty set of nodes!")
