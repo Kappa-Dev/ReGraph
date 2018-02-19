@@ -281,6 +281,7 @@ class Neo4jGraph(object):
 
         query += return_vars(carry_variables)
 
+        print(query)
         result = self.execute(query)
         # print(query)
         rhs_g = dict()
