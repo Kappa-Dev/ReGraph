@@ -124,7 +124,7 @@ class Neo4jGraph(object):
         result = self.execute(query)
         return result.single().value()
 
-    def merge_nodes(self, node_list, name=None):
+    def merge_nodes(self, node_list, name=None, ignore_naming=False):
         """Merge nodes of the graph."""
         if name is not None:
             pass
@@ -135,9 +135,11 @@ class Neo4jGraph(object):
             merging_query(
                 original_vars=node_list,
                 merged_var='merged_node',
-                merged_id=name, 
-                merged_id_var='new_id')[0] +\
+                merged_id=name,
+                merged_id_var='new_id',
+                ignore_naming=ignore_naming)[0] +\
             return_vars(['new_id'])
+        print(query)
         result = self.execute(query)
         return result.single().value()
 
