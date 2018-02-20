@@ -134,7 +134,7 @@ def create_edge(u_var, v_var):
         Name of the variable corresponding to the source
         of the edge
     """
-    return "CREATE UNIQUE ({})-[:edge]->({}) ".format(u_var, v_var)
+    return "MERGE ({})-[:edge]->({}) ".format(u_var, v_var)
 
 
 def delete_nodes_var(var_names):
