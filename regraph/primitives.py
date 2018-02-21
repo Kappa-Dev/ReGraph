@@ -777,178 +777,177 @@ def merge_nodes(graph, nodes, node_id=None, method="union", edge_method="union")
     {"a": {1, 3}, "b": {1}, "c": {3}}
 
     """
-    # if len(nodes) == 1:
-    #     if node_id is not None:
-    #         relabel_node(graph, nodes[0], node_id)
-    # elif len(nodes) > 1:
+    if len(nodes) == 1:
+        if node_id is not None:
+            relabel_node(graph, nodes[0], node_id)
+    elif len(nodes) > 1:
 
-    #     if method is None:
-    #         method = "union"
+        if method is None:
+            method = "union"
 
-    #     if edge_method is None:
-    #         method = "union"
+        if edge_method is None:
+            method = "union"
 
-    #     # Generate name for new node
-    #     if node_id is None:
-    #         node_id = "_".join([str(n) for n in sorted(nodes)])
-    #         if node_id in graph.nodes():
-    #             node_id = unique_node_id(graph, node_id)
-    #     elif node_id in graph.nodes() and (node_id not in nodes):
-    #         raise GraphError(
-    #             "New name for merged node is not valid: "
-    #             "node with name '%s' already exists!" % node_id
-    #         )
+        # Generate name for new node
+        if node_id is None:
+            node_id = "_".join([str(n) for n in sorted(nodes)])
+            if node_id in graph.nodes():
+                node_id = unique_node_id(graph, node_id)
+        elif node_id in graph.nodes() and (node_id not in nodes):
+            raise GraphError(
+                "New name for merged node is not valid: "
+                "node with name '%s' already exists!" % node_id
+            )
 
-    #     # Merge data attached to node according to the method specified
-    #     # restore proper connectivity
-    #     if method == "union":
-    #         attr_accumulator = {}
-    #     elif method == "intersection":
-    #         attr_accumulator = deepcopy(graph.node[nodes[0]])
-    #     else:
-    #         raise ReGraphError("Merging method '%s' is not defined!" % method)
+        # Merge data attached to node according to the method specified
+        # restore proper connectivity
+        if method == "union":
+            attr_accumulator = {}
+        elif method == "intersection":
+            attr_accumulator = deepcopy(graph.node[nodes[0]])
+        else:
+            raise ReGraphError("Merging method '%s' is not defined!" % method)
 
-    #     self_loop = False
-    #     self_loop_attrs = {}
+        self_loop = False
+        self_loop_attrs = {}
 
-    #     if graph.is_directed():
-    #         source_nodes = set()
-    #         target_nodes = set()
+        if graph.is_directed():
+            source_nodes = set()
+            target_nodes = set()
 
-    #         source_dict = {}
-    #         target_dict = {}
-    #     else:
-    #         neighbors = set()
-    #         neighbors_dict = {}
-    #     all_neighbors = set()
+            source_dict = {}
+            target_dict = {}
+        else:
+            neighbors = set()
+            neighbors_dict = {}
+        all_neighbors = set()
 
-    #     for node in nodes:
-    #         all_neighbors |= set(graph.__getitem__(node).keys())
-    #         attr_accumulator = merge_attributes(
-    #             attr_accumulator, graph.node[node], method)
+        for node in nodes:
+            all_neighbors |= set(graph.__getitem__(node).keys())
+            attr_accumulator = merge_attributes(
+                attr_accumulator, graph.node[node], method)
 
-    #         if graph.is_directed():
-    #             in_edges = graph.in_edges(node)
-    #             out_edges = graph.out_edges(node)
+            if graph.is_directed():
+                in_edges = graph.in_edges(node)
+                out_edges = graph.out_edges(node)
 
-    #             # manage self loops
-    #             for s, t in in_edges:
-    #                 if s in nodes:
-    #                     self_loop = True
-    #                     if len(self_loop_attrs) == 0:
-    #                         self_loop_attrs = graph.edge[s][t]
-    #                     else:
-    #                         self_loop_attrs = merge_attributes(
-    #                             self_loop_attrs,
-    #                             graph.edge[s][t],
-    #                             edge_method)
+                # manage self loops
+                for s, t in in_edges:
+                    if s in nodes:
+                        self_loop = True
+                        if len(self_loop_attrs) == 0:
+                            self_loop_attrs = graph.edge[s][t]
+                        else:
+                            self_loop_attrs = merge_attributes(
+                                self_loop_attrs,
+                                graph.edge[s][t],
+                                edge_method)
 
-    #             for s, t in out_edges:
-    #                 if t in nodes:
-    #                     self_loop = True
-    #                     if len(self_loop_attrs) == 0:
-    #                         self_loop_attrs = graph.edge[s][t]
-    #                     else:
-    #                         self_loop_attrs = merge_attributes(
-    #                             self_loop_attrs,
-    #                             graph.edge[s][t],
-    #                             edge_method)
+                for s, t in out_edges:
+                    if t in nodes:
+                        self_loop = True
+                        if len(self_loop_attrs) == 0:
+                            self_loop_attrs = graph.edge[s][t]
+                        else:
+                            self_loop_attrs = merge_attributes(
+                                self_loop_attrs,
+                                graph.edge[s][t],
+                                edge_method)
 
-    #             source_nodes.update(
-    #                 [n if n not in nodes else node_id
-    #                  for n, _ in in_edges])
-    #             target_nodes.update(
-    #                 [n if n not in nodes else node_id
-    #                  for _, n in out_edges])
+                source_nodes.update(
+                    [n if n not in nodes else node_id
+                     for n, _ in in_edges])
+                target_nodes.update(
+                    [n if n not in nodes else node_id
+                     for _, n in out_edges])
 
-    #             for edge in in_edges:
-    #                 if not edge[0] in source_dict.keys():
-    #                     attrs = graph.edge[edge[0]][edge[1]]
-    #                     source_dict.update({edge[0]: attrs})
-    #                 else:
-    #                     attrs = merge_attributes(
-    #                         source_dict[edge[0]],
-    #                         graph.edge[edge[0]][edge[1]],
-    #                         edge_method)
-    #                     source_dict.update({edge[0]: attrs})
+                for edge in in_edges:
+                    if not edge[0] in source_dict.keys():
+                        attrs = graph.edge[edge[0]][edge[1]]
+                        source_dict.update({edge[0]: attrs})
+                    else:
+                        attrs = merge_attributes(
+                            source_dict[edge[0]],
+                            graph.edge[edge[0]][edge[1]],
+                            edge_method)
+                        source_dict.update({edge[0]: attrs})
 
-    #             for edge in out_edges:
-    #                 if not edge[1] in target_dict.keys():
-    #                     attrs = graph.edge[edge[0]][edge[1]]
-    #                     target_dict.update({edge[1]: attrs})
-    #                 else:
-    #                     attrs = merge_attributes(
-    #                         target_dict[edge[1]],
-    #                         graph.edge[edge[0]][edge[1]],
-    #                         edge_method)
-    #                     target_dict.update({edge[1]: attrs})
-    #         else:
-    #             for n in graph.neighbors(node):
-    #                 if n in nodes:
-    #                     self_loop = True
-    #                     if len(self_loop_attrs) == 0:
-    #                         self_loop_attrs = graph.edge[n][node]
-    #                     else:
-    #                         self_loop_attrs = merge_attributes(
-    #                             self_loop_attrs,
-    #                             graph.edge[n][node],
-    #                             edge_method)
+                for edge in out_edges:
+                    if not edge[1] in target_dict.keys():
+                        attrs = graph.edge[edge[0]][edge[1]]
+                        target_dict.update({edge[1]: attrs})
+                    else:
+                        attrs = merge_attributes(
+                            target_dict[edge[1]],
+                            graph.edge[edge[0]][edge[1]],
+                            edge_method)
+                        target_dict.update({edge[1]: attrs})
+            else:
+                for n in graph.neighbors(node):
+                    if n in nodes:
+                        self_loop = True
+                        if len(self_loop_attrs) == 0:
+                            self_loop_attrs = graph.edge[n][node]
+                        else:
+                            self_loop_attrs = merge_attributes(
+                                self_loop_attrs,
+                                graph.edge[n][node],
+                                edge_method)
 
-    #             neighbors.update(
-    #                 [n for n in graph.neighbors(node) if n not in nodes])
-    #             for n in graph.neighbors(node):
-    #                 if n not in nodes:
-    #                     if n not in neighbors_dict.keys():
-    #                         attrs = graph.edge[n][node]
-    #                         neighbors_dict.update({n: attrs})
-    #                     else:
-    #                         attrs = merge_attributes(
-    #                             neighbors_dict[n],
-    #                             graph.edge[n][node],
-    #                             edge_method)
-    #                         neighbors_dict.update({n: attrs})
+                neighbors.update(
+                    [n for n in graph.neighbors(node) if n not in nodes])
+                for n in graph.neighbors(node):
+                    if n not in nodes:
+                        if n not in neighbors_dict.keys():
+                            attrs = graph.edge[n][node]
+                            neighbors_dict.update({n: attrs})
+                        else:
+                            attrs = merge_attributes(
+                                neighbors_dict[n],
+                                graph.edge[n][node],
+                                edge_method)
+                            neighbors_dict.update({n: attrs})
 
-    #         graph.remove_node(node)
-    #         all_neighbors -= {node}
+            graph.remove_node(node)
+            all_neighbors -= {node}
 
-    #     add_node(graph, node_id, attr_accumulator)
-    #     all_neighbors.add(node_id)
+        add_node(graph, node_id, attr_accumulator)
+        all_neighbors.add(node_id)
 
-    #     if graph.is_directed():
-    #         if self_loop:
-    #             add_edges_from(graph, [(node_id, node_id)])
-    #             graph.edge[node_id][node_id] = self_loop_attrs
-    #         for n in source_nodes:
-    #             if not exists_edge(graph, n, node_id):
-    #                 add_edge(graph, n, node_id)
-    #         for n in target_nodes:
-    #             if not exists_edge(graph, node_id, n):
-    #                 add_edge(graph, node_id, n)
+        if graph.is_directed():
+            if self_loop:
+                add_edges_from(graph, [(node_id, node_id)])
+                graph.edge[node_id][node_id] = self_loop_attrs
+            for n in source_nodes:
+                if not exists_edge(graph, n, node_id):
+                    add_edge(graph, n, node_id)
+            for n in target_nodes:
+                if not exists_edge(graph, node_id, n):
+                    add_edge(graph, node_id, n)
 
-    #         # Attach accumulated attributes to edges
-    #         for node, attrs in source_dict.items():
-    #             if node not in nodes:
-    #                 graph.edge[node][node_id] = attrs
-    #         for node, attrs in target_dict.items():
-    #             if node not in nodes:
-    #                 graph.edge[node_id][node] = attrs
-    #     else:
-    #         if self_loop:
-    #             add_edges_from(graph, [(node_id, node_id)])
-    #             graph.edge[node_id][node_id] = self_loop_attrs
+            # Attach accumulated attributes to edges
+            for node, attrs in source_dict.items():
+                if node not in nodes:
+                    graph.edge[node][node_id] = attrs
+            for node, attrs in target_dict.items():
+                if node not in nodes:
+                    graph.edge[node_id][node] = attrs
+        else:
+            if self_loop:
+                add_edges_from(graph, [(node_id, node_id)])
+                graph.edge[node_id][node_id] = self_loop_attrs
 
-    #         add_edges_from(graph, [(n, node_id) for n in neighbors])
+            add_edges_from(graph, [(n, node_id) for n in neighbors])
 
-    #         # Attach accumulated attributes to edges
-    #         for node, attrs in neighbors_dict.items():
-    #             if node not in nodes:
-    #                 graph.edge[node][node_id] = attrs
-    #                 graph.edge[node_id][node] = attrs
+            # Attach accumulated attributes to edges
+            for node, attrs in neighbors_dict.items():
+                if node not in nodes:
+                    graph.edge[node][node_id] = attrs
+                    graph.edge[node_id][node] = attrs
 
-    #     return node_id
-    # else:
-    #     raise ReGraphError("Cannot merge an empty set of nodes!")
-    new_merge_nodes(graph, nodes, node_id, method, edge_method)
+        return node_id
+    else:
+        raise ReGraphError("Cannot merge an empty set of nodes!")
 
 
 def subtract(a, b, ba_mapping):
