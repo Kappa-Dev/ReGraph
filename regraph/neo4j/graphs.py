@@ -37,12 +37,12 @@ class Neo4jGraph(object):
         result = self.execute(query)
         return result
 
-    def add_node(self, node, attrs=None):
+    def add_node(self, node, attrs=None, ignore_naming=False):
         """Add a node to the graph db."""
         query =\
             create_node(
                 node, node, 'new_id',
-                literal_id=True)[0] +\
+                literal_id=True, ignore_naming=ignore_naming)[0] +\
             return_vars(['new_id'])
 
         result = self.execute(query)
@@ -139,7 +139,7 @@ class Neo4jGraph(object):
                 merged_id_var='new_id',
                 ignore_naming=ignore_naming)[0] +\
             return_vars(['new_id'])
-        print(query)
+        # print(query)
         result = self.execute(query)
         return result.single().value()
 
@@ -155,8 +155,8 @@ class Neo4jGraph(object):
             instances.append(instance)
         return instances
 
-    def rewrite(self, rule, instance):
-        """Perform SqPO rewiting of the graph with a rule."""
+    def rule_to_cypher(self, rule, instance):
+        """Convert a rule on the instance to Cypher query."""
 
         rule._escape()
 
@@ -282,10 +282,14 @@ class Neo4jGraph(object):
             query += create_edge(rhs_vars[u], rhs_vars[v])
 
         query += return_vars(carry_variables)
+        return query
 
-        print(query)
+    def rewrite(self, rule, instance):
+        """Perform SqPO rewiting of the graph with a rule."""
+        query = g.rule_to_cypher(rule, instance)
+
         result = self.execute(query)
-        # print(query)
+
         rhs_g = dict()
         for record in result:
             for k, v in record.items():
@@ -296,5 +300,4 @@ class Neo4jGraph(object):
 
         rhs_vars_inverse = {v: k for k, v in rhs_vars.items()}
         rhs_g = {rhs_vars_inverse[k]: v for k, v in rhs_g.items()}
-        assert(set(rhs_g.keys()) == set(rule.rhs.nodes()))
         return rhs_g

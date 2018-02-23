@@ -120,7 +120,6 @@ def create_node(var_name, node_id, node_id_var,
 
     carry_vars.add(node_id_var)
     carry_vars.add(var_name)
-    print(query)
     return query, carry_vars
 
 
@@ -367,23 +366,35 @@ def merging_query(original_vars, merged_var, merged_id,
     if carry_vars is None:
         carry_vars = set(original_vars)
 
-    match_edges =\
-        " ".join(
-            "OPTIONAL MATCH ({})-[:edge]->({}) "
-            "OPTIONAL MATCH ({})-[:edge]->({})".format(
-                n, "suc_" + n, "pred_" + n, n) for n in original_vars) + " " +\
-        " WITH " + ", ".join(
-            "COLLECT({}) as sucs_{}, COLLECT({}) as preds_{}".format(
-                "suc_" + n, n, "pred_" + n, n) for n in original_vars)
-
-    if len(carry_vars) > 0:
-        match_edges += ", " + ", ".join(carry_vars) + " "
-    else:
-        match_edges += " "
-
+    match_edges = ""
     for n in original_vars:
+        match_edges +=\
+            "OPTIONAL MATCH ({})-[:edge]->({}), ".format(n, "suc_" + n) +\
+            "({})-[:edge]->({}) ".format("pred_" + n, n) +\
+            "WITH COLLECT({}) as sucs_{}, COLLECT({}) as preds_{} ".format(
+                "suc_" + n, n, "pred_" + n, n, n)
+
+        if len(carry_vars) > 0:
+            match_edges += ", " + ", ".join(carry_vars) + " "
+        else:
+            match_edges += " "
+
         carry_vars.add("sucs_{}".format(n))
         carry_vars.add("preds_{}".format(n))
+
+    # match_edges =\
+    #     "OPTIONAL MATCH " + ", ".join(
+    #         "({})-[:edge]->({}), "
+    #         "({})-[:edge]->({})".format(
+    #             n, "suc_" + n, "pred_" + n, n) for n in original_vars) + " " +\
+    #     " WITH " + ", ".join(
+    #         "COLLECT({}) as sucs_{}, COLLECT({}) as preds_{}".format(
+    #             "suc_" + n, n, "pred_" + n, n) for n in original_vars)
+
+    # if len(carry_vars) > 0:
+    #     match_edges += ", " + ", ".join(carry_vars) + " "
+    # else:
+    #     match_edges += " "
 
     # merged_var += "_merged_var"
     new_node, carry_vars = create_node(
@@ -392,24 +403,26 @@ def merging_query(original_vars, merged_var, merged_id,
 
     reconnect_edges =\
         " ".join(
-            "FOREACH(s IN sucs_{} | CREATE UNIQUE ({})-[:edge]->(s)) ".format(
+            "FOREACH(s IN sucs_{} | MERGE ({})-[:edge]->(s)) ".format(
                 n, merged_var) for n in original_vars) +\
         " ".join(
-            "FOREACH(p IN preds_{} | CREATE UNIQUE (p)-[:edge]->({})) ".format(
+            "FOREACH(p IN preds_{} | MERGE (p)-[:edge]->({})) ".format(
                 n, merged_var) for n in original_vars) +\
         "FOREACH(n IN {} | ".format(
             " + ".join("sucs_{} + preds_{}".format(n, n) for n in original_vars)) +\
         "FOREACH(dummy_var IN CASE WHEN n IN [{}] THEN ['dummy'] ELSE [] END | ".format(
             ", ".join(n for n in original_vars)) +\
-        "CREATE UNIQUE ({})-[:edge]->({})) )".format(merged_var, merged_var) + " "
+        "MERGE ({})-[:edge]->({})) )".format(merged_var, merged_var) + " "
 
     delete_nodes = delete_nodes_var(original_vars)
 
     for n in original_vars:
         if n in carry_vars and n != merged_id:
             carry_vars.remove(n)
-        carry_vars.remove("sucs_{}".format(n))
-        carry_vars.remove("preds_{}".format(n))
+        if "sucs_{}".format(n) in carry_vars:
+            carry_vars.remove("sucs_{}".format(n))
+        if "preds_{}".format(n) in carry_vars:
+            carry_vars.remove("preds_{}".format(n))
         # carry_vars.remove(merged_id_var)
     carry_vars.add(merged_var)
 
