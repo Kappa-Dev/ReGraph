@@ -4,7 +4,7 @@ import networkx as nx
 
 from neo4j.v1 import GraphDatabase
 
-from regraph.default.utils import keys_by_value
+from regraph.default.utils import keys_by_value, normalize_attrs
 from regraph.neo4j.cypher_utils import *
 
 
@@ -39,9 +39,13 @@ class Neo4jGraph(object):
 
     def add_node(self, node, attrs=None, ignore_naming=False):
         """Add a node to the graph db."""
+
+        if attrs is None:
+            attrs = dict()
+        normalize_attrs(attrs)
         query =\
             create_node(
-                node, node, 'new_id',
+                node, node, 'new_id', attrs,
                 literal_id=True, ignore_naming=ignore_naming)[0] +\
             return_vars(['new_id'])
 
@@ -54,7 +58,7 @@ class Neo4jGraph(object):
             source: source,
             target: target
         })
-        query += create_edge(source, target)
+        query += create_edge(source, target, attrs)
         result = self.execute(query)
         # print(result)
 
@@ -63,9 +67,16 @@ class Neo4jGraph(object):
         query = ""
         carry_variables = set()
         for n in nodes:
-            q, carry_variables =\
-                create_node(
-                    n, n, 'new_id_' + n)
+            try:
+                n_id, attrs = n
+                normalize_attrs(attrs)
+                q, carry_variables =\
+                    create_node(
+                        n_id, n_id, 'new_id_' + n_id, attrs)
+            except:
+                q, carry_variables =\
+                    create_node(
+                        n, n, 'new_id_' + n)
             query += q + with_vars(carry_variables)
         query += return_vars(carry_variables)
         result = self.execute(query)
@@ -73,10 +84,24 @@ class Neo4jGraph(object):
 
     def add_edges_from(self, edges):
         """Add edges to the graph db."""
+        nodes_to_match = set()
+        edge_creation_queries = []
+        for e in edges:
+            try:
+                u, v, attrs = e
+                nodes_to_match.add(u)
+                nodes_to_match.add(v)
+                normalize_attrs(attrs)
+                edge_creation_queries.append(create_edge(u, v, attrs))
+            except:
+                u, v = e
+                nodes_to_match.add(u)
+                nodes_to_match.add(v)
+                edge_creation_queries.append(create_edge(u, v))
         query = match_nodes(
-            {n: n for n in set(sum(edges, ()))})
-        for u, v in edges:
-            query += create_edge(u, v)
+            {n: n for n in nodes_to_match})
+        for q in edge_creation_queries:
+            query += q
         result = self.execute(query)
         # print(result)
 
