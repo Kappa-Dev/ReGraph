@@ -57,19 +57,19 @@ class AttributeContainter(object):
 
     def add_attrs(self, attrs):
         """Add attrs to the container."""
-        if attrs:
-            new_attrs = copy.deepcopy(attrs)
-            normalize_attrs(new_attrs)
+        if attrs is not None:
+            normalize_attrs(attrs)
         else:
-            new_attrs = dict()
-        if len(self.attrs) == 0:
-            self.attrs = new_attrs
+            attrs = dict()
+        node_attrs = self.attrs
+        if node_attrs is None:
+            self.attrs = attrs
         else:
-            for key, value in new_attrs.items():
-                if key not in self.attrs.keys():
-                    self.attrs[key] = FiniteSet(value)
+            for key in attrs:
+                if key in node_attrs:
+                    node_attrs[key] = node_attrs[key].union(attrs[key])
                 else:
-                    self.attrs[key] = self.attrs[key].union(value)
+                    node_attrs[key] = attrs[key]
         return
 
     def remove_attrs(self, attrs):
