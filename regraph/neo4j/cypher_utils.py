@@ -3,7 +3,7 @@ from regraph.default.attribute_sets import *
 
 
 def set_attributes(var_name, attrs):
-    """."""
+    """Generate a subquery to set the attributes for some variable."""
     query = ""
     for k, value in attrs.items():
         if isinstance(value, FiniteSet):
@@ -22,7 +22,7 @@ def set_attributes(var_name, attrs):
 
 
 def generate_attributes(attrs):
-    """."""
+    """Generate a string converting attrs to Cypher compatible format."""
     if attrs is None:
         return ""
     else:
@@ -44,7 +44,7 @@ def generate_attributes(attrs):
 
 
 def match_node(var_name, node_id):
-    """Query for match a node into the variable.
+    """Query to match a node into the variable.
 
     Parameters
     ----------
@@ -167,19 +167,21 @@ def create_node(var_name, node_id, node_id_var, attrs=None,
     return query, carry_vars
 
 
-def create_edge(u_var, v_var, attrs=None):
+def create_edge(source_var, target_var, attrs=None):
     """Generate query for edge creation.
 
-    u_var
+    source_var
         Name of the variable corresponding to the source
-        of the edge
-    v_var
-        Name of the variable corresponding to the source
-        of the edge
+        node
+    target_var
+        Name of the variable corresponding to the target
+        node
+    attrs
+        Attributes of the new edge
     """
     attrs_str = generate_attributes(attrs)
     query = "MERGE ({})-[:edge {{ {} }}]->({}) ".format(
-        u_var, attrs_str, v_var)
+        source_var, attrs_str, target_var)
     return query
 
 
@@ -207,12 +209,12 @@ def delete_edge_var(edge_var):
 
 
 def with_vars(carry_vars):
-    """Generate with statement with input variables to carry."""
+    """Generate WITH statement using the input variables to carry."""
     return "WITH {} ".format(", ".join(carry_vars))
 
 
 def return_vars(var_list):
-    """Generate return query with variables in the list."""
+    """Generate RETURN query with the input variables."""
     return "RETURN {} ".format(", ".join(var_list))
 
 
@@ -495,11 +497,32 @@ def match_pattern_instance(pattern, pattern_vars, instance):
     if len(pattern.edges()) > 0:
         query +=\
             ", " +\
-            ", ".join("({})-[{}:edge]->({})".format(
-                pattern_vars[u], 
-                str(pattern_vars[u]) + "_" + str(pattern_vars[v]), 
-                pattern_vars[v])
-                      for u, v in pattern.edges())
+            ", ".join(
+                "({})-[{}:edge]->({})".format(
+                    pattern_vars[u],
+                    str(pattern_vars[u]) + "_" + str(pattern_vars[v]),
+                    pattern_vars[v])
+                for u, v in pattern.edges())
     else:
         query += " "
     return query
+
+
+# def match_pattern_instance1(pattern, pattern_vars, instance):
+#     """."""
+#     # Match nodes of the instance
+#     query =\
+#         match_nodes(instance)
+
+#     # Match edges that are affected
+#     if len(pattern.edges()) > 0:
+#         query +=\
+#             ", " +\
+#             ", ".join(
+#                 "({})-[{}:edge]->({})".format(
+#                     pattern_vars[u],
+#                     str(pattern_vars[u]) + "_" + str(pattern_vars[v]),
+#                     pattern_vars[v])
+#                 for u, v in pattern.edges())
+
+#     return query

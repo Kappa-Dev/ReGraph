@@ -1,6 +1,5 @@
 """Neo4j driver for regraph."""
 import uuid
-import networkx as nx
 
 from neo4j.v1 import GraphDatabase
 
@@ -9,6 +8,7 @@ from regraph.neo4j.cypher_utils import *
 
 
 def generate_var_name():
+    """Generate unique variable names."""
     uid = "uid" + str(uuid.uuid4()).replace("-", "")
     return uid
 
@@ -39,7 +39,6 @@ class Neo4jGraph(object):
 
     def add_node(self, node, attrs=None, ignore_naming=False):
         """Add a node to the graph db."""
-
         if attrs is None:
             attrs = dict()
         normalize_attrs(attrs)
@@ -54,6 +53,9 @@ class Neo4jGraph(object):
 
     def add_edge(self, source, target, attrs=None):
         """Add an edge to the graph db."""
+        if attrs is None:
+            attrs = dict()
+        normalize_attrs(attrs)
         query = match_nodes({
             source: source,
             target: target
@@ -181,27 +183,34 @@ class Neo4jGraph(object):
         return instances
 
     def rule_to_cypher(self, rule, instance):
-        """Convert a rule on the instance to Cypher query."""
-
-        rule._escape()
+        """Convert a rule on the instance to a Cypher query."""
+        # If names of nodes of the rule graphs (L, P, R) are used as
+        # var names, we need to perform escaping on these names
+        # for neo4j not to complain (some symbols are forbidden in
+        # Cypher's var names)
+        # rule._escape()
 
         query = ""
 
+        # Generate unique variable names corresponding to node names
         lhs_vars = {n: generate_var_name() for n in rule.lhs.nodes()}
         p_vars = {n: generate_var_name() for n in rule.p.nodes()}
         rhs_vars = {n: generate_var_name() for n in rule.rhs.nodes()}
 
+        # Variables of the nodes of instance
         match_instance_vars = {lhs_vars[k]: v for k, v in instance.items()}
 
+        # If instance is not empty, generate Cypher that matches the nodes
+        # of the instance
         if len(instance) > 0:
             query += match_pattern_instance(
                 rule.lhs, lhs_vars, match_instance_vars)
 
+        # Add instance nodes to the set of vars to carry
         carry_variables = set(match_instance_vars.keys())
 
-        # Generate clone subquery
+        # Generate cloning subquery
         for lhs_node, p_nodes in rule.cloned_nodes().items():
-
             clones = set()
             preds_to_ignore = dict()
             sucs_to_ignore = dict()
@@ -222,16 +231,19 @@ class Neo4jGraph(object):
                     clone_var=p_vars[n],
                     clone_id=n,
                     clone_id_var=generate_var_name(),
-                    neighbours_to_ignore=sucs_to_ignore[n].union(preds_to_ignore[n]),
+                    neighbours_to_ignore=sucs_to_ignore[n].union(
+                        preds_to_ignore[n]),
                     carry_vars=carry_variables,
                     ignore_naming=True)
                 query += q
                 query += with_vars(carry_variables)
 
+        # Generate nodes removal subquery
         for node in rule.removed_nodes():
             query += delete_nodes_var([lhs_vars[node]])
             carry_variables.remove(lhs_vars[node])
 
+        # Generate edges removal subquery
         for u, v in rule.removed_edges():
             if u in instance.keys() and v in instance.keys():
                 query += delete_edge_var(
@@ -240,7 +252,7 @@ class Neo4jGraph(object):
         if len(rule.removed_nodes()) > 0 or len(rule.removed_edges()) > 0:
             query += with_vars(carry_variables)
 
-        # rename untouched vars as they are in p
+        # Rename untouched vars as they are in P
         vars_to_rename = {}
         for n in rule.lhs.nodes():
             if n not in rule.removed_nodes():
@@ -251,16 +263,20 @@ class Neo4jGraph(object):
             if len(carry_variables) > 0:
                 query +=\
                     with_vars(carry_variables) +\
-                    ", " + ", ".join("{} as {}".format(k, v) for k, v in vars_to_rename.items()) +\
+                    ", " + ", ".join(
+                        "{} as {}".format(k, v)
+                        for k, v in vars_to_rename.items()) +\
                     " "
             else:
                 query +=\
-                    "WITH " + ", ".join("{} as {}".format(k, v) for k, v in vars_to_rename.items()) +\
+                    "WITH " + ", ".join(
+                        "{} as {}".format(k, v)
+                        for k, v in vars_to_rename.items()) +\
                     " "
-
         for k, v in vars_to_rename.items():
             carry_variables.add(v)
 
+        # Generate merging subquery
         for rhs_key, p_nodes in rule.merged_nodes().items():
             merged_id = "_".join(instance[rule.p_lhs[p_n]]for p_n in p_nodes)
             q, carry_variables = merging_query(
@@ -273,14 +289,16 @@ class Neo4jGraph(object):
             query += q
             query += with_vars(carry_variables)
 
+        # Generate nodes addition subquery
         for rhs_node in rule.added_nodes():
             q, carry_variables = create_node(
-                rhs_vars[rhs_node], rhs_node, generate_var_name(), carry_vars=carry_variables,
+                rhs_vars[rhs_node], rhs_node, generate_var_name(),
+                carry_vars=carry_variables,
                 ignore_naming=True)
             query += q
             query += with_vars(carry_variables)
 
-        # rename untouched vars as they are in rhs
+        # Rename untouched vars as they are in rhs
         vars_to_rename = {}
         for n in rule.rhs.nodes():
             if n not in rule.added_nodes() and\
@@ -293,28 +311,39 @@ class Neo4jGraph(object):
             if len(carry_variables) > 0:
                 query +=\
                     with_vars(carry_variables) +\
-                    ", " + ", ".join("{} as {}".format(k, v) for k, v in vars_to_rename.items()) +\
+                    ", " + ", ".join(
+                        "{} as {}".format(k, v)
+                        for k, v in vars_to_rename.items()) +\
                     " "
             else:
                 query +=\
-                    "WITH " + ", ".join("{} as {}".format(k, v) for k, v in vars_to_rename.items()) +\
+                    "WITH " + ", ".join(
+                        "{} as {}".format(k, v)
+                        for k, v in vars_to_rename.items()) +\
                     " "
-
         for k, v in vars_to_rename.items():
             carry_variables.add(v)
 
+        # Generate edges addition subquery
         for u, v in rule.added_edges():
             query += create_edge(rhs_vars[u], rhs_vars[v])
 
         query += return_vars(carry_variables)
-        return query
+
+        # Dictionary defining a mapping from the generated
+        # unique variable names to the names of nodes of the rhs
+        rhs_vars_inverse = {v: k for k, v in rhs_vars.items()}
+
+        return query, rhs_vars_inverse
 
     def rewrite(self, rule, instance):
         """Perform SqPO rewiting of the graph with a rule."""
-        query = g.rule_to_cypher(rule, instance)
-
+        # Generate corresponding Cypher query
+        query, rhs_vars_inverse = self.rule_to_cypher(rule, instance)
+        # Execute query
         result = self.execute(query)
-
+        # Retrieve a dictionary mapping the nodes of the rhs to the nodes
+        # of the resulting graph
         rhs_g = dict()
         for record in result:
             for k, v in record.items():
@@ -322,7 +351,32 @@ class Neo4jGraph(object):
                     rhs_g[k] = v.properties["id"]
                 except:
                     pass
-
-        rhs_vars_inverse = {v: k for k, v in rhs_vars.items()}
         rhs_g = {rhs_vars_inverse[k]: v for k, v in rhs_g.items()}
         return rhs_g
+
+    # def rule_to_cypher1(self, rule, instance):
+    #     # here we will bind the edges of the nodes to clone/merge to some vars
+    #     rule._escape()
+
+    #     query = ""
+
+    #     lhs_vars = {n: generate_var_name() for n in rule.lhs.nodes()}
+    #     p_vars = {n: generate_var_name() for n in rule.p.nodes()}
+    #     rhs_vars = {n: generate_var_name() for n in rule.rhs.nodes()}
+
+    #     edge_side_effect_neighbours = set()
+    #     for lhs_node, p_nodes in rule.cloned_nodes().items():
+    #         edge_side_effect_neighbours.add(instance[lhs_node])
+    #     for rhs_key, p_nodes in rule.merged_nodes().items():
+    #         for p_node in p_nodes:
+    #             edge_side_effect_neighbours.add(rule.p_lhs[p_node])
+
+    #     match_instance_vars = {lhs_vars[k]: v for k, v in instance.items()}
+
+    #     side_effect_edge_vars = {e for e in rule.lhs.edges()}
+
+    #     # if len(instance) > 0:
+    #     #     query += match_pattern_instance(
+    #     #         rule.lhs, lhs_vars, match_instance_vars)
+
+    #     # carry_variables = set(match_instance_vars.keys())
