@@ -183,6 +183,25 @@ class Neo4jGraph(object):
         result = self.execute(query)
         return result.single().value()
 
+    def merge_nodes1(self, node_list, name=None, ignore_naming=False):
+        """Merge nodes of the graph."""
+        if name is not None:
+            pass
+        else:
+            name = "_".join(node_list)
+        query =\
+            match_nodes({n: n for n in node_list}) + "\n" +\
+            merging_query1(
+                original_vars=node_list,
+                merged_var='merged_node',
+                merged_id=name,
+                merged_id_var='new_id',
+                ignore_naming=ignore_naming)[0] +\
+            return_vars(['new_id'])
+        print(query)
+        result = self.execute(query)
+        return result.single().value()
+
     def find_matching(self, pattern, nodes=None):
         """Find matchings of a pattern in the graph."""
         result = self.execute(find_matching(pattern, nodes))
