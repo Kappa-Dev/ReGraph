@@ -139,13 +139,13 @@ class Neo4jGraph(object):
         """Return node's attributes."""
         query = get_node(node_id)
         result = self.execute(query)
-        return result.value()[0].properties
+        return dict(result.value()[0])
 
     def get_edge(self, s, t):
         """Return edge attributes."""
         query = get_edge(s, t)
         result = self.execute(query)
-        return result.value()[0].properties
+        return dict(result.value()[0])
 
     def clone_node(self, node, name=None, ignore_naming=False):
         """Clone a node of the graph."""
@@ -210,7 +210,7 @@ class Neo4jGraph(object):
         for record in result:
             instance = dict()
             for k, v in record.items():
-                instance[k] = v.properties["id"]
+                instance[k] = dict(v)["id"]
             instances.append(instance)
         return instances
 
@@ -381,7 +381,8 @@ class Neo4jGraph(object):
                n not in rule.merged_nodes().keys():
                 prev_var_name = p_vars[keys_by_value(rule.p_rhs, n)[0]]
                 vars_to_rename[prev_var_name] = rhs_vars[n]
-                carry_variables.remove(prev_var_name)
+                if prev_var_name in carry_variables:
+                    carry_variables.remove(prev_var_name)
 
         if len(vars_to_rename) > 0:
             query += "// Renaming vars to correspond to the vars of rhs\n"
