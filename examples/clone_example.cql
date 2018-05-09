@@ -7,16 +7,16 @@ WITH collect({neighbor: suc, edge: out_edge}) as suc_maps, predIgnore, x
 // match predecessors and in-edges of a node to be cloned
 OPTIONAL MATCH (pred)-[in_edge:edge]->(x) 
 WHERE NOT pred.id IS NULL AND NOT pred.id IN predIgnore
-WITH collect({neighbor: pred, edge: in_edge}) as pred_maps, x, suc_maps 
+WITH collect({neighbor: pred, edge: in_edge}) as pred_maps, suc_maps, x 
 // search for a node with the same id as the clone id
 OPTIONAL MATCH (same_id_node:node { id : 'a'}) 
-WITH same_id_node,  CASE WHEN same_id_node IS NOT NULL THEN (coalesce(same_id_node.count, 0) + 1) ELSE 0 END AS same_id_node_new_count, x, suc_maps, pred_maps
+WITH same_id_node,  CASE WHEN same_id_node IS NOT NULL THEN (coalesce(same_id_node.count, 0) + 1) ELSE 0 END AS same_id_node_new_count, suc_maps, x, pred_maps
 // generate new id if the same id node was found
 // and filter edges which will be removed 
-WITH same_id_node, same_id_node_new_count, 'a' + CASE WHEN same_id_node_new_count <> 0 THEN toString(same_id_node_new_count) ELSE '' END as uid, x, suc_maps, pred_maps
+WITH same_id_node, same_id_node_new_count, 'a' + CASE WHEN same_id_node_new_count <> 0 THEN toString(same_id_node_new_count) ELSE '' END as uid, suc_maps, x, pred_maps
 // create a node corresponding to the clone
 CREATE (new_node:node) 
-WITH same_id_node, same_id_node_new_count, new_node, uid, x.id as original_old, x, suc_maps, pred_maps
+WITH same_id_node, same_id_node_new_count, new_node, uid, x.id as original_old, suc_maps, x, pred_maps
 // set the id property of the original node to NULL
 SET x.id = NULL
 // copy all the properties of the original node to the clone

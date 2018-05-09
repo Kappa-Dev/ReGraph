@@ -265,7 +265,7 @@ class Neo4jGraph(object):
             p_vars = {n: generate_var_name() for n in rule.p.nodes()}
             rhs_vars = {n: generate_var_name() for n in rule.rhs.nodes()}
         else:
-            rule._escape()
+            # rule._escape()
             lhs_vars = {n: "lhs_" + str(n) for n in rule.lhs.nodes()}
             p_vars = {n: "p_" + str(n) for n in rule.p.nodes()}
             rhs_vars = {n: "rhs_" + str(n) for n in rule.rhs.nodes()}
