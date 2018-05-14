@@ -6,31 +6,47 @@ from regraph.neo4j.graphs import *
 class TestGraphs(object):
 
     def __init__(self):
+        """Init of the test class."""
         self.g = Neo4jGraph(
               uri="bolt://localhost:7687", user="neo4j", password="admin")
         res = self.g.clear()
         nodes = [
-            ("a", {"name": "Jack", "age": 23, "hobby": {"hiking", "music"},
-                   "weight": 75}),
-            ("b", {"name": "Bob", "age": 24, "hobby": {"sport", "music"},
-                   "height": 178}),
-            "c",
-            ("d", {"name": "Paul"}), "e", "f"
+            ('1', {'name': 'EGFR', 'state': 'p'}),
+            ('2', {'name': 'BND'}),
+            ('3', {'name': 'Grb2', 'aa': 'S', 'loc':90}),
+            ('4', {'name': 'SH2'}),
+            ('5', {'name': 'EGFR'}),
+            ('6', {'name': 'BND'}),
+            ('7', {'name': 'Grb2'}),
+            ('8', {'name': 'WAF1'}),
+            ('9', {'name': 'BND'}),
+            ('10', {'name': 'G1-S/CDK', 'state': 'p'}),
+            '11', '12', '13'
             ]
         edges = [
-            ("a", "b", {"type": {"friends", "colleagues"}}),
-            ("d", "b", {"type": "enemies"}),
-            ("a", "c"),
-            ("d", "a", {"type": "friends"}),
-            ("e", "a"),
-            ("f", "d")
+            ('1', '2', {'s': 'p'}),
+            ('4', '2', {'s': 'u'}),
+            ('4', '3'),
+            ('5', '6', {'s': 'p'}),
+            ('7', '6', {'s': 'u'}),
+            ('8', '9'),
+            ('9', '8'),
+            ('10', '8', {'a': {1}}),
+            ('10', '9', {'a': {2}}),
+            ('11', '12'),
+            ('12', '11'),
+            ('12', '13'),
+            ('13', '12'),
+            ('11', '13'),
+            ('13', '11'),
+            ('5', '2', {'s': 'u'})
             ]
         self.g.add_nodes_from(nodes)
         self.g.add_edges_from(edges)
 
     def test_add_node(self):
-        """Test add_node() method."""
-        attrs = {"name": "Roberto"}
+        # Case 1 : "x" is not in the graph
+        attrs = {'a': {1}}
         self.g.add_node("x", attrs)
         query = get_node("x")
         print(query)
@@ -44,7 +60,11 @@ class TestGraphs(object):
             for v in attrs[k]:
                 assert(v in res_node[k])
 
-
+    def test_add_edge(self):
+        s = '1'
+        t = '5'
+        attrs = {'a': {1}}
+        g.add_edge(s, t, attrs)
 
 
 #t = TestGraphs()
