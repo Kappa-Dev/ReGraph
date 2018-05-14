@@ -139,13 +139,19 @@ class Neo4jGraph(object):
         """Return node's attributes."""
         query = get_node(node_id)
         result = self.execute(query)
-        return dict(result.value()[0])
+        try:
+            return dict(result.value()[0])
+        except(IndexError):
+            return None
 
     def get_edge(self, s, t):
         """Return edge attributes."""
         query = get_edge(s, t)
         result = self.execute(query)
-        return dict(result.value()[0])
+        try:
+            return dict(result.value()[0])
+        except(IndexError):
+            return None
 
     def clone_node(self, node, name=None, ignore_naming=False):
         """Clone a node of the graph."""
@@ -160,7 +166,7 @@ class Neo4jGraph(object):
                 clone_id_var='uid',
                 ignore_naming=ignore_naming)[0] +\
             return_vars(['uid'])
-        #print(query)
+        print(query)
         result = self.execute(query)
         return result.single().value()
 
@@ -181,7 +187,9 @@ class Neo4jGraph(object):
             return_vars(['new_id'])
         print(query)
         result = self.execute(query)
-        return result.single().value()
+        # print(result.value())
+        # print(result.single())
+        return result.single()#.value()
 
     def merge_nodes1(self, node_list, name=None, ignore_naming=False):
         """Merge nodes of the graph."""
