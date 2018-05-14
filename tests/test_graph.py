@@ -11,61 +11,100 @@ class TestGraphs(object):
               uri="bolt://localhost:7687", user="neo4j", password="admin")
         res = self.g.clear()
         nodes = [
-            ('1', {'name': 'EGFR', 'state': 'p'}),
-            ('2', {'name': 'BND'}),
-            ('3', {'name': 'Grb2', 'aa': 'S', 'loc':90}),
-            ('4', {'name': 'SH2'}),
-            ('5', {'name': 'EGFR'}),
-            ('6', {'name': 'BND'}),
-            ('7', {'name': 'Grb2'}),
-            ('8', {'name': 'WAF1'}),
-            ('9', {'name': 'BND'}),
-            ('10', {'name': 'G1-S/CDK', 'state': 'p'}),
-            '11', '12', '13'
+            ("a", {"name": "EGFR", "state": "p"}),
+            ("b", {"name": "BND"}),
+            ("c", {"name": "Grb2", "aa": "S", "loc": 90}),
+            ("d", {"name": "SH2"}),
+            ("e", {"name": "EGFR"}),
+            ("f", {"name": "BND"}),
+            ("g", {"name": "Grb2"}),
+            ("h", {"name": "WAF1"}),
+            ("i", {"name": "BND"}),
+            ("j", {"name": "G1-S/CDK", "state": "p"}),
+            "k", "l", "m"
             ]
         edges = [
-            ('1', '2', {'s': 'p'}),
-            ('4', '2', {'s': 'u'}),
-            ('4', '3'),
-            ('5', '6', {'s': 'p'}),
-            ('7', '6', {'s': 'u'}),
-            ('8', '9'),
-            ('9', '8'),
-            ('10', '8', {'a': {1}}),
-            ('10', '9', {'a': {2}}),
-            ('11', '12'),
-            ('12', '11'),
-            ('12', '13'),
-            ('13', '12'),
-            ('11', '13'),
-            ('13', '11'),
-            ('5', '2', {'s': 'u'})
+            ("a", "b", {"s": "p"}),
+            ("d", "b", {"s": "u"}),
+            ("d", "c"),
+            ("e", "f", {"s": "p"}),
+            ("g", "f", {"s": "u"}),
+            ("h", "i"),
+            ("i", "h"),
+            ("j", "h", {"act": {1}}),
+            ("j", "i", {"act": {2}}),
+            ("k", "l"),
+            ("l", "k"),
+            ("l", "m"),
+            ("m", "l"),
+            ("k", "m"),
+            ("m", "k"),
+            ("e", "b", {"s": "u"})
             ]
         self.g.add_nodes_from(nodes)
         self.g.add_edges_from(edges)
 
     def test_add_node(self):
         # Case 1 : "x" is not in the graph
-        attrs = {'a': {1}}
+        attrs = {"act": {1}}
         self.g.add_node("x", attrs)
         query = get_node("x")
-        print(query)
         result = self.g.execute(query)
         try:
             res_node = dict(result.value()[0])
-        except(ValueError):
+        except(IndexError):
             res_node = dict(result.value())
-        assert(len(res_node)!=0)
+        assert(len(res_node) != 0)
         for k in attrs.keys():
             for v in attrs[k]:
                 assert(v in res_node[k])
 
     def test_add_edge(self):
-        s = '1'
-        t = '5'
-        attrs = {'a': {1}}
-        g.add_edge(s, t, attrs)
+        # Case 1 : (s, t) is not in the graph
+        s = "a"
+        t = "d"
+        attrs = {"act": {1}}
+        self.g.add_edge(s, t, attrs)
+        query = get_edge(s, t)
+        result = self.g.execute(query)
+        try:
+            res_edge = dict(result.value()[0])
+        except(IndexError):
+            res_edge = dict(result.value())
+            assert(len(res_edge) != 0)
+        for k in attrs.keys():
+            for v in attrs[k]:
+                assert(v in res_edge[k])
+
+    def test_remove_node(self):
+        # Case 1 : "a" is in the graph
+        self.g.remove_node("x")
+        query = get_node("x")
+        result = self.g.execute(query)
+        try:
+            res_node = dict(result.value()[0])
+        except(IndexError):
+            res_node = dict(result.value())
+        assert(len(res_node) == 0)
+
+    def test_remove_edge(self):
+        s = "a"
+        t = "d"
+        self.g.remove_edge(s, t)
+        query = get_edge(s, t)
+        result = self.g.execute(query)
+        try:
+            res_edge = dict(result.value()[0])
+        except(IndexError):
+            res_edge = dict(result.value())
+        assert(len(res_edge) == 0)
+
+    def test_clone_node(self):
+        node = "a"
+        clone = "a_clone"
+        res = self.g.clone_node(node, clone)
+        print(res)
 
 
-#t = TestGraphs()
-#t.test_add_node()
+t = TestGraphs()
+t.test_clone_node()
