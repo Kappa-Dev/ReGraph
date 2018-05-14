@@ -160,7 +160,7 @@ class Neo4jGraph(object):
                 clone_id_var='uid',
                 ignore_naming=ignore_naming)[0] +\
             return_vars(['uid'])
-        print(query)
+        #print(query)
         result = self.execute(query)
         return result.single().value()
 
