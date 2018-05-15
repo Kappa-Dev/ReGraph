@@ -153,6 +153,18 @@ class Neo4jGraph(object):
         except(IndexError):
             return None
 
+    def find_successors(self, node):
+        """Return node's successors id."""
+        query = successors_query(node, node)
+        succ = set(self.execute(query).value())
+        return(succ)
+
+    def find_predecessors(self, node):
+        """Return node's predecessors id."""
+        query = predecessors_query(node, node)
+        pred = set(self.execute(query).value())
+        return(pred)
+
     def clone_node(self, node, name=None, ignore_naming=False):
         """Clone a node of the graph."""
         if name is None:
