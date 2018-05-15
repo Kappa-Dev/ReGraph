@@ -31,6 +31,14 @@ class Neo4jGraph(object):
             result = session.run(query)
             return result
 
+    def execution_time(self, query):
+        """Give the execution time of a Cypher query."""
+        with self._driver.session() as session:
+            result = session.run(query)
+            avail = result.summary().result_available_after
+            cons = result.summary().result_consumed_after
+            return avail + cons
+
     def clear(self):
         """Clear graph database."""
         query = clear_graph()
