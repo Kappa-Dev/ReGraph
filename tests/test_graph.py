@@ -44,28 +44,12 @@ class TestGraphs(object):
         self.g.add_nodes_from(nodes)
         self.g.add_edges_from(edges)
 
-    def find_successors(self, node):
-        query = (
-            "MATCH (p:node {{id : '{}'}})-[]-> (s:node)".format(node) +
-            "RETURN s.id"
-        )
-        succ = set(self.g.execute(query).value())
-        return(succ)
-
-    def find_predecessors(self, node):
-        query = (
-            "MATCH (p:node)-[]-> (s:node {{id : '{}'}})".format(node) +
-            "RETURN p.id"
-        )
-        pred = set(self.g.execute(query).value())
-        return(pred)
-
     def test_add_node(self):
         # Case 1 : "x" is not in the graph
         node = "x"
         attrs = {"act": {1}}
         self.g.add_node(node, attrs)
-        attrs_node = self.g.get_node("z")
+        attrs_node = self.g.get_node(node)
         assert(attrs_node is not None)
         # if (res_node is not None):
         for k in attrs.keys():
@@ -78,8 +62,7 @@ class TestGraphs(object):
         t = "d"
         attrs = {"act": {1}}
         self.g.add_edge(s, t, attrs)
-        query = get_edge(s, t)
-        attrs_edge = self.g.execute(query)
+        attrs_edge = self.g.get_edge(s, t)
         assert(attrs_edge is not None)
         for k in attrs.keys():
             for v in attrs[k]:
@@ -96,8 +79,7 @@ class TestGraphs(object):
         s = "a"
         t = "d"
         self.g.remove_edge(s, t)
-        query = get_edge(s, t)
-        attrs_edge = self.g.execute(query)
+        attrs_edge = self.g.get_edge(s, t)
         assert(attrs_edge is None)
 
     def test_clone_node(self):
@@ -113,31 +95,31 @@ class TestGraphs(object):
                 for v in attrs_node[k]:
                     assert(v in attrs_clone[k])
         # Assert that the 2 nodes have the same successors
-        succ_node = self.find_successors(node)
-        succ_clone = self.find_successors(clone)
+        succ_node = self.g.find_successors(node)
+        succ_clone = self.g.find_successors(clone)
         assert(succ_node == succ_clone)
         # Assert that the 2 nodes have the same predecessors
-        pred_node = self.find_predecessors(node)
-        pred_clone = self.find_predecessors(clone)
+        pred_node = self.g.find_predecessors(node)
+        pred_clone = self.g.find_predecessors(clone)
         assert(pred_node == pred_clone)
 
     def test_merge_nodes(self):
         n1 = "c"
         attrs_n1 = self.g.get_node(n1)
-        succ_n1 = self.find_successors(n1)
-        pred_n1 = self.find_predecessors(n1)
+        succ_n1 = self.g.find_successors(n1)
+        pred_n1 = self.g.find_predecessors(n1)
         n2 = "j"
         attrs_n2 = self.g.get_node(n2)
-        succ_n2 = self.find_successors(n2)
-        pred_n2 = self.find_predecessors(n2)
+        succ_n2 = self.g.find_successors(n2)
+        pred_n2 = self.g.find_predecessors(n2)
         merged_node = "c_j"
         res = self.g.merge_nodes([n1, n2], merged_node)
         print('-----')
         print(res)
         print('-----')
         attrs_merged = self.g.get_node(merged_node)
-        succ_merged = self.find_successors(merged_node)
-        pred_merged = self.find_predecessors(merged_node)
+        succ_merged = self.g.find_successors(merged_node)
+        pred_merged = self.g.find_predecessors(merged_node)
         # Assert that the properties are correctly merged_id
         assert(set(attrs_merged.keys())
                == set(attrs_n1.keys()).union(set(attrs_n2.keys())))
@@ -174,5 +156,5 @@ class TestGraphs(object):
         # Assert that the properties on the edges are merged correctly
 
 
-t = TestGraphs()
-t.test_merge_nodes()
+#t = TestGraphs()
+#t.test_merge_nodes()
