@@ -240,6 +240,23 @@ def get_edges():
     query = "MATCH (n)-[r]->(m)\nRETURN n.id, m.id\n"
     return query
 
+def successors_query(var_name, node_id):
+    """Generate query for getting the ids of all the successors of a node."""
+    query = (
+            "MATCH ({}:node {{id : '{}'}})-[]-> (s:node)".format(
+                var_name, node_id) +
+            "RETURN s.id"
+        )
+    return query
+
+def predecessors_query(var_name, node_id):
+    """Generate query for getting the ids of all the predecessors of a node."""
+    query = (
+            "MATCH (p:node)-[]-> ({}:node {{id : '{}'}})".format(
+                var_name, node_id) +
+            "RETURN p.id"
+        )
+    return query
 
 def cloning_query(original_var, clone_var, clone_id, clone_id_var,
                   sucs_to_ignore=None, preds_to_ignore=None,
