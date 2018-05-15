@@ -29,6 +29,8 @@ class TestGraphs(object):
             ("d", "c"),
             ("e", "f", {"s": "p"}),
             ("g", "f", {"s": "u"}),
+            ("e", "g", {"act": {2}}),
+            ("g", "e", {"act": {1}}),
             ("h", "i"),
             ("i", "h"),
             ("j", "h", {"act": {1}}),
@@ -94,6 +96,8 @@ class TestGraphs(object):
             if (k != 'id') and (k != 'count'):
                 for v in attrs_node[k]:
                     assert(v in attrs_clone[k])
+            elif (k == 'id'):
+                assert(attrs_node[k] != attrs_clone[k])
         # Assert that the 2 nodes have the same successors
         succ_node = self.g.find_successors(node)
         succ_clone = self.g.find_successors(clone)
@@ -102,27 +106,54 @@ class TestGraphs(object):
         pred_node = self.g.find_predecessors(node)
         pred_clone = self.g.find_predecessors(clone)
         assert(pred_node == pred_clone)
+        # Assert that the edges properties are correctly cloned
 
     def test_merge_nodes(self):
-        n1 = "c"
+        # Old node and edges 1
+        n1 = "e"
         attrs_n1 = self.g.get_node(n1)
         succ_n1 = self.g.find_successors(n1)
+        attrs_edge_out_n1 = {}
+        for neighbor in succ_n1:
+            attrs_edge_out_n1[neighbor] = self.g.get_edge(n1, neighbor)
         pred_n1 = self.g.find_predecessors(n1)
-        n2 = "j"
+        attrs_edge_in_n1 = {}
+        for neighbor in pred_n1:
+            attrs_edge_in_n1[neighbor] = self.g.get_edge(neighbor, n1)
+
+        # Old node and edges 2
+        n2 = "g"
         attrs_n2 = self.g.get_node(n2)
         succ_n2 = self.g.find_successors(n2)
+        attrs_edge_out_n2 = {}
+        for neighbor in succ_n2:
+            attrs_edge_out_n2[neighbor] = self.g.get_edge(n2, neighbor)
         pred_n2 = self.g.find_predecessors(n2)
-        merged_node = "c_j"
+        attrs_edge_in_n2 = {}
+        for neighbor in pred_n2:
+            attrs_edge_in_n2[neighbor] = self.g.get_edge(neighbor, n2)
+
+        # New node and edges
+        merged_node = "e_g"
         res = self.g.merge_nodes([n1, n2], merged_node)
         print('-----')
         print(res)
         print('-----')
         attrs_merged = self.g.get_node(merged_node)
         succ_merged = self.g.find_successors(merged_node)
+        attrs_edge_out_merged = {}
+        for neighbor in succ_merged:
+            attrs_edge_out_merged[neighbor] = self.g.get_edge(merged_node,
+                                                              neighbor)
         pred_merged = self.g.find_predecessors(merged_node)
-        # Assert that the properties are correctly merged_id
-        assert(set(attrs_merged.keys())
-               == set(attrs_n1.keys()).union(set(attrs_n2.keys())))
+        attrs_edge_in_merged = {}
+        for neighbor in pred_merged:
+            attrs_edge_in_merged[neighbor] = self.g.get_edge(neighbor,
+                                                             merged_node)
+
+        # Assert that the properties are correctly merged
+        assert(set(attrs_merged.keys()) ==
+               set(attrs_n1.keys()).union(set(attrs_n2.keys())))
         for k in attrs_n1.keys():
             if (k != 'id') and (k != 'count'):
                 for v in attrs_n1[k]:
@@ -131,7 +162,8 @@ class TestGraphs(object):
             if (k != 'id') and (k != 'count'):
                 for v in attrs_n2[k]:
                     assert(v in attrs_merged[k])
-        # Assert that the predecesors are correctly merged
+
+        # Assert that the predecesors are conserved
         for pred1 in pred_n1:
             if (pred1 != n1) and (pred1 != n2):
                 assert(pred1 in pred_merged)
@@ -142,7 +174,8 @@ class TestGraphs(object):
                 assert(pred2 in pred_merged)
             else:
                 assert(merged_node in pred_merged)
-        # Assert that the successors are correctly merged
+
+        # Assert that the successors are conserved
         for suc1 in succ_n1:
             if (suc1 != n1) and (suc1 != n2):
                 assert(suc1 in succ_merged)
@@ -153,7 +186,46 @@ class TestGraphs(object):
                 assert(suc2 in succ_merged)
             else:
                 assert(merged_node in succ_merged)
-        # Assert that the properties on the edges are merged correctly
+
+        # Assert that the in_edges properties are merged correctly
+        for k in attrs_edge_in_n1.keys():
+            if (k != n1) and (k != n2):
+                for kk in attrs_edge_in_n1[k].keys():
+                    for v in attrs_edge_in_n1[k][kk]:
+                        assert(v in attrs_edge_in_merged[k][kk])
+            else:
+                for kk in attrs_edge_in_n1[k].keys():
+                    for v in attrs_edge_in_n1[k][kk]:
+                        assert(v in attrs_edge_in_merged[merged_node][kk])
+        for k in attrs_edge_in_n2.keys():
+            if (k != n1) and (k != n2):
+                for kk in attrs_edge_in_n2[k].keys():
+                    for v in attrs_edge_in_n2[k][kk]:
+                        assert(v in attrs_edge_in_merged[k][kk])
+            else:
+                for kk in attrs_edge_in_n2[k].keys():
+                    for v in attrs_edge_in_n2[k][kk]:
+                        assert(v in attrs_edge_in_merged[merged_node][kk])
+
+        # Assert that the out_edges properties are merged correctly
+        for k in attrs_edge_out_n1.keys():
+            if (k != n1) and (k != n2):
+                for kk in attrs_edge_out_n1[k].keys():
+                    for v in attrs_edge_out_n1[k][kk]:
+                        assert(v in attrs_edge_out_merged[k][kk])
+            else:
+                for kk in attrs_edge_in_n1[k].keys():
+                    for v in attrs_edge_out_n1[k][kk]:
+                        assert(v in attrs_edge_out_merged[merged_node][kk])
+        for k in attrs_edge_in_n2.keys():
+            if (k != n1) and (k != n2):
+                for kk in attrs_edge_out_n2[k].keys():
+                    for v in attrs_edge_out_n2[k][kk]:
+                        assert(v in attrs_edge_out_merged[k][kk])
+            else:
+                for kk in attrs_edge_out_n2[k].keys():
+                    for v in attrs_edge_out_n2[k][kk]:
+                        assert(v in attrs_edge_out_merged[merged_node][kk])
 
 
 #t = TestGraphs()
