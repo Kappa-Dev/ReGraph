@@ -209,7 +209,7 @@ class Neo4jGraph(object):
         result = self.execute(query)
         # print(result.value())
         # print(result.single())
-        return result.single()#.value()
+        return result.single().value()
 
     def merge_nodes1(self, node_list, name=None, ignore_naming=False):
         """Merge nodes of the graph."""
