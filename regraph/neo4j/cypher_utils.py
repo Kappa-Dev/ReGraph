@@ -753,3 +753,14 @@ def get_edge(s, t):
         "RETURN rel\n"
 
     return query
+
+
+def constraint_query(node_var, node_label, node_property):
+    """Generate query for creating a constraint on a property."""
+    query = "CREATE CONSTRAINT ON ({}:{}) ASSERT {}.{} IS UNIQUE".format(
+                node_var,
+                node_label,
+                node_var,
+                node_property
+                    )
+    return query
