@@ -43,6 +43,8 @@ class TestGraphs(object):
             ("m", "k"),
             ("e", "b", {"s": "u"})
             ]
+        query = constraint_query("n", "node", "id")
+        self.g.execute(query)
         self.g.add_nodes_from(nodes)
         self.g.add_edges_from(edges)
 
