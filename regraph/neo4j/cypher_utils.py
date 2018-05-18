@@ -595,13 +595,11 @@ def merging_query1(original_vars, merged_var, merged_id,
     query += (
         "// accumulate all the attrs of the edges incident to the merged nodes\n"
         "WITH [] as suc_maps, [] as pred_maps, " +
-        "\t[{}] as self_loops, ".format(", ".join(
-            "toString(id({}))".format(n) for n in original_vars[1:]) + ", toString(id({}))".format(
-                merged_var)) +
+        # "\t[{}] as self_loops, ".format(", ".join(
+        #     "toString(id({}))".format(n) for n in original_vars[1:]) + ", toString(id({}))".format(
+        #         merged_var)) +
         ", ".join(carry_vars) + "\n"
     )
-
-    carry_vars.add("self_loops")
 
     query += (
         "OPTIONAL MATCH ({})-[out_rel:edge]->(suc)\n".format(merged_var) +
@@ -624,11 +622,19 @@ def merging_query1(original_vars, merged_var, merged_id,
     query += (
         "WITH apoc.map.groupByMulti(suc_maps, 'id') as suc_props, " +
         "REDUCE(list=[], map in suc_maps | \n"
-        "\tlist + map['neighbor']) as suc_nodes, "
+        "\tlist + CASE WHEN NOT map['neighbor'] IS NULL THEN [map['neighbor']] ELSE [] END) as suc_nodes, "
         "apoc.map.groupByMulti(pred_maps, 'id') as pred_props, " +
         "REDUCE(list=[], map in pred_maps | \n"
-        "\tlist + map['neighbor']) as pred_nodes, " +
-        ", ".join(carry_vars) + "\n" +
+        "\tlist + CASE WHEN NOT map['neighbor'] IS NULL THEN [map['neighbor']] ELSE [] END) as pred_nodes, " +
+        "\tREDUCE(l=[], el in suc_maps + pred_maps| \n" +
+        "\t\tl + CASE WHEN el['id'] IN [{}] THEN [el['id']] ELSE [] END)".format(
+            ",".join(["id({})".format(v) for v in [merged_var] + original_vars[1:]])) +
+        " as self_loops, " +
+        ", ".join(carry_vars) + "\n"
+    )
+    carry_vars.add("self_loops")
+
+    query += (
         "WITH suc_nodes, pred_nodes, "
         "apoc.map.fromValues(REDUCE(edge_props=[], k in keys(suc_props) | \n"
         "\tedge_props + [k, apoc.map.groupByMulti(REDUCE(props=[], el in suc_props[k] | \n"
@@ -644,15 +650,13 @@ def merging_query1(original_vars, merged_var, merged_id,
         "\t\tedge_props + suc_props[k]) + \n"
         "\tREDUCE(edge_props=[], k IN filter(k IN keys(pred_props) WHERE k IN self_loops) |\n"
         "\t\tedge_props + pred_props[k]) as self_loop_props, " +
-        ", ".join(carry_vars) + "\n"
-
+        ", ".join(carry_vars) + "\n" +
         "WITH suc_nodes, suc_props, pred_nodes, pred_props, " +
         "apoc.map.groupByMulti(REDUCE(pairs=[], el in self_loop_props |\n"
         "\tpairs + REDUCE(inner_pairs=[], k in keys(el['edge']) | \n"
         "\t\tinner_pairs + REDUCE(values=[], v in el['edge'][k] |\n"
         "\t\t\tvalues + {key: k, value: v}))), 'key') as self_loop_props, " +
-        ", ".join(carry_vars) + "\n"
-
+        ", ".join(carry_vars) + "\n" +
         "FOREACH(suc IN filter(suc IN suc_nodes WHERE NOT id(suc) in self_loops) |\n"
         "\tMERGE ({})-[new_rel:edge]->(suc)\n".format(merged_var) +
         "\tSET new_rel = apoc.map.fromValues(REDUCE(pairs=[], k in keys(suc_props[toString(id(suc))]) | \n"
