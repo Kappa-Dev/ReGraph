@@ -37,6 +37,14 @@ class Neo4jGraph(object):
         result = self.execute(query)
         return result
 
+    def set_constraints(self):
+        """Set all the constraints on the database."""
+        label = "node"
+        prop = "id"
+        query = "CREATE " + constraint_query('n', label, prop)
+        result = self.execute(query)
+        return result
+
     def add_node(self, node, attrs=None, ignore_naming=False, profiling=False):
         """Add a node to the graph db."""
         if profiling:
