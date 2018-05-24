@@ -31,26 +31,22 @@ class Neo4jGraph(object):
             result = session.run(query)
             return result
 
-    def execution_time(self, query):
-        """Give the execution time of a Cypher query."""
-        with self._driver.session() as session:
-            result = session.run(query)
-            avail = result.summary().result_available_after
-            cons = result.summary().result_consumed_after
-            return avail + cons
-
     def clear(self):
         """Clear graph database."""
         query = clear_graph()
         result = self.execute(query)
         return result
 
-    def add_node(self, node, attrs=None, ignore_naming=False):
+    def add_node(self, node, attrs=None, ignore_naming=False, profiling=False):
         """Add a node to the graph db."""
+        if profiling:
+            query = "PROFILE\n"
+        else:
+            query = ""
         if attrs is None:
             attrs = dict()
         normalize_attrs(attrs)
-        query =\
+        query +=\
             create_node(
                 node, node, 'new_id', attrs,
                 literal_id=True, ignore_naming=ignore_naming)[0] +\
@@ -58,23 +54,32 @@ class Neo4jGraph(object):
 
         result = self.execute(query)
         # print(result)
+        return result
 
-    def add_edge(self, source, target, attrs=None):
+    def add_edge(self, source, target, attrs=None, profiling=False):
         """Add an edge to the graph db."""
+        if profiling:
+            query = "PROFILE\n"
+        else:
+            query = ""
         if attrs is None:
             attrs = dict()
         normalize_attrs(attrs)
-        query = match_nodes({
+        query += match_nodes({
             source: source,
             target: target
         })
         query += create_edge(source, target, attrs)
         result = self.execute(query)
         # print(result)
+        return result
 
-    def add_nodes_from(self, nodes):
+    def add_nodes_from(self, nodes, profiling=False):
         """Add nodes to the graph db."""
-        query = ""
+        if profiling:
+            query = "PROFILE\n"
+        else:
+            query = ""
         carry_variables = set()
         for n in nodes:
             try:
@@ -91,9 +96,14 @@ class Neo4jGraph(object):
         query += return_vars(carry_variables)
         result = self.execute(query)
         # print(result)
+        return result
 
-    def add_edges_from(self, edges):
+    def add_edges_from(self, edges, profiling=False):
         """Add edges to the graph db."""
+        if profiling:
+            query = "PROFILE\n"
+        else:
+            query = ""
         nodes_to_match = set()
         edge_creation_queries = []
         for e in edges:
@@ -108,28 +118,39 @@ class Neo4jGraph(object):
                 nodes_to_match.add(u)
                 nodes_to_match.add(v)
                 edge_creation_queries.append(create_edge(u, v))
-        query = match_nodes(
+        query += match_nodes(
             {n: n for n in nodes_to_match})
         for q in edge_creation_queries:
             query += q
         result = self.execute(query)
         # print(result)
+        return result
 
-    def remove_node(self, node):
+    def remove_node(self, node, profiling=False):
         """Remove a node from the graph db."""
-        query =\
+        if profiling:
+            query = "PROFILE\n"
+        else:
+            query = ""
+        query +=\
             match_node(node, node) +\
             delete_nodes_var([node])
         result = self.execute(query)
         # print(result)
+        return result
 
-    def remove_edge(self, source, target):
+    def remove_edge(self, source, target, profiling=False):
         """Remove an edge from the graph db."""
-        query =\
+        if profiling:
+            query = "PROFILE\n"
+        else:
+            query = ""
+        query +=\
             match_edge(source, target, source, target, 'edge_var') +\
             delete_edge_var('edge_var')
         result = self.execute(query)
         # print(result)
+        return result
 
     def nodes(self):
         """Return a list of nodes of the graph."""
@@ -173,11 +194,16 @@ class Neo4jGraph(object):
         pred = set(self.execute(query).value())
         return(pred)
 
-    def clone_node(self, node, name=None, ignore_naming=False):
+    def clone_node(self, node, name=None,
+                   ignore_naming=False, profiling=False):
         """Clone a node of the graph."""
+        if profiling:
+            query = "PROFILE\n"
+        else:
+            query = ""
         if name is None:
             name = node
-        query =\
+        query +=\
             match_node('x', node) +\
             cloning_query(
                 original_var='x',
@@ -188,15 +214,20 @@ class Neo4jGraph(object):
             return_vars(['uid'])
         print(query)
         result = self.execute(query)
-        return result.single().value()
+        return result
 
-    def merge_nodes(self, node_list, name=None, ignore_naming=False):
+    def merge_nodes(self, node_list, name=None,
+                    ignore_naming=False, profiling=False):
         """Merge nodes of the graph."""
+        if profiling:
+            query = "PROFILE\n"
+        else:
+            query = ""
         if name is not None:
             pass
         else:
             name = "_".join(node_list)
-        query =\
+        query +=\
             match_nodes({n: n for n in node_list}) + "\n" +\
             merging_query(
                 original_vars=node_list,
@@ -209,15 +240,20 @@ class Neo4jGraph(object):
         result = self.execute(query)
         # print(result.value())
         # print(result.single())
-        return result.single().value()
+        return result
 
-    def merge_nodes1(self, node_list, name=None, ignore_naming=False):
+    def merge_nodes1(self, node_list, name=None,
+                     ignore_naming=False, profiling=False):
         """Merge nodes of the graph."""
+        if profiling:
+            query = "PROFILE\n"
+        else:
+            query = ""
         if name is not None:
             pass
         else:
             name = "_".join(node_list)
-        query =\
+        query +=\
             match_nodes({n: n for n in node_list}) + "\n" +\
             merging_query1(
                 original_vars=node_list,
@@ -228,7 +264,7 @@ class Neo4jGraph(object):
             return_vars(['new_id'])
         print(query)
         result = self.execute(query)
-        return result.single().value()
+        return result
 
     def find_matching(self, pattern, nodes=None):
         """Find matchings of a pattern in the graph."""
