@@ -2,7 +2,8 @@
 
 from neo4j.v1 import GraphDatabase
 
-from regraph.neo4j.graph import Neo4jGraph
+from regraph.neo4j.graphs import Neo4jGraph
+import regraph.neo4j.cypher_utils as cypher
 
 
 class Neo4jDatabase(object):
@@ -17,6 +18,18 @@ class Neo4jDatabase(object):
     def close(self):
         """Close connection."""
         self._driver.close()
+
+    def execute(self, query):
+        """Execute a Cypher query."""
+        with self._driver.session() as session:
+            result = session.run(query)
+            return result
+
+    def clear(self):
+        """Clear graph database."""
+        query = cypher.clear_graph()
+        result = self.execute(query)
+        return result
 
     def access_graph(self, label):
         """Add a graph to the database."""
