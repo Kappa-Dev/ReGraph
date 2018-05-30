@@ -1,8 +1,6 @@
 """Neo4j driver for regraph."""
 import uuid
 
-from neo4j.v1 import GraphDatabase
-
 from regraph.default.utils import keys_by_value, normalize_attrs
 from regraph.neo4j.cypher_utils import *
 
@@ -14,20 +12,19 @@ def generate_var_name():
 
 
 class Neo4jGraph(object):
-    """Class implementing neo4j graph db driver."""
+    """Class implementing neo4j graph instance."""
 
-    def __init__(self, uri, user, password):
-        """Initialize driver."""
-        self._driver = GraphDatabase.driver(
-            uri, auth=(user, password))
-
-    def close(self):
-        """Close connection."""
-        self._driver.close()
+    def __init__(self, label, db, set_constraint=False):
+        self._label = label
+        self._node_label = ":".join(['node', self._label])
+        self._edge_label = ":".join(['edge', self._label])
+        self._db = db
+        if set_constraint:
+            self.set_constraint(self._label, 'id')
 
     def execute(self, query):
         """Execute a Cypher query."""
-        with self._driver.session() as session:
+        with self._db._driver.session() as session:
             result = session.run(query)
             return result
 
