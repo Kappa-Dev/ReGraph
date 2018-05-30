@@ -29,20 +29,38 @@ class Neo4jDatabase(object):
         """Clear graph database."""
         query = cypher.clear_graph()
         result = self.execute(query)
-
-        # with self._driver.session() as session:
-        #    for constraint in session.run("CALL db.constraints"):
-        #        session.run("DROP " + constraint[0])
-
         # self._graphs = set()
         return result
 
-    def access_graph(self, label):
+    def drop_all_constraints(self):
+        """Drop all the constraints on the database."""
+        with self._driver.session() as session:
+            for constraint in session.run("CALL db.constraints"):
+                session.run("DROP " + constraint[0])
+
+    def add_graph(self, label):
         """Add a graph to the database."""
         if label in self._graphs:
-            g = Neo4jGraph(label, self)
-        else:
-            self._graphs.update(label)
-            g = Neo4jGraph(label, self, set_constraint=True)
-            # Create a node in the hierarchy...
+            raise ValueError(
+                "The graph '{}' is already in the database.".format(label))
+        self._graphs.update([label])
+        Neo4jGraph(label, self, set_constraint=True)
+        # Create a node in the hierarchy...
+
+    def remove_graph(self, label):
+        """Remove a graph from the database."""
+        if label not in self._graphs:
+            raise ValueError(
+                "The graph '{}' is not in the database.".format(label))
+        g = self.access_graph(label)
+        g.drop_constraint('id')
+        g.clear()
+        self._graphs.remove(label)
+
+    def access_graph(self, label):
+        """Access a graph of the database."""
+        if label not in self._graphs:
+            raise ValueError(
+                "The graph '{}' is not in the database.".format(label))
+        g = Neo4jGraph(label, self)
         return g

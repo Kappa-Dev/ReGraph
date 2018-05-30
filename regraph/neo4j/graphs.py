@@ -39,9 +39,9 @@ class Neo4jGraph(object):
         result = self.execute(query)
         return result
 
-    def drop_constraint(self, label, prop):
+    def drop_constraint(self, prop):
         """Drop a constraint on the database."""
-        query = "DROP " + constraint_query('n', label, prop)
+        query = "DROP " + constraint_query('n', self._label, prop)
         result = self.execute(query)
         return result
 
