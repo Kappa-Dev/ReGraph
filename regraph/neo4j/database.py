@@ -29,6 +29,12 @@ class Neo4jDatabase(object):
         """Clear graph database."""
         query = cypher.clear_graph()
         result = self.execute(query)
+
+        # with self._driver.session() as session:
+        #    for constraint in session.run("CALL db.constraints"):
+        #        session.run("DROP " + constraint[0])
+
+        # self._graphs = set()
         return result
 
     def access_graph(self, label):
