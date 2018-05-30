@@ -1,15 +1,18 @@
 """Collection of tests for ReGraph_neo4j graphs."""
 
-from regraph.neo4j.graphs import *
+from regraph.neo4j.database import Neo4jDatabase
+from regraph.neo4j.cypher_utils import *
 
 
 class TestGraphs(object):
 
     def __init__(self):
         """Init of the test class."""
-        self.g = Neo4jGraph(
-              uri="bolt://localhost:7687", user="neo4j", password="admin")
-        res = self.g.clear()
+        self.db = Neo4jDatabase(uri="bolt://localhost:7687",
+                                user="neo4j",
+                                password="admin")
+        res = self.db.clear()
+        self.g = self.db.access_graph('ActionGraph')
         nodes = [
             ("a", {"name": "EGFR", "state": "p"}),
             ("b", {"name": "BND"}),
@@ -43,8 +46,6 @@ class TestGraphs(object):
             ("m", "k"),
             ("e", "b", {"s": "u"})
             ]
-        query = constraint_query("n", "node", "id")
-        self.g.execute(query)
         self.g.add_nodes_from(nodes)
         self.g.add_edges_from(edges)
 

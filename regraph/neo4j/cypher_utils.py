@@ -317,7 +317,7 @@ def predecessors_query(var_name, node_id, node_label='node', label_pred=None):
         label_pred = node_label
     query = (
             "OPTIONAL MATCH (pred:{})-[]-> ({}:{} {{id : '{}'}})".format(
-                var_name, label_pred, node_id, node_label) +
+                label_pred, var_name, node_label, node_id) +
             "RETURN pred.id"
         )
     return query

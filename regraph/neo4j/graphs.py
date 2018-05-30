@@ -56,8 +56,9 @@ class Neo4jGraph(object):
         normalize_attrs(attrs)
         query +=\
             create_node(
-                node, node, 'new_id', attrs,
+                node, node, 'new_id',
                 label=self._node_label,
+                attrs=attrs,
                 literal_id=True,
                 ignore_naming=ignore_naming)[0] +\
             return_vars(['new_id'])
@@ -176,7 +177,7 @@ class Neo4jGraph(object):
 
     def nodes(self):
         """Return a list of nodes of the graph."""
-        query = get_nodes(label= self._node_label)
+        query = get_nodes(label=self._node_label)
         result = self.execute(query)
         return [list(d.values())[0] for d in result]
 
@@ -190,7 +191,7 @@ class Neo4jGraph(object):
 
     def get_node(self, node_id):
         """Return node's attributes."""
-        query = get_node(node_id)
+        query = get_node(node_id, node_label=self._node_label)
         result = self.execute(query)
         try:
             return dict(result.value()[0])
@@ -199,7 +200,10 @@ class Neo4jGraph(object):
 
     def get_edge(self, s, t):
         """Return edge attributes."""
-        query = get_edge(s, t)
+        query = get_edge(s, t,
+                         source_label=self._node_label,
+                         target_label=self._node_label,
+                         edge_label='edge')
         result = self.execute(query)
         try:
             return dict(result.value()[0])
@@ -264,6 +268,8 @@ class Neo4jGraph(object):
                 merged_var='merged_node',
                 merged_id=name,
                 merged_id_var='new_id',
+                node_label=self._node_label,
+                edge_label='edge',
                 ignore_naming=ignore_naming)[0] +\
             return_vars(['new_id'])
         print(query)
@@ -291,6 +297,8 @@ class Neo4jGraph(object):
                 merged_var='merged_node',
                 merged_id=name,
                 merged_id_var='new_id',
+                node_label=self._node_label,
+                edge_label='edge',
                 ignore_naming=ignore_naming)[0] +\
             return_vars(['new_id'])
         print(query)
@@ -299,7 +307,9 @@ class Neo4jGraph(object):
 
     def find_matching(self, pattern, nodes=None):
         """Find matchings of a pattern in the graph."""
-        result = self.execute(find_matching(pattern, nodes))
+        result = self.execute(find_matching(
+            pattern, nodes,
+            node_label=self._node_label, edge_label='edge'))
         instances = list()
 
         for record in result:
@@ -347,7 +357,8 @@ class Neo4jGraph(object):
         if len(instance) > 0:
             query += "// Match nodes and edges of the instance \n"
             query += match_pattern_instance(
-                rule.lhs, lhs_vars, match_instance_vars)
+                rule.lhs, lhs_vars, match_instance_vars,
+                node_label=self._node_label, edge_label='edge')
             query += "\n\n"
         else:
             query += "// Empty instance \n\n"
