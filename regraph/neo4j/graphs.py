@@ -245,7 +245,7 @@ class Neo4jGraph(object):
                 edge_label='edge',
                 ignore_naming=ignore_naming)[0] +\
             return_vars(['uid'])
-        print(query)
+        # print(query)
         result = self.execute(query)
         return result
 
@@ -272,7 +272,7 @@ class Neo4jGraph(object):
                 edge_label='edge',
                 ignore_naming=ignore_naming)[0] +\
             return_vars(['new_id'])
-        print(query)
+        # print(query)
         result = self.execute(query)
         # print(result.value())
         # print(result.single())
@@ -301,7 +301,7 @@ class Neo4jGraph(object):
                 edge_label='edge',
                 ignore_naming=ignore_naming)[0] +\
             return_vars(['new_id'])
-        print(query)
+        # print(query)
         result = self.execute(query)
         return result
 
