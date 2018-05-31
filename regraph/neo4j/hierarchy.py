@@ -6,8 +6,8 @@ from regraph.neo4j.graphs import Neo4jGraph
 import regraph.neo4j.cypher_utils as cypher
 
 
-class Neo4jDatabase(object):
-    """Class implementing neo4j graph db driver."""
+class Neo4jHierarchy(object):
+    """Class implementing neo4j hierarchy driver."""
 
     def __init__(self, uri, user, password):
         """Initialize driver."""
@@ -26,20 +26,20 @@ class Neo4jDatabase(object):
             return result
 
     def clear(self):
-        """Clear graph database."""
+        """Clear the hierarchy."""
         query = cypher.clear_graph()
         result = self.execute(query)
         # self._graphs = set()
         return result
 
     def drop_all_constraints(self):
-        """Drop all the constraints on the database."""
+        """Drop all the constraints on the hierarchy."""
         with self._driver.session() as session:
             for constraint in session.run("CALL db.constraints"):
                 session.run("DROP " + constraint[0])
 
     def add_graph(self, label):
-        """Add a graph to the database."""
+        """Add a graph to the hierarchy."""
         if label in self._graphs:
             raise ValueError(
                 "The graph '{}' is already in the database.".format(label))
@@ -48,7 +48,7 @@ class Neo4jDatabase(object):
         # Create a node in the hierarchy...
 
     def remove_graph(self, label):
-        """Remove a graph from the database."""
+        """Remove a graph from the hierarchy."""
         if label not in self._graphs:
             raise ValueError(
                 "The graph '{}' is not in the database.".format(label))
@@ -58,7 +58,7 @@ class Neo4jDatabase(object):
         self._graphs.remove(label)
 
     def access_graph(self, label):
-        """Access a graph of the database."""
+        """Access a graph of the hierarchy."""
         if label not in self._graphs:
             raise ValueError(
                 "The graph '{}' is not in the database.".format(label))
