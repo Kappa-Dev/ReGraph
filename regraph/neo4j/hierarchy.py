@@ -64,3 +64,48 @@ class Neo4jHierarchy(object):
                 "The graph '{}' is not in the database.".format(label))
         g = Neo4jGraph(label, self)
         return g
+
+    def add_typing(self, source, target, mapping, attrs=None):
+        """Add homomorphism to the hierarchy.
+
+        Parameters
+        ----------
+        source
+            Label of a source graph node of typing
+        target
+            Label of a target graph node of typing
+        mapping : dict
+            Dictionary representing a mapping of nodes ids
+            from the source graph to target's nodes
+        attrs : dict
+            Dictionary containing attributes of the new
+            typing edge
+        """
+        g_src = self.access_graph(source)
+        g_tar = self.access_graph(target)
+
+        query = ""
+        nodes_to_match_src = set()
+        nodes_to_match_tar = set()
+        edge_creation_queries = []
+
+        for u, v in mapping.items():
+            nodes_to_match_src.add(u)
+            nodes_to_match_tar.add(v)
+            edge_creation_queries.append(
+                cypher.create_edge(u+"_src", v+"_tar", edge_label='typing'))
+
+
+
+        query += cypher.match_nodes({n+"_src": n for n in nodes_to_match_src},
+                                    label=g_src._node_label)
+        query += cypher.with_vars([s+"_src" for s in nodes_to_match_src])
+        query += cypher.match_nodes({n+"_tar": n for n in nodes_to_match_tar},
+                                    label=g_tar._node_label)
+        for q in edge_creation_queries:
+            query += q
+        result = self.execute(query)
+        return result
+
+
+
