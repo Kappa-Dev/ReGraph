@@ -925,6 +925,8 @@ def props_union(var_list, new_props_var, carry_vars=None):
         "\t\tvalues + CASE WHEN v.value IN values THEN [] ELSE v.value END)])) as {}, ".format(
             new_props_var) +\
         ", ".join(carry_vars) + "\n"
+
+    carry_vars.add(new_props_var)
     return query
 
 
@@ -972,4 +974,6 @@ def props_intersection(var_list, new_props_var, carry_vars=None):
         "\t\tvalues + CASE WHEN v.value IN values THEN [] ELSE v.value END)])) as {}, ".format(
             new_props_var) +\
         ", ".join(carry_vars) + "\n"
+
+    carry_vars.add(new_props_var)
     return query
