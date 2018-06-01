@@ -10,17 +10,30 @@ def pullback(b, c, d, a=None):
     query = ""
 
     # Match all the pair of nodes with the same image in d
-    query += "OPTIONAL MATCH (n:{})-[:typing]->(:{})<-[:typing]-(m:{})\n".format(
-            b, d, c)
+    query +=\
+        "OPTIONAL MATCH (n:{})-[:typing]->(:{})<-[:typing]-(m:{})\n\n".format(
+            b, d, c) +\
+        "WITH n, m, [] as new_props\n"
 
     # For each pair, collect all the properties
     query += new_props_merge(["n", "m"], 'new_props')
+    # For each pair, create a new node
+    query += "\nCREATE (new_node_a:{})\n".format(a)  # a tester : provisoire
+    query += "SET new_node_a += new_props\n"
+    # Add the typing edges
+    query += "WITH n, m, new_node_a\n"
+    query += "MERGE (new_node_a)-[:typing]->(n)\n"
+    query += "MERGE (new_node_a)-[:typing]->(m)\n\n"
 
-    # With blablabla... 
-    query += "CREATE (x:{})".format(a) # a tester : provisoire
-    query += "SET x += new_props"
+    query2 = ""
+    query2 +=\
+        "MATCH (x:{})-[:typing]->(:{})-[:edge]-(:{})<-[:typing]-(y:{})\n".format(
+            a, b, b, a) +\
+        "WHERE (x)-[:typing]->(:{})-[:edge]-(:{})<-[:typing]-(y)\n".format(
+            c, c)
 
-    return query
+
+    return query, query2
 
 
 def new_props_merge(node_var_list, new_props_var, carry_vars=None):
@@ -50,9 +63,8 @@ def new_props_merge(node_var_list, new_props_var, carry_vars=None):
 
     return query
 
-print(pullback('graphB', 'graphC', 'graphD'))
 
-
+print(pullback('graphB', 'graphC', 'graphD', a='graphA')[1])
 
 
 """
