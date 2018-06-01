@@ -29,11 +29,14 @@ def pullback(b, c, d, a=None, inplace=False):
                         ignore_naming=True)[0]
     carry_vars.remove("id_var")
     query += "SET new_node_a += new_props\n"
-    # Add the typing edges
-    query += "WITH n, m, new_node_a\n"
-    query += "MERGE (new_node_a)-[:typing]->(n)\n"
-    query += "MERGE (new_node_a)-[:typing]->(m)\n\n"
+    carry_vars.remove("new_props")
 
+    # Add the typing edges
+    query += cypher.with_vars(carry_vars) + "\n"
+    query += cypher.create_edge('new_node_a', 'n', edge_label='typing') + "\n"
+    query += cypher.create_edge('new_node_a', 'm', edge_label='typing') + "\n"
+
+    # Add the graph edges
     carry_vars = set()
     query2 = ""
     query2 +=\
@@ -51,8 +54,7 @@ def pullback(b, c, d, a=None, inplace=False):
     return query, query2
 
 
-
-res = pullback('graphB', 'graphC', 'graphD', a='graphA')
+res = pullback('graphB', 'graphC', 'graphD', 'graphA')
 print(res[0])
-print('----------------')
+print('--------------------')
 print(res[1])
