@@ -1,18 +1,19 @@
 """Collection of tests for ReGraph_neo4j graphs."""
 
-from regraph.neo4j.database import Neo4jDatabase
+from regraph.neo4j.hierarchy import Neo4jHierarchy
 from regraph.neo4j.cypher_utils import *
 
 
 class TestGraphs(object):
 
-    def __init__(self):
-        """Init of the test class."""
-        self.db = Neo4jDatabase(uri="bolt://localhost:7687",
+    @classmethod
+    def setup_class(self):
+        self.h = Neo4jHierarchy(uri="bolt://localhost:7687",
                                 user="neo4j",
                                 password="admin")
-        res = self.db.clear()
-        self.g = self.db.access_graph('ActionGraph')
+        self.h.clear()
+        self.h.add_graph('TestGraph')
+        self.g = self.h.access_graph('TestGraph')
         nodes = [
             ("a", {"name": "EGFR", "state": "p"}),
             ("b", {"name": "BND"}),
@@ -48,6 +49,11 @@ class TestGraphs(object):
             ]
         self.g.add_nodes_from(nodes)
         self.g.add_edges_from(edges)
+
+    @classmethod
+    def teardown_class(self):
+        self.h.clear()
+        self.h.close()
 
     def test_add_node(self):
         # Case 1 : "x" is not in the graph
