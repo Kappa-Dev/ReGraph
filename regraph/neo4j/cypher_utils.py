@@ -868,15 +868,15 @@ def constraint_query(node_var, node_label, node_property):
     return query
 
 
-def merge_attributes(var_list, new_props_var, carry_vars=None,
+def merge_properties(var_list, new_props_var, carry_vars=None,
                      method='union'):
-    """Merge attributes of a list of nodes/edges.
+    """Merge properties of a list of nodes/edges.
 
     Parameters
     ----------
     var_list : iterable
         Collection of variables corresponding to the
-        nodes/edges whose attributes are merged
+        nodes/edges whose properties are merged
     new_props_var : str
         Name of the variable corresponding to the
         map of new properties
@@ -886,21 +886,22 @@ def merge_attributes(var_list, new_props_var, carry_vars=None,
         'union' or 'intersection'
     """
     if method == 'union':
-        return attrs_union(var_list, new_props_var, carry_vars)
+        return props_union(var_list, new_props_var, carry_vars)
     elif method == "intersection":
-        return attrs_intersection(var_list, new_props_var, carry_vars)
+        return props_intersection(var_list, new_props_var, carry_vars)
     else:
         raise ValueError("Merging method {} is not defined!".format(method))
 
 
-def attrs_union(var_list, new_props_var, carry_vars=None):
-    """Perform the union of the attributes of a list of nodes/edges."""
+def props_union(var_list, new_props_var, carry_vars=None):
+    """Perform the union of the properties of a list of nodes/edges."""
     if carry_vars is None:
         carry_vars = set(var_list)
     else:
         carry_vars.update(var_list)
 
-    query = "\n//Perform the union of the attributes\n"
+    query = "\n//Perform the union of the properties of "
+    query += ", ".join(var_list) + "\n"
     query += "WITH [] as {}, ".format(new_props_var) +\
         ", ".join(carry_vars) + "\n"
 
@@ -927,14 +928,15 @@ def attrs_union(var_list, new_props_var, carry_vars=None):
     return query
 
 
-def attrs_intersection(var_list, new_props_var, carry_vars=None):
-    """Perform the intersection of the attributes of a list of nodes/edges."""
+def props_intersection(var_list, new_props_var, carry_vars=None):
+    """Perform the intersection of the properties of a list of nodes/edges."""
     if carry_vars is None:
         carry_vars = set(var_list)
     else:
         carry_vars.update(var_list)
 
-    query = "\n//Perform the intersection of the attributes\n"
+    query = "\n//Perform the intersection of the properties of "
+    query += ", ".join(var_list) + "\n"
     query += "WITH [] as {}, ".format(new_props_var) +\
         ", ".join(carry_vars) + "\n"
 
