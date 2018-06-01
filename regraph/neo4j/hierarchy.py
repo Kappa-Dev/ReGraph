@@ -4,6 +4,7 @@ from neo4j.v1 import GraphDatabase
 
 from regraph.neo4j.graphs import Neo4jGraph
 import regraph.neo4j.cypher_utils as cypher
+from regraph.neo4j.category_utils import pullback
 
 
 class Neo4jHierarchy(object):
@@ -95,8 +96,6 @@ class Neo4jHierarchy(object):
             edge_creation_queries.append(
                 cypher.create_edge(u+"_src", v+"_tar", edge_label='typing'))
 
-
-
         query += cypher.match_nodes({n+"_src": n for n in nodes_to_match_src},
                                     label=g_src._node_label)
         query += cypher.with_vars([s+"_src" for s in nodes_to_match_src])
@@ -107,5 +106,13 @@ class Neo4jHierarchy(object):
         result = self.execute(query)
         return result
 
+    def pullback(self, b, c, d, a):
+        self.add_graph(a)
+        query1, query2 = pullback(b, c, d, a)
+        print(query1)
+        print('--------------------')
+        print(query2)
+        self.execute(query1)
+        self.execute(query2)
 
 
