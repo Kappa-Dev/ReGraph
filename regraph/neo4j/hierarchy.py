@@ -29,7 +29,7 @@ class Neo4jHierarchy(object):
         """Clear the hierarchy."""
         query = cypher.clear_graph()
         result = self.execute(query)
-        # self._graphs = set()
+        self._graphs = set()
         return result
 
     def drop_all_constraints(self):
