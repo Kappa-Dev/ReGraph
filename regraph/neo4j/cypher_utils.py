@@ -900,9 +900,9 @@ def attrs_union(var_list, new_props_var, carry_vars=None):
     else:
         carry_vars.update(var_list)
 
-    query = "\n//Perform the union of the attributes"
+    query = "\n//Perform the union of the attributes\n"
     query += "WITH [] as {}, ".format(new_props_var) +\
-        ", ".join(carry_vars)
+        ", ".join(carry_vars) + "\n"
 
     for var in var_list:
         query +=\
@@ -934,21 +934,21 @@ def attrs_intersection(var_list, new_props_var, carry_vars=None):
     else:
         carry_vars.update(var_list)
 
-    query = "\n//Perform the intersection of the attributes"
+    query = "\n//Perform the intersection of the attributes\n"
     query += "WITH [] as {}, ".format(new_props_var) +\
-        ", ".join(carry_vars)
+        ", ".join(carry_vars) + "\n"
 
     var_first = var_list[0]
 
     query +=\
         "WITH {} + REDUCE(pairs = [], k in keys({}) | \n".format(
             new_props_var, var_first) +\
-        "\tCASE WHEN ALL(other in [{}] WHERE k in keys(other))\n".format(
+        "\tCASE WHEN ALL(others in [{}] WHERE k in keys(others))\n".format(
             ", ".join(var_list[1:])) +\
         "\tTHEN\n" +\
         "\t\tpairs + REDUCE(inner_pairs = [], v in {}[k] | \n".format(
             var_first) +\
-        "\t\t\tCASE WHEN ALL(other in [{}] WHERE v in x[other])\n".format(
+        "\t\t\tCASE WHEN ALL(others in [{}] WHERE v in others[k])\n".format(
             ", ".join(var_list[1:])) +\
         "\t\t\tTHEN\n" +\
         "\t\t\t\tinner_pairs + {key: k, value: v}\n" +\
@@ -957,7 +957,7 @@ def attrs_intersection(var_list, new_props_var, carry_vars=None):
         "\t\t\tEND)\n" +\
         "\tELSE\n" +\
         "\t\tpairs\n" +\
-        "\tEND) as {}\n".format(new_props_var) +\
+        "\tEND) as {}, ".format(new_props_var) +\
         ", ".join(carry_vars) + "\n"
     query +=\
         "WITH apoc.map.groupByMulti({}, 'key') as {}, ".format(
