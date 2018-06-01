@@ -12,7 +12,7 @@ def pullback(b, c, d, a=None, inplace=False):
 
     # Match all the pair of nodes with the same image in d
     query +=\
-        "OPTIONAL MATCH (n:{})-[:typing]->(:{})<-[:typing]-(m:{})\n\n".format(
+        "OPTIONAL MATCH (n:{})-[:typing]->(:{})<-[:typing]-(m:{})\n".format(
             b, d, c)
 
     # For each pair, collect all the merged properties
@@ -54,7 +54,13 @@ def pullback(b, c, d, a=None, inplace=False):
     return query, query2
 
 
-res = pullback('graphB', 'graphC', 'graphD', 'graphA')
-print(res[0])
-print('--------------------')
-print(res[1])
+def pushout(a, b, c, d=None, inplace=False):
+    pass
+
+
+def pullback_complement(a, b, d, c=None, inplace=False):
+    pass
+
+
+def check_homomorphism(domain, codomain, total=True):
+    pass
