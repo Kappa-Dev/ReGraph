@@ -866,3 +866,108 @@ def constraint_query(node_var, node_label, node_property):
                 node_property
                     )
     return query
+
+
+def merge_attributes(var_list, new_props_var, carry_vars=None,
+                     method='union'):
+    """Merge attributes of a list of nodes/edges.
+
+    Parameters
+    ----------
+    var_list : iterable
+        Collection of variables corresponding to the
+        nodes/edges whose attributes are merged
+    new_props_var : str
+        Name of the variable corresponding to the
+        map of new properties
+    carry_vars : iterable
+        Collection of variables to carry
+    method : str
+        'union' or 'intersection'
+    """
+    if method == 'union':
+        return attrs_union(var_list, new_props_var, carry_vars)
+    elif method == "intersection":
+        return attrs_intersection(var_list, new_props_var, carry_vars)
+    else:
+        raise ValueError("Merging method {} is not defined!".format(method))
+
+
+def attrs_union(var_list, new_props_var, carry_vars=None):
+    """Perform the union of the attributes of a list of nodes/edges."""
+    if carry_vars is None:
+        carry_vars = set(var_list)
+    else:
+        carry_vars.update(var_list)
+
+    query = "\n//Perform the union of the attributes"
+    query += "WITH [] as {}, ".format(new_props_var) +\
+        ", ".join(carry_vars)
+
+    for var in var_list:
+        query +=\
+            "WITH {} + REDUCE(pairs = [], k in keys({}) | \n".format(
+                new_props_var, var) +\
+            "\tpairs + REDUCE(inner_pairs = [], v in {}[k] | \n".format(
+                var) +\
+            "\t\t inner_pairs + {{key: k, value: v}})) as {},  ".format(
+                new_props_var) +\
+            ", ".join(carry_vars) + "\n"
+    query +=\
+        "WITH apoc.map.groupByMulti({}, 'key') as {}, ".format(
+            new_props_var, new_props_var) +\
+        ", ".join(carry_vars) + "\n" +\
+        "WITH apoc.map.fromValues(REDUCE(pairs=[], k in keys({}) | \n".format(
+            new_props_var) +\
+        "\tpairs + [k, REDUCE(values=[], v in {}[k] | \n".format(
+            new_props_var) +\
+        "\t\tvalues + CASE WHEN v.value IN values THEN [] ELSE v.value END)])) as {}, ".format(
+            new_props_var) +\
+        ", ".join(carry_vars) + "\n"
+    return query
+
+
+def attrs_intersection(var_list, new_props_var, carry_vars=None):
+    """Perform the intersection of the attributes of a list of nodes/edges."""
+    if carry_vars is None:
+        carry_vars = set(var_list)
+    else:
+        carry_vars.update(var_list)
+
+    query = "\n//Perform the intersection of the attributes"
+    query += "WITH [] as {}, ".format(new_props_var) +\
+        ", ".join(carry_vars)
+
+    var_first = var_list[0]
+
+    query +=\
+        "WITH {} + REDUCE(pairs = [], k in keys({}) | \n".format(
+            new_props_var, var_first) +\
+        "\tCASE WHEN ALL(other in [{}] WHERE k in keys(other))\n".format(
+            ", ".join(var_list[1:])) +\
+        "\tTHEN\n" +\
+        "\t\tpairs + REDUCE(inner_pairs = [], v in {}[k] | \n".format(
+            var_first) +\
+        "\t\t\tCASE WHEN ALL(other in [{}] WHERE v in x[other])\n".format(
+            ", ".join(var_list[1:])) +\
+        "\t\t\tTHEN\n" +\
+        "\t\t\t\tinner_pairs + {key: k, value: v}\n" +\
+        "\t\t\tELSE\n" +\
+        "\t\t\t\tinner_pairs\n" +\
+        "\t\t\tEND)\n" +\
+        "\tELSE\n" +\
+        "\t\tpairs\n" +\
+        "\tEND) as {}\n".format(new_props_var) +\
+        ", ".join(carry_vars) + "\n"
+    query +=\
+        "WITH apoc.map.groupByMulti({}, 'key') as {}, ".format(
+            new_props_var, new_props_var) +\
+        ", ".join(carry_vars) + "\n" +\
+        "WITH apoc.map.fromValues(REDUCE(pairs=[], k in keys({}) | \n".format(
+            new_props_var) +\
+        "\tpairs + [k, REDUCE(values=[], v in {}[k] | \n".format(
+            new_props_var) +\
+        "\t\tvalues + CASE WHEN v.value IN values THEN [] ELSE v.value END)])) as {}, ".format(
+            new_props_var) +\
+        ", ".join(carry_vars) + "\n"
+    return query
