@@ -14,7 +14,8 @@ class Neo4jHierarchy(object):
         """Initialize driver."""
         self._driver = GraphDatabase.driver(
             uri, auth=(user, password))
-        self._graphs = set()
+        query = "CREATE " + cypher.constraint_query('n', 'hierarchyNode', 'id')
+        self.execute(query)
 
     def close(self):
         """Close connection."""
@@ -30,7 +31,7 @@ class Neo4jHierarchy(object):
         """Clear the hierarchy."""
         query = cypher.clear_graph()
         result = self.execute(query)
-        self._graphs = set()
+        self.drop_all_constraints()
         return result
 
     def drop_all_constraints(self):
@@ -41,26 +42,33 @@ class Neo4jHierarchy(object):
 
     def add_graph(self, label):
         """Add a graph to the hierarchy."""
-        if label in self._graphs:
+        # Create a node in the hierarchy...
+        try:
+            query = "CREATE (:{} {{id: '{}' }})".format('hierarchyNode', label)
+            self.execute(query)
+        except:  #ConstraintError
             raise ValueError(
                 "The graph '{}' is already in the database.".format(label))
-        self._graphs.update([label])
         Neo4jGraph(label, self, set_constraint=True)
-        # Create a node in the hierarchy...
+
 
     def remove_graph(self, label):
         """Remove a graph from the hierarchy."""
-        if label not in self._graphs:
-            raise ValueError(
-                "The graph '{}' is not in the database.".format(label))
         g = self.access_graph(label)
         g.drop_constraint('id')
         g.clear()
-        self._graphs.remove(label)
+        # Remove the hierarchyNode
+        query = cypher.match_node(var_name="graph_to_rm",
+                                  node_id=label,
+                                  label='hierarchyNode')
+        query += cypher.delete_nodes_var(["graph_to_rm"])
+        self.execute(query)
 
     def access_graph(self, label):
         """Access a graph of the hierarchy."""
-        if label not in self._graphs:
+        query = "MATCH (n:hierarchyNode) WHERE n.id='{}' RETURN n".format(label)
+        res = self.execute(query)
+        if res.single() is None:
             raise ValueError(
                 "The graph '{}' is not in the database.".format(label))
         g = Neo4jGraph(label, self)
@@ -104,6 +112,13 @@ class Neo4jHierarchy(object):
         for q in edge_creation_queries:
             query += q
         result = self.execute(query)
+
+        query2 = cypher.match_nodes(var_id_dict={'g_src':source, 'g_tar':target},
+                                    label='hierarchyNode')
+        query2 += cypher.create_edge(source_var='g_src',
+                                     target_var='g_tar',
+                                     edge_label='hierarchyEdge')
+        self.execute(query2)
         return result
 
     def pullback(self, b, c, d, a):
