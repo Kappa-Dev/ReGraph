@@ -504,6 +504,11 @@ def merging_query(original_vars, merged_var, merged_id, merged_id_var,
     carry_vars : set
         Updated collection of variables to carry
     """
+    if edge_label is None:
+        edge_label = ""
+    else:
+        edge_label = ":" + edge_label
+
     if carry_vars is None:
         carry_vars = set(original_vars)
 
@@ -555,12 +560,12 @@ def merging_query(original_vars, merged_var, merged_id, merged_id_var,
 
     query += (
         "// find and merge multiple relations resulting from the node merge\n"
-        "OPTIONAL MATCH ({})-[out_rel:{}]->(suc)\n".format(merged_var,
-                                                           edge_label) +
+        "OPTIONAL MATCH ({})-[out_rel{}]->(suc)\n".format(merged_var,
+                                                          edge_label) +
         "WITH collect({neighbor: suc, edge: out_rel}) as suc_maps, " +
         ", ".join(carry_vars) + "\n" +
-        "OPTIONAL MATCH (pred)-[in_rel:{}]->({})\n".format(edge_label,
-                                                           merged_var) +
+        "OPTIONAL MATCH (pred)-[in_rel{}]->({})\n".format(edge_label,
+                                                          merged_var) +
         "WHERE pred.id <> {}.id\n".format(merged_var) +
         "WITH collect({neighbor: pred, edge: in_rel}) as pred_maps, suc_maps, " +
         ", ".join(carry_vars) + "\n" +
