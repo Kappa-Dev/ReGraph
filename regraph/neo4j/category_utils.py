@@ -157,13 +157,3 @@ def pullback_complement(a, b, d, c=None, inplace=False):
 
 def check_homomorphism(domain, codomain, total=True):
     pass
-
-
-res = pushout('graphA', 'graphB', 'graphC', 'graphD')
-print(res[0])
-print('//---------------')
-print(res[1])
-print('//---------------')
-print(res[2])
-print('//---------------')
-print(res[3])
