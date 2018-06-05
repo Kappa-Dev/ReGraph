@@ -139,7 +139,7 @@ def pushout(a, b, c, d=None, inplace=False):
         "WITH x, y, collect(r) as BC_rel WHERE size(BC_rel)<>0\n" +\
         "WITH x, y, BC_rel, BC_rel[0] as rel1, size(BC_rel) AS nb_rel\n" +\
         "MERGE (x)-[new_rel:edge]->(y)\n" +\
-        "SET new_rel += properties rel1\n" +\
+        "SET new_rel += properties(rel1)\n" +\
         "WITH BC_rel, new_rel, nb_rel\n" +\
         "UNWIND range(1, nb_rel-1) AS i\n" +\
         "WITH BC_rel, new_rel, BC_rel[i] as rel2\n" +\

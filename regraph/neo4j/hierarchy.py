@@ -119,7 +119,7 @@ class Neo4jHierarchy(object):
         query2 += cypher.create_edge(source_var='g_src',
                                      target_var='g_tar',
                                      edge_label='hierarchyEdge')
-        self.execute(query2)
+        result = self.execute(query2)
         return result
 
     def pullback(self, b, c, d, a):
