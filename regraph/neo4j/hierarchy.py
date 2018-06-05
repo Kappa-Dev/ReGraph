@@ -4,7 +4,7 @@ from neo4j.v1 import GraphDatabase
 
 from regraph.neo4j.graphs import Neo4jGraph
 import regraph.neo4j.cypher_utils as cypher
-from regraph.neo4j.category_utils import pullback
+from regraph.neo4j.category_utils import pullback, pushout
 
 
 class Neo4jHierarchy(object):
@@ -51,7 +51,6 @@ class Neo4jHierarchy(object):
                 "The graph '{}' is already in the database.".format(label))
         Neo4jGraph(label, self, set_constraint=True)
 
-
     def remove_graph(self, label):
         """Remove a graph from the hierarchy."""
         g = self.access_graph(label)
@@ -74,7 +73,7 @@ class Neo4jHierarchy(object):
         g = Neo4jGraph(label, self)
         return g
 
-    def add_typing(self, source, target, mapping, attrs=None):
+    def add_typing(self, source, target, mapping=None, attrs=None):
         """Add homomorphism to the hierarchy.
 
         Parameters
@@ -93,25 +92,27 @@ class Neo4jHierarchy(object):
         g_src = self.access_graph(source)
         g_tar = self.access_graph(target)
 
-        query = ""
-        nodes_to_match_src = set()
-        nodes_to_match_tar = set()
-        edge_creation_queries = []
+        if mapping is not None:
+            query = ""
+            nodes_to_match_src = set()
+            nodes_to_match_tar = set()
+            edge_creation_queries = []
 
-        for u, v in mapping.items():
-            nodes_to_match_src.add(u)
-            nodes_to_match_tar.add(v)
-            edge_creation_queries.append(
-                cypher.create_edge(u+"_src", v+"_tar", edge_label='typing'))
+            for u, v in mapping.items():
+                nodes_to_match_src.add(u)
+                nodes_to_match_tar.add(v)
+                edge_creation_queries.append(
+                    cypher.create_edge(u+"_src", v+"_tar", edge_label='typing'))
 
-        query += cypher.match_nodes({n+"_src": n for n in nodes_to_match_src},
-                                    label=g_src._node_label)
-        query += cypher.with_vars([s+"_src" for s in nodes_to_match_src])
-        query += cypher.match_nodes({n+"_tar": n for n in nodes_to_match_tar},
-                                    label=g_tar._node_label)
-        for q in edge_creation_queries:
-            query += q
-        result = self.execute(query)
+            query += cypher.match_nodes({n+"_src": n for n in nodes_to_match_src},
+                                        label=g_src._node_label)
+            query += cypher.with_vars([s+"_src" for s in nodes_to_match_src])
+            query += cypher.match_nodes({n+"_tar": n for n in nodes_to_match_tar},
+                                        label=g_tar._node_label)
+            for q in edge_creation_queries:
+                query += q
+
+            result = self.execute(query)
 
         query2 = cypher.match_nodes(var_id_dict={'g_src':source, 'g_tar':target},
                                     label='hierarchyNode')
@@ -123,6 +124,8 @@ class Neo4jHierarchy(object):
 
     def pullback(self, b, c, d, a):
         self.add_graph(a)
+        self.add_typing(a, b)
+        self.add_typing(a, c)
         query1, query2 = pullback(b, c, d, a)
         print(query1)
         print('--------------------')
@@ -130,4 +133,13 @@ class Neo4jHierarchy(object):
         self.execute(query1)
         self.execute(query2)
 
+    def pushout(self, a, b, c, d):
+        self.add_graph(d)
+        self.add_typing(b, d)
+        self.add_typing(c, d)
+        queries = pushout(a, b, c, d)
+        for q in queries:
+            print(q)
+            print('--------------------')
+            self.execute(q)
 
