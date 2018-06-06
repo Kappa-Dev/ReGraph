@@ -117,11 +117,11 @@ def pushout(a, b, c, d=None, inplace=False):
         "WITH nodes_to_merge[0] as node1, " + ", ".join(carry_vars) + "\n"
     carry_vars.add("node1")
     query3 +=\
-        "\n//We connect the nodes in C with their images\n" +\
-        "MERGE (m)-[:typing]->(node1)" +\
+        "\n//We merge the nodes in D that need to be merged\n" +\
+        "MERGE (m)-[:typing]->(node1)\n" +\
         cypher.with_vars(carry_vars) + "\n" +\
-        "UNWIND range(1,number_of_nodes-1) AS i\n" +\
-        "WITH m, node1, nodes_to_merge[i] as node2\n" +\
+        "WHERE number_of_nodes <> 1\n" +\
+        "UNWIND nodes_to_merge[1..] AS node2\n" +\
         cypher.merging_query(original_vars=["node1", "node2"],
                              merged_var="merged_node",
                              merged_id="id",
@@ -133,6 +133,7 @@ def pushout(a, b, c, d=None, inplace=False):
         cypher.return_vars(['new_id'])
 
     query4 =\
+        "\n//We create the edges of D\n" +\
         "MATCH (x:{}), (y:{})\n".format(d, d) +\
         "WITH x, y, [] as new_props\n" +\
         "OPTIONAL MATCH (x)<-[:typing]-()-[r:edge]->()-[:typing]->(y)\n" +\
