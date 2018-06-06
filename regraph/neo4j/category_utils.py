@@ -33,7 +33,7 @@ def pullback(b, c, d, a=None, inplace=False):
                         var_name="new_node_a",
                         node_id="pb",
                         node_id_var="id_var",
-                        label=a,
+                        label='node:'+a,
                         carry_vars=carry_vars,
                         ignore_naming=True)[0]
     carry_vars.remove("id_var")
@@ -84,21 +84,32 @@ def pushout(a, b, c, d=None, inplace=False):
     carry_vars = set()
 
     query1 =\
-        "OPTIONAL MATCH (n:{})\n".format(b) +\
-        "WHERE n IS NOT NULL\n" +\
-        "MERGE (n)-[:typing]->(m:{})\n".format(d) +\
-        "SET m += properties(n)" +\
-        "SET m.id = id(m)"
+        "\n//We copy the nodes of B in D\n" +\
+        cypher.clone_graph(b, d, attach=True, carry_vars=carry_vars)[0]
+
+    query12 =\
+        "OPTIONAL MATCH (n:{})<-[:typing]-(:{})-[r:edge]->(:{})-[:typing]->(m:{})".format(
+            d, b, b, d) + "\n" +\
+        "WHERE r IS NOT NULL\n" +\
+        "MERGE (n)-[new_rel:edge]->(m)\n" +\
+        "ON CREATE SET new_rel += properties(r)"
+
+    query13 =\
+        "OPTIONAL MATCH (n:{})<-[:typing]-(m:{})-[r:edge]->(m)\n".format(
+            d, b, b) +\
+        "WHERE r IS NOT NULL\n" +\
+        "MERGE (n)-[new_rel:edge]->(n)\n" +\
+        "ON CREATE SET new_rel += properties(r)"
 
     query2 =\
-        "//We create the images of the exclusive nodes of C\n" +\
+        "\n//We create the images of the exclusive nodes of C\n" +\
         "MATCH (m:{})\n".format(c) +\
         "WHERE NOT (m)<-[:typing]-(:{})\n".format(a) +\
         cypher.create_node(
                         var_name="new_node_d",
                         node_id="pb",
                         node_id_var="id_var",
-                        label=d,
+                        label='node:'+d,
                         carry_vars={"m"},
                         ignore_naming=True)[0] +\
         "SET new_node_d += properties(m)\n" +\
@@ -108,8 +119,8 @@ def pushout(a, b, c, d=None, inplace=False):
 
     query3 =\
         "\n//We search for all the nodes in C with at least 1 equivalent in D\n" +\
-        "OPTIONAL MATCH (n:{})<-[:typing]-(:{})<-[:typing]-(:{})-[:typing]->(m)\n".format(
-            d, b, a) +\
+        "OPTIONAL MATCH (n:{})<-[:typing]-(:{})<-[:typing]-(:{})-[:typing]->(m:{})\n".format(
+            d, b, a, c) +\
         "WITH collect(n) as nodes_to_merge, m\n" +\
         "WITH m, nodes_to_merge, size(nodes_to_merge) as number_of_nodes\n"
     carry_vars.update(["m", "nodes_to_merge", "number_of_nodes"])
@@ -126,7 +137,7 @@ def pushout(a, b, c, d=None, inplace=False):
                              merged_var="merged_node",
                              merged_id="id",
                              merged_id_var="new_id",
-                             node_label=d,
+                             node_label='node:'+d,
                              edge_label=None,
                              carry_vars={"m", "node1", "node2"},
                              ignore_naming=True)[0] + "\n" +\
