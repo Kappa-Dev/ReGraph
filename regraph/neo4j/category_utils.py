@@ -74,36 +74,26 @@ def pushout(a, b, c, d=None, inplace=False):
         Generated query for creating the exclusive images
         (nodes of D) of the nodes of C
     query3 : str
+        Generated query for adding the typing edges between C and D
+    query4 : str
+        Generated query for adding edges of C in D
+    query5 : str
         Generated query for merging the nodes in D that need
         to be merged
-    query4 : str
-        Generated query for creating all the edges of D
     """
     if d is None:
         d = "pb_" + "_".join([a, b, c])
     carry_vars = set()
 
+    c_to_d = "({}:node:{})<-[:typing]-(:node:{})-[:typing]->(:node:{})-[:typing]->({}:node:{})"
+
     query1 =\
         "\n//We copy the nodes of B in D\n" +\
-        cypher.clone_graph(b, d, attach=True, carry_vars=carry_vars)[0]
-
-    query12 =\
-        "OPTIONAL MATCH (n:{})<-[:typing]-(:{})-[r:edge]->(:{})-[:typing]->(m:{})".format(
-            d, b, b, d) + "\n" +\
-        "WHERE r IS NOT NULL\n" +\
-        "MERGE (n)-[new_rel:edge]->(m)\n" +\
-        "ON CREATE SET new_rel += properties(r)"
-
-    query13 =\
-        "OPTIONAL MATCH (n:{})<-[:typing]-(m:{})-[r:edge]->(m)\n".format(
-            d, b, b) +\
-        "WHERE r IS NOT NULL\n" +\
-        "MERGE (n)-[new_rel:edge]->(n)\n" +\
-        "ON CREATE SET new_rel += properties(r)"
+        cypher.clone_graph(b, d, attach=True)[0]
 
     query2 =\
         "\n//We create the images of the exclusive nodes of C\n" +\
-        "MATCH (m:{})\n".format(c) +\
+        "MATCH (m:node:{})\n".format(c) +\
         "WHERE NOT (m)<-[:typing]-(:{})\n".format(a) +\
         cypher.create_node(
                         var_name="new_node_d",
@@ -115,52 +105,60 @@ def pushout(a, b, c, d=None, inplace=False):
         "SET new_node_d += properties(m)\n" +\
         "SET new_node_d.id = id(new_node_d)\n" +\
         "MERGE (m)-[:typing]->(new_node_d) \n"
-    carry_vars = set()
 
     query3 =\
-        "\n//We search for all the nodes in C with at least 1 equivalent in D\n" +\
-        "OPTIONAL MATCH (n:{})<-[:typing]-(:{})<-[:typing]-(:{})-[:typing]->(m:{})\n".format(
-            d, b, a, c) +\
-        "WITH collect(n) as nodes_to_merge, m\n" +\
-        "WITH m, nodes_to_merge, size(nodes_to_merge) as number_of_nodes\n"
-    carry_vars.update(["m", "nodes_to_merge", "number_of_nodes"])
-    query3 +=\
-        "WITH nodes_to_merge[0] as node1, " + ", ".join(carry_vars) + "\n"
-    carry_vars.add("node1")
-    query3 +=\
-        "\n//We merge the nodes in D that need to be merged\n" +\
-        "MERGE (m)-[:typing]->(node1)\n" +\
-        cypher.with_vars(carry_vars) + "\n" +\
-        "WHERE number_of_nodes <> 1\n" +\
-        "UNWIND nodes_to_merge[1..] AS node2\n" +\
-        cypher.merging_query(original_vars=["node1", "node2"],
-                             merged_var="merged_node",
-                             merged_id="id",
-                             merged_id_var="new_id",
-                             node_label='node:'+d,
-                             edge_label=None,
-                             carry_vars={"m", "node1", "node2"},
-                             ignore_naming=True)[0] + "\n" +\
-        cypher.return_vars(['new_id'])
+        "OPTIONAL MATCH " + c_to_d.format("m", c, a, b, "x", d) + "\n" +\
+        "WHERE x IS NOT NULL\n" +\
+        "MERGE (m)-[:typing]->(x)" +\
+        cypher.merge_properties(["m", "x"], 'new_props',
+                                method='union') +\
+        "SET x += new_props\n" +\
+        "SET x.id = toString(id(x))\n"
 
     query4 =\
-        "\n//We create the edges of D\n" +\
-        "MATCH (x:{}), (y:{})\n".format(d, d) +\
-        "WITH x, y, [] as new_props\n" +\
-        "OPTIONAL MATCH (x)<-[:typing]-()-[r:edge]->()-[:typing]->(y)\n" +\
-        "WITH x, y, collect(r) as BC_rel WHERE size(BC_rel)<>0\n" +\
-        "WITH x, y, BC_rel, BC_rel[0] as rel1, size(BC_rel) AS nb_rel\n" +\
-        "MERGE (x)-[new_rel:edge]->(y)\n" +\
-        "SET new_rel += properties(rel1)\n" +\
-        "WITH BC_rel, new_rel, nb_rel\n" +\
-        "UNWIND range(1, nb_rel-1) AS i\n" +\
-        "WITH BC_rel, new_rel, BC_rel[i] as rel2\n" +\
-        cypher.merge_properties(["new_rel", "rel2"], "new_props",
-                                carry_vars={"BC_rel"},
+        "OPTIONAL MATCH (x:node:{})<-[:typing]-(:node:{})-[rel_c:edge]->(:node:{})-[:typing]->(y:node:{})\n".format(
+            d, c, c, d) +\
+        "WHERE rel_c IS NOT NULL\n" +\
+        "OPTIONAL MATCH (x)-[rel_d:edge]->(y)\n" +\
+        "FOREACH(ignoreMe IN CASE WHEN rel_d IS NULL THEN [1] ELSE [] END |\n" +\
+        "\tMERGE (x)-[new_rel:edge]->(y)\n" +\
+        "\tON CREATE SET new_rel = properties(rel_c) )\n" +\
+        "WITH rel_c, rel_d\n" +\
+        "WHERE rel_d IS NOT NULL\n" +\
+        cypher.merge_properties(["rel_c", "rel_d"], 'new_props',
                                 method='union') +\
-        "SET new_rel += new_props\n"
+        "SET rel_d += new_props\n"
 
-    return query1, query2, query3, query4
+    carry_vars = set()
+
+    query5 =\
+        "\n//We search for all the nodes in D that we need to merge\n" +\
+        "OPTIONAL MATCH (n:{})<-[:typing]-(:{})<-[:typing]-(:{})-[:typing]->(m:{})\n".format(
+            d, b, a, c) +\
+        "WITH collect(n) as nodes_to_merge, m\n"
+    carry_vars.update(["m", "nodes_to_merge"])
+    query5 +=\
+        "WITH nodes_to_merge[0] as node1, size(nodes_to_merge) as number_of_nodes," +\
+        ", ".join(carry_vars) + "\n" +\
+        "WHERE number_of_nodes <> 1\n"
+    carry_vars.update(["number_of_nodes", "node1"])
+    query5 +=\
+        "\n//We merge the nodes in D that need to be merged\n" +\
+        "UNWIND nodes_to_merge[1..] AS node2\n"
+    carry_vars.add("node2")
+    query5 +=\
+        cypher.merging_query2(original_vars=["node1", "node2"],
+                              merged_var="merged_node",
+                              merged_id="id",
+                              merged_id_var="new_id",
+                              node_label='node:'+d,
+                              edge_label=None,
+                              carry_vars=carry_vars,
+                              ignore_naming=True,
+                              multiple_rows=True)[0] + "\n" +\
+        "RETURN merged_node.id"
+
+    return query1, query2, query3, query4, query5
 
 
 def pullback_complement(a, b, d, c=None, inplace=False):
