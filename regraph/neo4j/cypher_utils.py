@@ -1034,7 +1034,76 @@ def cloning_query1(original_var, clone_var, clone_id, clone_id_var,
         attach = False
 
     carry_vars.add(original_var)
-    query = (
+
+    if ignore_naming is True:
+        query = (
+            "// create a node corresponding to the clone\n" +
+            # "CREATE ({}:node) \n".format(clone_var, clone_var) +
+            "CREATE ({}:node:{}) \n".format(
+                clone_var, clone_graph)
+            )
+        if attach:
+            query += "MERGE ({})-[:typing]->({})".format(original_var, clone_var)
+        query += (
+            "WITH {}, toString(id({})) as {}, {}.id as original_old, ".format(
+                clone_var, clone_var, clone_id_var, original_var) +
+            ", ".join(carry_vars) + " \n" +
+            "// set the id property of the original node to NULL\n" +
+            "SET {}.id = NULL\n".format(original_var) +
+            "// copy all the properties of the original node to the clone\n" +
+            "SET {} = {}\n".format(clone_var, original_var) +
+            "// set id property of the clone to neo4j-generated id\n" +
+            "SET {}.id = toString(id({})), {}.count = NULL\n".format(
+                clone_var, clone_var, clone_var) +
+            "// set back the id property of the original node\n" +
+            "SET {}.id = original_old\n".format(original_var) +
+            "WITH {}, toString(id({})) as {}, ".format(
+                clone_var, clone_var, clone_id_var) +
+            ", ".join(carry_vars) + " \n"
+        )
+    else:
+        query = (
+            "// search for a node with the same id as the clone id\n" +
+            "OPTIONAL MATCH (same_id_node:node:{} {{ id : '{}'}}) \n".format(
+                clone_graph, clone_id) +
+            "WITH same_id_node,  " +
+            "CASE WHEN same_id_node IS NOT NULL "
+            "THEN (coalesce(same_id_node.count, 0) + 1) " +
+            "ELSE 0 END AS same_id_node_new_count, " +
+            ", ".join(carry_vars) + "\n" +
+            "// generate new id if the same id node was found\n" +
+            "// and filter edges which will be removed \n" +
+            "WITH same_id_node, same_id_node_new_count, " +
+            "'{}' + CASE WHEN same_id_node_new_count <> 0 ".format(clone_id) +
+            "THEN toString(same_id_node_new_count) ELSE '' END as {}, ".format(
+                clone_id_var) +
+            ", ".join(carry_vars) + "\n" +
+            "// create a node corresponding to the clone\n" +
+            # "CREATE ({}:node) \n".format(clone_var, clone_id_var) +
+            "CREATE ({}:node:{}) \n".format(
+                clone_var, clone_graph)
+            )
+        if attach:
+            query += "MERGE ({})-[:typing]->({})".format(original_var,
+                                                         clone_var)
+        query += (
+            "WITH same_id_node, same_id_node_new_count, {}, {}, "
+            "{}.id as original_old, ".format(
+                clone_var, clone_id_var, original_var) +
+            ", ".join(carry_vars) + "\n" +
+            "// set the id property of the original node to NULL\n" +
+            "SET {}.id = NULL\n".format(original_var) +
+            "// copy all the properties of the original node to the clone\n" +
+            "SET {} = {}\n".format(clone_var, original_var) +
+            "// set id property of the clone to the generated id\n" +
+            "SET {}.id = {}, {}.count = NULL, ".format(
+                clone_var, clone_id_var, clone_var) +
+            "same_id_node.count = same_id_node_new_count + 1\n" +
+            "// set back the id property of the original node\n" +
+            "SET {}.id = original_old\n".format(original_var)
+        )
+    carry_vars.add(clone_var)
+    query += (
         "WITH [{}] as sucIgnore, ".format(
             ", ".join("'{}'".format(n) for n in sucs_to_ignore)) +
         "[{}] as predIgnore, ".format(
@@ -1084,74 +1153,6 @@ def cloning_query1(original_var, clone_var, clone_id, clone_id_var,
         ", ".join(carry_vars) + " \n"
     )
     carry_vars.add("pred_maps")
-
-    if ignore_naming is True:
-        query += (
-            "// create a node corresponding to the clone\n" +
-            # "CREATE ({}:node) \n".format(clone_var, clone_var) +
-            "CREATE ({}:node:{}) \n".format(
-                clone_var, clone_graph)
-            )
-        if attach:
-            query += "MERGE ({})-[:typing]->({})".format(original_var, clone_var)
-        query += (
-            "WITH {}, toString(id({})) as {}, {}.id as original_old, ".format(
-                clone_var, clone_var, clone_id_var, original_var) +
-            ", ".join(carry_vars) + " \n" +
-            "// set the id property of the original node to NULL\n" +
-            "SET {}.id = NULL\n".format(original_var) +
-            "// copy all the properties of the original node to the clone\n" +
-            "SET {} = {}\n".format(clone_var, original_var) +
-            "// set id property of the clone to neo4j-generated id\n" +
-            "SET {}.id = toString(id({})), {}.count = NULL\n".format(
-                clone_var, clone_var, clone_var) +
-            "// set back the id property of the original node\n" +
-            "SET {}.id = original_old\n".format(original_var) +
-            "WITH {}, toString(id({})) as {}, ".format(
-                clone_var, clone_var, clone_id_var) +
-            ", ".join(carry_vars) + " \n"
-        )
-    else:
-        query += (
-            "// search for a node with the same id as the clone id\n" +
-            "OPTIONAL MATCH (same_id_node:node:{} {{ id : '{}'}}) \n".format(
-                clone_graph, clone_id) +
-            "WITH same_id_node,  " +
-            "CASE WHEN same_id_node IS NOT NULL "
-            "THEN (coalesce(same_id_node.count, 0) + 1) " +
-            "ELSE 0 END AS same_id_node_new_count, " +
-            ", ".join(carry_vars) + "\n" +
-            "// generate new id if the same id node was found\n" +
-            "// and filter edges which will be removed \n" +
-            "WITH same_id_node, same_id_node_new_count, " +
-            "'{}' + CASE WHEN same_id_node_new_count <> 0 ".format(clone_id) +
-            "THEN toString(same_id_node_new_count) ELSE '' END as {}, ".format(
-                clone_id_var) +
-            ", ".join(carry_vars) + "\n" +
-            "// create a node corresponding to the clone\n" +
-            # "CREATE ({}:node) \n".format(clone_var, clone_id_var) +
-            "CREATE ({}:node:{}) \n".format(
-                clone_var, clone_graph)
-            )
-        if attach:
-            query += "MERGE ({})-[:typing]->({})".format(original_var, clone_var)
-        query += (
-            "WITH same_id_node, same_id_node_new_count, {}, {}, "
-            "{}.id as original_old, ".format(
-                clone_var, clone_id_var, original_var) +
-            ", ".join(carry_vars) + "\n" +
-            "// set the id property of the original node to NULL\n" +
-            "SET {}.id = NULL\n".format(original_var) +
-            "// copy all the properties of the original node to the clone\n" +
-            "SET {} = {}\n".format(clone_var, original_var) +
-            "// set id property of the clone to the generated id\n" +
-            "SET {}.id = {}, {}.count = NULL, ".format(
-                clone_var, clone_id_var, clone_var) +
-            "same_id_node.count = same_id_node_new_count + 1\n" +
-            "// set back the id property of the original node\n" +
-            "SET {}.id = original_old\n".format(original_var)
-        )
-
     query += (
         "// copy all incident edges of the original node to the clone\n" +
         "FOREACH (suc_map IN suc_maps | \n"
