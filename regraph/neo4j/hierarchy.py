@@ -6,7 +6,8 @@ from regraph.neo4j.graphs import Neo4jGraph
 import regraph.neo4j.cypher_utils as cypher
 from regraph.neo4j.category_utils import (pullback, pushout,
                                           graph_successors_query,
-                                          graph_predecessors_query
+                                          graph_predecessors_query,
+                                          propagate_up
                                           )
 
 
@@ -162,7 +163,20 @@ class Neo4jHierarchy(object):
         """Get all the ids of the predecessors of a graph."""
         query = graph_predecessors_query(graph_label)
         result = self.execute(query)
-        return [list(d.values())[0] for d in result]
+        return list(result.values()[0])[0]
 
-    def propagation_up(self, rewrote_graph):
-
+    def propagation_up(self, rewritten_graph):
+        """Propagate the changes of a rewritten graph up."""
+        ancestors = self.graph_predecessors(rewritten_graph)
+        print("Rewritting ancestors of {}...".format(rewritten_graph))
+        for ancestor in ancestors:
+            print(ancestor)
+            queries = propagate_up(rewritten_graph, ancestor)
+            # run multiple queries in one transaction
+            with self._driver.session() as session:
+                tx = session.begin_transaction()
+                for q in queries:
+                    tx.run(q)
+                tx.commit()
+        for ancestor in ancestors:
+            self.propagation_up(ancestor)
