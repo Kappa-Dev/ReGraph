@@ -4,7 +4,10 @@ from neo4j.v1 import GraphDatabase
 
 from regraph.neo4j.graphs import Neo4jGraph
 import regraph.neo4j.cypher_utils as cypher
-from regraph.neo4j.category_utils import pullback, pushout
+from regraph.neo4j.category_utils import (pullback, pushout,
+                                          graph_successors_query,
+                                          graph_predecessors_query
+                                          )
 
 
 class Neo4jHierarchy(object):
@@ -144,8 +147,22 @@ class Neo4jHierarchy(object):
             self.execute(q)
 
     def rewrite(self, graph_label, rule, instance):
-        """Perform SqPO rewritu=ing of the graph with a rule."""
+        """Perform SqPO rewriting of the graph with a rule."""
         g = self.access_graph(graph_label)
         rhs_g = g.rewrite(rule, instance)
         return rhs_g
+
+    def graph_successors(self, graph_label):
+        """Get all the ids of the successors of a graph."""
+        query = graph_successors_query(graph_label)
+        result = self.execute(query)
+        return [list(d.values())[0] for d in result]
+
+    def graph_predecessors(self, graph_label):
+        """Get all the ids of the predecessors of a graph."""
+        query = graph_predecessors_query(graph_label)
+        result = self.execute(query)
+        return [list(d.values())[0] for d in result]
+
+    def propagation_up(self, rewrote_graph):
 
