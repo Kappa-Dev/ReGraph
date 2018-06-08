@@ -167,3 +167,29 @@ def pullback_complement(a, b, d, c=None, inplace=False):
 
 def check_homomorphism(domain, codomain, total=True):
     pass
+
+
+def graph_predecessors_query(graph):
+    """Generate query for getting the labels of the predecessors of a graph."""
+    query = cypher.match_node(
+                        var_name='g',
+                        node_id=graph,
+                        label='hierarchyNode')
+    query += (
+        "OPTIONAL MATCH (predecessor)-[:hierarchyEdge]->(g)\n"
+        "RETURN collect(predecessor.id)"
+        )
+    return query
+
+
+def graph_successors_query(graph):
+    query = ""
+    query += cypher.match_node(
+                        var_name='g',
+                        node_id=graph,
+                        label='hierarchyNode')
+    query += (
+        "OPTIONAL MATCH (g)-[:hierarchyEdge]->(successor)\n"
+        "RETURN collect(successor.id)"
+        )
+    return query
