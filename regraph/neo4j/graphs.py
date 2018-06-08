@@ -349,7 +349,6 @@ class Neo4jGraph(object):
 
         # Variables of the nodes of instance
         match_instance_vars = {lhs_vars[k]: v for k, v in instance.items()}
-
         query = ""
 
         # If instance is not empty, generate Cypher that matches the nodes
@@ -368,20 +367,31 @@ class Neo4jGraph(object):
 
         # Generate cloning subquery
         for lhs_node, p_nodes in rule.cloned_nodes().items():
+            print(lhs_node, p_nodes)
+            print('-------------')
             query += "// Cloning node '{}' of the lhs \n".format(lhs_node)
             clones = set()
             preds_to_ignore = dict()
             sucs_to_ignore = dict()
             for p_node in p_nodes:
+                print(p_node)
                 if p_node != lhs_node:
                     clones.add(p_node)
                     preds_to_ignore[p_node] = set()
                     sucs_to_ignore[p_node] = set()
                     for u, v in rule.removed_edges():
+                        print(u,v)
+                        print(preds_to_ignore)
                         if u == p_node:
-                            sucs_to_ignore[p_node].add(instance[v])
+                            try:
+                                sucs_to_ignore[p_node].add(instance[v])
+                            except(KeyError):
+                                sucs_to_ignore[p_node].add(v)
                         if v == p_node:
-                            preds_to_ignore[p_node].add(instance[u])
+                            try:
+                                preds_to_ignore[p_node].add(instance[u])
+                            except(KeyError):
+                                preds_to_ignore[p_node].add(u)
             for n in clones:
                 query +=\
                     "// Create clone corresponding to '{}' ".format(n) +\
@@ -391,13 +401,13 @@ class Neo4jGraph(object):
                 else:
                     clone_id_var = "p_" + str(n) + "_id"
 
-                q, carry_variables = cloning_query(
+                q, carry_variables = cloning_query1(
                     original_var=lhs_vars[lhs_node],
                     clone_var=p_vars[n],
                     clone_id=n,
                     clone_id_var=clone_id_var,
-                    node_label=self._node_label,
-                    edge_label='edge',
+                    original_graph=self._label,
+                    preserv_typing=True,
                     sucs_to_ignore=sucs_to_ignore[n],
                     preds_to_ignore=preds_to_ignore[n],
                     carry_vars=carry_variables,
@@ -461,6 +471,8 @@ class Neo4jGraph(object):
                 merged_var=rhs_vars[rhs_key],
                 merged_id=merged_id,
                 merged_id_var=generate_var_name(),
+                node_label=self._node_label,
+                edge_label=None,
                 carry_vars=carry_variables,
                 ignore_naming=True)
             query += q
