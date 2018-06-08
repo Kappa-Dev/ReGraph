@@ -143,3 +143,9 @@ class Neo4jHierarchy(object):
             print('--------------------')
             self.execute(q)
 
+    def rewrite(self, graph_label, rule, instance):
+        """Perform SqPO rewritu=ing of the graph with a rule."""
+        g = self.access_graph(graph_label)
+        rhs_g = g.rewrite(rule, instance)
+        return rhs_g
+
