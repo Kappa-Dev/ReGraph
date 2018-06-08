@@ -183,6 +183,7 @@ def graph_predecessors_query(graph):
 
 
 def graph_successors_query(graph):
+    """Generate query for getting the labels of the successors of a graph."""
     query = ""
     query += cypher.match_node(
                         var_name='g',
@@ -193,3 +194,51 @@ def graph_successors_query(graph):
         "RETURN collect(successor.id)"
         )
     return query
+
+
+def propagate_up(rewrote_graph, predecessor):
+    """Generate the queries for propagating the changes up."""
+    query1 = (
+        "OPTIONAL MATCH (n:node:{})\n".format(predecessor) +
+        "WHERE NOT (n)-[:typing]->(:node:{})\n".format(rewrote_graph) +
+        "DETACH DELETE n\n"
+        )
+
+    query2 = (
+        "OPTIONAL MATCH (n:node:{})-[rel_pred:edge]->(m:node:{})\n".format(
+            predecessor, predecessor) +
+        "WHERE rel_pred IS NOT NULL\n" +
+        "OPTIONAL MATCH (n)-[:typing]->(:node:{})-[rel:edge]->(:node:{})<-[:typing]-(m)\n".format(
+            rewrote_graph, rewrote_graph) +
+        "WITH rel_pred WHERE rel IS NULL\n" +
+        "WITH DISTINCT rel_pred\n" +
+        "DELETE rel_pred"
+        )
+
+    carry_vars = set()
+    query3 = (
+        "OPTIONAL MATCH (node_to_clone:node:{})-[t:typing]->(n:node:{})\n".format(
+            predecessor, rewrote_graph) +
+        "WITH node_to_clone, collect(n) as sucs, collect(t) as typ_sucs\n" +
+        "WHERE node_to_clone IS NOT NULL AND size(sucs) >= 2\n"
+        "FOREACH(t IN typ_sucs | DELETE t)\n" +
+        "WITH node_to_clone, sucs, sucs[0] as suc1\n"
+        )
+    carry_vars.update(['node_to_clone', 'suc1', 'node_suc'])
+    query3 += (
+        "UNWIND sucs[1..] AS node_suc" +
+        cypher.cloning_query1(
+                    original_var='node_to_clone',
+                    clone_var='cloned_node',
+                    clone_id='clone_id',
+                    clone_id_var='clone_id_var',
+                    original_graph=predecessor,
+                    carry_vars=carry_vars,
+                    preserv_typing=True,
+                    ignore_naming=True)[0] +
+        cypher.with_vars(carry_vars) + "\n" +
+        "MERGE (cloned_node)-[:typing]->(node_suc)\n" +
+        "MERGE (node_to_clone)-[:typing]->(suc1)\n"
+        )
+
+    return query1, query2, query3
