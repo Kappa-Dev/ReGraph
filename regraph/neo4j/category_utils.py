@@ -196,11 +196,21 @@ def graph_successors_query(graph):
     return query
 
 
-def propagate_up(rewrote_graph, predecessor):
-    """Generate the queries for propagating the changes up."""
+def propagate_up(rewritten_graph, predecessor):
+    """Generate the queries for propagating the changes up from H-->G.
+
+    Returns
+    -------
+    query1 : str
+        Generated query for removing nodes from H
+    query2 : str
+        Generated query for removing clones from H
+    query3 : str
+    Generated query for cloning nodes in H
+    """
     query1 = (
         "OPTIONAL MATCH (n:node:{})\n".format(predecessor) +
-        "WHERE NOT (n)-[:typing]->(:node:{})\n".format(rewrote_graph) +
+        "WHERE NOT (n)-[:typing]->(:node:{})\n".format(rewritten_graph) +
         "DETACH DELETE n\n"
         )
 
@@ -209,7 +219,7 @@ def propagate_up(rewrote_graph, predecessor):
             predecessor, predecessor) +
         "WHERE rel_pred IS NOT NULL\n" +
         "OPTIONAL MATCH (n)-[:typing]->(:node:{})-[rel:edge]->(:node:{})<-[:typing]-(m)\n".format(
-            rewrote_graph, rewrote_graph) +
+            rewritten_graph, rewritten_graph) +
         "WITH rel_pred WHERE rel IS NULL\n" +
         "WITH DISTINCT rel_pred\n" +
         "DELETE rel_pred"
@@ -218,7 +228,7 @@ def propagate_up(rewrote_graph, predecessor):
     carry_vars = set()
     query3 = (
         "OPTIONAL MATCH (node_to_clone:node:{})-[t:typing]->(n:node:{})\n".format(
-            predecessor, rewrote_graph) +
+            predecessor, rewritten_graph) +
         "WITH node_to_clone, collect(n) as sucs, collect(t) as typ_sucs\n" +
         "WHERE node_to_clone IS NOT NULL AND size(sucs) >= 2\n"
         "FOREACH(t IN typ_sucs | DELETE t)\n" +
