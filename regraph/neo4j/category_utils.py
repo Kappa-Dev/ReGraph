@@ -252,3 +252,18 @@ def propagate_up(rewritten_graph, predecessor):
         )
 
     return query1, query2, query3
+
+
+def propagation_down(rewritten_graph, successor):
+    """Generate the queries for propagating the changes down from G-->T.
+
+    """
+    query1 = (
+        "OPTIONAL MATCH (n:node:{})".format(rewritten_graph) +
+        "WHERE NOT (n)-[:typing]->(:node:{})\n".format(successor) +
+        "MERGE (n)-[:typing]->(new_node:node:{})\n".format(successor) +
+        "ON CREATE SET new_node += properties(n)\n" +
+        "ON CREATE SET new_node.id = id(new_node)\n"
+        )
+
+    return query1
