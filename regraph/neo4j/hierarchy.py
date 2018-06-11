@@ -7,7 +7,7 @@ import regraph.neo4j.cypher_utils as cypher
 from regraph.neo4j.category_utils import (pullback, pushout,
                                           graph_successors_query,
                                           graph_predecessors_query,
-                                          propagate_up
+                                          propagate_up, propagate_down
                                           )
 
 
@@ -176,7 +176,27 @@ class Neo4jHierarchy(object):
             with self._driver.session() as session:
                 tx = session.begin_transaction()
                 for q in queries:
+                    print(q)
+                    print('---------------------------')
                     tx.run(q)
                 tx.commit()
         for ancestor in ancestors:
             self.propagation_up(ancestor)
+
+    def propagation_down(self, rewritten_graph):
+        """Propagate the changes of a rewritten graph down."""
+        successors = self.graph_successors(rewritten_graph)
+        print("Rewritting children of {}...".format(rewritten_graph))
+        for successor in successors:
+            print(successor)
+            queries = propagate_down(rewritten_graph, successor)
+            # run multiple queries in one transaction
+            with self._driver.session() as session:
+                tx = session.begin_transaction()
+                for q in queries:
+                    print(q)
+                    print('---------------------------')
+                    tx.run(q)
+                tx.commit()
+        for successor in successors:
+            self.propagation_down(successor)
