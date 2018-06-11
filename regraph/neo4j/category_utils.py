@@ -204,7 +204,7 @@ def propagate_up(rewritten_graph, predecessor):
     query1 : str
         Generated query for removing nodes from H
     query2 : str
-        Generated query for removing clones from H
+        Generated query for removing nodes from H
     query3 : str
     Generated query for cloning nodes in H
     """
@@ -257,6 +257,14 @@ def propagate_up(rewritten_graph, predecessor):
 def propagation_down(rewritten_graph, successor):
     """Generate the queries for propagating the changes down from G-->T.
 
+    Returns
+    -------
+    query1 : str
+        Generated query for adding nodes in T
+    query2 : str
+        Generated query for adding edges in T
+    query3 : str
+    Generated query for merging nodes in H
     """
     query1 = (
         "OPTIONAL MATCH (n:node:{})".format(rewritten_graph) +
@@ -266,4 +274,39 @@ def propagation_down(rewritten_graph, successor):
         "ON CREATE SET new_node.id = id(new_node)\n"
         )
 
-    return query1
+    query2 = (
+        "OPTIONAL MATCH (n:node:{})<-[:typing]-(:node:{})-[rel:edge]->(:node:{})-[:typing]->(m:node:{})\n".format(
+            successor, rewritten_graph, rewritten_graph, successor) +
+        "WHERE NOT (n)-[:edge]->(m)\n" +
+        "MERGE (n)-[new_rel:edge]->(m)\n" +
+        "ON CREATE SET new_rel += properties(rel)\n"
+        )
+
+    query3 = (
+        "OPTIONAL MATCH (n:node:{})-[:typing]->(node_to_merge:node:{})\n".format(
+            rewritten_graph, successor) +
+        "WITH n, collect(node_to_merge) as nodes_to_merge\n" +
+        "WHERE n IS NOT NULL AND size(nodes_to_merge) >= 2\n" +
+        "WITH n, nodes_to_merge, nodes_to_merge[0] as node1\n"
+        )
+    query3 += (
+        "UNWIND nodes_to_merge[1..] as node2\n" +
+        cypher.merging_query2(
+                    original_vars=["node1", "node2"],
+                    merged_var="merged_node",
+                    merged_id="id",
+                    merged_id_var="new_id",
+                    node_label='node:'+successor,
+                    edge_label=None,
+                    ignore_naming=True,
+                    multiple_rows=True)[0] +
+        "RETURN merged_node.id\n"
+        )
+
+    return query1, query2, query3
+
+
+queries = propagation_down('actionGraph', 'metaModel')
+for q in queries:
+    print(q)
+    print('//----------------------------')
