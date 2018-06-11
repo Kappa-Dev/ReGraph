@@ -224,7 +224,7 @@ class Neo4jGraph(object):
         pred = set(self.execute(query).value())
         return(pred)
 
-    def clone_node(self, node, name=None,
+    def clone_node(self, node, name=None, preserv_typing=False,
                    ignore_naming=False, profiling=False):
         """Clone a node of the graph."""
         if profiling:
@@ -242,7 +242,7 @@ class Neo4jGraph(object):
                 clone_id=name,
                 clone_id_var='uid',
                 node_label=self._node_label,
-                edge_label='edge',
+                preserv_typing=preserv_typing,
                 ignore_naming=ignore_naming)[0] +\
             return_vars(['uid'])
         # print(query)
@@ -401,12 +401,12 @@ class Neo4jGraph(object):
                 else:
                     clone_id_var = "p_" + str(n) + "_id"
 
-                q, carry_variables = cloning_query1(
+                q, carry_variables = cloning_query(
                     original_var=lhs_vars[lhs_node],
                     clone_var=p_vars[n],
                     clone_id=n,
                     clone_id_var=clone_id_var,
-                    original_graph=self._label,
+                    node_label=self._node_label,
                     preserv_typing=True,
                     sucs_to_ignore=sucs_to_ignore[n],
                     preds_to_ignore=preds_to_ignore[n],
