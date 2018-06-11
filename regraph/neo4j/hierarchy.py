@@ -157,7 +157,7 @@ class Neo4jHierarchy(object):
         """Get all the ids of the successors of a graph."""
         query = graph_successors_query(graph_label)
         result = self.execute(query)
-        return [list(d.values())[0] for d in result]
+        return list(result.values()[0])[0]
 
     def graph_predecessors(self, graph_label):
         """Get all the ids of the predecessors of a graph."""
