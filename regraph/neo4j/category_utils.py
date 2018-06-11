@@ -254,7 +254,7 @@ def propagate_up(rewritten_graph, predecessor):
     return query1, query2, query3
 
 
-def propagation_down(rewritten_graph, successor):
+def propagate_down(rewritten_graph, successor):
     """Generate the queries for propagating the changes down from G-->T.
 
     Returns
@@ -304,9 +304,3 @@ def propagation_down(rewritten_graph, successor):
         )
 
     return query1, query2, query3
-
-
-queries = propagation_down('actionGraph', 'metaModel')
-for q in queries:
-    print(q)
-    print('//----------------------------')
