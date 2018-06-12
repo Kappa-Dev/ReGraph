@@ -213,33 +213,6 @@ def check_homomorphism(tx, domain, codomain, total=True):
     return True
 
 
-def graph_predecessors_query(graph):
-    """Generate query for getting the labels of the predecessors of a graph."""
-    query = cypher.match_node(
-                        var_name='g',
-                        node_id=graph,
-                        label='hierarchyNode')
-    query += (
-        "OPTIONAL MATCH (predecessor)-[:hierarchyEdge]->(g)\n"
-        "RETURN collect(predecessor.id)"
-        )
-    return query
-
-
-def graph_successors_query(graph):
-    """Generate query for getting the labels of the successors of a graph."""
-    query = ""
-    query += cypher.match_node(
-                        var_name='g',
-                        node_id=graph,
-                        label='hierarchyNode')
-    query += (
-        "OPTIONAL MATCH (g)-[:hierarchyEdge]->(successor)\n"
-        "RETURN collect(successor.id)"
-        )
-    return query
-
-
 def propagate_up(rewritten_graph, predecessor):
     """Generate the queries for propagating the changes up from H-->G.
 
