@@ -591,7 +591,6 @@ class Neo4jGraph(object):
 
         # ids of the nodes of instance
         match_instance_ids = {lhs_vars[k]: v for k, v in instance.items()}
-
         # Cloning the nodes of LHS
         for lhs_node, p_nodes in rule.cloned_nodes().items():
             q_clone_match = match_node(
@@ -648,8 +647,8 @@ class Neo4jGraph(object):
         for node in rule.removed_nodes():
             node_var = lhs_vars[node]
             q_node_rm = "// Removing node '{}' of the lhs \n".format(node)
-            q_clone_match = match_node(
-                                var_name=lhs_vars[node_var],
+            q_node_rm += match_node(
+                                var_name=node_var,
                                 node_id=match_instance_ids[node_var],
                                 label=self._node_label)
             q_node_rm += delete_nodes_var([node_var])
@@ -741,8 +740,9 @@ class Neo4jGraph(object):
         # Dictionary defining a mapping from the generated
         # unique variable names to the names of nodes of the rhs
         rhs_vars_inverse = {v: k for k, v in rhs_vars.items()}
+        vars_to_ids = {k: match_instance_ids[v] for k, v in rhs_vars.items()}
 
-        return rhs_vars_inverse
+        return vars_to_ids
 
 
     # def rule_to_cypher1(self, rule, instance):
