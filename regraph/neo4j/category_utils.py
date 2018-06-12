@@ -280,15 +280,15 @@ def propagate_up(rewritten_graph, predecessor):
         )
     carry_vars.update(['node_to_clone', 'suc1', 'node_suc'])
     query3 += (
-        "UNWIND sucs[1..] AS node_suc" +
+        "UNWIND sucs[1..] AS node_suc\n" +
         cypher.cloning_query1(
                     original_var='node_to_clone',
                     clone_var='cloned_node',
                     clone_id='clone_id',
                     clone_id_var='clone_id_var',
                     original_graph=predecessor,
-                    carry_vars=carry_vars,
                     preserv_typing=True,
+                    carry_vars=carry_vars,
                     ignore_naming=True)[0] +
         cypher.with_vars(carry_vars) + "\n" +
         "MERGE (cloned_node)-[:typing]->(node_suc)\n" +
