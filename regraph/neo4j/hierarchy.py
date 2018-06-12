@@ -153,6 +153,12 @@ class Neo4jHierarchy(object):
         rhs_g = g.rewrite(rule, instance)
         return rhs_g
 
+    def rewrite_v2(self, graph_label, rule, instance):
+        """Perform SqPO rewriting of the graph with a rule."""
+        g = self.access_graph(graph_label)
+        maps_vars_ids = g.rule_to_cypher_v2(rule, instance)
+        return (maps_vars_ids)
+
     def graph_successors(self, graph_label):
         """Get all the ids of the successors of a graph."""
         query = graph_successors_query(graph_label)
