@@ -5,8 +5,6 @@ from neo4j.v1 import GraphDatabase
 from regraph.neo4j.graphs import Neo4jGraph
 import regraph.neo4j.cypher_utils as cypher
 from regraph.neo4j.category_utils import (pullback, pushout,
-                                          graph_successors_query,
-                                          graph_predecessors_query,
                                           propagate_up, propagate_down,
                                           check_homomorphism
                                           )
@@ -172,15 +170,25 @@ class Neo4jHierarchy(object):
 
     def graph_successors(self, graph_label):
         """Get all the ids of the successors of a graph."""
-        query = graph_successors_query(graph_label)
-        result = self.execute(query)
-        return list(result.values()[0])[0]
+        query = cypher.successors_query(var_name='g',
+                                        node_id=graph_label,
+                                        node_label='hierarchyNode',
+                                        edge_label='hierarchyEdge')
+        succ = self.execute(query).value()
+        if succ[0] is None:
+            succ = []
+        return succ
 
     def graph_predecessors(self, graph_label):
         """Get all the ids of the predecessors of a graph."""
-        query = graph_predecessors_query(graph_label)
-        result = self.execute(query)
-        return list(result.values()[0])[0]
+        query = cypher.predecessors_query(var_name='g',
+                                          node_id=graph_label,
+                                          node_label='hierarchyNode',
+                                          edge_label='hierarchyEdge')
+        preds = self.execute(query).value()
+        if preds[0] is None:
+            preds = []
+        return preds
 
     def propagation_up(self, rewritten_graph):
         """Propagate the changes of a rewritten graph up."""
