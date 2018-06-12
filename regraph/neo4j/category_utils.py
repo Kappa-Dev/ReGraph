@@ -165,8 +165,52 @@ def pullback_complement(a, b, d, c=None, inplace=False):
     pass
 
 
-def check_homomorphism(domain, codomain, total=True):
-    pass
+def check_homomorphism(tx, domain, codomain, total=True):
+    """Check if the homomorphism is valid."""
+
+    # Check if all the nodes of the domain have exactly 1 image
+    query1 = (
+        "MATCH (n:node:{})\n".format(domain) +
+        "OPTIONAL MATCH (n)-[:typing]->(m:node:{})\n".format(codomain) +
+        "WITH n, collect(m) as images\n" +
+        "WHERE size(images) <> 1\n" +
+        "RETURN n.id as ids, size(images) as nb_of_img\n"
+        )
+    result = tx.run(query1)
+    nodes = []
+    for record in result:
+        nodes.append((record['ids'], record['nb_of_img']))
+    if len(nodes) != 0:
+        raise ValueError(
+            "Wrong number of images!\n" +
+            "\n".join(
+                ["The node '{}' of the graph {} have {} image(s) in the graph {}.".format(
+                    n, domain, str(nb), codomain) for n, nb in nodes]
+                )
+            )
+
+    query2 = (
+        "MATCH (n:node:{})-[:edge]->(m:node:{})\n".format(
+            domain, domain) +
+        "MATCH (n)-[:typing]->(x:node:{}), (y:node:{})<-[:typing]-(m)\n".format(
+            codomain, codomain) +
+        "OPTIONAL MATCH (x)-[r:edge]->(y)\n" +
+        "WITH x.id as x_id, y.id as y_id, r\n" +
+        "WHERE r IS NULL\n" +
+        "WITH x_id, y_id, collect(r) as rs\n" +
+        "RETURN x_id, y_id\n"
+        )
+    result = tx.run(query2)
+    xy_ids = []
+    for record in result:
+        xy_ids.append((record['x_id'], record['y_id']))
+    if len(xy_ids) != 0:
+        raise ValueError(
+            "Connectivity is not preserved!\n" +
+            "\n".join([" Was expecting an edge between '{}' and '{}'.".format(
+                x, y) for x, y in xy_ids])
+            )
+    return True
 
 
 def graph_predecessors_query(graph):
