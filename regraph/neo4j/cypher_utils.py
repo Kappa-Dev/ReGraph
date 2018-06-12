@@ -275,7 +275,8 @@ def get_edges(label_source='node', label_target='node',
     return query
 
 
-def successors_query(var_name, node_id, node_label='node', label_succ=None):
+def successors_query(var_name, node_id, node_label='node',
+                     edge_label='edge', label_succ=None):
     """Generate query for getting the ids of all the successors of a node.
 
     Parameters
@@ -286,20 +287,23 @@ def successors_query(var_name, node_id, node_label='node', label_succ=None):
         Id of the node to match
     node_label
         Label of the node to match, default is 'node'
+    edge_label
+        Label of the edge to match, default is 'edge'
     label_succ
         Label of the successors we want to find. node_label if None.
     """
     if label_succ is None:
         label_succ = node_label
     query = (
-            "OPTIONAL MATCH ({}:{} {{id : '{}'}})-[]-> (suc:{})".format(
-                var_name, node_label, node_id, label_succ) +
+            "OPTIONAL MATCH ({}:{} {{id : '{}'}})-[:{}]-> (suc:{})".format(
+                var_name, node_label, node_id, edge_label, label_succ) +
             "RETURN suc.id"
         )
     return query
 
 
-def predecessors_query(var_name, node_id, node_label='node', label_pred=None):
+def predecessors_query(var_name, node_id, node_label='node',
+                       edge_label='edge', label_pred=None):
     """Generate query for getting the ids of all the predecessors of a node.
 
     Parameters
@@ -310,14 +314,16 @@ def predecessors_query(var_name, node_id, node_label='node', label_pred=None):
         Id of the node to match
     node_label
         Label of the node to match, default is 'node'
+    edge_label
+        Label of the edge to match, default is 'edge'
     label_pred
         Label of the predecessors we want to find. node_label if None.
     """
     if label_pred is None:
         label_pred = node_label
     query = (
-            "OPTIONAL MATCH (pred:{})-[]-> ({}:{} {{id : '{}'}})".format(
-                label_pred, var_name, node_label, node_id) +
+            "OPTIONAL MATCH (pred:{})-[:{}]-> ({}:{} {{id : '{}'}})".format(
+                label_pred, edge_label, var_name, node_label, node_id) +
             "RETURN pred.id"
         )
     return query
