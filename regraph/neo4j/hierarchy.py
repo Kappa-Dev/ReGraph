@@ -7,7 +7,8 @@ import regraph.neo4j.cypher_utils as cypher
 from regraph.neo4j.category_utils import (pullback, pushout,
                                           graph_successors_query,
                                           graph_predecessors_query,
-                                          propagate_up, propagate_down
+                                          propagate_up, propagate_down,
+                                          check_homomorphism
                                           )
 
 
@@ -125,6 +126,16 @@ class Neo4jHierarchy(object):
                                      edge_label='hierarchyEdge')
         result = self.execute(query2)
         return result
+
+    def check_typing(self, source, target):
+        """Check if a typing is a homomorphism."""
+        g_src = self.access_graph(source)
+        g_tar = self.access_graph(target)
+
+        with self._driver.session() as session:
+            tx = session.begin_transaction()
+            res = check_homomorphism(tx, source, target)
+        print(res)
 
     def pullback(self, b, c, d, a):
         self.add_graph(a)
