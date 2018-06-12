@@ -369,31 +369,6 @@ def cloning_query(original_var, clone_var, clone_id, clone_id_var,
     carry_vars.add(original_var)
     query = ""
 
-    query += (
-        "WITH [{}] as sucIgnore, ".format(
-            ", ".join("'{}'".format(n) for n in sucs_to_ignore)) +
-        "[{}] as predIgnore, ".format(
-            ", ".join("'{}'".format(n) for n in preds_to_ignore)) +
-        ", ".join(carry_vars) + " \n"
-    )
-    query += (
-        "// match successors and out-edges of a node to be cloned\n" +
-        "OPTIONAL MATCH ({})-[out_edge:edge]->(suc) \n".format(original_var) +
-        "WHERE NOT suc.id IS NULL AND NOT suc.id IN sucIgnore\n" +
-        "WITH collect({neighbor: suc, edge: out_edge}) as suc_maps, predIgnore, " +
-        ", ".join(carry_vars) + " \n"
-    )
-
-    carry_vars.add("suc_maps")
-    query += (
-        "// match predecessors and in-edges of a node to be cloned\n" +
-        "OPTIONAL MATCH (pred)-[in_edge:edge]->({}) \n".format(original_var) +
-        "WHERE NOT pred.id IS NULL AND NOT pred.id IN predIgnore\n" +
-        "WITH collect({neighbor: pred, edge: in_edge}) as pred_maps, " +
-        ", ".join(carry_vars) + " \n"
-    )
-    carry_vars.add("pred_maps")
-
     if ignore_naming is True:
         query += (
             "// create a node corresponding to the clone\n" +
@@ -453,6 +428,32 @@ def cloning_query(original_var, clone_var, clone_id, clone_id_var,
             "SET {}.id = original_old\n".format(original_var)
         )
     carry_vars.add(clone_id_var)
+    carry_vars.add(clone_var)
+
+    query += (
+        "WITH [{}] as sucIgnore, ".format(
+            ", ".join("'{}'".format(n) for n in sucs_to_ignore)) +
+        "[{}] as predIgnore, ".format(
+            ", ".join("'{}'".format(n) for n in preds_to_ignore)) +
+        ", ".join(carry_vars) + " \n"
+    )
+    query += (
+        "// match successors and out-edges of a node to be cloned\n" +
+        "OPTIONAL MATCH ({})-[out_edge:edge]->(suc) \n".format(original_var) +
+        "WHERE NOT suc.id IS NULL AND NOT suc.id IN sucIgnore\n" +
+        "WITH collect({neighbor: suc, edge: out_edge}) as suc_maps, predIgnore, " +
+        ", ".join(carry_vars) + " \n"
+    )
+
+    carry_vars.add("suc_maps")
+    query += (
+        "// match predecessors and in-edges of a node to be cloned\n" +
+        "OPTIONAL MATCH (pred)-[in_edge:edge]->({}) \n".format(original_var) +
+        "WHERE NOT pred.id IS NULL AND NOT pred.id IN predIgnore\n" +
+        "WITH collect({neighbor: pred, edge: in_edge}) as pred_maps, " +
+        ", ".join(carry_vars) + " \n"
+    )
+    carry_vars.add("pred_maps")
 
     query += (
         "// copy all incident edges of the original node to the clone\n" +
@@ -469,12 +470,11 @@ def cloning_query(original_var, clone_var, clone_id, clone_id_var,
         "// copy self loop\n" +
         "FOREACH (suc_map IN suc_maps | \n"
         "\tFOREACH (self_loop IN "
-        "CASE WHEN {} IN suc_map.neighbor IS NOT NULL THEN [suc_map.edge] ELSE [] END |\n".format(
+        "CASE WHEN suc_map.neighbor = {} THEN [suc_map.edge] ELSE [] END |\n".format(
             original_var) +
         "\t\tMERGE ({})-[new_edge:edge]->({}) \n".format(clone_var, clone_var) +
         "\t\tSET new_edge = self_loop))\n"
     )
-    carry_vars.add(clone_var)
     carry_vars.remove("suc_maps")
     carry_vars.remove("pred_maps")
 

@@ -627,7 +627,7 @@ class Neo4jGraph(object):
                 else:
                     clone_id_var = "p_" + str(n) + "_id"
 
-                q, carry_variables = cloning_query1(
+                q, carry_variables = cloning_query(
                     original_var=lhs_vars[lhs_node],
                     clone_var=p_vars[n],
                     clone_id=n,
