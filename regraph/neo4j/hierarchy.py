@@ -196,26 +196,11 @@ class Neo4jHierarchy(object):
         ancestors = self.graph_predecessors(rewritten_graph)
         print("Rewritting ancestors of {}...".format(rewritten_graph))
         for ancestor in ancestors:
-            print(ancestor)
-            queries = propagate_up(rewritten_graph, ancestor)
+            print('--> ', ancestor)
             # run multiple queries in one transaction
             with self._driver.session() as session:
                 tx = session.begin_transaction()
-                print(queries[0])
-                print("//----------")
-                tx.run(queries[0])
-                print(queries[1])
-                print("//----------")
-                tx.run(queries[1])
-                print(queries[2])
-                print("//----------")
-                result = tx.run(queries[2])
-                for record in result:
-                    node_id = record['node_id']
-                    print(node_id)
-                    print(queries[3])
-                    print("//----------")
-                    tx.run(queries[3], id=node_id)
+                propagate_up(tx, rewritten_graph, ancestor)
                 tx.commit()
         for ancestor in ancestors:
             self.propagation_up(ancestor)

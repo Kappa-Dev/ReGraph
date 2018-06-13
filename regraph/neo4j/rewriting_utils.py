@@ -1,7 +1,7 @@
 import regraph.neo4j.cypher_utils as cypher
 
 
-def propagate_up(rewritten_graph, predecessor):
+def propagate_up(tx, rewritten_graph, predecessor):
     """Generate the queries for propagating the changes up from H-->G.
 
     Returns
@@ -15,24 +15,33 @@ def propagate_up(rewritten_graph, predecessor):
     query3 : str
         Generated query for cloning nodes in H, depending on their ids
     """
+    # We remove the nodes of H without image in G
     query1 = (
+        "// Removal of nodes in {}\n".format(predecessor) +
         "MATCH (n:node:{})\n".format(predecessor) +
         "WHERE NOT (n)-[:typing]->(:node:{})\n".format(rewritten_graph) +
-        "DETACH DELETE n\n"
+        "DETACH DELETE n\n\n"
         )
+    tx.run(query1)
 
+    # We remove the edges without image in G
     query2 = (
+        "// Removal of edges in {}\n".format(predecessor) +
         "MATCH (n:node:{})-[rel_pred:edge]->(m:node:{})\n".format(
             predecessor, predecessor) +
         "OPTIONAL MATCH (n)-[:typing]->(:node:{})-[rel:edge]->(:node:{})<-[:typing]-(m)\n".format(
             rewritten_graph, rewritten_graph) +
         "WITH rel_pred WHERE rel IS NULL\n" +
         "WITH DISTINCT rel_pred\n" +
-        "DELETE rel_pred"
+        "DELETE rel_pred\n\n"
         )
+    tx.run(query2)
 
+    # We clone the nodes that have more than 1 image and
+    # reassign the typing edges
     carry_vars = set()
     query3_1 = (
+        "// Matching of the nodes to clone in {}\n".format(predecessor) +
         "MATCH (node_to_clone:node:{})-[:typing]->(n:node:{})\n".format(
             predecessor, rewritten_graph) +
         "WITH node_to_clone, collect(n) as sucs\n" +
@@ -40,12 +49,12 @@ def propagate_up(rewritten_graph, predecessor):
         "RETURN node_to_clone.id as node_id\n"
         )
     query3 = (
+        "// Cloning of the node $id of the graph {}\n".format(predecessor) +
         "MATCH (node_to_clone:node:{}) WHERE node_to_clone.id = $id\n".format(
                     predecessor) +
         "MATCH (node_to_clone)-[t:typing]->(n:node:{})\n".format(
                     rewritten_graph) +
         "WITH node_to_clone, collect(n) as sucs, collect(t) as typ_sucs\n" +
-        "WHERE size(sucs) >= 2\n" +
         "FOREACH(t IN typ_sucs | DELETE t)\n" +
         "WITH node_to_clone, sucs, sucs[0] as suc1\n"
         )
@@ -65,6 +74,10 @@ def propagate_up(rewritten_graph, predecessor):
         "MERGE (cloned_node)-[:typing]->(node_suc)\n" +
         "MERGE (node_to_clone)-[:typing]->(suc1)\n"
         )
+    result = tx.run(query3_1)
+    for record in result:
+        node_id = record['node_id']
+        tx.run(query3, id=node_id)
 
     return query1, query2, query3_1, query3
 
