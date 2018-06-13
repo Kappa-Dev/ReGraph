@@ -4,10 +4,11 @@ from neo4j.v1 import GraphDatabase
 
 from regraph.neo4j.graphs import Neo4jGraph
 import regraph.neo4j.cypher_utils as cypher
-from regraph.neo4j.category_utils import (pullback, pushout,
-                                          propagate_up, propagate_down,
-                                          check_homomorphism
-                                          )
+from regraph.neo4j.category_utils import (pullback,
+                                          pushout,
+                                          check_homomorphism)
+from regraph.neo4j.rewriting_utils import (propagate_up,
+                                           propagate_down,)
 
 
 class Neo4jHierarchy(object):
