@@ -1257,17 +1257,17 @@ def cloning_query1(original_var, clone_var, clone_id, clone_id_var,
     return query, carry_vars
 
 
-def clone_graph(graphA, graphB, attach=False, carry_vars=None):
+def clone_graph(original_graph, cloned_graph, attach=False, carry_vars=None):
     """Clone all the nodes and edges of a graph in an other.
     """
     if carry_vars is None:
         carry_vars = set()
 
     query =\
-        "MATCH (n:node:{})\n".format(graphA) +\
+        "MATCH (n:node:{})\n".format(original_graph) +\
         cloning_query1('n', 'm', 'id', 'm_id_var',
-                       original_graph=graphA,
-                       clone_graph=graphB,
+                       original_graph=original_graph,
+                       clone_graph=cloned_graph,
                        attach=attach,
                        carry_vars=carry_vars,
                        ignore_naming=True)[0]
