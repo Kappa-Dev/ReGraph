@@ -193,16 +193,16 @@ class Neo4jHierarchy(object):
 
     def propagation_up(self, rewritten_graph):
         """Propagate the changes of a rewritten graph up."""
-        ancestors = self.graph_predecessors(rewritten_graph)
+        predecessors = self.graph_predecessors(rewritten_graph)
         print("Rewritting ancestors of {}...".format(rewritten_graph))
-        for ancestor in ancestors:
-            print('--> ', ancestor)
+        for predecessor in predecessors:
+            print('--> ', predecessor)
             # run multiple queries in one transaction
             with self._driver.session() as session:
                 tx = session.begin_transaction()
-                propagate_up(tx, rewritten_graph, ancestor)
+                propagate_up(tx, rewritten_graph, predecessor)
                 tx.commit()
-        for ancestor in ancestors:
+        for ancestor in predecessors:
             self.propagation_up(ancestor)
 
     def propagation_down(self, rewritten_graph):
