@@ -658,7 +658,8 @@ class Neo4jGraph(object):
 
         # Removing of edges
         for u, v in rule.removed_edges():
-            if u in match_instance_ids.keys() and v in match_instance_ids.keys():
+            if lhs_vars[u] in match_instance_ids.keys() and\
+               lhs_vars[v] in match_instance_ids.keys():
                 u_var = lhs_vars[u]
                 v_var = lhs_vars[v]
                 u_id = match_instance_ids[lhs_vars[u]]
