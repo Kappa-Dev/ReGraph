@@ -10,19 +10,20 @@ def propagate_up(rewritten_graph, predecessor):
         Generated query for removing nodes from H
     query2 : str
         Generated query for removing nodes from H
+    query3_1 : str
+        Generated query for matching the nodes to clone in H
     query3 : str
-    Generated query for cloning nodes in H
+        Generated query for cloning nodes in H, depending on their ids
     """
     query1 = (
-        "OPTIONAL MATCH (n:node:{})\n".format(predecessor) +
+        "MATCH (n:node:{})\n".format(predecessor) +
         "WHERE NOT (n)-[:typing]->(:node:{})\n".format(rewritten_graph) +
         "DETACH DELETE n\n"
         )
 
     query2 = (
-        "OPTIONAL MATCH (n:node:{})-[rel_pred:edge]->(m:node:{})\n".format(
+        "MATCH (n:node:{})-[rel_pred:edge]->(m:node:{})\n".format(
             predecessor, predecessor) +
-        "WHERE rel_pred IS NOT NULL\n" +
         "OPTIONAL MATCH (n)-[:typing]->(:node:{})-[rel:edge]->(:node:{})<-[:typing]-(m)\n".format(
             rewritten_graph, rewritten_graph) +
         "WITH rel_pred WHERE rel IS NULL\n" +
@@ -31,11 +32,20 @@ def propagate_up(rewritten_graph, predecessor):
         )
 
     carry_vars = set()
-    query3 = (
-        "OPTIONAL MATCH (node_to_clone:node:{})-[t:typing]->(n:node:{})\n".format(
+    query3_1 = (
+        "MATCH (node_to_clone:node:{})-[:typing]->(n:node:{})\n".format(
             predecessor, rewritten_graph) +
+        "WITH node_to_clone, collect(n) as sucs\n" +
+        "WHERE size(sucs) >= 2\n" +
+        "RETURN node_to_clone.id as node_id\n"
+        )
+    query3 = (
+        "MATCH (node_to_clone:node:{}) WHERE node_to_clone.id = $id\n".format(
+                    predecessor) +
+        "MATCH (node_to_clone)-[t:typing]->(n:node:{})\n".format(
+                    rewritten_graph) +
         "WITH node_to_clone, collect(n) as sucs, collect(t) as typ_sucs\n" +
-        "WHERE node_to_clone IS NOT NULL AND size(sucs) >= 2\n"
+        "WHERE size(sucs) >= 2\n" +
         "FOREACH(t IN typ_sucs | DELETE t)\n" +
         "WITH node_to_clone, sucs, sucs[0] as suc1\n"
         )
@@ -56,7 +66,7 @@ def propagate_up(rewritten_graph, predecessor):
         "MERGE (node_to_clone)-[:typing]->(suc1)\n"
         )
 
-    return query1, query2, query3
+    return query1, query2, query3_1, query3
 
 
 def propagate_down(rewritten_graph, successor):
@@ -90,11 +100,13 @@ def propagate_down(rewritten_graph, successor):
     query3 = (
         "OPTIONAL MATCH (n:node:{})-[:typing]->(node_to_merge:node:{})\n".format(
             rewritten_graph, successor) +
-        "WITH n, collect(node_to_merge) as nodes_to_merge\n" +
+        "WITH n, collect(node_to_merge.id) as nodes_to_merge\n" +
         "WHERE n IS NOT NULL AND size(nodes_to_merge) >= 2\n" +
-        "WITH n, nodes_to_merge, nodes_to_merge[0] as node1\n"
+        "RETURN n, nodes_to_merge\n"
         )
+    """
     query3 += (
+        "WITH n, nodes_to_merge, nodes_to_merge[0] as node1\n" +
         "UNWIND nodes_to_merge[1..] as node2\n" +
         cypher.merging_query2(
                     original_vars=["node1", "node2"],
@@ -107,5 +119,5 @@ def propagate_down(rewritten_graph, successor):
                     multiple_rows=True)[0] +
         "RETURN merged_node.id\n"
         )
-
+    """
     return query1, query2, query3

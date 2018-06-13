@@ -201,10 +201,21 @@ class Neo4jHierarchy(object):
             # run multiple queries in one transaction
             with self._driver.session() as session:
                 tx = session.begin_transaction()
-                for q in queries:
-                    print(q)
-                    print('---------------------------')
-                    tx.run(q)
+                print(queries[0])
+                print("//----------")
+                tx.run(queries[0])
+                print(queries[1])
+                print("//----------")
+                tx.run(queries[1])
+                print(queries[2])
+                print("//----------")
+                result = tx.run(queries[2])
+                for record in result:
+                    node_id = record['node_id']
+                    print(node_id)
+                    print(queries[3])
+                    print("//----------")
+                    tx.run(queries[3], id=node_id)
                 tx.commit()
         for ancestor in ancestors:
             self.propagation_up(ancestor)
@@ -219,10 +230,35 @@ class Neo4jHierarchy(object):
             # run multiple queries in one transaction
             with self._driver.session() as session:
                 tx = session.begin_transaction()
-                for q in queries:
-                    print(q)
-                    print('---------------------------')
-                    tx.run(q)
+                print(queries[0])
+                print("//----------")
+                tx.run(queries[0])
+                print(queries[1])
+                print("//----------")
+                tx.run(queries[1])
+                print(queries[2])
+                print("//----------")
+                result = tx.run(queries[2])
+                for record in result:
+                    nodes_to_merge = record["nodes_to_merge"]
+                    print(nodes_to_merge)
+                    query = (
+                        cypher.match_nodes(
+                            var_id_dict={n: n for n in nodes_to_merge},
+                            label='node:'+successor) + "\n" +
+                        cypher.merging_query(
+                            original_vars=nodes_to_merge,
+                            merged_var='merged_node',
+                            merged_id='id',
+                            merged_id_var='new_id',
+                            node_label='node:'+successor,
+                            edge_label=None,
+                            ignore_naming=True)[0] +
+                        cypher.return_vars(['new_id'])
+                    )
+                    print(query)
+                    print("//-----------------")
+                    tx.run(query)
                 tx.commit()
         for successor in successors:
             self.propagation_down(successor)
