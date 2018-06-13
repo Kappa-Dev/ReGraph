@@ -210,40 +210,11 @@ class Neo4jHierarchy(object):
         successors = self.graph_successors(rewritten_graph)
         print("Rewritting children of {}...".format(rewritten_graph))
         for successor in successors:
-            print(successor)
-            queries = propagate_down(rewritten_graph, successor)
+            print('--> ', successor)
             # run multiple queries in one transaction
             with self._driver.session() as session:
                 tx = session.begin_transaction()
-                print(queries[0])
-                print("//----------")
-                tx.run(queries[0])
-                print(queries[1])
-                print("//----------")
-                tx.run(queries[1])
-                print(queries[2])
-                print("//----------")
-                result = tx.run(queries[2])
-                for record in result:
-                    nodes_to_merge = record["nodes_to_merge"]
-                    print(nodes_to_merge)
-                    query = (
-                        cypher.match_nodes(
-                            var_id_dict={n: n for n in nodes_to_merge},
-                            label='node:'+successor) + "\n" +
-                        cypher.merging_query(
-                            original_vars=nodes_to_merge,
-                            merged_var='merged_node',
-                            merged_id='id',
-                            merged_id_var='new_id',
-                            node_label='node:'+successor,
-                            edge_label=None,
-                            ignore_naming=True)[0] +
-                        cypher.return_vars(['new_id'])
-                    )
-                    print(query)
-                    print("//-----------------")
-                    tx.run(query)
+                propagate_down(tx, rewritten_graph, successor)
                 tx.commit()
         for successor in successors:
             self.propagation_down(successor)

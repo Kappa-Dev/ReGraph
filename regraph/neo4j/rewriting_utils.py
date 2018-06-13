@@ -17,7 +17,7 @@ def propagate_up(tx, rewritten_graph, predecessor):
     """
     # We remove the nodes of H without image in G
     query1 = (
-        "// Removal of nodes in {}\n".format(predecessor) +
+        "// Removal of nodes in '{}'\n".format(predecessor) +
         "MATCH (n:node:{})\n".format(predecessor) +
         "WHERE NOT (n)-[:typing]->(:node:{})\n".format(rewritten_graph) +
         "DETACH DELETE n\n\n"
@@ -26,7 +26,7 @@ def propagate_up(tx, rewritten_graph, predecessor):
 
     # We remove the edges without image in G
     query2 = (
-        "// Removal of edges in {}\n".format(predecessor) +
+        "// Removal of edges in '{}'\n".format(predecessor) +
         "MATCH (n:node:{})-[rel_pred:edge]->(m:node:{})\n".format(
             predecessor, predecessor) +
         "OPTIONAL MATCH (n)-[:typing]->(:node:{})-[rel:edge]->(:node:{})<-[:typing]-(m)\n".format(
@@ -41,7 +41,7 @@ def propagate_up(tx, rewritten_graph, predecessor):
     # reassign the typing edges
     carry_vars = set()
     query3_1 = (
-        "// Matching of the nodes to clone in {}\n".format(predecessor) +
+        "// Matching of the nodes to clone in '{}'\n".format(predecessor) +
         "MATCH (node_to_clone:node:{})-[:typing]->(n:node:{})\n".format(
             predecessor, rewritten_graph) +
         "WITH node_to_clone, collect(n) as sucs\n" +
@@ -49,7 +49,7 @@ def propagate_up(tx, rewritten_graph, predecessor):
         "RETURN node_to_clone.id as node_id\n"
         )
     query3 = (
-        "// Cloning of the node $id of the graph {}\n".format(predecessor) +
+        "// Cloning of the node '$id' of the graph '{}'\n".format(predecessor) +
         "MATCH (node_to_clone:node:{}) WHERE node_to_clone.id = $id\n".format(
                     predecessor) +
         "MATCH (node_to_clone)-[t:typing]->(n:node:{})\n".format(
@@ -82,7 +82,7 @@ def propagate_up(tx, rewritten_graph, predecessor):
     return query1, query2, query3_1, query3
 
 
-def propagate_down(rewritten_graph, successor):
+def propagate_down(tx, rewritten_graph, successor):
     """Generate the queries for propagating the changes down from G-->T.
 
     Returns
@@ -94,29 +94,58 @@ def propagate_down(rewritten_graph, successor):
     query3 : str
     Generated query for merging nodes in H
     """
+    # add nodes in T for each node without image in G
     query1 = (
-        "OPTIONAL MATCH (n:node:{})".format(rewritten_graph) +
+        "// Addition of nodes in '{}'\n".format(successor) +
+        "MATCH (n:node:{})".format(rewritten_graph) +
         "WHERE NOT (n)-[:typing]->(:node:{})\n".format(successor) +
         "MERGE (n)-[:typing]->(new_node:node:{})\n".format(successor) +
         "ON CREATE SET new_node += properties(n)\n" +
         "ON CREATE SET new_node.id = id(new_node)\n"
         )
+    tx.run(query1)
 
+    # add edges in T for each edge without image in G
     query2 = (
-        "OPTIONAL MATCH (n:node:{})<-[:typing]-(:node:{})-[rel:edge]->(:node:{})-[:typing]->(m:node:{})\n".format(
+        "// Addition of edges in '{}'\n".format(successor) +
+        "MATCH (n:node:{})<-[:typing]-(:node:{})-[rel:edge]->(:node:{})-[:typing]->(m:node:{})\n".format(
             successor, rewritten_graph, rewritten_graph, successor) +
         "WHERE NOT (n)-[:edge]->(m)\n" +
         "MERGE (n)-[new_rel:edge]->(m)\n" +
         "ON CREATE SET new_rel += properties(rel)\n"
         )
+    tx.run(query2)
 
+    # match nodes of T with the same pre-image in G and merge them
     query3 = (
-        "OPTIONAL MATCH (n:node:{})-[:typing]->(node_to_merge:node:{})\n".format(
+        "// Matching of the nodes to merge in '{}'\n".format(successor) +
+        "MATCH (n:node:{})-[:typing]->(node_to_merge:node:{})\n".format(
             rewritten_graph, successor) +
         "WITH n, collect(node_to_merge.id) as nodes_to_merge\n" +
         "WHERE n IS NOT NULL AND size(nodes_to_merge) >= 2\n" +
         "RETURN n, nodes_to_merge\n"
         )
+    result = tx.run(query3)
+
+    for record in result:
+        nodes_to_merge = record['nodes_to_merge']
+        query = (
+            "// Merging of the nodes {}\n".format(
+                ", ".join(nodes_to_merge)) +
+            cypher.match_nodes(
+                        var_id_dict={n: n for n in nodes_to_merge},
+                        label='node:'+successor) + "\n" +
+            cypher.merging_query(
+                        original_vars=nodes_to_merge,
+                        merged_var='merged_node',
+                        merged_id='id',
+                        merged_id_var='new_id',
+                        node_label='node:'+successor,
+                        edge_label=None,
+                        ignore_naming=True)[0] + "\n" +
+            cypher.return_vars(['new_id'])
+            )
+        tx.run(query)
     """
     query3 += (
         "WITH n, nodes_to_merge, nodes_to_merge[0] as node1\n" +
