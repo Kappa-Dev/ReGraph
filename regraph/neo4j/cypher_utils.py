@@ -765,7 +765,7 @@ def merging_query1(original_vars, merged_var, merged_id, merged_id_var,
         "REDUCE(list=[], map in pred_maps | \n"
         "\tlist + CASE WHEN NOT map['neighbor'] IS NULL THEN [map['neighbor']] ELSE [] END) as pred_nodes, " +
         "\tREDUCE(l=[], el in suc_maps + pred_maps| \n" +
-        "\t\tl + CASE WHEN el['id'] IN [{}] THEN [el['id']] ELSE [] END)".format(
+        "\t\tl + CASE WHEN el['id'] IN [{}] THEN [toString(el['id'])] ELSE [] END)".format(
             ",".join(["id({})".format(v) for v in [merged_var] + original_vars[1:]])) +
         " as self_loops, " +
         ", ".join(carry_vars) + "\n"
