@@ -90,11 +90,11 @@ def pushout(a, b, c, d=None, inplace=False):
     c_to_d = "({}:node:{})<-[:typing]-(:node:{})-[:typing]->(:node:{})-[:typing]->({}:node:{})"
 
     query1 =\
-        "\n//We copy the nodes of B in D\n" +\
+        "\n// We copy the nodes of B in D\n" +\
         cypher.clone_graph(b, d, attach=True)[0]
 
     query2 =\
-        "\n//We create the images of the exclusive nodes of C\n" +\
+        "\n// We create the images of the exclusive nodes of C\n" +\
         "MATCH (m:node:{})\n".format(c) +\
         "WHERE NOT (m)<-[:typing]-(:{})\n".format(a) +\
         cypher.create_node(
@@ -106,10 +106,16 @@ def pushout(a, b, c, d=None, inplace=False):
                         ignore_naming=True)[0] +\
         "SET new_node_d += properties(m)\n" +\
         "SET new_node_d.id = id(new_node_d)\n" +\
-        "MERGE (m)-[:typing]->(new_node_d) \n"
+        cypher.create_edge(
+                        source_var='m',
+                        target_var='new_node_d',
+                        edge_label='typing')
 
     query3 =\
+        "\n// We add the missing typing edges between C and D " +\
+        "and merge the properties\n" +\
         "OPTIONAL MATCH " + c_to_d.format("m", c, a, b, "x", d) + "\n" +\
+        cypher.with_vars(['m', 'x']) + "\n" +\
         "WHERE x IS NOT NULL\n" +\
         "MERGE (m)-[:typing]->(x)" +\
         cypher.merge_properties(["m", "x"], 'new_props',
@@ -118,14 +124,16 @@ def pushout(a, b, c, d=None, inplace=False):
         "SET x.id = toString(id(x))\n"
 
     query4 =\
+        "\n// We add the edges of C in D\n" +\
         "OPTIONAL MATCH (x:node:{})<-[:typing]-(:node:{})-[rel_c:edge]->(:node:{})-[:typing]->(y:node:{})\n".format(
             d, c, c, d) +\
+        cypher.with_vars(['x', 'y', 'rel_c']) + "\n" +\
         "WHERE rel_c IS NOT NULL\n" +\
         "OPTIONAL MATCH (x)-[rel_d:edge]->(y)\n" +\
-        "FOREACH(ignoreMe IN CASE WHEN rel_d IS NULL THEN [1] ELSE [] END |\n" +\
+        "FOREACH(_ IN CASE WHEN rel_d IS NULL THEN [1] ELSE [] END |\n" +\
         "\tMERGE (x)-[new_rel:edge]->(y)\n" +\
         "\tON CREATE SET new_rel = properties(rel_c) )\n" +\
-        "WITH rel_c, rel_d\n" +\
+        cypher.with_vars(['rel_c', 'rel_d']) + "\n" +\
         "WHERE rel_d IS NOT NULL\n" +\
         cypher.merge_properties(["rel_c", "rel_d"], 'new_props',
                                 method='union') +\
@@ -158,7 +166,7 @@ def pushout(a, b, c, d=None, inplace=False):
                               carry_vars=carry_vars,
                               ignore_naming=True,
                               multiple_rows=True)[0] + "\n" +\
-        "RETURN merged_node.id"
+        cypher.return_vars(["merged_node.id"])
 
     return query1, query2, query3, query4, query5
 
