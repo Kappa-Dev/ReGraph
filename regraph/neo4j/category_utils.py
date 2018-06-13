@@ -106,8 +106,7 @@ def pushout(a, b, c, d=None, inplace=False):
         "\n// We copy the nodes of B in D\n" +
         cypher.clone_graph(
                     original_graph=b,
-                    cloned_graph=d,
-                    attach=True)[0]
+                    cloned_graph=d)[0]
         )
 
     query2 = (
