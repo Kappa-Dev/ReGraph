@@ -1,6 +1,7 @@
 """Neo4j driver for regraph."""
 
 from neo4j.v1 import GraphDatabase
+from neo4j.exceptions import ConstraintError
 
 from regraph.neo4j.graphs import Neo4jGraph
 import regraph.neo4j.cypher_utils as cypher
@@ -9,7 +10,7 @@ from regraph.neo4j.category_utils import (pullback,
                                           check_homomorphism)
 from regraph.neo4j.rewriting_utils import (propagate_up,
                                            propagate_down,)
-
+from regraph.default.exceptions import (HierarchyError)
 
 class Neo4jHierarchy(object):
     """Class implementing neo4j hierarchy driver."""
@@ -44,16 +45,45 @@ class Neo4jHierarchy(object):
             for constraint in session.run("CALL db.constraints"):
                 session.run("DROP " + constraint[0])
 
-    def add_graph(self, label):
-        """Add a graph to the hierarchy."""
-        # Create a node in the hierarchy...
+    def add_graph(self, graph_id, node_list, edge_list, graph_attrs=None):
+        """Add a graph to the hierarchy.
+
+        Parameters
+        ----------
+        graph_id : hashable
+            Id of a new node in the hierarchy
+        node_list : iterable
+            Iterable containing a collection of nodes, optionally,
+            with their attributes
+        edge_list : iterable
+            Iterable containing a collection of edges, optionally,
+            with their attributes
+        graph_attrs : dict
+            Dictionary containing attributes of the new graph
+
+        Raises
+        ------
+        HierarchyError
+            If graph with provided id already exists in the hierarchy
+
+        """
         try:
-            query = "CREATE (:{} {{id: '{}' }})".format('hierarchyNode', label)
+            # Create a node in the hierarchy
+            query = "CREATE ({}:{} {{ id : '{}' }}) \n".format(
+                            'new_graph',
+                            'hierarchyNode',
+                            graph_id)
+            if graph_attrs is not None:
+                query += cypher.set_attributes(
+                            var_name='new_graph',
+                            attrs=graph_attrs)
             self.execute(query)
-        except:  #ConstraintError
-            raise ValueError(
-                "The graph '{}' is already in the database.".format(label))
-        Neo4jGraph(label, self, set_constraint=True)
+        except(ConstraintError):
+            raise HierarchyError(
+                "The graph '{}' is already in the database.".format(graph_id))
+        g = Neo4jGraph(graph_id, self, set_constraint=True)
+        g.add_nodes_from(node_list)
+        g.add_edges_from(edge_list)
 
     def remove_graph(self, label):
         """Remove a graph from the hierarchy."""
