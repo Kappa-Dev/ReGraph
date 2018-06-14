@@ -248,4 +248,32 @@ def check_homomorphism(tx, domain, codomain, total=True):
             "\n".join([" Was expecting an edge between '{}' and '{}'.".format(
                 x, y) for x, y in xy_ids])
             )
+
+    query3 = (
+        "MATCH (n:node:{})-[:typing]->(m:node:{})\n".format(
+                domain, codomain) +
+        "WITH properties(n) as n_props, properties(m) as m_props, " +
+        "n.id as n_id, m.id as m_id\n" +
+        "WITH REDUCE(invalid = 0, k in filter(k in keys(n_props) WHERE k <> 'id') |\n" +
+        "\tinvalid + CASE\n" +
+        "\t\tWHEN NOT k IN keys(m_props) THEN 1\n" +
+        "\t\tELSE REDUCE(invalid_values = 0, v in n_props[k] |\n" +
+        "\t\t\tinvalid_values + CASE\n" +
+        "\t\t\t\tWHEN NOT v IN m_props[k] THEN 1 ELSE 0 END)\n" +
+        "\t\tEND) AS invalid, n_id, m_id\n" +
+        "WHERE invalid <> 0\n" +
+        "RETURN n_id, m_id, invalid\n"
+        )
+    result = tx.run(query3)
+    invalid_typings = []
+    for record in result:
+        invalid_typings.append((record['n_id'], record['m_id']))
+    if len(invalid_typings) != 0:
+        raise InvalidHomomorphism(
+            "Properties are not preserved!\n" +
+            "\n".join(["Properties of nodes source: '{}'".format(n) +
+                       "and target: '{}' do not match!".format(m)
+                       for n, m in invalid_typings])
+            )
+
     return True
