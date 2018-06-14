@@ -39,7 +39,8 @@ def pullback(b, c, d, a=None, inplace=False):
                     label='node:'+a,
                     carry_vars=carry_vars,
                     ignore_naming=True)[0] +
-        "SET new_node_a += new_props\n"
+        "SET new_node_a += new_props\n" +
+        "SET new_node_a.id = toString(id(new_node_a))\n"
         )
     carry_vars.remove("id_var")
     carry_vars.remove("new_props")
@@ -121,7 +122,7 @@ def pushout(a, b, c, d=None, inplace=False):
                     carry_vars={"m"},
                     ignore_naming=True)[0] +
         "SET new_node_d += properties(m)\n" +
-        "SET new_node_d.id = id(new_node_d)\n" +
+        "SET new_node_d.id = toString(id(new_node_d))\n" +
         cypher.create_edge(
                     source_var='m',
                     target_var='new_node_d',

@@ -71,8 +71,14 @@ def propagate_up(tx, rewritten_graph, predecessor):
                     carry_vars=carry_vars,
                     ignore_naming=True)[0] +
         cypher.with_vars(carry_vars) + "\n" +
-        "MERGE (cloned_node)-[:typing]->(node_suc)\n" +
-        "MERGE (node_to_clone)-[:typing]->(suc1)\n"
+        cypher.create_edge(
+                    source_var='cloned_node',
+                    target_var='node_suc',
+                    edge_label='typing') + "\n" +
+        cypher.create_edge(
+                    source_var='node_to_clone',
+                    target_var='suc1',
+                    edge_label='typing') + "\n"
         )
     result = tx.run(query3_1)
     for record in result:
@@ -101,7 +107,7 @@ def propagate_down(tx, rewritten_graph, successor):
         "WHERE NOT (n)-[:typing]->(:node:{})\n".format(successor) +
         "MERGE (n)-[:typing]->(new_node:node:{})\n".format(successor) +
         "ON CREATE SET new_node += properties(n)\n" +
-        "ON CREATE SET new_node.id = id(new_node)\n"
+        "ON CREATE SET new_node.id = toString(id(new_node))\n"
         )
     tx.run(query1)
 
