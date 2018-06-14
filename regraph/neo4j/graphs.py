@@ -466,7 +466,7 @@ class Neo4jGraph(object):
                 "// Merging nodes '{}' of the preserved part ".format(p_nodes) +\
                 "into '{}' \n".format(rhs_key)
             merged_id = "_".join(instance[rule.p_lhs[p_n]]for p_n in p_nodes)
-            q, carry_variables = merging_query(
+            q, carry_variables = merging_query1(
                 original_vars=[p_vars[n] for n in p_nodes],
                 merged_var=rhs_vars[rhs_key],
                 merged_id=merged_id,
