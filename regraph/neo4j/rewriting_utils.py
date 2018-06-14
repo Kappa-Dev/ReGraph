@@ -22,6 +22,7 @@ def propagate_up(tx, rewritten_graph, predecessor):
         "WHERE NOT (n)-[:typing]->(:node:{})\n".format(rewritten_graph) +
         "DETACH DELETE n\n\n"
         )
+    print(query1)
     tx.run(query1)
 
     # We remove the edges without image in G
@@ -35,6 +36,7 @@ def propagate_up(tx, rewritten_graph, predecessor):
         "WITH DISTINCT rel_pred\n" +
         "DELETE rel_pred\n\n"
         )
+    print(query2)
     tx.run(query2)
 
     # We clone the nodes that have more than 1 image and
@@ -80,9 +82,12 @@ def propagate_up(tx, rewritten_graph, predecessor):
                     target_var='suc1',
                     edge_label='typing') + "\n"
         )
+    print(query3_1)
     result = tx.run(query3_1)
     for record in result:
         node_id = record['node_id']
+        print(node_id)
+        print(query3)
         tx.run(query3, id=node_id)
 
     return query1, query2, query3_1, query3
@@ -109,6 +114,7 @@ def propagate_down(tx, rewritten_graph, successor):
         "ON CREATE SET new_node += properties(n)\n" +
         "ON CREATE SET new_node.id = toString(id(new_node))\n"
         )
+    print(query1)
     tx.run(query1)
 
     # add edges in T for each edge without image in G
@@ -120,6 +126,7 @@ def propagate_down(tx, rewritten_graph, successor):
         "MERGE (n)-[new_rel:edge]->(m)\n" +
         "ON CREATE SET new_rel += properties(rel)\n"
         )
+    print(query2)
     tx.run(query2)
 
     # match nodes of T with the same pre-image in G and merge them
@@ -131,6 +138,7 @@ def propagate_down(tx, rewritten_graph, successor):
         "WHERE n IS NOT NULL AND size(nodes_to_merge) >= 2\n" +
         "RETURN n, nodes_to_merge\n"
         )
+    print(query3)
     result = tx.run(query3)
 
     for record in result:
@@ -151,6 +159,7 @@ def propagate_down(tx, rewritten_graph, successor):
                         ignore_naming=True)[0] + "\n" +
             cypher.return_vars(['new_id'])
             )
+        print(query)
         tx.run(query)
     """
     query3 += (
