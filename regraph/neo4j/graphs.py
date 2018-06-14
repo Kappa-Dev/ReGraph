@@ -365,6 +365,8 @@ class Neo4jGraph(object):
 
         # Add instance nodes to the set of vars to carry
         carry_variables = set(match_instance_vars.keys())
+        for u, v in rule.lhs.edges():
+            carry_variables.add(str(lhs_vars[u]) + "_" + str(lhs_vars[v]))
 
         # Generate cloning subquery
         for lhs_node, p_nodes in rule.cloned_nodes().items():
