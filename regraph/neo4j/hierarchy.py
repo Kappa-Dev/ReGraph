@@ -134,6 +134,7 @@ class Neo4jHierarchy(object):
         with self._driver.session() as session:
             tx = session.begin_transaction()
             res = check_homomorphism(tx, source, target)
+            tx.commit()
         print(res)
 
     def pullback(self, b, c, d, a):
