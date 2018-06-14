@@ -107,7 +107,7 @@ class Neo4jHierarchy(object):
         g = Neo4jGraph(label, self)
         return g
 
-    def add_typing(self, source, target, mapping=None, attrs=None):
+    def add_typing(self, source, target, mapping, attrs=None):
         """Add homomorphism to the hierarchy.
 
         Parameters
@@ -126,33 +126,38 @@ class Neo4jHierarchy(object):
         g_src = self.access_graph(source)
         g_tar = self.access_graph(target)
 
-        if mapping is not None:
-            query = ""
-            nodes_to_match_src = set()
-            nodes_to_match_tar = set()
-            edge_creation_queries = []
+        query = ""
+        nodes_to_match_src = set()
+        nodes_to_match_tar = set()
+        edge_creation_queries = []
 
-            for u, v in mapping.items():
-                nodes_to_match_src.add(u)
-                nodes_to_match_tar.add(v)
-                edge_creation_queries.append(
-                    cypher.create_edge(u+"_src", v+"_tar", edge_label='typing'))
+        for u, v in mapping.items():
+            nodes_to_match_src.add(u)
+            nodes_to_match_tar.add(v)
+            edge_creation_queries.append(
+                cypher.create_edge(
+                            edge_var="typ_"+u+"_"+v,
+                            source_var=u+"_src",
+                            target_var=v+"_tar",
+                            edge_label='typing'))
 
-            query += cypher.match_nodes({n+"_src": n for n in nodes_to_match_src},
-                                        label=g_src._node_label)
-            query += cypher.with_vars([s+"_src" for s in nodes_to_match_src])
-            query += cypher.match_nodes({n+"_tar": n for n in nodes_to_match_tar},
-                                        label=g_tar._node_label)
-            for q in edge_creation_queries:
-                query += q
+        query += cypher.match_nodes({n+"_src": n for n in nodes_to_match_src},
+                                    label=g_src._node_label)
+        query += cypher.with_vars([s+"_src" for s in nodes_to_match_src])
+        query += cypher.match_nodes({n+"_tar": n for n in nodes_to_match_tar},
+                                    label=g_tar._node_label)
+        for q in edge_creation_queries:
+            query += q
 
-            result = self.execute(query)
+        result = self.execute(query)
 
         query2 = cypher.match_nodes(var_id_dict={'g_src':source, 'g_tar':target},
                                     label='hierarchyNode')
-        query2 += cypher.create_edge(source_var='g_src',
-                                     target_var='g_tar',
-                                     edge_label='hierarchyEdge')
+        query2 += cypher.create_edge(
+                            edge_var='new_hierarchy_edge',
+                            source_var='g_src',
+                            target_var='g_tar',
+                            edge_label='hierarchyEdge')
         result = self.execute(query2)
         return result
 

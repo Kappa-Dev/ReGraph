@@ -80,9 +80,11 @@ class Neo4jGraph(object):
             source: source,
             target: target
         }, label=self._node_label)
-        query += create_edge(source, target,
-                             edge_label='edge',
-                             attrs=attrs)
+        query += create_edge(
+                        edge_var='new_edge',
+                        source, target,
+                        edge_label='edge',
+                        attrs=attrs)
         result = self.execute(query)
         # print(result)
         return result
@@ -129,7 +131,8 @@ class Neo4jGraph(object):
                 nodes_to_match.add(v)
                 normalize_attrs(attrs)
                 edge_creation_queries.append(
-                    create_edge(u, v,
+                    create_edge(edge_var=u+"_"+v,
+                                u, v,
                                 edge_label='edge',
                                 attrs=attrs))
             except:
@@ -137,7 +140,8 @@ class Neo4jGraph(object):
                 nodes_to_match.add(u)
                 nodes_to_match.add(v)
                 edge_creation_queries.append(
-                    create_edge(u, v,
+                    create_edge(edge_var=u+"_"+v,
+                                u, v,
                                 edge_label='edge'))
         query += match_nodes({n: n for n in nodes_to_match},
                              label=self._node_label)
@@ -531,8 +535,11 @@ class Neo4jGraph(object):
         # Generate edges addition subquery
         for u, v in rule.added_edges():
             query += "// Adding edge '{}->{}' from the rhs \n".format(u, v)
-            query += create_edge(rhs_vars[u], rhs_vars[v],
-                                 edge_label='edge')
+            query += create_edge(
+                        edge_var=rhs_vars[u]+"_"+rhs_vars[v],
+                        source_var=rhs_vars[u],
+                        target_var=rhs_vars[v],
+                        edge_label='edge')
             query += "\n"
 
         query += "// Return statement \n"
@@ -736,8 +743,11 @@ class Neo4jGraph(object):
             v_id = match_instance_ids[rhs_vars[v]]
             q_edge_add += match_nodes({u_var: u_id, v_var: v_id},
                                       label=self._node_label)
-            q_edge_add += create_edge(u_var, v_var,
-                                      edge_label='edge')
+            q_edge_add += create_edge(
+                        edge_var=u_var+"_"+v_var,
+                        source_var=u_var,
+                        target_var=v_var,
+                        edge_label='edge')
             q_edge_add += "\n"
             self.execute(q_edge_add)
 

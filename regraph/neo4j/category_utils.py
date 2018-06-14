@@ -48,10 +48,12 @@ def pullback(b, c, d, a=None, inplace=False):
     query1 += (
         cypher.with_vars(carry_vars) + "\n" +
         cypher.create_edge(
+                    edge_var='new_typing_to_n',
                     source_var='new_node_a',
                     target_var='n',
                     edge_label='typing') + "\n" +
         cypher.create_edge(
+                    edge_var='new_typing_to_m',
                     source_var='new_node_a',
                     target_var='m',
                     edge_label='typing') + "\n"
@@ -124,6 +126,7 @@ def pushout(a, b, c, d=None, inplace=False):
         "SET new_node_d += properties(m)\n" +
         "SET new_node_d.id = toString(id(new_node_d))\n" +
         cypher.create_edge(
+                    edge_var='new_typing',
                     source_var='m',
                     target_var='new_node_d',
                     edge_label='typing')
@@ -134,6 +137,7 @@ def pushout(a, b, c, d=None, inplace=False):
         "and merge the properties\n" +
         "MATCH " + c_to_d.format("m", c, a, b, "x", d) + "\n" +
         cypher.create_edge(
+                    edge_var='new_typing',
                     source_var='m',
                     target_var='x',
                     edge_label='typing') +
@@ -309,3 +313,7 @@ def check_homomorphism(tx, domain, codomain, total=True):
             )
 
     return True
+
+
+def check_consistency(tx, source, target):
+    pass

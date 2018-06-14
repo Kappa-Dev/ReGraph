@@ -74,10 +74,12 @@ def propagate_up(tx, rewritten_graph, predecessor):
                     ignore_naming=True)[0] +
         cypher.with_vars(carry_vars) + "\n" +
         cypher.create_edge(
+                    edge_var='restored_typing',
                     source_var='cloned_node',
                     target_var='node_suc',
                     edge_label='typing') + "\n" +
         cypher.create_edge(
+                    edge_var='restored_typing1',
                     source_var='node_to_clone',
                     target_var='suc1',
                     edge_label='typing') + "\n"
