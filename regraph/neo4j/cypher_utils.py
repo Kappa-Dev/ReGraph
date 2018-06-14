@@ -176,7 +176,8 @@ def create_node(var_name, node_id, node_id_var, label='node',
     return query, carry_vars
 
 
-def create_edge(source_var, target_var, edge_label='edge', attrs=None):
+def create_edge(edge_var, source_var, target_var,
+                edge_label='edge', attrs=None):
     """Generate query for edge creation.
 
     source_var
@@ -190,7 +191,7 @@ def create_edge(source_var, target_var, edge_label='edge', attrs=None):
     """
     attrs_str = generate_attributes(attrs)
     query = "MERGE ({})-[:{} {{ {} }}]->({})\n".format(
-        source_var, edge_label, attrs_str, target_var)
+        source_var, edge_var, edge_label, attrs_str, target_var)
     return query
 
 
