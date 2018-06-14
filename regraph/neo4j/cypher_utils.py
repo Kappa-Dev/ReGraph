@@ -635,7 +635,7 @@ def merging_query(original_vars, merged_var, merged_id, merged_id_var,
 
 
 def merging_query1(original_vars, merged_var, merged_id, merged_id_var,
-                   node_label='node', edge_label='edge',
+                   node_label='node', edge_label='edge', merge_typing=False,
                    carry_vars=None, ignore_naming=False):
     """Generate query for merging nodes.
 
@@ -816,6 +816,36 @@ def merging_query1(original_vars, merged_var, merged_id, merged_id_var,
         "\t\tpairs + [k, REDUCE(values=[], v in self_loop_props[k] |\n"
         "\t\t\tvalues + CASE WHEN v.value IN values THEN [] ELSE v.value END)])))\n"
     )
+
+    if merge_typing:
+        query += (
+            "// accumulate all the attrs of the edges incident to the merged nodes\n"
+            "WITH [] as suc_typings, [] as pred_typings, " +
+            ", ".join(carry_vars) + "\n"
+        )
+        query += (
+            "OPTIONAL MATCH ({})-[:typing]->(suc)\n".format(merged_var) +
+            "WITH suc_typings + collect(suc) as suc_typings, " +
+            "pred_typings, " + ", ".join(carry_vars) + "\n" +
+            "OPTIONAL MATCH (pred)-[:typing]->({})\n".format(merged_var) +
+            "WITH pred_typings + collect(pred) as pred_typings, " +
+            "suc_typings, " + ", ".join(carry_vars) + "\n"
+        )
+        for n in original_vars[1:]:
+            query += (
+                "OPTIONAL MATCH ({})-[:typing]->(suc)\n".format(n) +
+                "WITH suc_typings + collect(suc) as suc_typings, " +
+                "pred_typings, " + ", ".join(carry_vars) + "\n" +
+                "OPTIONAL MATCH (pred)-[:typing]->({})\n".format(n) +
+                "WITH pred_typings + collect(pred) as pred_typings, " +
+                "suc_typings, " + ", ".join(carry_vars) + "\n"
+            )
+        query += (
+            "FOREACH(suc in suc_typings |\n" +
+            "\tMERGE ({})-[:typing]->(suc))\n".format(merged_var) +
+            "FOREACH(pred in pred_typings |\n" +
+            "\tMERGE (pred)-[:typing]->({}))\n".format(merged_var)
+        )
 
     for n in original_vars[1:]:
         query += "DETACH DELETE ({})\n".format(n)

@@ -278,7 +278,7 @@ class Neo4jGraph(object):
         # print(result.single())
         return result
 
-    def merge_nodes1(self, node_list, name=None,
+    def merge_nodes1(self, node_list, name=None, merge_typing=False,
                      ignore_naming=False, profiling=False):
         """Merge nodes of the graph."""
         if profiling:
@@ -299,6 +299,7 @@ class Neo4jGraph(object):
                 merged_id_var='new_id',
                 node_label=self._node_label,
                 edge_label='edge',
+                merge_typing=merge_typing,
                 ignore_naming=ignore_naming)[0] +\
             return_vars(['new_id'])
         # print(query)
@@ -472,7 +473,7 @@ class Neo4jGraph(object):
                 merged_id=merged_id,
                 merged_id_var=generate_var_name(),
                 node_label=self._node_label,
-                edge_label=None,
+                merge_typing=True,
                 carry_vars=carry_variables,
                 ignore_naming=True)
             query += q
