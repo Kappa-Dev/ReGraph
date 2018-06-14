@@ -170,13 +170,13 @@ def _autocomplete_typing(hierarchy, graph_id, instance,
             typing = hierarchy.edge[graph_id][typing_graph].mapping
             # Autocomplete lhs and rhs typings
             # by immediate successors induced by an instance
+            if typing_graph not in new_lhs_typing.keys():
+                new_lhs_typing[typing_graph] = dict()
             for (source, target) in instance.items():
-                if typing_graph not in new_lhs_typing.keys():
-                    new_lhs_typing[typing_graph] = dict()
                 if source not in new_lhs_typing[typing_graph].keys():
-
                     if target in typing.keys():
                         new_lhs_typing[typing_graph][source] = typing[target]
+
             for (p_node, l_node) in p_lhs.items():
                 if l_node in new_lhs_typing[typing_graph].keys():
                     if p_rhs[p_node] not in new_rhs_typing_rel[typing_graph].keys():
