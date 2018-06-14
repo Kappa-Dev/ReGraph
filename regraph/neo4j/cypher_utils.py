@@ -190,7 +190,7 @@ def create_edge(edge_var, source_var, target_var,
         Attributes of the new edge
     """
     attrs_str = generate_attributes(attrs)
-    query = "MERGE ({})-[:{} {{ {} }}]->({})\n".format(
+    query = "MERGE ({})-[{}:{} {{ {} }}]->({})\n".format(
         source_var, edge_var, edge_label, attrs_str, target_var)
     return query
 

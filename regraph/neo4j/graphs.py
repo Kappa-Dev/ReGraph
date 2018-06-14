@@ -82,7 +82,8 @@ class Neo4jGraph(object):
         }, label=self._node_label)
         query += create_edge(
                         edge_var='new_edge',
-                        source, target,
+                        source_var=source,
+                        target_var=target,
                         edge_label='edge',
                         attrs=attrs)
         result = self.execute(query)
@@ -132,7 +133,8 @@ class Neo4jGraph(object):
                 normalize_attrs(attrs)
                 edge_creation_queries.append(
                     create_edge(edge_var=u+"_"+v,
-                                u, v,
+                                source_var=u,
+                                target_var=v,
                                 edge_label='edge',
                                 attrs=attrs))
             except:
@@ -141,7 +143,8 @@ class Neo4jGraph(object):
                 nodes_to_match.add(v)
                 edge_creation_queries.append(
                     create_edge(edge_var=u+"_"+v,
-                                u, v,
+                                source_var=u,
+                                target_var=v,
                                 edge_label='edge'))
         query += match_nodes({n: n for n in nodes_to_match},
                              label=self._node_label)
