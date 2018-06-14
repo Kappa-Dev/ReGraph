@@ -10,7 +10,9 @@ from regraph.neo4j.category_utils import (pullback,
                                           check_homomorphism)
 from regraph.neo4j.rewriting_utils import (propagate_up,
                                            propagate_down,)
-from regraph.default.exceptions import (HierarchyError)
+from regraph.default.exceptions import (HierarchyError,
+                                        InvalidHomomorphism)
+
 
 class Neo4jHierarchy(object):
     """Class implementing neo4j hierarchy driver."""
@@ -122,6 +124,17 @@ class Neo4jHierarchy(object):
         attrs : dict
             Dictionary containing attributes of the new
             typing edge
+
+        Raises
+        ------
+        HierarchyError
+            This error is raised in the following cases:
+
+                * source or target ids are not found in the hierarchy
+
+        InvalidHomomorphism
+            If a homomorphism from a graph at the source to a graph at
+            the target given by `mapping` is not a valid homomorphism.
         """
         g_src = self.access_graph(source)
         g_tar = self.access_graph(target)
@@ -151,14 +164,31 @@ class Neo4jHierarchy(object):
 
         result = self.execute(query)
 
-        query2 = cypher.match_nodes(var_id_dict={'g_src':source, 'g_tar':target},
-                                    label='hierarchyNode')
-        query2 += cypher.create_edge(
+        valid_typing = False
+        try:
+            valid_typing = self.check_typing(source, target)
+        except InvalidHomomorphism as error:
+            del_query = (
+                "MATCH (:node:{})-[t:typing]-(:node:{})\n".format(
+                                    source, target) +
+                "DELETE t\n"
+            )
+            del_res = self.execute(del_query)
+            raise error
+
+        if valid_typing:
+            query2 = (
+                cypher.match_nodes(
+                            var_id_dict={'g_src': source, 'g_tar': target},
+                            label='hierarchyNode') +
+                cypher.create_edge(
                             edge_var='new_hierarchy_edge',
                             source_var='g_src',
                             target_var='g_tar',
-                            edge_label='hierarchyEdge')
-        result = self.execute(query2)
+                            edge_label='hierarchyEdge',
+                            attrs=attrs)
+            )
+            res = self.execute(query2)
         return result
 
     def check_typing(self, source, target):
