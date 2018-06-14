@@ -270,10 +270,42 @@ def check_homomorphism(tx, domain, codomain, total=True):
         invalid_typings.append((record['n_id'], record['m_id']))
     if len(invalid_typings) != 0:
         raise InvalidHomomorphism(
-            "Properties are not preserved!\n" +
+            "Node properties are not preserved!\n" +
             "\n".join(["Properties of nodes source: '{}'".format(n) +
                        "and target: '{}' do not match!".format(m)
                        for n, m in invalid_typings])
+            )
+
+    query4 = (
+        "MATCH (n:node:{})-[rel_orig:edge]->(m:node:{})\n".format(
+            domain, domain) +
+        "MATCH (n)-[:typing]->(x:node:{}), (y:node:{})<-[:typing]-(m)\n".format(
+            codomain, codomain) +
+        "MATCH (x)-[rel_img:edge]->(y)\n" +
+        "WITH n.id as n_id, m.id as m_id, x.id as x_id, y.id as y_id, " +
+        "properties(rel_orig) as rel_orig_props, " +
+        "properties(rel_img) as rel_img_props\n" +
+        "WITH REDUCE(invalid = 0, k in keys(rel_orig_props) |\n" +
+        "\tinvalid + CASE\n" +
+        "\t\tWHEN NOT k IN keys(rel_img_props) THEN 1\n" +
+        "\t\tELSE REDUCE(invalid_values = 0, v in rel_orig_props[k] |\n" +
+        "\t\t\tinvalid_values + CASE\n" +
+        "\t\t\t\tWHEN NOT v IN rel_img_props[k] THEN 1 ELSE 0 END)\n" +
+        "\t\tEND) AS invalid, n_id, m_id, x_id, y_id\n" +
+        "WHERE invalid <> 0\n" +
+        "RETURN n_id, m_id, x_id, y_id, invalid\n"
+        )
+    result = tx.run(query4)
+    invalid_edges = []
+    for record in result:
+        invalid_edges.append((record['n_id'], record['m_id'],
+                              record['x_id'], record['y_id']))
+    if len(invalid_edges) != 0:
+        raise InvalidHomomorphism(
+            "Edge properties are not preserved!\n" +
+            "\n".join(["Properties of edges ({})->({})".format(n, m) +
+                       "and ({})->({}) do not match!".format(x, y)
+                       for n, m, x, y in invalid_edges])
             )
 
     return True
