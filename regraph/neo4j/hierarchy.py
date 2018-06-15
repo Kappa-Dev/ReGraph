@@ -9,7 +9,7 @@ from regraph.neo4j.category_utils import (pullback,
                                           pushout,
                                           check_homomorphism)
 from regraph.neo4j.rewriting_utils import (propagate_up,
-                                           propagate_down,)
+                                           propagate_down, propagate_down_v2)
 from regraph.default.exceptions import (HierarchyError,
                                         InvalidHomomorphism)
 
@@ -230,16 +230,7 @@ class Neo4jHierarchy(object):
         g = self.access_graph(graph_label)
         query, rhs_vars_inverse = g.rule_to_cypher(rule, instance)
         rewriting_result = self.execute(query)
-        changes = dict()
-        changes['merged_nodes'] = set()
-        changes['added_nodes'] = set()
-        changes['added_edges'] = set()
-        for record in rewriting_result:
-            changes['merged_nodes'].update(record["merged_nodes"])
-            changes['added_nodes'].update(record["added_nodes"])
-            changes['added_edges'].update([(edge['source'], (edge['target']))
-                                          for edge in record["added_edges"]])
-        return changes
+        return rewriting_result.single()
 
     def rewrite_v2(self, graph_label, rule, instance):
         """Perform SqPO rewriting of the graph with a rule."""
@@ -296,3 +287,18 @@ class Neo4jHierarchy(object):
                 tx.commit()
         for successor in successors:
             self.propagation_down(successor)
+
+    def propagation_down_v2(self, rewritten_graph, changes):
+        successors = self.graph_successors(rewritten_graph)
+        print("Rewritting children of {}...".format(rewritten_graph))
+        for successor in successors:
+            print('--> ', successor)
+            # run multiple queries in one transaction
+            with self._driver.session() as session:
+                tx = session.begin_transaction()
+                query = propagate_down_v2(rewritten_graph, successor)
+                tx.run(query,
+                       added_nodes_list=changes['added_nodes'],
+                       added_edges_list=changes['added_edges'],
+                       merged_nodes_list=changes['merged_nodes'])
+                tx.commit()
