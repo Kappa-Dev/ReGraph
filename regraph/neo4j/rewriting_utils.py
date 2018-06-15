@@ -492,8 +492,10 @@ def merging_from_list(list_var, merged_var, merged_id, merged_id_var,
         )
 
     query += "WITH " + ", ".join(carry_vars) + "\n"
-    query += "UNWIND {}[1..] AS node_to_merge\n".format(list_var)
+    query += "UNWIND {} AS node_to_merge\n".format(list_var)
     carry_vars.remove(list_var)
+    query += "WITH node_to_merge, " + ", ".join(carry_vars) + "\n"
+    query += "WHERE node_to_merge <> {}\n".format(merged_var)
     query += "DETACH DELETE (node_to_merge)\n"
 
     return query, carry_vars
