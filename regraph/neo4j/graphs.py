@@ -542,7 +542,10 @@ class Neo4jGraph(object):
             carry_variables.add(v)
 
         # Generate edges addition subquery
-        query += "WITH [] as added_edges, " + ", ".join(carry_variables) + "\n"
+        query += (
+            "WITH {source:[], target:[]} as added_edges, " +
+            ", ".join(carry_variables) + "\n"
+        )
         for u, v in rule.added_edges():
             query += "// Adding edge '{}->{}' from the rhs \n".format(u, v)
             query += create_edge(
@@ -550,8 +553,11 @@ class Neo4jGraph(object):
                         source_var=rhs_vars[u],
                         target_var=rhs_vars[v],
                         edge_label='edge')
-            query += "WITH added_edges + {{source:{}.id, target:{}.id}}as added_edges, ".format(
-                                                    rhs_vars[u], rhs_vars[v])
+            query += (
+                "WITH {{source: added_edges.source+{}.id, ".format(rhs_vars[u]) +
+                "target: added_edges.target+{}.id}} as added_edges, ".format(
+                                                    rhs_vars[v])
+            )
             query += ", ".join(carry_variables) + "\n"
             query += "\n"
         carry_variables.add('added_edges')
