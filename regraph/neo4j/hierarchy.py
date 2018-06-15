@@ -109,7 +109,7 @@ class Neo4jHierarchy(object):
         g = Neo4jGraph(label, self)
         return g
 
-    def add_typing(self, source, target, mapping, attrs=None):
+    def add_typing(self, source, target, mapping, attrs=None, check=False):
         """Add homomorphism to the hierarchy.
 
         Parameters
@@ -164,17 +164,19 @@ class Neo4jHierarchy(object):
 
         result = self.execute(query)
 
-        valid_typing = False
-        try:
-            valid_typing = self.check_typing(source, target)
-        except InvalidHomomorphism as error:
-            del_query = (
-                "MATCH (:node:{})-[t:typing]-(:node:{})\n".format(
-                                    source, target) +
-                "DELETE t\n"
-            )
-            del_res = self.execute(del_query)
-            raise error
+        valid_typing = True
+        if check:
+            try:
+                valid_typing = self.check_typing(source, target)
+            except InvalidHomomorphism as error:
+                valid_typing = False
+                del_query = (
+                    "MATCH (:node:{})-[t:typing]-(:node:{})\n".format(
+                                        source, target) +
+                    "DELETE t\n"
+                )
+                del_res = self.execute(del_query)
+                raise error
 
         if valid_typing:
             query2 = (
@@ -226,8 +228,18 @@ class Neo4jHierarchy(object):
     def rewrite(self, graph_label, rule, instance):
         """Perform SqPO rewriting of the graph with a rule."""
         g = self.access_graph(graph_label)
-        rhs_g = g.rewrite(rule, instance)
-        return rhs_g
+        query, rhs_vars_inverse = g.rule_to_cypher(rule, instance)
+        rewriting_result = self.execute(query)
+        changes = dict()
+        changes['merged_nodes'] = set()
+        changes['added_nodes'] = set()
+        changes['added_edges'] = set()
+        for record in rewriting_result:
+            changes['merged_nodes'].update(record["merged_nodes"])
+            changes['added_nodes'].update(record["added_nodes"])
+            changes['added_edges'].update([(edge['source'], (edge['target']))
+                                          for edge in record["added_edges"]])
+        return changes
 
     def rewrite_v2(self, graph_label, rule, instance):
         """Perform SqPO rewriting of the graph with a rule."""
