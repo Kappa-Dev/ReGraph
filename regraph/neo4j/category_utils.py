@@ -176,28 +176,25 @@ def pushout(a, b, c, d=None, inplace=False):
         )
     carry_vars.update(["m", "nodes_to_merge"])
     query5 += (
-        "WITH nodes_to_merge[0] as node1, size(nodes_to_merge) as number_of_nodes," +
+        "WITH size(nodes_to_merge) as number_of_nodes," +
         ", ".join(carry_vars) + "\n" +
         "WHERE number_of_nodes <> 1\n"
         )
-    carry_vars.update(["number_of_nodes", "node1"])
+    carry_vars.update(["number_of_nodes"])
     query5 += (
-        "\n//We merge the nodes in D that need to be merged\n" +
-        "UNWIND nodes_to_merge[1..] AS node2\n"
-        )
-    carry_vars.add("node2")
-    query5 += (
-        cypher.merging_query2(
-                    original_vars=["node1", "node2"],
-                    merged_var="merged_node",
-                    merged_id="id",
-                    merged_id_var="new_id",
-                    node_label='node:'+d,
-                    edge_label=None,
-                    carry_vars=carry_vars,
-                    ignore_naming=True,
-                    multiple_rows=True)[0] + "\n" +
-        cypher.return_vars(["merged_node.id"])
+        cypher.merging_from_list(
+                        list_var='nodes_to_merge',
+                        merged_var='merged_node',
+                        merged_id='id',
+                        merged_id_var='merged_id',
+                        node_label='node:'+d,
+                        edge_label='edge',
+                        merge_typing=True,
+                        carry_vars=carry_vars,
+                        ignore_naming=True,
+                        multiple_rows=True,
+                        multiple_var='m')[0] + "\n" +
+        cypher.return_vars(["merged_id"])
         )
 
     return query1, query2, query3, query4, query5

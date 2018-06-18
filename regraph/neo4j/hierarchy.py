@@ -9,7 +9,7 @@ from regraph.neo4j.category_utils import (pullback,
                                           pushout,
                                           check_homomorphism)
 from regraph.neo4j.rewriting_utils import (propagate_up,
-                                           propagate_down, propagate_down_v2)
+                                           propagate_down, propagate_down_v2, propagate_down_v3)
 from regraph.default.exceptions import (HierarchyError,
                                         InvalidHomomorphism)
 
@@ -47,7 +47,7 @@ class Neo4jHierarchy(object):
             for constraint in session.run("CALL db.constraints"):
                 session.run("DROP " + constraint[0])
 
-    def add_graph(self, graph_id, node_list, edge_list, graph_attrs=None):
+    def add_graph(self, graph_id, node_list=None, edge_list=None, graph_attrs=None):
         """Add a graph to the hierarchy.
 
         Parameters
@@ -84,8 +84,10 @@ class Neo4jHierarchy(object):
             raise HierarchyError(
                 "The graph '{}' is already in the database.".format(graph_id))
         g = Neo4jGraph(graph_id, self, set_constraint=True)
-        g.add_nodes_from(node_list)
-        g.add_edges_from(edge_list)
+        if node_list is not None:
+            g.add_nodes_from(node_list)
+        if edge_list is not None:
+            g.add_edges_from(edge_list)
 
     def remove_graph(self, label):
         """Remove a graph from the hierarchy."""
@@ -206,8 +208,8 @@ class Neo4jHierarchy(object):
 
     def pullback(self, b, c, d, a):
         self.add_graph(a)
-        self.add_typing(a, b)
-        self.add_typing(a, c)
+        #self.add_typing(a, b)
+        #self.add_typing(a, c)
         query1, query2 = pullback(b, c, d, a)
         print(query1)
         print('--------------------')
@@ -217,8 +219,8 @@ class Neo4jHierarchy(object):
 
     def pushout(self, a, b, c, d):
         self.add_graph(d)
-        self.add_typing(b, d)
-        self.add_typing(c, d)
+        #self.add_typing(b, d)
+        #self.add_typing(c, d)
         queries = pushout(a, b, c, d)
         for q in queries:
             print(q)
@@ -302,3 +304,33 @@ class Neo4jHierarchy(object):
                        added_edges_list=changes['added_edges'],
                        merged_nodes_list=changes['merged_nodes'])
                 tx.commit()
+
+    def propagation_down_v3(self, rewritten_graph, changes):
+        successors = self.graph_successors(rewritten_graph)
+        new_changes = dict()
+        print("Rewritting children of {}...".format(rewritten_graph))
+        for successor in successors:
+            print('--> ', successor)
+            # run multiple queries in one transaction
+            with self._driver.session() as session:
+                tx = session.begin_transaction()
+                q_add_node, q_add_edge, q_merge_node = propagate_down_v3(
+                                                            rewritten_graph,
+                                                            successor)
+                print(q_merge_node)
+                added_nodes = tx.run(
+                            q_add_node,
+                            added_nodes_list=changes['added_nodes']).single()
+                added_edges = tx.run(
+                            q_add_edge,
+                            added_edges_list=changes['added_edges']).single()
+                merged_nodes = tx.run(
+                            q_merge_node,
+                            merged_nodes_list=changes['merged_nodes']).single()
+                tx.commit()
+            new_changes[successor] = dict()
+            new_changes[successor]['added_nodes'] = added_nodes
+            new_changes[successor]['added_edges'] = added_edges
+            new_changes[successor]['merged_nodes'] = merged_nodes
+        for successor in successors:
+            self.propagation_down_v3(successor, new_changes[successor])
