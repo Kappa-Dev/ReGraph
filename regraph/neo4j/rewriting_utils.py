@@ -304,7 +304,7 @@ def propagate_down_v3(rewritten_graph, successor):
             rewritten_graph, rewritten_graph) +
         "WHERE n.id IN $added_edges_list.source " +
         "AND m.id IN $added_edges_list.target\n" +
-        "WITH n, m WHERE n IS NOT NULL AND m IS NOT NULL\n" +
+        "WITH n, m, rel WHERE n IS NOT NULL AND m IS NOT NULL\n" +
         "OPTIONAL MATCH (n)-[:typing]->(x:node:{}), (m)-[:typing]->(y:node:{})\n".format(
             successor, successor) +
         "MERGE (x)-[rel_img:edge]->(y)\n"
@@ -322,8 +322,10 @@ def propagate_down_v3(rewritten_graph, successor):
     carry_vars = set()
 
     # match nodes of T with the same pre-image in G and merge them
+    carry_vars.add('merged_nodes')
     query3 = (
         "\n// Matching of the nodes to merge in '{}'\n".format(successor) +
+        "WITH [] as merged_nodes\n"
         "OPTIONAL MATCH (n:node:{}) \n".format(rewritten_graph) +
         "WHERE n.id IN $merged_nodes_list\n" +
         "OPTIONAL MATCH (n)-[:typing]->(node_to_merge:node:{})\n".format(
@@ -490,21 +492,40 @@ def merging_from_list(list_var, merged_var, merged_id, merged_id_var,
             )
         carry_vars.update([multiple_var, list_var, merged_var, merged_id_var, 'ids_to_merged_id'])
 
-
     query += "UNWIND {} AS node_to_merge\n".format(list_var)
     carry_vars.remove(list_var)
 
-    query += (
-        "// accumulate all the attrs of the edges incident to the merged nodes\n"
-        "WITH [] as suc_maps, [] as pred_maps, node_to_merge, " +
-        ", ".join(carry_vars) + "\n"
-        "OPTIONAL MATCH (node_to_merge)-[out_rel:{}]->(suc)\n".format(edge_label) +
-        "WITH suc_maps + collect({id: id(suc), neighbor: suc, edge: out_rel}) as suc_maps, " +
-        "pred_maps, node_to_merge, " + ", ".join(carry_vars) + "\n" +
-        "OPTIONAL MATCH (pred)-[in_rel:{}]->(node_to_merge)\n".format(edge_label) +
-        "WITH pred_maps + collect({id: id(pred), neighbor: pred, edge: in_rel}) as pred_maps, " +
-        "suc_maps, node_to_merge, " + ", ".join(carry_vars) + "\n"
-    )
+    if multiple_rows:
+        query += (
+            "// accumulate all the attrs of the edges incident to the merged nodes\n"
+            "WITH node_to_merge, " + ", ".join(carry_vars) + "\n"
+            "OPTIONAL MATCH (node_to_merge)-[out_rel:{}]->(suc)\n".format(edge_label) +
+            "WITH CASE WHEN suc.id IN keys(ids_to_merged_id)\n" +
+            "\t\tTHEN {id: id(ids_to_merged_id[suc.id][0]), neighbor: ids_to_merged_id[suc.id][0], edge: out_rel}\n" +
+            "\t\tELSE {id: id(suc), neighbor: suc, edge: out_rel} END AS suc_map, " +
+            "node_to_merge, " + ", ".join(carry_vars) + "\n" +
+            "WITH collect(suc_map) as suc_maps, " +
+            "node_to_merge, " + ", ".join(carry_vars) + "\n" +
+            "OPTIONAL MATCH (pred)-[in_rel:{}]->(node_to_merge)\n".format(edge_label) +
+            "WITH CASE WHEN pred.id IN keys(ids_to_merged_id)\n" +
+            "\t\tTHEN {id: id(ids_to_merged_id[pred.id][0]), neighbor: ids_to_merged_id[pred.id][0], edge: in_rel}\n" +
+            "\t\tELSE {id: id(pred), neighbor: pred, edge: in_rel} END AS pred_map, " +
+            "node_to_merge, suc_maps, " + ", ".join(carry_vars) + "\n" +
+            "WITH collect(pred_map) as pred_maps, " +
+            "suc_maps, node_to_merge, " + ", ".join(carry_vars) + "\n"
+        )
+    else:
+        query += (
+            "// accumulate all the attrs of the edges incident to the merged nodes\n"
+            "WITH [] as suc_maps, [] as pred_maps, node_to_merge, " +
+            ", ".join(carry_vars) + "\n"
+            "OPTIONAL MATCH (node_to_merge)-[out_rel:{}]->(suc)\n".format(edge_label) +
+            "WITH suc_maps + collect({id: id(suc), neighbor: suc, edge: out_rel}) as suc_maps, " +
+            "pred_maps, node_to_merge, " + ", ".join(carry_vars) + "\n" +
+            "OPTIONAL MATCH (pred)-[in_rel:{}]->(node_to_merge)\n".format(edge_label) +
+            "WITH pred_maps + collect({id: id(pred), neighbor: pred, edge: in_rel}) as pred_maps, " +
+            "suc_maps, node_to_merge, " + ", ".join(carry_vars) + "\n"
+        )
     query += (
         "WITH collect(node_to_merge) as {}, ".format(list_var) +
         "collect(node_to_merge.id) as list_ids, "
@@ -557,48 +578,18 @@ def merging_from_list(list_var, merged_var, merged_id, merged_id_var,
         "\t\t\tvalues + {key: k, value: v}))), 'key') as self_loop_props, " +
         ", ".join(carry_vars) + "\n"
     )
-    if multiple_rows:
-        query += (
-            "FOREACH(suc IN filter(suc IN suc_nodes WHERE NOT id(suc) in self_loops) |\n"
-            "\tFOREACH(new_suc in CASE WHEN suc.id IN keys(ids_to_merged_id) THEN ids_to_merged_id[suc.id] ELSE [] END |\n"
-            "\t\tMERGE ({})-[new_rel:{}]->(new_suc)\n".format(
-                merged_var, edge_label) +
-            "\t\tSET new_rel = apoc.map.fromValues(REDUCE(pairs=[], k in keys(suc_props[toString(id(suc))]) | \n"
-            "\t\t\tpairs + [k, REDUCE(values=[], v in suc_props[toString(id(suc))][k] | \n"
-            "\t\t\t\tvalues + CASE WHEN v.value IN values THEN [] ELSE v.value END)])))\n"
-            "\tFOREACH(_ in CASE WHEN NOT suc.id IN keys(ids_to_merged_id) THEN [1] ELSE [] END |\n"
-            "\t\tMERGE ({})-[new_rel:{}]->(suc)\n".format(
-                merged_var, edge_label) +
-            "\t\tSET new_rel = apoc.map.fromValues(REDUCE(pairs=[], k in keys(suc_props[toString(id(suc))]) | \n"
-            "\t\t\tpairs + [k, REDUCE(values=[], v in suc_props[toString(id(suc))][k] | \n"
-            "\t\t\t\tvalues + CASE WHEN v.value IN values THEN [] ELSE v.value END)]))))\n"
-            "FOREACH(pred IN filter(pred IN pred_nodes WHERE NOT id(pred) in self_loops) |\n"
-            "\tFOREACH(new_pred in CASE WHEN pred.id IN keys(ids_to_merged_id) THEN ids_to_merged_id[pred.id] ELSE [] END |\n"
-            "\t\tMERGE (new_pred)-[new_rel:{}]->({})\n".format(
-                edge_label, merged_var) +
-            "\t\tSET new_rel = apoc.map.fromValues(REDUCE(pairs=[], k in keys(pred_props[toString(id(pred))]) | \n"
-            "\t\t\tpairs + [k, REDUCE(values=[], v in pred_props[toString(id(pred))][k] | \n"
-            "\t\t\t\tvalues + CASE WHEN v.value IN values THEN [] ELSE v.value END)])))\n"
-            "\tFOREACH(_ in CASE WHEN NOT pred.id IN keys(ids_to_merged_id) THEN [1] ELSE [] END |\n"
-            "\t\tMERGE (pred)-[new_rel:{}]->({})\n".format(
-                edge_label, merged_var) +
-            "\t\tSET new_rel = apoc.map.fromValues(REDUCE(pairs=[], k in keys(pred_props[toString(id(pred))]) | \n"
-            "\t\t\tpairs + [k, REDUCE(values=[], v in pred_props[toString(id(pred))][k] | \n"
-            "\t\t\t\tvalues + CASE WHEN v.value IN values THEN [] ELSE v.value END)]))))\n"
-        )
-    else:
-        query += (
-            "FOREACH(suc IN filter(suc IN suc_nodes WHERE NOT id(suc) in self_loops) |\n"
-            "\tMERGE ({})-[new_rel:{}]->(suc)\n".format(merged_var, edge_label) +
-            "\tSET new_rel = apoc.map.fromValues(REDUCE(pairs=[], k in keys(suc_props[toString(id(suc))]) | \n"
-            "\t\t pairs + [k, REDUCE(values=[], v in suc_props[toString(id(suc))][k] | \n"
-            "\t\t\tvalues + CASE WHEN v.value IN values THEN [] ELSE v.value END)])))\n"
-            "FOREACH(pred IN filter(pred IN pred_nodes WHERE NOT id(pred) in self_loops) |\n"
-            "\tMERGE (pred)-[new_rel:{}]->({})\n".format(edge_label, merged_var) +
-            "\tSET new_rel = apoc.map.fromValues(REDUCE(pairs=[], k in keys(pred_props[toString(id(pred))]) | \n"
-            "\t\t pairs + [k, REDUCE(values=[], v in pred_props[toString(id(pred))][k] | \n"
-            "\t\t\tvalues + CASE WHEN v.value IN values THEN [] ELSE v.value END)])))\n"
-        )
+    query += (
+        "FOREACH(suc IN filter(suc IN suc_nodes WHERE NOT id(suc) in self_loops) |\n"
+        "\tMERGE ({})-[new_rel:{}]->(suc)\n".format(merged_var, edge_label) +
+        "\tSET new_rel = apoc.map.fromValues(REDUCE(pairs=[], k in keys(suc_props[toString(id(suc))]) | \n"
+        "\t\t pairs + [k, REDUCE(values=[], v in suc_props[toString(id(suc))][k] | \n"
+        "\t\t\tvalues + CASE WHEN v.value IN values THEN [] ELSE v.value END)])))\n"
+        "FOREACH(pred IN filter(pred IN pred_nodes WHERE NOT id(pred) in self_loops) |\n"
+        "\tMERGE (pred)-[new_rel:{}]->({})\n".format(edge_label, merged_var) +
+        "\tSET new_rel = apoc.map.fromValues(REDUCE(pairs=[], k in keys(pred_props[toString(id(pred))]) | \n"
+        "\t\t pairs + [k, REDUCE(values=[], v in pred_props[toString(id(pred))][k] | \n"
+        "\t\t\tvalues + CASE WHEN v.value IN values THEN [] ELSE v.value END)])))\n"
+    )
     query += (
         "// add self loop \n"
         "FOREACH(dummy in CASE WHEN length(self_loops) > 0 THEN [NULL] ELSE [] END |\n"
