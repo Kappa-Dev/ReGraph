@@ -817,6 +817,7 @@ def merging_query1(original_vars, merged_var, merged_id, merged_id_var,
         "\t\tpairs + [k, REDUCE(values=[], v in self_loop_props[k] |\n"
         "\t\t\tvalues + CASE WHEN v.value IN values THEN [] ELSE v.value END)])))\n"
     )
+    carry_vars.remove("self_loops")
 
     if merge_typing:
         query += (
