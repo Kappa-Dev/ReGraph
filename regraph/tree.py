@@ -197,7 +197,56 @@ def tmp_add_attributes(hie, top):
     for gr in [kami_base_gr, kami_gr]:
         for node in gr:
             attrs = gr.node[node]
-            attrs["val"] = univ_set()
+            #attrs["val"] = univ_set()
+            # For kami_base nodes.
+            if node == 'action':
+                attrs["test"] = univ_set()
+                attrs["type"] = univ_set()
+                attrs["value"] = univ_set()
+            if node == "component":
+                attrs["uniprot_id"] = univ_set()
+                attrs["uniprot_ac"] = univ_set()
+                attrs["hgnc_symbol"] = univ_set()
+                attrs["name"] = univ_set()
+                attrs["interpro_id"] = univ_set()
+                attrs["start"] = univ_set()
+                attrs["end"] = univ_set()
+                attrs["aa"] = univ_set()
+                attrs["loc"] = univ_set()
+                attrs["test"] = univ_set()
+            if node == "state":
+                attrs["name"] = univ_set()
+                attrs["test"] = univ_set()
+            # For kami nodes.
+            if node == "bnd":
+                attrs["test"] = univ_set()
+                attrs["type"] = univ_set()
+            if node == "mod":
+                attrs["value"] = univ_set()
+            if node == "gene":
+                attrs["uniprot_id"] = univ_set()
+                attrs["uniprot_ac"] = univ_set()
+                attrs["hgnc_symbol"] = univ_set()
+            if node == "region":
+                attrs["name"] = univ_set()
+                attrs["interpro_id"] = univ_set()
+                attrs["start"] = univ_set()
+                attrs["end"] = univ_set()
+            if node == "site":
+                attrs["name"] = univ_set()
+                attrs["start"] = univ_set()
+                attrs["end"] = univ_set()
+            if node == "site":
+                attrs["name"] = univ_set()
+                attrs["start"] = univ_set()
+                attrs["end"] = univ_set()
+            if node == "residue":
+                attrs["aa"] = univ_set()
+                attrs["loc"] = univ_set()
+                attrs["test"] = univ_set()
+            if node == "syn":
+                attrs["test"] = univ_set()
+            # "state" is already done.
 
 
 def to_json_tree(hie, g_id, parent, include_rules=True,
