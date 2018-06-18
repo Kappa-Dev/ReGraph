@@ -1277,123 +1277,6 @@ def clone_graph(original_graph, cloned_graph, carry_vars=None):
     return query, carry_vars
 
 
-def merging_query2(original_vars, merged_var, merged_id, merged_id_var,
-                   node_label='node', edge_label='edge',
-                   carry_vars=None, ignore_naming=False,
-                   multiple_rows=False):
-    """Generate query for merging nodes.
-
-    Parameters
-    ----------
-    original_vars : iterable
-        Collection of names of the variables corresponding
-        to the nodes to merge
-    merged_var : str
-        Name of the variable corresponding to the new merged node
-    merged_id : str
-        Id to use for the new node that corresponds to the merged node
-    merged_id_var : str
-        Name of the variable for the id of the new merged node
-    node_label
-        Label of the nodes to merge, default is 'node'
-    edge_label
-        Label of the edges to merge, default is 'edge'
-    carry_vars : str
-        Collection of variables to carry
-
-    Returns
-    -------
-    query : str
-        Generated query
-    carry_vars : set
-        Updated collection of variables to carry
-    """
-    if edge_label is None:
-        edge_label = ""
-    else:
-        edge_label = ":" + edge_label
-
-    if carry_vars is None:
-        carry_vars = set(original_vars)
-
-    query = ""
-
-    query += (
-        "// use the APOC procedure 'apoc.refactor.mergeNodes' to merge nodes\n"
-        "CALL apoc.refactor.mergeNodes([{}], {{properties: 'combine'}})\n".format(
-            ", ".join(original_vars)) +
-        "YIELD node as {}\n".format(merged_var)
-    )
-    carry_vars.add(merged_var)
-    for n in original_vars:
-        if n != merged_var:
-            carry_vars.remove(n)
-
-    if ignore_naming is True:
-        query += (
-            "// set appropriate node id\n"
-            "SET {}.id = toString(id({}))\n".format(merged_var, merged_var) +
-            "SET {}.count = NULL\n".format(merged_var) +
-            "WITH toString(id({})) as {}, ".format(merged_var, merged_id_var) +
-            ", ".join(carry_vars) + "\n"
-        )
-    else:
-        query += (
-            "// search for a node with the same id as the clone id\n" +
-            "OPTIONAL MATCH (same_id_node:{} {{ id : '{}'}}) \n".format(
-                node_label, merged_id) +
-            "WITH same_id_node,  " +
-            "CASE WHEN same_id_node IS NOT NULL "
-            "THEN (coalesce(same_id_node.count, 0) + 1) " +
-            "ELSE 0 END AS same_id_node_new_count, " +
-            ", ".join(carry_vars) + "\n" +
-            "// generate new id if the same id node was found\n" +
-            "// and filter edges which will be removed \n" +
-            "WITH same_id_node, same_id_node_new_count, " +
-            "'{}' + CASE WHEN same_id_node_new_count <> 0 ".format(merged_id) +
-            "THEN toString(same_id_node_new_count) ELSE '' END as {}, ".format(
-                merged_id_var) +
-            ", ".join(carry_vars) + "\n"
-            "// set appropriate node id\n"
-            "SET {}.id = {}\n".format(merged_var, merged_id_var) +
-            "SET {}.count = NULL\n".format(merged_var) + "\n"
-        )
-
-    if multiple_rows:
-        carry_vars = set()
-        carry_vars.add(merged_var)
-        query += "WITH DISTINCT {}\n".format(merged_var)
-
-    query += (
-        "// find and merge multiple relations resulting from the node merge\n" +
-        "OPTIONAL MATCH ({})-[out_rel{}]->(suc)\n".format(merged_var,
-                                                          edge_label) +
-        "WITH collect({neighbor: suc, edge: out_rel}) as suc_maps, " +
-        ", ".join(carry_vars) + "\n" +
-        "OPTIONAL MATCH (pred)-[in_rel{}]->({})\n".format(edge_label,
-                                                          merged_var) +
-        "WHERE pred.id <> {}.id\n".format(merged_var) +
-        "WITH collect({neighbor: pred, edge: in_rel}) as pred_maps, suc_maps, " +
-        ", ".join(carry_vars) + "\n" +
-        "WITH apoc.map.groupByMulti(suc_maps, 'neighbor') as suc_maps, "
-        "apoc.map.groupByMulti(pred_maps, 'neighbor') as pred_maps, " +
-        ", ".join(carry_vars) + "\n" +
-        "WITH REDUCE(edges=[],  k in filter(k in keys(suc_maps) "
-        "WHERE length(suc_maps[k]) > 1 ) | \n"
-        "\tedges + [suc_maps[k]]) + \n"
-        "\tREDUCE(edges=[],  k in filter(k in keys(pred_maps) "
-        "WHERE length(pred_maps[k]) > 1)| \n"
-        "\t\tedges + [pred_maps[k]]) as all_merge_edges, " +
-        ", ".join(carry_vars) + "\n" +
-        "UNWIND all_merge_edges as edge_list\n"
-        "\tCALL apoc.refactor.mergeRelationships(\n"
-        "\t\tREDUCE(rels=[], el in edge_list | rels + el['edge']), "
-        " {properties: 'combine'})\n"
-        "\tYIELD rel\n"
-    )
-    return query, carry_vars
-
-
 def merging_from_list(list_var, merged_var, merged_id, merged_id_var,
                       node_label='node', edge_label='edge', merge_typing=False,
                       carry_vars=None, ignore_naming=False,
@@ -1402,9 +1285,8 @@ def merging_from_list(list_var, merged_var, merged_id, merged_id_var,
 
     Parameters
     ----------
-    original_vars : iterable
-        Collection of names of the variables corresponding
-        to the nodes to merge
+    list_var : str
+        Name of the variable corresponding to the list of nodes to clone
     merged_var : str
         Name of the variable corresponding to the new merged node
     merged_id : str
@@ -1415,8 +1297,16 @@ def merging_from_list(list_var, merged_var, merged_id, merged_id_var,
         Label of the nodes to merge, default is 'node'
     edge_label
         Label of the edges to merge, default is 'edge'
+    merge_typing : boolean
+        If true, typing edges are merged
     carry_vars : str
         Collection of variables to carry
+    multiple_rows : boolean
+        True when multiple merging are happening in the same time
+         on diferent rows
+    multiple_var : str
+        Variable which has a different value on each row. Used for controlling
+        the merging on multiple rows
 
     Returns
     -------
