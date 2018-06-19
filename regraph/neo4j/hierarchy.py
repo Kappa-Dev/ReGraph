@@ -8,7 +8,7 @@ import regraph.neo4j.cypher_utils as cypher
 from regraph.neo4j.category_utils import (pullback,
                                           pushout,
                                           check_homomorphism)
-from regraph.neo4j.rewriting_utils import (propagate_up,
+from regraph.neo4j.rewriting_utils import (propagate_up, propagate_up_v3,
                                            propagate_down, propagate_down_v2, propagate_down_v3)
 from regraph.default.exceptions import (HierarchyError,
                                         InvalidHomomorphism)
@@ -276,6 +276,25 @@ class Neo4jHierarchy(object):
         for ancestor in predecessors:
             self.propagation_up(ancestor)
 
+    def propagation_up_v3(self, rewritten_graph):
+        """Propagate the changes of a rewritten graph up."""
+        predecessors = self.graph_predecessors(rewritten_graph)
+        print("Rewritting ancestors of {}...".format(rewritten_graph))
+        for predecessor in predecessors:
+            print('--> ', predecessor)
+            q_rm_node, q_rm_edge, q_clone = propagate_up_v3(
+                                                    rewritten_graph,
+                                                    predecessor)
+            # run multiple queries in one transaction
+            with self._driver.session() as session:
+                tx = session.begin_transaction()
+                tx.run(q_rm_node)
+                tx.run(q_rm_edge)
+                tx.run(q_clone)
+                tx.commit()
+        for ancestor in predecessors:
+            self.propagation_up(ancestor)
+
     def propagation_down(self, rewritten_graph):
         """Propagate the changes of a rewritten graph down."""
         successors = self.graph_successors(rewritten_graph)
@@ -311,13 +330,12 @@ class Neo4jHierarchy(object):
         print("Rewritting children of {}...".format(rewritten_graph))
         for successor in successors:
             print('--> ', successor)
+            q_merge_node, q_add_node, q_add_edge = propagate_down_v3(
+                                                    rewritten_graph,
+                                                    successor)
             # run multiple queries in one transaction
             with self._driver.session() as session:
                 tx = session.begin_transaction()
-                q_merge_node, q_add_node, q_add_edge = propagate_down_v3(
-                                                            rewritten_graph,
-                                                            successor)
-                print(q_merge_node)
                 merged_nodes = tx.run(
                             q_merge_node,
                             merged_nodes_list=changes['merged_nodes']).single()
