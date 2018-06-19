@@ -314,23 +314,23 @@ class Neo4jHierarchy(object):
             # run multiple queries in one transaction
             with self._driver.session() as session:
                 tx = session.begin_transaction()
-                q_add_node, q_add_edge, q_merge_node = propagate_down_v3(
+                q_merge_node, q_add_node, q_add_edge = propagate_down_v3(
                                                             rewritten_graph,
                                                             successor)
                 print(q_merge_node)
+                merged_nodes = tx.run(
+                            q_merge_node,
+                            merged_nodes_list=changes['merged_nodes']).single()
                 added_nodes = tx.run(
                             q_add_node,
                             added_nodes_list=changes['added_nodes']).single()
                 added_edges = tx.run(
                             q_add_edge,
                             added_edges_list=changes['added_edges']).single()
-                merged_nodes = tx.run(
-                            q_merge_node,
-                            merged_nodes_list=changes['merged_nodes']).single()
                 tx.commit()
             new_changes[successor] = dict()
+            new_changes[successor]['merged_nodes'] = merged_nodes
             new_changes[successor]['added_nodes'] = added_nodes
             new_changes[successor]['added_edges'] = added_edges
-            new_changes[successor]['merged_nodes'] = merged_nodes
         for successor in successors:
             self.propagation_down_v3(successor, new_changes[successor])

@@ -272,54 +272,18 @@ def propagate_down_v3(rewritten_graph, successor):
     Returns
     -------
     query1 : str
-        Generated query for adding nodes in T
+        Generated query for merging nodes in H
     query2 : str
-        Generated query for adding edges in T
+        Generated query for adding nodes in T
     query3 : str
-    Generated query for merging nodes in H
+        Generated query for adding edges in T
     """
     # add nodes in T for each node without image in G
     carry_vars = set()
 
-    query1 = (
-        "// Addition of nodes in '{}'\n".format(successor) +
-        "OPTIONAL MATCH (n:node:{})".format(rewritten_graph) +
-        "WHERE n.id IN $added_nodes_list " +
-        "AND NOT (n)-[:typing]->(:node:{})\n".format(successor) +
-        "WITH n WHERE n IS NOT NULL\n" +
-        "MERGE (n)-[:typing]->(new_node:node:{})\n".format(successor) +
-        "ON CREATE SET new_node += properties(n)\n" +
-        "ON CREATE SET new_node.id = toString(id(new_node))\n"
-        )
-    query1 += "RETURN collect(new_node.id) as added_nodes\n"
-
-    # add edges in T for each edge without image in G
-    query2 = (
-        "\n// Addition of edges in '{}'\n".format(successor) +
-        "OPTIONAL MATCH (n:node:{})-[rel:edge]->(m:node:{})\n".format(
-            rewritten_graph, rewritten_graph) +
-        "WHERE n.id IN $added_edges_list.source " +
-        "AND m.id IN $added_edges_list.target\n" +
-        "WITH n, m, rel WHERE n IS NOT NULL AND m IS NOT NULL\n" +
-        "OPTIONAL MATCH (n)-[:typing]->(x:node:{}), (m)-[:typing]->(y:node:{})\n".format(
-            successor, successor) +
-        "MERGE (x)-[rel_img:edge]->(y)\n"
-    )
-    carry_vars.update(['x', 'y'])
-    query2 += (
-        cypher.merge_properties(
-                    var_list=['rel', 'rel_img'],
-                    new_props_var='new_props',
-                    carry_vars=carry_vars) +
-        "SET rel_img += new_props\n"
-        )
-    query2 += "RETURN {source:collect(x.id), target:collect(y.id)} as added_edges"
-
-    carry_vars = set()
-
     # match nodes of T with the same pre-image in G and merge them
     carry_vars.add('merged_nodes')
-    query3 = (
+    query1 = (
         "\n// Matching of the nodes to merge in '{}'\n".format(successor) +
         "WITH [] as merged_nodes\n"
         "OPTIONAL MATCH (n:node:{}) \n".format(rewritten_graph) +
@@ -331,7 +295,7 @@ def propagate_down_v3(rewritten_graph, successor):
         "WHERE n IS NOT NULL AND size(nodes_to_merge) >= 2\n" 
     )
     carry_vars.add('n')
-    query3 += (
+    query1 += (
         cypher.merging_from_list(
                         list_var='nodes_to_merge',
                         merged_var='merged_node',
@@ -347,6 +311,42 @@ def propagate_down_v3(rewritten_graph, successor):
         )
     carry_vars.remove('merged_node')
     carry_vars.remove('merged_id')
-    query3 += "RETURN collect(merged_id) as merged_nodes"
+    query1 += "RETURN collect(merged_id) as merged_nodes"
+
+    carry_vars = set()
+
+    query2 = (
+        "// Addition of nodes in '{}'\n".format(successor) +
+        "OPTIONAL MATCH (n:node:{})".format(rewritten_graph) +
+        "WHERE n.id IN $added_nodes_list " +
+        "AND NOT (n)-[:typing]->(:node:{})\n".format(successor) +
+        "WITH n WHERE n IS NOT NULL\n" +
+        "MERGE (n)-[:typing]->(new_node:node:{})\n".format(successor) +
+        "ON CREATE SET new_node += properties(n)\n" +
+        "ON CREATE SET new_node.id = toString(id(new_node))\n"
+        )
+    query2 += "RETURN collect(new_node.id) as added_nodes\n"
+
+    # add edges in T for each edge without image in G
+    query3 = (
+        "\n// Addition of edges in '{}'\n".format(successor) +
+        "OPTIONAL MATCH (n:node:{})-[rel:edge]->(m:node:{})\n".format(
+            rewritten_graph, rewritten_graph) +
+        "WHERE n.id IN $added_edges_list.source " +
+        "AND m.id IN $added_edges_list.target\n" +
+        "WITH n, m, rel WHERE n IS NOT NULL AND m IS NOT NULL\n" +
+        "OPTIONAL MATCH (n)-[:typing]->(x:node:{}), (m)-[:typing]->(y:node:{})\n".format(
+            successor, successor) +
+        "MERGE (x)-[rel_img:edge]->(y)\n"
+    )
+    carry_vars.update(['x', 'y'])
+    query3 += (
+        cypher.merge_properties(
+                    var_list=['rel', 'rel_img'],
+                    new_props_var='new_props',
+                    carry_vars=carry_vars) +
+        "SET rel_img += new_props\n"
+        )
+    query3 += "RETURN {source:collect(x.id), target:collect(y.id)} as added_edges"
 
     return query1, query2, query3
