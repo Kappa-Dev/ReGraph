@@ -284,7 +284,7 @@ class Neo4jHierarchy(object):
         maps_vars_ids = g.rule_to_cypher_v2(rule, instance)
         return (maps_vars_ids)
 
-    def graph_successors(self, graph_label):
+    def successors(self, graph_label):
         """Get all the ids of the successors of a graph."""
         query = cypher.successors_query(var_name='g',
                                         node_id=graph_label,
@@ -295,7 +295,7 @@ class Neo4jHierarchy(object):
             succ = []
         return succ
 
-    def graph_predecessors(self, graph_label):
+    def predecessors(self, graph_label):
         """Get all the ids of the predecessors of a graph."""
         query = cypher.predecessors_query(var_name='g',
                                           node_id=graph_label,
@@ -308,7 +308,7 @@ class Neo4jHierarchy(object):
 
     def propagation_up(self, rewritten_graph):
         """Propagate the changes of a rewritten graph up."""
-        predecessors = self.graph_predecessors(rewritten_graph)
+        predecessors = self.predecessors(rewritten_graph)
         print("Rewritting ancestors of {}...".format(rewritten_graph))
         for predecessor in predecessors:
             print('--> ', predecessor)
@@ -322,7 +322,7 @@ class Neo4jHierarchy(object):
 
     def propagation_up_v3(self, rewritten_graph):
         """Propagate the changes of a rewritten graph up."""
-        predecessors = self.graph_predecessors(rewritten_graph)
+        predecessors = self.predecessors(rewritten_graph)
         print("Rewritting ancestors of {}...".format(rewritten_graph))
         for predecessor in predecessors:
             print('--> ', predecessor)
@@ -341,7 +341,7 @@ class Neo4jHierarchy(object):
 
     def propagation_down(self, rewritten_graph):
         """Propagate the changes of a rewritten graph down."""
-        successors = self.graph_successors(rewritten_graph)
+        successors = self.successors(rewritten_graph)
         print("Rewritting children of {}...".format(rewritten_graph))
         for successor in successors:
             print('--> ', successor)
@@ -354,7 +354,7 @@ class Neo4jHierarchy(object):
             self.propagation_down(successor)
 
     def propagation_down_v2(self, rewritten_graph, changes):
-        successors = self.graph_successors(rewritten_graph)
+        successors = self.successors(rewritten_graph)
         print("Rewritting children of {}...".format(rewritten_graph))
         for successor in successors:
             print('--> ', successor)
@@ -369,7 +369,7 @@ class Neo4jHierarchy(object):
                 tx.commit()
 
     def propagation_down_v3(self, rewritten_graph, changes):
-        successors = self.graph_successors(rewritten_graph)
+        successors = self.successors(rewritten_graph)
         new_changes = dict()
         print("Rewritting children of {}...".format(rewritten_graph))
         for successor in successors:
