@@ -89,14 +89,58 @@ class Neo4jHierarchy(object):
         if edge_list is not None:
             g.add_edges_from(edge_list)
 
-    def remove_graph(self, label):
-        """Remove a graph from the hierarchy."""
-        g = self.access_graph(label)
+    def remove_graph(self, graph_id, reconnect=False):
+        """Remove a graph from the hierarchy.
+
+        Parameters
+        ----------
+        node_id
+            Id of the graph to remove
+        reconnect : bool
+            Reconnect the descendants of the removed graph to
+            its predecessors
+
+        Raises
+        ------
+        HierarchyError
+            If graph with `graph_id` is not defined in the hierarchy
+        """
+        g = self.access_graph(graph_id)
+
+        if reconnect:
+            query = (
+                "MATCH (n:node:{})".format(graph_id) +
+                "OPTIONAL MATCH (pred)-[:typing]->(n)-[:typing]->(suc)\n" +
+                "WITH pred, suc WHERE pred IS NOT NULL\n" +
+                cypher.create_edge(
+                            edge_var='recennect_typing',
+                            source_var='pred',
+                            target_var='suc',
+                            edge_label='typing')
+            )
+            self.execute(query)
+        # Clear the graph and drop the constraint on the ids
         g.drop_constraint('id')
         g.clear()
-        # Remove the hierarchyNode
+
+        # Remove the hierarchyNode (and reconnect if True)
+        if reconnect:
+            query = (
+                cypher.match_node(
+                                var_name="graph_to_rm",
+                                node_id=graph_id,
+                                label='hierarchyNode') +
+                "OPTIONAL MATCH (pred)-[:hierarchyEdge]->(n)-[:hierarchyEdge]->(suc)\n" +
+                "WITH pred, suc WHERE pred IS NOT NULL\n" +
+                cypher.create_edge(
+                            edge_var='recennect_typing',
+                            source_var='pred',
+                            target_var='suc',
+                            edge_label='hierarchyEdge')
+            )
+            self.execute(query)
         query = cypher.match_node(var_name="graph_to_rm",
-                                  node_id=label,
+                                  node_id=graph_id,
                                   label='hierarchyNode')
         query += cypher.delete_nodes_var(["graph_to_rm"])
         self.execute(query)
@@ -106,7 +150,7 @@ class Neo4jHierarchy(object):
         query = "MATCH (n:hierarchyNode) WHERE n.id='{}' RETURN n".format(label)
         res = self.execute(query)
         if res.single() is None:
-            raise ValueError(
+            raise HierarchyError(
                 "The graph '{}' is not in the database.".format(label))
         g = Neo4jGraph(label, self)
         return g
