@@ -312,7 +312,7 @@ def check_homomorphism(tx, domain, codomain, total=True):
     return True
 
 
-def _check_consistency(source, target):
+def _check_consistency(tx, source, target):
     """Check if the adding of a homomorphism is consistent."""
 
     carry_vars = set()
@@ -336,33 +336,29 @@ def _check_consistency(source, target):
         "UNWIND pred_list as pred\n" +
         "UNWIND suc_list as suc\n" +
         "OPTIONAL MATCH (pred)-[r:typing*]->(suc)\n" +
-        "WHERE NONE(rel in r WHERE rel.typing_state = 'tmp')\n" +
-        "WITH s, t, r, collect(labels(pred)) as pred_labels, collect(labels(suc)) as suc_labels\n" +
+        "WHERE NONE(rel in r WHERE properties(rel) = {typing_state: 'tmp'})\n" +
+        "WITH s, t, r, labels(pred) as pred_label, labels(suc) as suc_label\n" +
         "WHERE r IS NOT NULL\n" +
-        "WITH DISTINCT s, t\n"
+        "WITH DISTINCT s, t, pred_label, suc_label\n"
     )
     query += (
         "// return the pairs 's' 't' where there should be a typing edge\n"
         "OPTIONAL MATCH (s)-[new_typing:typing]->(t)\n" +
-        "WITH pred_labels, suc_labels, s.id as s_id, t.id as t_id, new_typing\n" +
+        "WITH pred_label, suc_label, s.id as s_id, t.id as t_id, new_typing\n" +
         "WHERE new_typing IS NULL\n" +
-        "RETURN s_id, t_id\n"
+        "RETURN pred_label, suc_label, s_id, t_id\n"
     )
-    """
+
     result = tx.run(query)
 
     missing_typing = []
     for record in result:
-        missing_typing.append((record['s_id'], record['t_id']))
+        missing_typing.append((record['pred_label'], record['suc_label']))
     if len(missing_typing) != 0:
         raise HierarchyError(
-            "Homomorphism does not commute with an existing path.\n" +
-            "\n".join(["'{}' in '{}' sould be typed by '{}' in '{}'!".format(
-                s, source, t, target) for s, t in missing_typing])
+            "Homomorphism does not commute with existing paths:\n" +
+            ",\n".join(["\t- from '{}' to '{}'".format(
+                s, t) for s, t in missing_typing]) + "."
         )
-    """
+
     return query
-
-
-print(_check_consistency('graphC', 'graphD'))
-
