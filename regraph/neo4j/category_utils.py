@@ -312,5 +312,32 @@ def check_homomorphism(tx, domain, codomain, total=True):
     return True
 
 
-def check_consistency(tx, source, target):
-    pass
+def _check_consistency(tx, source, target):
+    """Check if the adding of a homomorphism is consistent."""
+
+    carry_vars = set()
+    query = (
+        "// match all typing pairs between '{}' and '{}'\n".format(
+            source, target) +
+        "MATCH (s:node:{}), (t:node:{})\n".format(
+            source, target) +
+        "WHERE (s)-[:typing]->(t)\n" +
+        "WITH s, t\n"
+    )
+    query += (
+        "// match all the predecessors of 's' and successors of 't'\n"
+        "MATCH (pred:node), (suc:node)\n" +
+        "WHERE (pred)-[:typing*0..]->(s)\n" +
+        "\tAND (t)-[:typing*0..]->(suc)\n" +
+        "WITH s, t, collect(DISTINCT pred) as pred_list, " +
+        "collect(DISTINCT suc) as suc_list\n"
+    )
+    query += (
+        "// select all the pairs 'suc' "
+        "UNWIND pred_list as pred\n" +
+        "UNWIND suc_list as suc\n" +
+        "OPTIONAL MATCH (pred)-[r:typing*]->(suc)\n" +
+        "WHERE NONE(rel in r WHERE rel.typing_state = 'tmp')\n" +
+        "WITH s, t, suc, pred\n" +
+        "WHERE r I NOT NULL\n" +
+    )
