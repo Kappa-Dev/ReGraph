@@ -2,7 +2,7 @@
 
 import regraph.neo4j.cypher_utils as cypher
 
-from regraph.default.exceptions import (InvalidHomomorphism)
+from regraph.default.exceptions import (InvalidHomomorphism, HierarchyError)
 
 
 def pullback(b, c, d, a=None, inplace=False):
@@ -312,7 +312,7 @@ def check_homomorphism(tx, domain, codomain, total=True):
     return True
 
 
-def _check_consistency(tx, source, target):
+def _check_consistency(source, target):
     """Check if the adding of a homomorphism is consistent."""
 
     carry_vars = set()
@@ -321,7 +321,6 @@ def _check_consistency(tx, source, target):
             source, target) +
         "MATCH (s:node:{}), (t:node:{})\n".format(
             source, target) +
-        "WHERE (s)-[:typing]->(t)\n" +
         "WITH s, t\n"
     )
     query += (
@@ -333,11 +332,37 @@ def _check_consistency(tx, source, target):
         "collect(DISTINCT suc) as suc_list\n"
     )
     query += (
-        "// select all the pairs 'suc' "
+        "// select all the pairs 'pred' 'suc' with a path between\n"
         "UNWIND pred_list as pred\n" +
         "UNWIND suc_list as suc\n" +
         "OPTIONAL MATCH (pred)-[r:typing*]->(suc)\n" +
         "WHERE NONE(rel in r WHERE rel.typing_state = 'tmp')\n" +
-        "WITH s, t, suc, pred\n" +
-        "WHERE r I NOT NULL\n" +
+        "WITH s, t, r, collect(labels(pred)) as pred_labels, collect(labels(suc)) as suc_labels\n" +
+        "WHERE r IS NOT NULL\n" +
+        "WITH DISTINCT s, t\n"
     )
+    query += (
+        "// return the pairs 's' 't' where there should be a typing edge\n"
+        "OPTIONAL MATCH (s)-[new_typing:typing]->(t)\n" +
+        "WITH pred_labels, suc_labels, s.id as s_id, t.id as t_id, new_typing\n" +
+        "WHERE new_typing IS NULL\n" +
+        "RETURN s_id, t_id\n"
+    )
+    """
+    result = tx.run(query)
+
+    missing_typing = []
+    for record in result:
+        missing_typing.append((record['s_id'], record['t_id']))
+    if len(missing_typing) != 0:
+        raise HierarchyError(
+            "Homomorphism does not commute with an existing path.\n" +
+            "\n".join(["'{}' in '{}' sould be typed by '{}' in '{}'!".format(
+                s, source, t, target) for s, t in missing_typing])
+        )
+    """
+    return query
+
+
+print(_check_consistency('graphC', 'graphD'))
+
