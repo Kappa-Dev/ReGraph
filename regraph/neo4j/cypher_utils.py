@@ -1564,16 +1564,20 @@ def merging_from_list(list_var, merged_var, merged_id, merged_id_var,
         query += (
             "FOREACH(suc in suc_typings |\n" +
             "\tMERGE ({})-[:typing]->(suc))\n".format(merged_var) +
+            "WITH pred_typings, " + ", ".join(carry_vars) + "\n"
             "FOREACH(pred in pred_typings |\n" +
             "\tMERGE (pred)-[:typing]->({}))\n".format(merged_var)
         )
 
-    query += "WITH " + ", ".join(carry_vars) + "\n"
-    query += "UNWIND {} AS node_to_merge\n".format(list_var)
+    query += (
+        "WITH " + ", ".join(carry_vars) + "\n" +
+        "FOREACH(node in filter(x IN {} WHERE x <> {} |\n".format(
+            list_var, merged_var) +
+        "\tDETACH DELETE node)\n"
+    )
+
+
     carry_vars.remove(list_var)
-    query += "WITH node_to_merge, " + ", ".join(carry_vars) + "\n"
-    query += "WHERE node_to_merge <> {}\n".format(merged_var)
-    query += "DETACH DELETE (node_to_merge)\n"
 
     return query, carry_vars
 
