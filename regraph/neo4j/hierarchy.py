@@ -306,20 +306,6 @@ class Neo4jHierarchy(object):
             preds = []
         return preds
 
-    def propagation_up_v2(self, rewritten_graph):
-        """Propagate the changes of a rewritten graph up."""
-        predecessors = self.predecessors(rewritten_graph)
-        print("Rewritting ancestors of {}...".format(rewritten_graph))
-        for predecessor in predecessors:
-            print('--> ', predecessor)
-            # run multiple queries in one transaction
-            with self._driver.session() as session:
-                tx = session.begin_transaction()
-                propagate_up(tx, rewritten_graph, predecessor)
-                tx.commit()
-        for ancestor in predecessors:
-            self.propagation_up(ancestor)
-
     def propagation_up(self, rewritten_graph):
         """Propagate the changes of a rewritten graph up."""
         predecessors = self.predecessors(rewritten_graph)
@@ -335,6 +321,21 @@ class Neo4jHierarchy(object):
                 tx.run(q_clone)
                 tx.run(q_rm_node)
                 tx.run(q_rm_edge)
+                tx.commit()
+        for ancestor in predecessors:
+            self.propagation_up(ancestor)
+
+    def propagation_up_v2(self, rewritten_graph):
+        """Propagate the changes of a rewritten graph up."""
+        predecessors = self.predecessors(rewritten_graph)
+        print("Rewritting ancestors of {}...".format(rewritten_graph))
+        for predecessor in predecessors:
+            print('--> ', predecessor)
+            # run multiple queries in one transaction
+            with self._driver.session() as session:
+                tx = session.begin_transaction()
+                query = propagate_up_v2(rewritten_graph, predecessor)
+                tx.run(query)
                 tx.commit()
         for ancestor in predecessors:
             self.propagation_up(ancestor)
