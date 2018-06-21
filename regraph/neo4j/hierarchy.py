@@ -8,8 +8,8 @@ import regraph.neo4j.cypher_utils as cypher
 from regraph.neo4j.category_utils import (pullback,
                                           pushout,
                                           check_homomorphism)
-from regraph.neo4j.rewriting_utils import (propagate_up, propagate_up_v3,
-                                           propagate_down, propagate_down_v2, propagate_down_v3)
+from regraph.neo4j.rewriting_utils import (propagate_up, propagate_up_v2,
+                                           propagate_down, propagate_down_v2)
 from regraph.default.exceptions import (HierarchyError,
                                         InvalidHomomorphism)
 
@@ -306,7 +306,7 @@ class Neo4jHierarchy(object):
             preds = []
         return preds
 
-    def propagation_up(self, rewritten_graph):
+    def propagation_up_v2(self, rewritten_graph):
         """Propagate the changes of a rewritten graph up."""
         predecessors = self.predecessors(rewritten_graph)
         print("Rewritting ancestors of {}...".format(rewritten_graph))
@@ -320,21 +320,21 @@ class Neo4jHierarchy(object):
         for ancestor in predecessors:
             self.propagation_up(ancestor)
 
-    def propagation_up_v3(self, rewritten_graph):
+    def propagation_up(self, rewritten_graph):
         """Propagate the changes of a rewritten graph up."""
         predecessors = self.predecessors(rewritten_graph)
         print("Rewritting ancestors of {}...".format(rewritten_graph))
         for predecessor in predecessors:
             print('--> ', predecessor)
-            q_rm_node, q_rm_edge, q_clone = propagate_up_v3(
+            q_clone, q_rm_node, q_rm_edge = propagate_up(
                                                     rewritten_graph,
                                                     predecessor)
             # run multiple queries in one transaction
             with self._driver.session() as session:
                 tx = session.begin_transaction()
+                tx.run(q_clone)
                 tx.run(q_rm_node)
                 tx.run(q_rm_edge)
-                tx.run(q_clone)
                 tx.commit()
         for ancestor in predecessors:
             self.propagation_up(ancestor)
