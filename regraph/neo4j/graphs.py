@@ -467,8 +467,6 @@ class Neo4jGraph(object):
             carry_variables.add(v)
 
         # Generate merging subquery
-        query += "WITH [] as merged_nodes, " + ", ".join(carry_variables) + "\n"
-        carry_variables.add('merged_nodes')
         for rhs_key, p_nodes in rule.merged_nodes().items():
             query +=\
                 "// Merging nodes '{}' of the preserved part ".format(p_nodes) +\
@@ -484,15 +482,9 @@ class Neo4jGraph(object):
                 carry_vars=carry_variables,
                 ignore_naming=True)
             query += q
-            query += "WITH merged_nodes + {}.id as merged_nodes, ".format(rhs_vars[rhs_key])
-            carry_variables.remove('merged_nodes')
-            query += ", ".join(carry_variables) + "\n"
-            carry_variables.add('merged_nodes')
             query += "\n\n"
 
         # Generate nodes addition subquery
-        query += "WITH [] as added_nodes, " + ", ".join(carry_variables) + "\n"
-        carry_variables.add('added_nodes')
         for rhs_node in rule.added_nodes():
             query += "// Adding node '{}' from the rhs \n".format(rhs_node)
             if generate_var_ids:
@@ -505,10 +497,6 @@ class Neo4jGraph(object):
                 carry_vars=carry_variables,
                 ignore_naming=True)
             query += q
-            query += "WITH added_nodes + {} as added_nodes, ".format(new_node_id_var)
-            carry_variables.remove('added_nodes')
-            query += ", ".join(carry_variables) + "\n"
-            carry_variables.add('added_nodes')
             query += "\n\n"
 
         # Rename untouched vars as they are in rhs
@@ -554,11 +542,10 @@ class Neo4jGraph(object):
                         target_var=rhs_vars[v],
                         edge_label='edge')
             query += (
-                "WITH {{source: added_edges.source+{}.id, ".format(rhs_vars[u]) +
-                "target: added_edges.target+{}.id}} as added_edges, ".format(
-                                                    rhs_vars[v])
+                "WITH added_edges + {{source: {}.id, ".format(rhs_vars[u]) +
+                "target: {}.id}} as added_edges, ".format(rhs_vars[v]) +
+                ", ".join(carry_variables) + "\n"
             )
-            query += ", ".join(carry_variables) + "\n"
             query += "\n"
         carry_variables.add('added_edges')
 
