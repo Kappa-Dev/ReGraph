@@ -339,19 +339,30 @@ class Neo4jHierarchy(object):
         for ancestor in predecessors:
             self.propagation_up(ancestor)
 
-    def propagation_down(self, rewritten_graph):
-        """Propagate the changes of a rewritten graph down."""
+    def propagation_down(self, rewritten_graph, changes):
         successors = self.successors(rewritten_graph)
+        new_changes = dict()
         print("Rewritting children of {}...".format(rewritten_graph))
         for successor in successors:
             print('--> ', successor)
+            q_merge_node, q_add_node, q_add_edge = propagate_down(
+                                                    rewritten_graph,
+                                                    successor)
             # run multiple queries in one transaction
             with self._driver.session() as session:
                 tx = session.begin_transaction()
-                propagate_down(tx, rewritten_graph, successor)
+                merged_nodes = tx.run(q_merge_node).single()
+                # print(merged_nodes)
+                added_nodes = tx.run(q_add_node).single()
+                # print(added_nodes)
+                added_edges = tx.run(q_add_edge,
+                                     added_edges_list=changes['added_edges']).single()
+                # print(added_edges)
                 tx.commit()
+            new_changes[successor] = dict()
+            new_changes[successor]['added_edges'] = added_edges
         for successor in successors:
-            self.propagation_down(successor)
+            self.propagation_down_v3(successor, new_changes[successor])
 
     def propagation_down_v2(self, rewritten_graph, changes):
         successors = self.successors(rewritten_graph)
@@ -364,26 +375,3 @@ class Neo4jHierarchy(object):
                 query = propagate_down_v2(rewritten_graph, successor)
                 tx.run(query, added_edges_list=changes['added_edges'])
                 tx.commit()
-
-    def propagation_down_v3(self, rewritten_graph, changes):
-        successors = self.successors(rewritten_graph)
-        new_changes = dict()
-        print("Rewritting children of {}...".format(rewritten_graph))
-        for successor in successors:
-            print('--> ', successor)
-            q_merge_node, q_add_node, q_add_edge = propagate_down_v3(
-                                                    rewritten_graph,
-                                                    successor)
-            # run multiple queries in one transaction
-            with self._driver.session() as session:
-                tx = session.begin_transaction()
-                merged_nodes = tx.run(q_merge_node).single()
-                added_nodes = tx.run(q_add_node).single()
-                added_edges = tx.run(
-                            q_add_edge,
-                            added_edges_list=changes['added_edges']).single()
-                tx.commit()
-            new_changes[successor] = dict()
-            new_changes[successor]['added_edges'] = added_edges
-        for successor in successors:
-            self.propagation_down_v3(successor, new_changes[successor])

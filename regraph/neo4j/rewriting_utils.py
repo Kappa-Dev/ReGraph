@@ -208,33 +208,34 @@ def propagate_down_v2(rewritten_graph, successor):
         "\n// Addition of edges in '{}'\n".format(successor) +
         "OPTIONAL MATCH (n:node:{})-[rel:edge]->(m:node:{})\n".format(
             rewritten_graph, rewritten_graph) +
-        "WHERE {{source: n.id, target:m.id}} IN $added_edges_list\n" +
+        "WHERE {source: n.id, target:m.id} IN $added_edges_list\n" +
         "OPTIONAL MATCH (n)-[:typing]->(x:node:{}), (m)-[:typing]->(y:node:{})\n".format(
             successor, successor)
     )
-    carry_vars.update(['x', 'y'])
+    carry_vars.update(['x', 'y', 'rel'])
     query += (
+        "FOREACH(dumy IN CASE WHEN rel IS NOT NULL THEN [1] ELSE [] END |\n"
+        "\tMERGE (x)-[rel_img:edge]->(y))\n" +
+        "WITH " + ", ".join(carry_vars) + "\n" +
+        "OPTIONAL MATCH (x)-[rel_img:edge]->(y)\n" +
         cypher.merge_properties(
                     var_list=['rel', 'rel_img'],
                     new_props_var='new_props',
                     carry_vars=carry_vars) +
-        "FOREACH(dumy IN CASE WHEN rel IS NOT NULL THEN [1] ELSE [] END |\n"
-        "\tMERGE (x)-[rel_img:edge]->(y)\n"
+        "FOREACH(dumy IN CASE WHEN rel_img IS NOT NULL THEN [1] ELSE [] END |\n"
         "\tSET rel_img += new_props)\n"
         )
     carry_vars.difference_update(['rel', 'rel_img', 'x', 'y', 'new_props'])
     query += (
-        "WITH collect({{source: x.id, target:y.id}}) as added_edges\n"
+        "WITH collect({source: x.id, target:y.id}) as added_edges\n"
     )
     carry_vars.add('added_edges')
 
     # match nodes of T with the same pre-image in G and merge them
     query += (
         "\n// Matching of the nodes to merge in '{}'\n".format(successor) +
-        "OPTIONAL MATCH (n:node:{}) \n".format(rewritten_graph) +
-        "WHERE n.id IN $merged_nodes_list\n" +
-        "OPTIONAL MATCH (n)-[:typing]->(node_to_merge:node:{})\n".format(
-            successor) +
+        "OPTIONAL MATCH (n:node:{})-[:typing]->(node_to_merge:node:{})\n".format(
+            rewritten_graph, successor) +
         "WITH n, collect(node_to_merge) as nodes_to_merge, " +
         ", ".join(carry_vars) + "\n"
         "WHERE n IS NOT NULL AND size(nodes_to_merge) >= 2\n"
@@ -259,8 +260,8 @@ def propagate_down_v2(rewritten_graph, successor):
     carry_vars.remove('merged_id')
     query += (
         "WITH collect('merged_id') as merged_nodes, " +
-        ", ".join(carry_vars) +
-        "RETURN added_nodes\n"
+        ", ".join(carry_vars) + "\n" +
+        "RETURN added_edges\n"
     )
 
     return query
@@ -293,6 +294,7 @@ def propagate_down_v3(rewritten_graph, successor):
         "WHERE n IS NOT NULL AND size(nodes_to_merge) >= 2\n" 
     )
     carry_vars.add('n')
+    carry_vars.add('nodes_to_merge')
     query1 += (
         cypher.merging_from_list(
                         list_var='nodes_to_merge',
@@ -329,7 +331,7 @@ def propagate_down_v3(rewritten_graph, successor):
         "\n// Addition of edges in '{}'\n".format(successor) +
         "OPTIONAL MATCH (n:node:{})-[rel:edge]->(m:node:{})\n".format(
             rewritten_graph, rewritten_graph) +
-        "WHERE {{source: n.id, target:m.id}} IN $added_edges_list\n" +
+        "WHERE {source: n.id, target:m.id} IN $added_edges_list\n" +
         "WITH n, m, rel WHERE n IS NOT NULL AND m IS NOT NULL\n" +
         "OPTIONAL MATCH (n)-[:typing]->(x:node:{}), (m)-[:typing]->(y:node:{})\n".format(
             successor, successor) +
@@ -343,7 +345,7 @@ def propagate_down_v3(rewritten_graph, successor):
                     carry_vars=carry_vars) +
         "SET rel_img += new_props\n"
         )
-    query3 += "RETURN collect({{source:x.id, target:y.id}}) as added_edges\n"
+    query3 += "RETURN collect({source:x.id, target:y.id}) as added_edges\n"
 
     return query1, query2, query3
 
