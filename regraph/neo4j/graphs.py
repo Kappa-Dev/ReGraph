@@ -531,7 +531,7 @@ class Neo4jGraph(object):
 
         # Generate edges addition subquery
         query += (
-            "WITH {source:[], target:[]} as added_edges, " +
+            "WITH [] as added_edges, " +
             ", ".join(carry_variables) + "\n"
         )
         for u, v in rule.added_edges():
