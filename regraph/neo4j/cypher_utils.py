@@ -21,6 +21,37 @@ def set_attributes(var_name, attrs):
     return query
 
 
+def add_attributes(var_name, attrs):
+    """Generate a subquery to add attributes to an existing node."""
+    query = ""
+    for k, value in attrs.items():
+        if isinstance(value, FiniteSet):
+            elements = []
+            for el in value:
+                if type(el) == str:
+                    elements.append("'{}'".format(el))
+                else:
+                    elements.append("{}".format(el))
+            query += (
+                "FOREACH(dummy IN CASE WHEN NOT {} IN keys({}) THEN [1] ELSE [] END |\n".format(
+                    k, var_name) +
+                "\tSET {}.{} = [{}])\n".format(
+                    var_name, k, ", ".join(el for el in elements))
+            )
+            query += (
+                "FOREACH(dummy IN CASE WHEN {} IN keys({}) THEN [1] ELSE [] END |\n".format(
+                        k, var_name) +
+                "\tFOREACH(val in [{}] |\n".format(", ".join(el for el in elements)) +
+                "\t\tFOREACH(dummy IN CASE WHEN val NOT IN {}[{}] THEN [1] ELSE [] END |\n".format(
+                    var_name, k) +
+                "\t\t\tSET {}.{} = {}.{} + [val])))\n".format(var_name, k, var_name, k)
+            )
+        else:
+            raise ValueError(
+                "Unknown type of attribute '{}': '{}'".format(k, type(value)))
+    return query
+
+
 def generate_attributes(attrs):
     """Generate a string converting attrs to Cypher compatible format."""
     if attrs is None:
@@ -884,6 +915,20 @@ def find_matching(pattern, nodes=None, node_label='node', edge_label='edge'):
                 "{}.id IN [{}]".format(
                     pattern_n, ", ".join("'{}'".format(n) for n in nodes))
                 for pattern_n in pattern.nodes()) + "\n"
+    else:
+        nodes_with_attrs = []
+        for n, attrs in pattern.nodes(data=True):
+            if len(attrs) != 0:
+                for k in attrs.keys():
+                    nodes_with_attrs.append((n, k, attrs[k]))
+        print(nodes_with_attrs)
+        if len(nodes_with_attrs) != 0:
+            query += (
+                "WHERE " + 
+                " AND ".join(["{}.{} = [{}]".format(
+                    n, k, ", ".join(
+                        "'{}'".format(v) for v in val)) for n, k, val in nodes_with_attrs]) + "\n"
+            )
 
     query += "RETURN {}".format(", ".join(pattern.nodes()))
 
@@ -1564,14 +1609,13 @@ def merging_from_list(list_var, merged_var, merged_id, merged_id_var,
         query += (
             "FOREACH(suc in suc_typings |\n" +
             "\tMERGE ({})-[:typing]->(suc))\n".format(merged_var) +
-            "WITH pred_typings, " + ", ".join(carry_vars) + "\n"
             "FOREACH(pred in pred_typings |\n" +
             "\tMERGE (pred)-[:typing]->({}))\n".format(merged_var)
         )
 
     query += (
         "WITH " + ", ".join(carry_vars) + "\n" +
-        "FOREACH(node in filter(x IN {} WHERE x <> {} |\n".format(
+        "FOREACH(node in filter(x IN {} WHERE x <> {}) |\n".format(
             list_var, merged_var) +
         "\tDETACH DELETE node)\n"
     )
