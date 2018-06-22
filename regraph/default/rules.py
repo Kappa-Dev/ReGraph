@@ -993,6 +993,8 @@ class Rule(object):
                                 self.p.edge[s_p_node][t_p_node]
                             )
                         )
+            if len(new_attrs) > 0:
+                attrs[(s, t)] = new_attrs
         return attrs
 
     def merged_nodes(self):
