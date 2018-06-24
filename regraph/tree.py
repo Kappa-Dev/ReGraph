@@ -204,6 +204,7 @@ def tmp_add_attributes(hie, top):
                 attrs["type"] = univ_set()
                 attrs["value"] = univ_set()
                 attrs["rate"] = univ_set()
+                attrs["annotation"] = univ_set()
             if node == "component":
                 attrs["uniprot_id"] = univ_set()
                 attrs["uniprot_ac"] = univ_set()
@@ -223,9 +224,11 @@ def tmp_add_attributes(hie, top):
                 attrs["test"] = univ_set()
                 attrs["type"] = univ_set()
                 attrs["rate"] = univ_set()
+                attrs["annotation"] = univ_set()
             if node == "mod":
                 attrs["value"] = univ_set()
                 attrs["rate"] = univ_set()
+                attrs["annotation"] = univ_set()
             if node == "gene":
                 attrs["uniprot_id"] = univ_set()
                 attrs["uniprot_ac"] = univ_set()
