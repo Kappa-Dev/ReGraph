@@ -335,15 +335,14 @@ def _check_consistency(tx, source, target):
         "// select all the pairs 'pred' 'suc' with a path between\n"
         "UNWIND pred_list as pred\n" +
         "UNWIND suc_list as suc\n" +
-        "OPTIONAL MATCH (pred)-[r:typing*]->(suc)\n" +
-        "WHERE NONE(rel in r WHERE properties(rel) = {typing_state: 'tmp'})\n" +
+        "OPTIONAL MATCH shortestPath((pred)-[r:typing*]->(suc))\n" +
         "WITH s, t, r, labels(pred) as pred_label, labels(suc) as suc_label\n" +
         "WHERE r IS NOT NULL\n" +
         "WITH DISTINCT s, t, pred_label, suc_label\n"
     )
     query += (
         "// return the pairs 's' 't' where there should be a typing edge\n"
-        "OPTIONAL MATCH (s)-[new_typing:typing]->(t)\n" +
+        "OPTIONAL MATCH (s)-[new_typing:tmp_typing]->(t)\n" +
         "WITH pred_label, suc_label, s.id as s_id, t.id as t_id, new_typing\n" +
         "WHERE new_typing IS NULL\n" +
         "RETURN pred_label, suc_label, s_id, t_id\n"
