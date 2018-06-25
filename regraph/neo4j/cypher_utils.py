@@ -66,9 +66,13 @@ def remove_attributes(var_name, attrs):
             query += (
                 "FOREACH(dummy IN CASE WHEN '{}' IN keys({}) THEN [1] ELSE [] END |\n".format(
                         k, var_name) +
-                "SET {}.{} = filter(v in {}.{} WHERE NOT v IN [{}]))".format(
-                    var_name, k, var_name, k, 
-                    ", ".join(["'{}'".format(val) for val in value]))
+                "\tSET {}.{} = filter(v in {}.{} WHERE NOT v IN [{}])".format(
+                    var_name, k, var_name, k,
+                    ", ".join(["'{}'".format(val) for val in value])) +
+                "\tFOREACH(dumy2 IN CASE WHEN size({}.{})=0 THEN [1] ELSE [] END |\n".format(
+                    var_name, k) +
+                "\t\tREMOVE {}.{}))\n".format(
+                    var_name, k)
             )
         else:
             raise ValueError(

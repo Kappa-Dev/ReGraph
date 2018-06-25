@@ -109,9 +109,9 @@ def propagate_up(rewritten_graph, predecessor):
     carry_vars = set()
     query3_1 = (
         "// Removal of edges attributes in '{}'\n".format(predecessor) +
-        "MATCH (x:node:{})-[rel_pred:edge]->(y:node:{})".format(
+        "MATCH (x:node:{})-[rel:edge]->(y:node:{})".format(
             rewritten_graph, rewritten_graph) +
-        "OPTIONAL MATCH (n:node:{})-[rel:edge]->(m:node:{})\n".format(
+        "OPTIONAL MATCH (n:node:{})-[rel_pred:edge]->(m:node:{})\n".format(
             predecessor, predecessor) +
         "WHERE (n)-[:typing]->(x) AND (m)-[:typing]->(y)\n" +
         "FOREACH(dummy IN CASE WHEN rel IS NULL THEN [1] ELSE [] END |\n" +
