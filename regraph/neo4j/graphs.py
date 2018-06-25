@@ -448,7 +448,7 @@ class Neo4jGraph(object):
                 vars_to_rename[lhs_vars[n]] = new_var_name
                 carry_variables.remove(lhs_vars[n])
         if len(vars_to_rename) > 0:
-            query += "// Renaming vars to correspond to the vars of rhs\n"
+            query += "// Renaming vars to correspond to the vars of P\n"
             if len(carry_variables) > 0:
                 query +=\
                     with_vars(carry_variables) +\
@@ -465,6 +465,21 @@ class Neo4jGraph(object):
             query += "\n\n"
         for k, v in vars_to_rename.items():
             carry_variables.add(v)
+
+        # Generate node attrs removal subquery
+        for node, attrs in rule.removed_node_attrs().items():
+            query += "// Removing properties from node '{}' of P \n".format(node)
+            query += remove_attributes(p_vars[node], attrs)
+            query += "\n"
+
+        # Generate edge attrs removal subquery
+        for e, attrs in rule.removed_edge_attrs().items():
+            u = e[0]
+            v = e[1]
+            query += "MATCH ({})-[{}:edge]->({})\n".format(
+                p_vars[u], p_vars[u]+"_"+p_vars[v], p_vars[v])
+            carry_variables.add(p_vars[u]+"_"+p_vars[v])
+            query += with_vars(carry_variables)
 
         # Generate merging subquery
         for rhs_key, p_nodes in rule.merged_nodes().items():
@@ -529,6 +544,11 @@ class Neo4jGraph(object):
         for k, v in vars_to_rename.items():
             carry_variables.add(v)
 
+        # Generate node attrs addition subquery
+        for rhs_node, attrs in rule.added_node_attrs().items():
+            query += "// Adding properties to the node '{}' from the rhs \n".format(rhs_node)
+            query += add_attributes(rhs_vars[rhs_node], attrs)
+
         # Generate edges addition subquery
         query += (
             "WITH [] as added_edges, " +
@@ -549,6 +569,17 @@ class Neo4jGraph(object):
             query += "\n"
         carry_variables.add('added_edges')
 
+        # Generate edge attrs addition subquery
+        for e, attrs in rule.added_edge_attrs().items():
+            u = e[0]
+            v = e[1]
+            query += "// Adding properties to the node '{}' from the rhs \n".format(rhs_node)
+            query += "MATCH ({})-[{}:edge]->({})\n".format(
+                rhs_vars[u], rhs_vars[u]+"_"+rhs_vars[v], rhs_vars[v])
+            carry_variables.add(rhs_vars[u]+"_"+rhs_vars[v])
+            query += with_vars(carry_variables)
+            query += add_attributes(rhs_vars[u]+"_"+rhs_vars[v], attrs)
+
         query += "// Return statement \n"
         query += return_vars(carry_variables)
 
@@ -556,6 +587,7 @@ class Neo4jGraph(object):
         # unique variable names to the names of nodes of the rhs
         rhs_vars_inverse = {v: k for k, v in rhs_vars.items()}
 
+        print(query)
         return query, rhs_vars_inverse
 
     def rewrite(self, rule, instance):

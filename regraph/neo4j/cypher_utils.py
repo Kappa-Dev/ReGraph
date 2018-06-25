@@ -33,18 +33,42 @@ def add_attributes(var_name, attrs):
                 else:
                     elements.append("{}".format(el))
             query += (
-                "FOREACH(dummy IN CASE WHEN NOT {} IN keys({}) THEN [1] ELSE [] END |\n".format(
+                "FOREACH(dummy IN CASE WHEN NOT '{}' IN keys({}) THEN [1] ELSE [] END |\n".format(
                     k, var_name) +
                 "\tSET {}.{} = [{}])\n".format(
                     var_name, k, ", ".join(el for el in elements))
             )
             query += (
-                "FOREACH(dummy IN CASE WHEN {} IN keys({}) THEN [1] ELSE [] END |\n".format(
+                "FOREACH(dummy IN CASE WHEN '{}' IN keys({}) THEN [1] ELSE [] END |\n".format(
                         k, var_name) +
                 "\tFOREACH(val in [{}] |\n".format(", ".join(el for el in elements)) +
-                "\t\tFOREACH(dummy IN CASE WHEN val NOT IN {}[{}] THEN [1] ELSE [] END |\n".format(
+                "\t\tFOREACH(dummy IN CASE WHEN NOT val IN {}.{} THEN [1] ELSE [] END |\n".format(
                     var_name, k) +
                 "\t\t\tSET {}.{} = {}.{} + [val])))\n".format(var_name, k, var_name, k)
+            )
+        else:
+            raise ValueError(
+                "Unknown type of attribute '{}': '{}'".format(k, type(value)))
+    return query
+
+
+def remove_attributes(var_name, attrs):
+    """Generate a subquery to remove attributes to an existing node."""
+    query = ""
+    for k, value in attrs.items():
+        if isinstance(value, FiniteSet):
+            elements = []
+            for el in value:
+                if type(el) == str:
+                    elements.append("'{}'".format(el))
+                else:
+                    elements.append("{}".format(el))
+            query += (
+                "FOREACH(dummy IN CASE WHEN '{}' IN keys({}) THEN [1] ELSE [] END |\n".format(
+                        k, var_name) +
+                "SET {}.{} = filter(v in {}.{} WHERE NOT v IN [{}])".format(
+                    var_name, k, var_name, k, 
+                    ", ".join(["'{}'".format(val) for val in value]))
             )
         else:
             raise ValueError(
@@ -1025,6 +1049,31 @@ def merge_properties(var_list, new_props_var, carry_vars=None,
         raise ValueError("Merging method {} is not defined!".format(method))
 
 
+def merge_properties_from_list(list_var, new_props_var, carry_vars=None,
+                               method='union'):
+    """Merge properties of a list of nodes/edges.
+
+    Parameters
+    ----------
+    list_var : str
+        Name of the variable corresponding to the list
+        of nodes/edges whose properties are merged
+    new_props_var : str
+        Name of the variable corresponding to the
+        map of new properties
+    carry_vars : iterable
+        Collection of variables to carry
+    method : str
+        'union' or 'intersection'
+    """
+    if method == 'union':
+        return props_union_from_list(list_var, new_props_var, carry_vars)
+    elif method == "intersection":
+        return props_intersection_from_list(list_var, new_props_var, carry_vars)
+    else:
+        raise ValueError("Merging method {} is not defined!".format(method))
+
+
 def props_union(var_list, new_props_var, carry_vars=None):
     """Perform the union of the properties of a list of nodes/edges."""
     if carry_vars is None:
@@ -1032,7 +1081,7 @@ def props_union(var_list, new_props_var, carry_vars=None):
     else:
         carry_vars.update(var_list)
 
-    query = "\n//Perform the union of the properties of "
+    query = "//Perform the union of the properties of "
     query += ", ".join(var_list) + "\n"
     query += "WITH [] as {}, ".format(new_props_var) +\
         ", ".join(carry_vars) + "\n"
@@ -1062,6 +1111,45 @@ def props_union(var_list, new_props_var, carry_vars=None):
     return query
 
 
+def props_union_from_list(list_var, new_props_var, carry_vars=None):
+    """Perform the union of the properties of a list of nodes/edges."""
+    if carry_vars is None:
+        carry_vars = set(list_var)
+    else:
+        carry_vars.update(list_var)
+
+    carry_vars.remove(list_var)
+    query = "UNWIND {} as prop_to_merge\n".format(list_var)
+
+    query += (
+        "// accumulate all the attrs of the nodes to be merged\n" +
+        "WITH [] as new_props, prop_to_merge, " + ", ".join(carry_vars) + "\n" +
+        "WITH new_props + REDUCE(pairs = [], k in keys(prop_to_merge) | \n" +
+        "\tpairs + REDUCE(inner_pairs = [], v in prop_to_merge[k] | \n" +
+        "\t\tinner_pairs + {key: k, value: v})) as new_props, prop_to_merge, " +
+        ", ".join(carry_vars) + "\n"
+    )
+
+    query += (
+        "WITH collect(prop_to_merge) as {}, ".format(list_var) +
+        "collect(new_props) as new_props_col, " +
+        ", ".join(carry_vars) + "\n"
+        "WITH REDUCE(init=[], props in new_props_col | init + props) as new_props, " +
+        "{}, ".format(list_var) + ", ".join(carry_vars) + "\n"
+    )
+    carry_vars.add(list_var)
+
+    query += (
+        "WITH apoc.map.groupByMulti(new_props, 'key') as new_props, " +
+        ", ".join(carry_vars) + "\n" +
+        "WITH apoc.map.fromValues(REDUCE(pairs=[], k in keys(new_props) | \n"
+        "\tpairs + [k, REDUCE(values=[], v in new_props[k] | \n"
+        "\t\tvalues + CASE WHEN v.value IN values THEN [] ELSE v.value END)])) as new_props, " +
+        ", ".join(carry_vars) + "\n"
+    )
+    return query
+
+
 def props_intersection(var_list, new_props_var, carry_vars=None):
     """Perform the intersection of the properties of a list of nodes/edges."""
     if carry_vars is None:
@@ -1086,6 +1174,53 @@ def props_intersection(var_list, new_props_var, carry_vars=None):
             var_first) +\
         "\t\t\tCASE WHEN ALL(others in [{}] WHERE v in others[k])\n".format(
             ", ".join(var_list[1:])) +\
+        "\t\t\tTHEN\n" +\
+        "\t\t\t\tinner_pairs + {key: k, value: v}\n" +\
+        "\t\t\tELSE\n" +\
+        "\t\t\t\tinner_pairs\n" +\
+        "\t\t\tEND)\n" +\
+        "\tELSE\n" +\
+        "\t\tpairs\n" +\
+        "\tEND) as {}, ".format(new_props_var) +\
+        ", ".join(carry_vars) + "\n"
+    query +=\
+        "WITH apoc.map.groupByMulti({}, 'key') as {}, ".format(
+            new_props_var, new_props_var) +\
+        ", ".join(carry_vars) + "\n" +\
+        "WITH apoc.map.fromValues(REDUCE(pairs=[], k in keys({}) | \n".format(
+            new_props_var) +\
+        "\tpairs + [k, REDUCE(values=[], v in {}[k] | \n".format(
+            new_props_var) +\
+        "\t\tvalues + CASE WHEN v.value IN values THEN [] ELSE v.value END)])) as {}, ".format(
+            new_props_var) +\
+        ", ".join(carry_vars) + "\n"
+
+    carry_vars.add(new_props_var)
+    return query
+
+
+def props_intersection_from_list(list_var, new_props_var, carry_vars=None):
+    """Perform the intersection of the properties of a list of nodes/edges."""
+    if carry_vars is None:
+        carry_vars = set(list_var)
+    else:
+        carry_vars.update(list_var)
+
+    query = "\n//Perform the intersection of the properties of "
+    query += ", ".join(list_var) + "\n"
+    query += "WITH [] as {}, ".format(new_props_var) +\
+        ", ".join(carry_vars) + "\n"
+
+    query +=\
+        "WITH {} + REDUCE(pairs = [], k in keys({}[0]) | \n".format(
+            new_props_var, list_var) +\
+        "\tCASE WHEN ALL(other in {} WHERE k in keys(other))\n".format(
+            list_var) +\
+        "\tTHEN\n" +\
+        "\t\tpairs + REDUCE(inner_pairs = [], v in {}[0].k | \n".format(
+            list_var) +\
+        "\t\t\tCASE WHEN ALL(other in {} WHERE v in other.k)\n".format(
+            list_var) +\
         "\t\t\tTHEN\n" +\
         "\t\t\t\tinner_pairs + {key: k, value: v}\n" +\
         "\t\t\tELSE\n" +\
@@ -1866,3 +2001,16 @@ def multiple_cloning_query(original_var, clone_var, clone_id, clone_id_var,
         carry_vars.remove("pred_typ_maps")
 
     return query, carry_vars
+
+
+def nb_of_attrs_mismatch(source, target):
+    query = (
+        "REDUCE(invalid = 0, k in filter(k in keys({}) WHERE k <> 'id') |\n".format(source) +
+        "\tinvalid + CASE\n" +
+        "\t\tWHEN NOT k IN keys({}) THEN 1\n".format(target) +
+        "\t\tELSE REDUCE(invalid_values = 0, v in {}[k] |\n".format(source) +
+        "\t\t\tinvalid_values + CASE\n" +
+        "\t\t\t\tWHEN NOT v IN {}[k] THEN 1 ELSE 0 END)\n".format(target) +
+        "\t\tEND)"
+        )
+    return query
