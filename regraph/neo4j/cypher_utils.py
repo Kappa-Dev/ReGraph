@@ -66,7 +66,7 @@ def remove_attributes(var_name, attrs):
             query += (
                 "FOREACH(dummy IN CASE WHEN '{}' IN keys({}) THEN [1] ELSE [] END |\n".format(
                         k, var_name) +
-                "SET {}.{} = filter(v in {}.{} WHERE NOT v IN [{}])".format(
+                "SET {}.{} = filter(v in {}.{} WHERE NOT v IN [{}]))".format(
                     var_name, k, var_name, k, 
                     ", ".join(["'{}'".format(val) for val in value]))
             )
@@ -1088,7 +1088,7 @@ def props_union(var_list, new_props_var, carry_vars=None):
 
     for var in var_list:
         query +=\
-            "WITH {} + REDUCE(pairs = [], k in keys({}) | \n".format(
+            "WITH {} + REDUCE(pairs = [], k in filter(k in keys({}) WHERE k <> 'id') | \n".format(
                 new_props_var, var) +\
             "\tpairs + REDUCE(inner_pairs = [], v in {}[k] | \n".format(
                 var) +\
@@ -1114,9 +1114,9 @@ def props_union(var_list, new_props_var, carry_vars=None):
 def props_union_from_list(list_var, new_props_var, carry_vars=None):
     """Perform the union of the properties of a list of nodes/edges."""
     if carry_vars is None:
-        carry_vars = set(list_var)
+        carry_vars = set([list_var])
     else:
-        carry_vars.update(list_var)
+        carry_vars.add(list_var)
 
     carry_vars.remove(list_var)
     query = "UNWIND {} as prop_to_merge\n".format(list_var)
@@ -1124,7 +1124,7 @@ def props_union_from_list(list_var, new_props_var, carry_vars=None):
     query += (
         "// accumulate all the attrs of the nodes to be merged\n" +
         "WITH [] as new_props, prop_to_merge, " + ", ".join(carry_vars) + "\n" +
-        "WITH new_props + REDUCE(pairs = [], k in keys(prop_to_merge) | \n" +
+        "WITH new_props + REDUCE(pairs = [], k in filter(k in keys(prop_to_merge) WHERE k <> 'id') | \n" +
         "\tpairs + REDUCE(inner_pairs = [], v in prop_to_merge[k] | \n" +
         "\t\tinner_pairs + {key: k, value: v})) as new_props, prop_to_merge, " +
         ", ".join(carry_vars) + "\n"
@@ -1202,9 +1202,9 @@ def props_intersection(var_list, new_props_var, carry_vars=None):
 def props_intersection_from_list(list_var, new_props_var, carry_vars=None):
     """Perform the intersection of the properties of a list of nodes/edges."""
     if carry_vars is None:
-        carry_vars = set(list_var)
+        carry_vars = set([list_var])
     else:
-        carry_vars.update(list_var)
+        carry_vars.add(list_var)
 
     query = "\n//Perform the intersection of the properties of "
     query += ", ".join(list_var) + "\n"
