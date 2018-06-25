@@ -1206,28 +1206,28 @@ def props_intersection_from_list(list_var, new_props_var, carry_vars=None):
     else:
         carry_vars.add(list_var)
 
-    query = "\n//Perform the intersection of the properties of "
-    query += ", ".join(list_var) + "\n"
+    query = "\n//Perform the intersection of the properties of {}".format(
+        list_var) + "\n"
     query += "WITH [] as {}, ".format(new_props_var) +\
         ", ".join(carry_vars) + "\n"
 
     query +=\
-        "WITH {} + REDUCE(pairs = [], k in keys({}[0]) | \n".format(
+        "WITH {} + REDUCE(pairs = [], k in keys({}[0]) | pairs +\n".format(
             new_props_var, list_var) +\
         "\tCASE WHEN ALL(other in {} WHERE k in keys(other))\n".format(
             list_var) +\
         "\tTHEN\n" +\
-        "\t\tpairs + REDUCE(inner_pairs = [], v in {}[0].k | \n".format(
+        "\t\tREDUCE(inner_pairs = [], v in {}[0][k] | inner_pairs +\n".format(
             list_var) +\
-        "\t\t\tCASE WHEN ALL(other in {} WHERE v in other.k)\n".format(
+        "\t\t\tCASE WHEN ALL(other in {} WHERE v in other[k])\n".format(
             list_var) +\
         "\t\t\tTHEN\n" +\
-        "\t\t\t\tinner_pairs + {key: k, value: v}\n" +\
+        "\t\t\t\t{key: k, value: v}\n" +\
         "\t\t\tELSE\n" +\
-        "\t\t\t\tinner_pairs\n" +\
+        "\t\t\t\t[]\n" +\
         "\t\t\tEND)\n" +\
         "\tELSE\n" +\
-        "\t\tpairs\n" +\
+        "\t\t[]\n" +\
         "\tEND) as {}, ".format(new_props_var) +\
         ", ".join(carry_vars) + "\n"
     query +=\
