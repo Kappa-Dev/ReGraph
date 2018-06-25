@@ -470,16 +470,20 @@ class Neo4jGraph(object):
         for node, attrs in rule.removed_node_attrs().items():
             query += "// Removing properties from node '{}' of P \n".format(node)
             query += remove_attributes(p_vars[node], attrs)
-            query += "\n"
+            query += "\n\n"
 
         # Generate edge attrs removal subquery
         for e, attrs in rule.removed_edge_attrs().items():
             u = e[0]
             v = e[1]
+            query += "// Removing properties from edge {}->{} of P \n".format(
+                u, v)
+            query += with_vars(carry_variables)
             query += "MATCH ({})-[{}:edge]->({})\n".format(
                 p_vars[u], p_vars[u]+"_"+p_vars[v], p_vars[v])
             carry_variables.add(p_vars[u]+"_"+p_vars[v])
-            query += with_vars(carry_variables)
+            query += remove_attributes(p_vars[u]+"_"+p_vars[v], attrs)
+            query += "\n\n"
 
         # Generate merging subquery
         for rhs_key, p_nodes in rule.merged_nodes().items():
@@ -566,7 +570,7 @@ class Neo4jGraph(object):
                 "target: {}.id}} as added_edges, ".format(rhs_vars[v]) +
                 ", ".join(carry_variables) + "\n"
             )
-            query += "\n"
+            query += "\n\n"
         carry_variables.add('added_edges')
 
         # Generate edge attrs addition subquery
@@ -574,11 +578,12 @@ class Neo4jGraph(object):
             u = e[0]
             v = e[1]
             query += "// Adding properties to the node '{}' from the rhs \n".format(rhs_node)
+            query += with_vars(carry_variables)
             query += "MATCH ({})-[{}:edge]->({})\n".format(
                 rhs_vars[u], rhs_vars[u]+"_"+rhs_vars[v], rhs_vars[v])
             carry_variables.add(rhs_vars[u]+"_"+rhs_vars[v])
-            query += with_vars(carry_variables)
             query += add_attributes(rhs_vars[u]+"_"+rhs_vars[v], attrs)
+            query += "\n\n"
 
         query += "// Return statement \n"
         query += return_vars(carry_variables)
