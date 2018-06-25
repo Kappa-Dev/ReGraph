@@ -14,7 +14,8 @@ from regraph.default.utils import (keys_by_value,
                                    make_canonical_commands,
                                    dict_sub,
                                    attrs_union,
-                                   remove_forbidden)
+                                   remove_forbidden,
+                                   normalize_attrs)
 from regraph.default.category_utils import (identity,
                                             check_homomorphism,
                                             pullback_complement,
@@ -1064,6 +1065,7 @@ class Rule(object):
                 new_attrs = attrs_union(new_attrs, dict_sub(
                     self.lhs.node[node], self.p.node[p_node]))
             if len(new_attrs) > 0:
+                normalize_attrs(new_attrs)
                 attrs[node] = new_attrs
         return attrs
 
@@ -1092,6 +1094,7 @@ class Rule(object):
                             )
                         )
             if len(new_attrs) > 0:
+                normalize_attrs(new_attrs)
                 attrs[(s, t)] = new_attrs
         return attrs
 
