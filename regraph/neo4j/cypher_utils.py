@@ -66,7 +66,7 @@ def remove_attributes(var_name, attrs):
             query += (
                 "FOREACH(dummy IN CASE WHEN '{}' IN keys({}) THEN [1] ELSE [] END |\n".format(
                         k, var_name) +
-                "\tSET {}.{} = filter(v in {}.{} WHERE NOT v IN [{}])".format(
+                "\tSET {}.{} = filter(v in {}.{} WHERE NOT v IN [{}])\n".format(
                     var_name, k, var_name, k,
                     ", ".join(["'{}'".format(val) for val in value])) +
                 "\tFOREACH(dumy2 IN CASE WHEN size({}.{})=0 THEN [1] ELSE [] END |\n".format(
@@ -948,18 +948,21 @@ def find_matching(pattern, nodes=None, node_label='node', edge_label='edge'):
         for n, attrs in pattern.nodes(data=True):
             if len(attrs) != 0:
                 for k in attrs.keys():
-                    nodes_with_attrs.append((n, k, attrs[k]))
+                    for el in attrs[k]:
+                        if type(el) == str:
+                            nodes_with_attrs.append((n, k, "'{}'".format(el)))
+                        else:
+                            nodes_with_attrs.append((n, k, "{}".format(el)))
         print(nodes_with_attrs)
         if len(nodes_with_attrs) != 0:
             query += (
-                "WHERE " + 
-                " AND ".join(["{}.{} = [{}]".format(
-                    n, k, ", ".join(
-                        "'{}'".format(v) for v in val)) for n, k, val in nodes_with_attrs]) + "\n"
+                "WHERE " +
+                " AND ".join(["{} IN {}.{}".format(
+                    v, n, k) for n, k, v in nodes_with_attrs]) + "\n"
             )
 
     query += "RETURN {}".format(", ".join(pattern.nodes()))
-
+    print(query)
     return query
 
 
