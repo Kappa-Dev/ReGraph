@@ -960,8 +960,8 @@ class Rule(object):
         attrs = dict()
         for node in self.rhs.nodes():
             p_nodes = keys_by_value(self.p_rhs, node)
-            # if len(p_nodes) == 0:
-            #     attrs[node] = self.rhs.node[node]
+            if len(p_nodes) == 0:
+                attrs[node] = self.rhs.node[node]
             new_attrs = {}
             for p_node in p_nodes:
                 new_attrs = attrs_union(new_attrs, dict_sub(
