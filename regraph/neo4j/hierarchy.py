@@ -7,11 +7,13 @@ from regraph.neo4j.graphs import Neo4jGraph
 import regraph.neo4j.cypher_utils as cypher
 from regraph.neo4j.category_utils import (pullback,
                                           pushout,
-                                          check_homomorphism)
+                                          _check_homomorphism,
+                                          _check_consistency)
 from regraph.neo4j.rewriting_utils import (propagate_up, propagate_up_v2,
                                            propagate_down, propagate_down_v2)
 from regraph.default.exceptions import (HierarchyError,
                                         InvalidHomomorphism)
+from regraph.default.utils import normalize_attrs
 
 
 class Neo4jHierarchy(object):
@@ -155,7 +157,7 @@ class Neo4jHierarchy(object):
         g = Neo4jGraph(label, self)
         return g
 
-    def add_typing(self, source, target, mapping, attrs=None, check=False):
+    def add_typing(self, source, target, mapping, attrs=None, check=True):
         """Add homomorphism to the hierarchy.
 
         Parameters
@@ -177,6 +179,8 @@ class Neo4jHierarchy(object):
             This error is raised in the following cases:
 
                 * source or target ids are not found in the hierarchy
+                * addition of an edge between source and target produces
+                paths that do not commute with some already existing paths
 
         InvalidHomomorphism
             If a homomorphism from a graph at the source to a graph at
@@ -189,7 +193,8 @@ class Neo4jHierarchy(object):
         nodes_to_match_src = set()
         nodes_to_match_tar = set()
         edge_creation_queries = []
-
+        tmp_attrs = {'tmp': {'true'}}
+        normalize_attrs(tmp_attrs)
         for u, v in mapping.items():
             nodes_to_match_src.add(u)
             nodes_to_match_tar.add(v)
@@ -198,7 +203,8 @@ class Neo4jHierarchy(object):
                             edge_var="typ_"+u+"_"+v,
                             source_var=u+"_src",
                             target_var=v+"_tar",
-                            edge_label='typing'))
+                            edge_label='typing',
+                            attrs=tmp_attrs))
 
         query += cypher.match_nodes({n+"_src": n for n in nodes_to_match_src},
                                     label=g_src._node_label)
@@ -211,20 +217,40 @@ class Neo4jHierarchy(object):
         result = self.execute(query)
 
         valid_typing = True
+        paths_commute = True
         if check:
+            # We first check that the homorphism is valid
             try:
-                valid_typing = self.check_typing(source, target)
-            except InvalidHomomorphism as error:
+                with self._driver.session() as session:
+                    tx = session.begin_transaction()
+                    valid_typing = _check_homomorphism(tx, source, target)
+                    tx.commit()
+            except InvalidHomomorphism as homomorphism_error:
                 valid_typing = False
                 del_query = (
                     "MATCH (:node:{})-[t:typing]-(:node:{})\n".format(
                                         source, target) +
                     "DELETE t\n"
                 )
-                del_res = self.execute(del_query)
-                raise error
+                self.execute(del_query)
+                raise homomorphism_error
+            # We then check that the new typing preserv consistency
+            try:
+                with self._driver.session() as session:
+                    tx = session.begin_transaction()
+                    paths_commute = _check_consistency(tx, source, target)
+                    tx.commit()
+            except InvalidHomomorphism as consistency_error:
+                paths_commute = False
+                del_query = (
+                    "MATCH (:node:{})-[t:typing]-(:node:{})\n".format(
+                                        source, target) +
+                    "DELETE t\n"
+                )
+                self.execute(del_query)
+                raise consistency_error
 
-        if valid_typing:
+        if valid_typing and paths_commute:
             query2 = (
                 cypher.match_nodes(
                             var_id_dict={'g_src': source, 'g_tar': target},
@@ -234,7 +260,12 @@ class Neo4jHierarchy(object):
                             source_var='g_src',
                             target_var='g_tar',
                             edge_label='hierarchyEdge',
-                            attrs=attrs)
+                            attrs=attrs) +
+                cypher.with_vars(["new_hierarchy_edge"]) +
+                "MATCH (:node:{})-[t:typing]-(:node:{})\n".format(
+                                        source, target) +
+                "REMOVE t.tmp\n"
+
             )
             res = self.execute(query2)
         return result
@@ -246,7 +277,7 @@ class Neo4jHierarchy(object):
 
         with self._driver.session() as session:
             tx = session.begin_transaction()
-            res = check_homomorphism(tx, source, target)
+            res = _check_homomorphism(tx, source, target)
             tx.commit()
         print(res)
 

@@ -204,7 +204,7 @@ def pullback_complement(a, b, d, c=None, inplace=False):
     pass
 
 
-def check_homomorphism(tx, domain, codomain, total=True):
+def _check_homomorphism(tx, domain, codomain, total=True):
     """Check if the homomorphism is valid."""
 
     # Check if all the nodes of the domain have exactly 1 image
@@ -335,14 +335,15 @@ def _check_consistency(tx, source, target):
         "// select all the pairs 'pred' 'suc' with a path between\n"
         "UNWIND pred_list as pred\n" +
         "UNWIND suc_list as suc\n" +
-        "OPTIONAL MATCH shortestPath((pred)-[r:typing*]->(suc))\n" +
-        "WITH s, t, r, labels(pred) as pred_label, labels(suc) as suc_label\n" +
+        "OPTIONAL MATCH (pred)-[r:typing*]->(suc)\n" +
+        "WITH s, t, r, labels(pred)[1] as pred_label, labels(suc)[1] as suc_label\n" +
         "WHERE r IS NOT NULL\n" +
         "WITH DISTINCT s, t, pred_label, suc_label\n"
     )
     query += (
         "// return the pairs 's' 't' where there should be a typing edge\n"
-        "OPTIONAL MATCH (s)-[new_typing:tmp_typing]->(t)\n" +
+        "OPTIONAL MATCH (s)-[new_typing:typing]->(t)\n" +
+        "WHERE new_typing.tmp IS NOT NULL\n" +
         "WITH pred_label, suc_label, s.id as s_id, t.id as t_id, new_typing\n" +
         "WHERE new_typing IS NULL\n" +
         "RETURN pred_label, suc_label, s_id, t_id\n"
@@ -356,8 +357,8 @@ def _check_consistency(tx, source, target):
     if len(missing_typing) != 0:
         raise HierarchyError(
             "Homomorphism does not commute with existing paths:\n" +
-            ",\n".join(["\t- from '{}' to '{}'".format(
+            ",\n".join(["\t- from {} to {}".format(
                 s, t) for s, t in missing_typing]) + "."
         )
 
-    return query
+    return True
