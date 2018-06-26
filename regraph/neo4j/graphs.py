@@ -554,10 +554,10 @@ class Neo4jGraph(object):
             query += add_attributes(rhs_vars[rhs_node], attrs)
 
         # Generate edges addition subquery
-        query += (
-            "WITH [] as added_edges, " +
-            ", ".join(carry_variables) + "\n"
-        )
+        # query += (
+        #     "WITH [] as added_edges, " +
+        #     ", ".join(carry_variables) + "\n"
+        # )
         for u, v in rule.added_edges():
             query += "// Adding edge '{}->{}' from the rhs \n".format(u, v)
             query += create_edge(
@@ -565,13 +565,13 @@ class Neo4jGraph(object):
                         source_var=rhs_vars[u],
                         target_var=rhs_vars[v],
                         edge_label='edge')
-            query += (
-                "WITH added_edges + {{source: {}.id, ".format(rhs_vars[u]) +
-                "target: {}.id}} as added_edges, ".format(rhs_vars[v]) +
-                ", ".join(carry_variables) + "\n"
-            )
+            # query += (
+            #     "WITH added_edges + {{source: {}.id, ".format(rhs_vars[u]) +
+            #     "target: {}.id}} as added_edges, ".format(rhs_vars[v]) +
+            #     ", ".join(carry_variables) + "\n"
+            # )
             query += "\n\n"
-        carry_variables.add('added_edges')
+        # carry_variables.add('added_edges')
 
         # Generate edge attrs addition subquery
         for e, attrs in rule.added_edge_attrs().items():
@@ -595,7 +595,7 @@ class Neo4jGraph(object):
         print(query)
         return query, rhs_vars_inverse
 
-    def rewrite(self, rule, instance):
+    def _rewrite_base(self, rule, instance):
         """Perform SqPO rewiting of the graph with a rule."""
         # Generate corresponding Cypher query
         query, rhs_vars_inverse = self.rule_to_cypher(rule, instance)

@@ -9,9 +9,9 @@ def propagate_up(rewritten_graph, predecessor):
     query1 : str
         Generated query for cloning nodes in H
     query2 : str
-        Generated query for removing nodes from H
+        Generated query for removing nodes and attrs from H
     query3 : str
-        Generated query for removing nodes from H
+        Generated query for removing nodes and attrs from H
     """
     # We clone the nodes that have more than 1 image and
     # reassign the typing edges
@@ -66,8 +66,8 @@ def propagate_up(rewritten_graph, predecessor):
         "DETACH DELETE n\n\n"
         )
 
+    # Remove nodes and nodes attrs
     carry_vars = set()
-    # Remove attrs from nodes v1
     query2_1 = (
         "// Removal of nodes in '{}'\n".format(predecessor) +
         "MATCH (n:node:{})\n".format(predecessor) +
@@ -105,7 +105,7 @@ def propagate_up(rewritten_graph, predecessor):
         "DELETE rel_pred\n\n"
         )
 
-    # Remove attrs from edges v1
+    # Remove edges and edges attrs
     carry_vars = set()
     query3_1 = (
         "// Removal of edges attributes in '{}'\n".format(predecessor) +
@@ -221,9 +221,9 @@ def propagate_down(rewritten_graph, successor):
     query1 : str
         Generated query for merging nodes in H
     query2 : str
-        Generated query for adding nodes in T
+        Generated query for adding nodes and attrs in T
     query3 : str
-        Generated query for adding edges in T
+        Generated query for adding edges and attrs in T
     """
     carry_vars = set()
 
@@ -273,9 +273,7 @@ def propagate_down(rewritten_graph, successor):
     query2 += "RETURN collect(new_node.id) as added_nodes\n"
 
     # add nodes in T for each node without image in G + add new_props
-
     carry_vars = set()
-    #add properties
     query2_1 = (
         "\n// Addition of nodes and properties in '{}'\n".format(successor) +
         "MATCH (n:node:{})".format(rewritten_graph) +
@@ -294,7 +292,7 @@ def propagate_down(rewritten_graph, successor):
         "SET node_img += new_props\n"
         )
 
-    # add edges in T for each edge without image in G + add new_props
+    # add edges in T for each edge without image in G
     query3 = (
         "\n// Addition of edges in '{}'\n".format(successor) +
         "OPTIONAL MATCH (n:node:{})-[rel:edge]->(m:node:{})\n".format(
@@ -315,6 +313,7 @@ def propagate_down(rewritten_graph, successor):
         )
     query3 += "RETURN collect({source:x.id, target:y.id}) as added_edges\n"
 
+    # add edges in T for each edge without image in G + add new_props
     carry_vars = set()
     query3_1 = (
         "\n// Addition of edges and properties in '{}'\n".format(successor) +
