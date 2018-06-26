@@ -327,7 +327,7 @@ class Neo4jGraph(object):
             instances.append(instance)
         return instances
 
-    def rule_to_cypher(self, rule, instance, generate_var_ids=False):
+    def rule_to_cypher(self, rule, instance, rhs_typing=None, generate_var_ids=False):
         """Convert a rule on the instance to a Cypher query.
 
         rule : regraph.Rule
@@ -343,6 +343,8 @@ class Neo4jGraph(object):
         # var names, we need to perform escaping on these names
         # for neo4j not to complain (some symbols are forbidden in
         # Cypher's var names)
+        if rhs_typing is None:
+            rhs_typing = dict()
 
         if generate_var_ids:
             # Generate unique variable names corresponding to node names
@@ -583,7 +585,23 @@ class Neo4jGraph(object):
                 rhs_vars[u], rhs_vars[u]+"_"+rhs_vars[v], rhs_vars[v])
             carry_variables.add(rhs_vars[u]+"_"+rhs_vars[v])
             query += add_attributes(rhs_vars[u]+"_"+rhs_vars[v], attrs)
+            query += with_vars(carry_variables)
             query += "\n\n"
+
+        # Genearate rhs_typing
+        for graph in rhs_typing.keys():
+            for node in rhs_typing[graph].keys():
+                query += (
+                    with_vars(carry_variables) +
+                    "OPTIONAL MATCH ({})-[t:typing]->(:node:{})\n".format(
+                        rhs_vars[node], graph) +
+                    "FOREACH(dummy IN CASE WHEN t IS NOT NULL THEN [1] ELSE [] END |\n" +
+                    "\tDELETE t)\n" +
+                    with_vars(carry_variables) +
+                    "MATCH ({}:node:{} {{id:'{}'}})\n".format(
+                        node+'_'+graph, graph, rhs_typing[graph][node]) +
+                    "MERGE ({})-[:typing]->({})\n".format(rhs_vars[node], node+'_'+graph)
+                )
 
         query += "// Return statement \n"
         query += return_vars(carry_variables)
@@ -595,10 +613,10 @@ class Neo4jGraph(object):
         print(query)
         return query, rhs_vars_inverse
 
-    def _rewrite_base(self, rule, instance):
+    def _rewrite_base(self, rule, instance, rhs_typing=None):
         """Perform SqPO rewiting of the graph with a rule."""
         # Generate corresponding Cypher query
-        query, rhs_vars_inverse = self.rule_to_cypher(rule, instance)
+        query, rhs_vars_inverse = self.rule_to_cypher(rule, instance, rhs_typing)
         print("Rewriting rule to Cypher: \n")
         print(query)
         # Execute query
