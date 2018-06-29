@@ -58,17 +58,9 @@ def propagate_up(rewritten_graph, predecessor):
         )
     query1 += "RETURN clone_ids"
 
-    # We remove the nodes of H without image in G
-    query2 = (
-        "// Removal of nodes in '{}'\n".format(predecessor) +
-        "OPTIONAL MATCH (n:node:{})\n".format(predecessor) +
-        "WHERE NOT (n)-[:typing]->(:node:{})\n".format(rewritten_graph) +
-        "DETACH DELETE n\n\n"
-        )
-
     # Remove nodes and nodes attrs
     carry_vars = set()
-    query2_1 = (
+    query2 = (
         "// Removal of nodes in '{}'\n".format(predecessor) +
         "MATCH (n:node:{})\n".format(predecessor) +
         "OPTIONAL MATCH (n)-[:typing]->(x:node:{})\n".format(rewritten_graph) +
@@ -82,7 +74,7 @@ def propagate_up(rewritten_graph, predecessor):
         "WITH n, x, [x, n] as node_to_merge_props\n"
         )
     carry_vars.update(['n', 'x'])
-    query2_1 += (
+    query2 += (
         cypher.merge_properties_from_list(
                     list_var='node_to_merge_props',
                     new_props_var='new_props',
@@ -93,26 +85,14 @@ def propagate_up(rewritten_graph, predecessor):
         "SET n.id = n_id\n"
         )
 
-    # We remove the edges without image in G
-    query3 = (
-        "// Removal of edges in '{}'\n".format(predecessor) +
-        "OPTIONAL MATCH (n:node:{})-[rel_pred:edge]->(m:node:{})\n".format(
-            predecessor, predecessor) +
-        "OPTIONAL MATCH (n)-[:typing]->(:node:{})-[rel:edge]->(:node:{})<-[:typing]-(m)\n".format(
-            rewritten_graph, rewritten_graph) +
-        "WITH rel_pred WHERE rel IS NULL\n" +
-        "WITH DISTINCT rel_pred\n" +
-        "DELETE rel_pred\n\n"
-        )
-
     # Remove edges and edges attrs
     carry_vars = set()
-    query3_1 = (
+    query3 = (
         "// Removal of edges attributes in '{}'\n".format(predecessor) +
-        "MATCH (x:node:{})-[rel:edge]->(y:node:{})".format(
-            rewritten_graph, rewritten_graph) +
-        "OPTIONAL MATCH (n:node:{})-[rel_pred:edge]->(m:node:{})\n".format(
+        "MATCH (n:node:{})-[rel_pred:edge]->(m:node:{})\n".format(
             predecessor, predecessor) +
+        "OPTIONAL MATCH (x:node:{})-[rel:edge]->(y:node:{})".format(
+            rewritten_graph, rewritten_graph) +
         "WHERE (n)-[:typing]->(x) AND (m)-[:typing]->(y)\n" +
         "FOREACH(dummy IN CASE WHEN rel IS NULL THEN [1] ELSE [] END |\n" +
         "\tDELETE rel_pred)\n" +
@@ -122,7 +102,7 @@ def propagate_up(rewritten_graph, predecessor):
         "WITH rel, rel_pred, [rel_pred, rel] as edges_to_merge_props\n"
         )
     carry_vars.update(['rel_pred', 'rel'])
-    query3_1 += (
+    query3 += (
         cypher.merge_properties_from_list(
                     list_var='edges_to_merge_props',
                     new_props_var='new_props',
@@ -132,9 +112,9 @@ def propagate_up(rewritten_graph, predecessor):
         )
 
     print(query1)
-    print(query2_1)
-    print(query3_1)
-    return query1, query2_1, query3_1
+    print(query2)
+    print(query3)
+    return query1, query2, query3
 
 
 def propagate_up_v2(rewritten_graph, predecessor):
@@ -260,21 +240,9 @@ def propagate_down(rewritten_graph, successor):
 
     carry_vars = set()
 
-    # add nodes in T for each node without image in G
-    query2 = (
-        "// Addition of nodes in '{}'\n".format(successor) +
-        "OPTIONAL MATCH (n:node:{})".format(rewritten_graph) +
-        "WHERE NOT (n)-[:typing]->(:node:{})\n".format(successor) +
-        "WITH n WHERE n IS NOT NULL\n" +
-        "MERGE (n)-[:typing]->(new_node:node:{})\n".format(successor) +
-        "ON CREATE SET new_node += properties(n)\n" +
-        "ON CREATE SET new_node.id = toString(id(new_node))\n"
-        )
-    query2 += "RETURN collect(new_node.id) as added_nodes\n"
-
     # add nodes in T for each node without image in G + add new_props
     carry_vars = set()
-    query2_1 = (
+    query2 = (
         "\n// Addition of nodes and properties in '{}'\n".format(successor) +
         "MATCH (n:node:{})".format(rewritten_graph) +
         "MERGE (n)-[:typing]->(node_img:node:{})\n".format(successor) +
@@ -283,7 +251,7 @@ def propagate_down(rewritten_graph, successor):
         "WITH node_img, collect(n) + [node_img] as nodes_to_merge_props\n"
     )
     carry_vars.add('node_img')
-    query2_1 += (
+    query2 += (
         cypher.merge_properties_from_list(
                     list_var='nodes_to_merge_props',
                     new_props_var='new_props',
@@ -292,30 +260,9 @@ def propagate_down(rewritten_graph, successor):
         "SET node_img += new_props\n"
         )
 
-    # add edges in T for each edge without image in G
-    query3 = (
-        "\n// Addition of edges in '{}'\n".format(successor) +
-        "OPTIONAL MATCH (n:node:{})-[rel:edge]->(m:node:{})\n".format(
-            rewritten_graph, rewritten_graph) +
-        "WHERE {source: n.id, target:m.id} IN $added_edges_list\n" +
-        "WITH n, m, rel WHERE n IS NOT NULL AND m IS NOT NULL\n" +
-        "OPTIONAL MATCH (n)-[:typing]->(x:node:{}), (m)-[:typing]->(y:node:{})\n".format(
-            successor, successor) +
-        "MERGE (x)-[rel_img:edge]->(y)\n"
-    )
-    carry_vars.update(['x', 'y'])
-    query3 += (
-        cypher.merge_properties(
-                    var_list=['rel', 'rel_img'],
-                    new_props_var='new_props',
-                    carry_vars=carry_vars) +
-        "SET rel_img += new_props\n"
-        )
-    query3 += "RETURN collect({source:x.id, target:y.id}) as added_edges\n"
-
     # add edges in T for each edge without image in G + add new_props
     carry_vars = set()
-    query3_1 = (
+    query3 = (
         "\n// Addition of edges and properties in '{}'\n".format(successor) +
         "MATCH (n:node:{})-[rel:edge]->(m:node:{}), ".format(
             rewritten_graph, rewritten_graph) +
@@ -327,7 +274,7 @@ def propagate_down(rewritten_graph, successor):
         "WITH x, y, rel_img, collect(rel) + rel_img as edges_to_merge_props\n"
     )
     carry_vars.update(['x', 'y', 'rel_img'])
-    query3_1 += (
+    query3 += (
         cypher.merge_properties_from_list(
                     list_var='edges_to_merge_props',
                     new_props_var='new_props',
@@ -336,9 +283,9 @@ def propagate_down(rewritten_graph, successor):
         "SET rel_img += new_props\n"
         )
     print(query1)
-    print(query2_1)
-    print(query3_1)
-    return query1, query2_1, query3_1
+    print(query2)
+    print(query3)
+    return query1, query2, query3
 
 
 def propagate_down_v2(rewritten_graph, successor):
