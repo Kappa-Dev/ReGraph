@@ -65,7 +65,7 @@ def propagate_up(rewritten_graph, predecessor):
         "MATCH (n:node:{})\n".format(predecessor) +
         "OPTIONAL MATCH (n)-[:typing]->(x:node:{})\n".format(rewritten_graph) +
         "FOREACH(dummy IN CASE WHEN x IS NULL THEN [1] ELSE [] END |\n" +
-        "\tDETACH DELETE n)\n"
+        "\t" + cypher.delete_nodes_var(['n']) + ")\n"
         "// Removal of node properties in '{}'\n".format(predecessor) +
         "WITH n, x\n".format(
             predecessor, rewritten_graph) +
@@ -95,7 +95,7 @@ def propagate_up(rewritten_graph, predecessor):
             rewritten_graph, rewritten_graph) +
         "WHERE (n)-[:typing]->(x) AND (m)-[:typing]->(y)\n" +
         "FOREACH(dummy IN CASE WHEN rel IS NULL THEN [1] ELSE [] END |\n" +
-        "\tDELETE rel_pred)\n" +
+        "\t" + cypher.delete_edge_var('rel_pred') + ")\n" +
         "WITH rel, rel_pred\n" +
         "WHERE rel IS NOT NULL AND " +
         cypher.nb_of_attrs_mismatch('rel_pred', 'rel') + " <> 0\n"
