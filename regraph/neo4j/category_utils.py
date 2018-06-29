@@ -205,7 +205,29 @@ def pullback_complement(a, b, d, c=None, inplace=False):
 
 
 def _check_homomorphism(tx, domain, codomain, total=True):
-    """Check if the homomorphism is valid."""
+    """Check if the homomorphism is valid.
+
+    Parameters
+    ----------
+    tx
+        Variable of a cypher transaction
+    domain : str
+        Label of the graph at the domain of the homomorphism
+    codmain : str
+        Label of the graph at the codomain of the homomorphism
+
+    Raises
+    ------
+    InvalidHomomorphism
+        This error is raised in the following cases:
+
+            * a node at the domain does not have exactly 1 image
+            in the codoamin
+            * an edge at the domain does not have an image in
+            the codomain
+            * a property does not match between a node and its image
+            * a property does not match between an edge and its image
+    """
 
     # Check if all the nodes of the domain have exactly 1 image
     query1 = (
@@ -228,6 +250,7 @@ def _check_homomorphism(tx, domain, codomain, total=True):
                 )
             )
 
+    # Check if all the edges of the domain have an image
     query2 = (
         "MATCH (n:node:{})-[:edge]->(m:node:{})\n".format(
             domain, domain) +
@@ -250,6 +273,7 @@ def _check_homomorphism(tx, domain, codomain, total=True):
                 x, y) for x, y in xy_ids])
             )
 
+    # Check if all the properties of a node of the domain are in its image
     query3 = (
         "MATCH (n:node:{})-[:typing]->(m:node:{})\n".format(
                 domain, codomain) +
@@ -277,6 +301,7 @@ def _check_homomorphism(tx, domain, codomain, total=True):
                        for n, m in invalid_typings])
             )
 
+    # Check if all the properties of an edge of the domain are in its image
     query4 = (
         "MATCH (n:node:{})-[rel_orig:edge]->(m:node:{})\n".format(
             domain, domain) +
