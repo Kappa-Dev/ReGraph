@@ -315,16 +315,19 @@ class Neo4jGraph(object):
 
     def find_matching(self, pattern, nodes=None):
         """Find matchings of a pattern in the graph."""
-        result = self.execute(find_matching(
-            pattern, nodes,
-            node_label=self._node_label, edge_label='edge'))
-        instances = list()
+        if len(pattern.nodes()) != 0:
+            result = self.execute(find_matching(
+                pattern, nodes,
+                node_label=self._node_label, edge_label='edge'))
+            instances = list()
 
-        for record in result:
-            instance = dict()
-            for k, v in record.items():
-                instance[k] = dict(v)["id"]
-            instances.append(instance)
+            for record in result:
+                instance = dict()
+                for k, v in record.items():
+                    instance[k] = dict(v)["id"]
+                instances.append(instance)
+        else:
+            instances = []
         return instances
 
     def rule_to_cypher(self, rule, instance, rhs_typing=None, generate_var_ids=False):
@@ -591,17 +594,14 @@ class Neo4jGraph(object):
         # Genearate rhs_typing
         for graph in rhs_typing.keys():
             for node in rhs_typing[graph].keys():
-                query += (
-                    with_vars(carry_variables) +
-                    "OPTIONAL MATCH ({})-[t:typing]->(:node:{})\n".format(
-                        rhs_vars[node], graph) +
-                    "FOREACH(dummy IN CASE WHEN t IS NOT NULL THEN [1] ELSE [] END |\n" +
-                    "\tDELETE t)\n" +
-                    with_vars(carry_variables) +
-                    "MATCH ({}:node:{} {{id:'{}'}})\n".format(
-                        node+'_'+graph, graph, rhs_typing[graph][node]) +
-                    "MERGE ({})-[:typing]->({})\n".format(rhs_vars[node], node+'_'+graph)
-                )
+                if node in rule.added_nodes():
+                    query += (
+                        with_vars(carry_variables) +
+                        "OPTIONAL MATCH ({}:node:{} {{id:'{}'}})\n".format(
+                            node+'_'+graph, graph, rhs_typing[graph][node]) +
+                        "MERGE ({})-[:tmp_typing]->({})\n".format(
+                            rhs_vars[node], node+'_'+graph)
+                    )
 
         query += "// Return statement \n"
         query += return_vars(carry_variables)
