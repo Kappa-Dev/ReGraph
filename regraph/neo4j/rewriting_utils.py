@@ -21,7 +21,7 @@ def propagate_up(rewritten_graph, predecessor):
         "OPTIONAL MATCH (node_to_clone:node:{})-[t:typing]->(n:node:{})\n".format(
             predecessor, rewritten_graph) +
         "WITH node_to_clone, collect(n) as sucs, collect(t) as typ_sucs, "
-        "size(collect(n)) as number_of_img\n" +
+        "count(n) as number_of_img\n" +
         "WHERE number_of_img >= 2 AND node_to_clone IS NOT NULL\n"
         )
     query1 += (
@@ -193,7 +193,7 @@ def propagate_up_v2(rewritten_graph, predecessor):
     return query
 
 
-def propagate_down(rewritten_graph, successor):
+def propagate_down(rewritten_graph, successor, rhs_typing=False):
     """Generate the queries for propagating the changes down from G-->T.
 
     Returns
@@ -242,23 +242,117 @@ def propagate_down(rewritten_graph, successor):
 
     # add nodes in T for each node without image in G + add new_props
     carry_vars = set()
-    query2 = (
-        "\n// Addition of nodes and properties in '{}'\n".format(successor) +
-        "MATCH (n:node:{})".format(rewritten_graph) +
-        "MERGE (n)-[:typing]->(node_img:node:{})\n".format(successor) +
-        "WITH n, node_img WHERE " +
-        cypher.nb_of_attrs_mismatch('n', 'node_img') + " <> 0\n" +
-        "WITH node_img, collect(n) + [node_img] as nodes_to_merge_props\n"
-    )
-    carry_vars.add('node_img')
-    query2 += (
-        cypher.merge_properties_from_list(
-                    list_var='nodes_to_merge_props',
-                    new_props_var='new_props',
-                    carry_vars=carry_vars,
-                    method='union') +
-        "SET node_img += new_props\n"
+    if not rhs_typing:
+        query2 = (
+            "\n// Addition of nodes and properties in '{}'\n".format(successor) +
+            "MATCH (n:node:{})\n".format(rewritten_graph) +
+            "OPTIONAL MATCH (n)<-[:typing*0..]-(:node)-[:typing*]->(existing_img:node:{})\n".format(
+                successor) +
+            "FOREACH(dummy IN CASE WHEN existing_img IS NOT NULL THEN [1] ELSE [] END |\n" +
+            "\tMERGE (n)-[:typing]->(existing_img))\n" +
+            cypher.with_vars(['n']) +
+            "MERGE (n)-[:typing]->(node_img:node:{})\n".format(successor) +
+            "WITH n, node_img\n" +
+            "FOREACH(dummy IN CASE WHEN node_img.id IS NULL THEN [1] ELSE [] END |\n" +
+            "\tSET node_img.id = id(node_img))\n" +
+            "WITH n, node_img WHERE " +
+            cypher.nb_of_attrs_mismatch('n', 'node_img') + " <> 0\n" +
+            "WITH node_img, collect(n) + [node_img] as nodes_to_merge_props\n"
         )
+        carry_vars.add('node_img')
+        query2 += (
+            cypher.merge_properties_from_list(
+                        list_var='nodes_to_merge_props',
+                        new_props_var='new_props',
+                        carry_vars=carry_vars,
+                        method='union') +
+            "SET node_img += new_props\n"
+            )
+    else:
+        query2 = (
+            "\n// Addition of nodes and properties in '{}'\n".format(successor) +
+            "MATCH (n:node:{})\n".format(rewritten_graph) +
+            "OPTIONAL MATCH (n)-[:tmp_typing]-(rhs_typing_node:node:{})\n".format(
+                successor) +
+            "FOREACH(dummy IN CASE WHEN rhs_typing_node IS NOT NULL THEN [1] ELSE [] END |\n" +
+            "\tMERGE (n)-[:typing]->(tmp_node:node:{})\n".format(
+                successor) +
+            "\tSET tmp_node.id = id(tmp_node))\n" +
+            "WITH n\n" +
+            "OPTIONAL MATCH (n)<-[:typing*0..]-" +
+            "(:node)-[rel:typing|tmp_typing*]->(existing_img:node:{})\n".format(
+                successor) +
+            "FOREACH(dummy IN CASE WHEN existing_img IS NOT NULL\n" +
+            "\t\tAND ANY(r in rel WHERE type(r) = 'tmp_typing') THEN [1] ELSE [] END |\n" +
+            "\tMERGE (n)-[:tmp_typing]->(existing_img))\n" +
+            "FOREACH(dummy IN CASE WHEN existing_img IS NOT NULL\n" +
+            "\t\tAND NONE(r in rel WHERE type(r) = 'tmp_typing') THEN [1] ELSE [] END |\n" +
+            "\tMERGE (n)-[:typing]->(existing_img))\n" +
+            cypher.with_vars(['n']) +
+            "OPTIONAL MATCH (n)-[:typing]->(node_img:node:{})\n".format(successor) +
+            "FOREACH(dummy IN CASE WHEN node_img IS NULL THEN [1] ELSE [] END |\n" +
+            "\tMERGE (n)-[:typing]->(img:node:{})\n".format(successor) +
+            "\tSET img.id = id(img))\n" +
+            "WITH n\n" +
+            "OPTIONAL MATCH (n)-[:typing]->(node_img:node:{})\n".format(
+                successor) +
+            "WHERE " + cypher.nb_of_attrs_mismatch('n', 'node_img') + " <> 0\n" +
+            "WITH node_img, collect(n) + [node_img] as nodes_to_merge_props\n"
+        )
+        carry_vars.add('node_img')
+        query2 += (
+            cypher.merge_properties_from_list(
+                        list_var='nodes_to_merge_props',
+                        new_props_var='new_props',
+                        carry_vars=carry_vars,
+                        method='union') +
+            "SET node_img += new_props\n"
+            )
+        """
+        query2 = (
+            "\n// Addition of nodes and properties in '{}'\n".format(
+                successor) +
+            "MATCH (n:node:{})\n".format(rewritten_graph) +
+            "OPTIONAL MATCH (n)-[:tmp_rhs_typing]-(rhs_typing_node:node:{})\n".format(
+                successor) +
+            "FOREACH(dummy IN CASE WHEN rhs_typing_node IS NOT NULL THEN [1] ELSE [] END |\n" +
+            "\tMERGE (n)-[:tmp_typing]->(tmp_node:node:tmp:{}))\n".format(
+                successor) +
+            "WITH n\n"
+            "OPTIONAL MATCH (n)<-[:typing|tmp_rhs_typing|tmp_typing*0..]-" +
+            "(:node)-[r:typing|tmp_rhs_typing|tmp_typing*]->(existing_img:node:{})\n".format(
+                successor) +
+            "FOREACH(dummy IN CASE\n" +
+            "\t\tWHEN ANY(rel in r WHERE type(rel) = 'tmp_rhs_typing') AND\n" +
+            "\t\tNOT 'tmp' in labels(n) THEN [1] ELSE [] END |\n" +
+            "\tMERGE (n)-[:tmp_rhs_typing]-(existing_img))\n" +
+            "FOREACH(dummy IN CASE WHEN 'tmp' IN labels(existing_img) THEN [1] ELSE [] END |\n" +
+            "\tMERGE (n)-[:tmp_typing]-(existing_img))\n" +
+            "WITH n\n" +
+            "OPTIONAL MATCH (n)-[:typing|tmp_typing]->(node_img:node:{})\n".format(
+                successor) +
+            "FOREACH(dummy IN CASE WHEN (node_img IS NULL) AND 'tmp' in labels(n) THEN [1] ELSE [] END |\n" +
+            "\tMERGE (n)-[:tmp_typing]-(img:node:tmp:{})\n".format(successor) +
+            "\tSET img.id = id(img))\n" +
+            "FOREACH(dummy IN CASE WHEN node_img IS NULL AND NOT 'tmp' in labels(n) THEN [1] ELSE [] END |\n" +
+            "\tMERGE (n)-[:typing]-(img:node:{})\n".format(successor) +
+            "\tSET img.id = id(img))\n" +
+            "WITH n\n" +
+            "OPTIONAL MATCH (n)-[:typing|tmp_typing]->(node_img:node:{})\n".format(
+                successor) +
+            "WHERE " + cypher.nb_of_attrs_mismatch('n', 'node_img') + " <> 0\n" +
+            "WITH node_img, collect(n) + [node_img] as nodes_to_merge_props\n"
+        )
+        carry_vars.add('node_img')
+        query2 += (
+            cypher.merge_properties_from_list(
+                        list_var='nodes_to_merge_props',
+                        new_props_var='new_props',
+                        carry_vars=carry_vars,
+                        method='union') +
+            "SET node_img += new_props\n"
+            )
+        """
 
     # add edges in T for each edge without image in G + add new_props
     carry_vars = set()

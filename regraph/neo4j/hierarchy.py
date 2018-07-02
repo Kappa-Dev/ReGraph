@@ -371,14 +371,15 @@ class Neo4jHierarchy(object):
         for ancestor in predecessors:
             self._propagation_up(ancestor)
 
-    def _propagation_down(self, rewritten_graph):
+    def _propagation_down(self, rewritten_graph, rhs_typing=False):
         successors = self.successors(rewritten_graph)
         print("Rewritting children of {}...".format(rewritten_graph))
         for successor in successors:
             print('--> ', successor)
             q_merge_node, q_add_node, q_add_edge = propagate_down(
                                                     rewritten_graph,
-                                                    successor)
+                                                    successor,
+                                                    rhs_typing)
             # run multiple queries in one transaction
             with self._driver.session() as session:
                 tx = session.begin_transaction()
@@ -387,7 +388,7 @@ class Neo4jHierarchy(object):
                 tx.run(q_add_edge).single()
                 tx.commit()
         for successor in successors:
-            self._propagation_down(successor)
+            self._propagation_down(successor, rhs_typing)
 
     def _propagation_down_v2(self, rewritten_graph, changes):
         successors = self.successors(rewritten_graph)
