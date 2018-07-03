@@ -1,8 +1,11 @@
 """Category operations used by neo4j graph rewriting tool."""
 
+import warnings
+
 import regraph.neo4j.cypher_utils as cypher
 
-from regraph.default.exceptions import (InvalidHomomorphism, HierarchyError)
+from regraph.default.exceptions import (InvalidHomomorphism, HierarchyError,
+                                        TypingWarning)
 
 
 def pullback(b, c, d, a=None, inplace=False):
@@ -387,3 +390,50 @@ def _check_consistency(tx, source, target):
         )
 
     return True
+
+
+def _check_rhs_consistency(tx, rewritten_graph):
+    """Check consistency of typing ofthe rhs of the rule."""
+    query1 = (
+        "MATCH (G:hierarchyNode)\n"
+        "WHERE G.id = '{}'\n".format(rewritten_graph) +
+        "OPTIONAL MATCH (t_i:hierarchyNode)\n" +
+        "WHERE (t_i)<-[:hierarchyEdge*1..]-(G)-[:hierarchyEdge*1..]->(t_i)\n" +
+        "WITH DISTINCT t_i\n" +
+        "RETURN collect(t_i.id)\n"
+    )
+
+    multiple_paths_successors = tx.run(query1).value()[0]
+    if len(multiple_paths_successors) == 0:
+        return True
+
+    inconsistent_paths = []
+    for graph in multiple_paths_successors:
+        query2 = (
+            "MATCH (n:node:{})-[:tmp_typing]->()-[:typing*0..]->(m:node:{})\n".format(
+                rewritten_graph, graph) +
+            "WITH n, collect(DISTINCT m.id) as imgs\n" +
+            "RETURN n.id as n_id, imgs, size(imgs) as nb_of_imgs\n"
+        )
+        result = tx.run(query2)
+        for record in result:
+            if record['nb_of_imgs'] > 1:
+                inconsistent_paths.append((record['n_id'], record['imgs'], graph))
+
+    if len(inconsistent_paths) == 0:
+        return True
+
+    else:
+        warn_message = (
+            "\nTyping of the rhs is self inconsistent:\n" +
+            "\n".join(["\t- Node '{}' is typed as {} in {}".format(
+                n,
+                " and ".join(["'{}'".format(i) for i in imgs]),
+                g) for n, imgs, g in inconsistent_paths]) +
+            "\n\n" +
+            "The rhs typing of the rule will be ignored and a canonical " +
+            "rewriting will be performed!\n"
+        )
+        warnings.warn(warn_message, TypingWarning)
+        return False
+

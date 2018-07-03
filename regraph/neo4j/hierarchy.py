@@ -8,7 +8,8 @@ import regraph.neo4j.cypher_utils as cypher
 from regraph.neo4j.category_utils import (pullback,
                                           pushout,
                                           _check_homomorphism,
-                                          _check_consistency)
+                                          _check_consistency,
+                                          _check_rhs_consistency)
 from regraph.neo4j.rewriting_utils import (propagate_up, propagate_up_v2,
                                            propagate_down, propagate_down_v2)
 from regraph.default.exceptions import (HierarchyError,
@@ -304,8 +305,18 @@ class Neo4jHierarchy(object):
 
     def rewrite(self, graph_label, rule, instance):
         """Perform SqPO rewriting of the graph with a rule."""
+
+        # Rewriting of the base graph
         g = self.access_graph(graph_label)
         rhs_g = g._rewrite_base(rule, instance)
+
+        # Checking if the rhs typing is consistent
+        with self._driver.session() as session:
+            tx = session.begin_transaction()
+            consistent_typing = _check_rhs_consistency(tx, graph_label)
+            tx.commit()
+
+        # Propagate the changes up and down
         self._propagation_up(graph_label)
         self._propagation_down(graph_label)
 
