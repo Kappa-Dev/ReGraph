@@ -11,7 +11,9 @@ from regraph.neo4j.category_utils import (pullback,
                                           _check_consistency,
                                           _check_rhs_consistency)
 from regraph.neo4j.rewriting_utils import (propagate_up, propagate_up_v2,
-                                           propagate_down, propagate_down_v2)
+                                           propagate_down, propagate_down_v2,
+                                           preserve_tmp_typing,
+                                           remove_tmp_typing)
 from regraph.default.exceptions import (HierarchyError,
                                         InvalidHomomorphism)
 from regraph.default.utils import normalize_attrs
@@ -303,18 +305,23 @@ class Neo4jHierarchy(object):
             print('--------------------')
             self.execute(q)
 
-    def rewrite(self, graph_label, rule, instance):
+    def rewrite(self, graph_label, rule, instance, rhs_typing=None):
         """Perform SqPO rewriting of the graph with a rule."""
 
         # Rewriting of the base graph
         g = self.access_graph(graph_label)
-        rhs_g = g._rewrite_base(rule, instance)
+        rhs_g = g._rewrite_base(rule, instance, rhs_typing)
 
         # Checking if the rhs typing is consistent
         with self._driver.session() as session:
             tx = session.begin_transaction()
             consistent_typing = _check_rhs_consistency(tx, graph_label)
             tx.commit()
+
+        if consistent_typing:
+            self.execute(preserve_tmp_typing(graph_label))
+        else:
+            self.execute(remove_tmp_typing(graph_label))
 
         # Propagate the changes up and down
         self._propagation_up(graph_label)
@@ -382,15 +389,14 @@ class Neo4jHierarchy(object):
         for ancestor in predecessors:
             self._propagation_up(ancestor)
 
-    def _propagation_down(self, rewritten_graph, rhs_typing=False):
+    def _propagation_down(self, rewritten_graph):
         successors = self.successors(rewritten_graph)
         print("Rewritting children of {}...".format(rewritten_graph))
         for successor in successors:
             print('--> ', successor)
             q_merge_node, q_add_node, q_add_edge = propagate_down(
                                                     rewritten_graph,
-                                                    successor,
-                                                    rhs_typing)
+                                                    successor)
             # run multiple queries in one transaction
             with self._driver.session() as session:
                 tx = session.begin_transaction()
@@ -399,7 +405,7 @@ class Neo4jHierarchy(object):
                 tx.run(q_add_edge).single()
                 tx.commit()
         for successor in successors:
-            self._propagation_down(successor, rhs_typing)
+            self._propagation_down(successor)
 
     def _propagation_down_v2(self, rewritten_graph, changes):
         successors = self.successors(rewritten_graph)

@@ -379,3 +379,20 @@ def propagate_down_v2(rewritten_graph, successor):
     )
 
     return query
+
+
+def remove_tmp_typing(rewritten_graph):
+    query = (
+        "MATCH (n:node:{})-[t:tmp_typing]->(:node)\n".format(rewritten_graph) +
+        "DELETE t\n"
+    )
+    return query
+
+
+def preserve_tmp_typing(rewritten_graph):
+    query = (
+        "MATCH (n:node:{})-[t:tmp_typing]->(m:node)\n".format(rewritten_graph) +
+        "DELETE t\n" +
+        "MERGE (n)-[:typing]->(m)\n"
+    )
+    return query
