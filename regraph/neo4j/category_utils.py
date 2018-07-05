@@ -413,12 +413,12 @@ def _check_rhs_consistency(tx, rewritten_graph):
             "MATCH (n:node:{})-[:tmp_typing]->()-[:typing*0..]->(m:node:{})\n".format(
                 rewritten_graph, graph) +
             "WITH n, collect(DISTINCT m.id) as imgs\n" +
-            "RETURN n.id as n_id, imgs, size(imgs) as nb_of_imgs\n"
+            "WHERE size(imgs) > 1\n" +
+            "RETURN n.id as n_id, imgs\n"
         )
         result = tx.run(query2)
         for record in result:
-            if record['nb_of_imgs'] > 1:
-                inconsistent_paths.append((record['n_id'], record['imgs'], graph))
+            inconsistent_paths.append((record['n_id'], record['imgs'], graph))
 
     if len(inconsistent_paths) == 0:
         return True
@@ -436,4 +436,3 @@ def _check_rhs_consistency(tx, rewritten_graph):
         )
         warnings.warn(warn_message, TypingWarning)
         return False
-
