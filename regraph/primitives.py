@@ -1122,6 +1122,34 @@ def graph_to_json(graph):
     return j_data
 
 
+def graph_to_d3_json(graph):
+    """Create a JSON representation of a graph."""
+    j_data = {"links": [], "nodes": []}
+    # dump nodes
+    for node in graph.nodes():
+        node_data = {}
+        node_data["id"] = node
+        if graph.node[node] is not None:
+            attrs = {}
+            for key, value in graph.node[node].items():
+                attrs[key] = value.to_json()
+            node_data["attrs"] = attrs
+        j_data["nodes"].append(node_data)
+
+    # dump edges
+    for s, t in graph.edges():
+        edge_data = {}
+        edge_data["source"] = s
+        edge_data["target"] = t
+        if graph.edge[s][t] is not None:
+            attrs = {}
+            for key, value in graph.edge[s][t].items():
+                attrs[key] = value.to_json()
+            edge_data["attrs"] = attrs
+        j_data["links"].append(edge_data)
+    return j_data
+
+
 def export_graph(graph, filename):
     """Export graph to JSON file.
 
