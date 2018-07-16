@@ -1503,7 +1503,7 @@ def merging_from_list(list_var, merged_var, merged_id, merged_id_var,
         Updated collection of variables to carry
     """
     if carry_vars is None:
-        carry_vars = set()
+        carry_vars = set([list_var])
 
     carry_vars.remove(list_var)
     query = "UNWIND {} as node_to_merge\n".format(list_var)
@@ -1916,6 +1916,13 @@ def multiple_cloning_query(original_var, clone_var, clone_id, clone_id_var,
             "clone_map.clone as {}, ".format(clone_var) +
             ", ".join(carry_vars) + "\n"
         )
+    else:
+        query += (
+            "WITH {{}} as orig_ids_to_clone, {}, {}, ".format(
+                clone_id_var, clone_var) + 
+            ", ".join(carry_vars) + "\n"
+        )
+        carry_vars.add('orig_ids_to_clone')
 
     carry_vars.add(clone_id_var)
     carry_vars.add(clone_var)
