@@ -1119,7 +1119,7 @@ def props_union(var_list, new_props_var, carry_vars=None):
 
 
 def props_union_from_list(list_var, new_props_var, carry_vars=None):
-    """Perform the union of the properties of a list of nodes/edges."""
+    """Perform the union of the properties of a neo4j list of nodes/edges."""
     if carry_vars is None:
         carry_vars = set([list_var])
     else:
@@ -1207,7 +1207,7 @@ def props_intersection(var_list, new_props_var, carry_vars=None):
 
 
 def props_intersection_from_list(list_var, new_props_var, carry_vars=None):
-    """Perform the intersection of the properties of a list of nodes/edges."""
+    """Perform the intersection of the properties of a neo4j list of nodes/edges."""
     if carry_vars is None:
         carry_vars = set([list_var])
     else:
@@ -1468,7 +1468,7 @@ def merging_from_list(list_var, merged_var, merged_id, merged_id_var,
                       node_label='node', edge_label='edge', merge_typing=False,
                       carry_vars=None, ignore_naming=False,
                       multiple_rows=False, multiple_var=None):
-    """Generate query for merging nodes.
+    """Generate query for merging the nodes of a neo4j list.
 
     Parameters
     ----------
@@ -1489,8 +1489,11 @@ def merging_from_list(list_var, merged_var, merged_id, merged_id_var,
     carry_vars : str
         Collection of variables to carry
     multiple_rows : boolean
-        True when multiple merging are happening in the same time
-         on diferent rows
+        Must be True when the previous matching resulted in more than one
+        record (for example when there is more than one group of nodes to
+        merge). When True, a map linking the original ids of the nodes to
+        the id of the merged one is created so that the edges between the
+        merged nodes are always preserved
     multiple_var : str
         Variable which has a different value on each row. Used for controlling
         the merging on multiple rows
@@ -1762,7 +1765,6 @@ def merging_from_list(list_var, merged_var, merged_id, merged_id_var,
         "\tDETACH DELETE node)\n"
     )
 
-
     carry_vars.remove(list_var)
 
     return query, carry_vars
@@ -1774,7 +1776,7 @@ def multiple_cloning_query(original_var, clone_var, clone_id, clone_id_var,
                            sucs_to_ignore=None, preds_to_ignore=None,
                            carry_vars=None, ignore_naming=False,
                            multiple_rows=False):
-    """Generate query for cloning a node.
+    """Generate query for cloning a node X times.
 
     Parameters
     ----------
@@ -1798,6 +1800,12 @@ def multiple_cloning_query(original_var, clone_var, clone_id, clone_id_var,
         while reconnecting edges to the new clone node
     carry_vars : iterable
         Collection of variables to carry
+    multiple_rows : boolean
+        Must be True when the previous matching resulted in more than one
+        record (for example when there is more than one node to clone).
+        When True, a map linking the original ids of the nodes to the ids
+        of its clones is created so that the edges between the clones are
+        always preserved
 
     Returns
     -------
@@ -2022,6 +2030,8 @@ def multiple_cloning_query(original_var, clone_var, clone_id, clone_id_var,
 
 
 def nb_of_attrs_mismatch(source, target):
+    """Generate a query which returns the number of attributes of a node which
+    are not in its image."""
     query = (
         "REDUCE(invalid = 0, k in filter(k in keys({}) WHERE k <> 'id') |\n".format(source) +
         "\tinvalid + CASE\n" +
