@@ -364,6 +364,7 @@ def _check_consistency(tx, source, target):
         "UNWIND pred_list as pred\n" +
         "UNWIND suc_list as suc\n" +
         "OPTIONAL MATCH (pred)-[r:typing*]->(suc)\n" +
+        "WHERE NONE(rel in r WHERE rel.tmp = 'True')\n"
         "WITH s, t, r, labels(pred)[1] as pred_label, labels(suc)[1] as suc_label\n" +
         "WHERE r IS NOT NULL\n" +
         "WITH DISTINCT s, t, pred_label, suc_label\n"
@@ -383,7 +384,7 @@ def _check_consistency(tx, source, target):
     for record in result:
         missing_typing.append((record['pred_label'], record['suc_label']))
     if len(missing_typing) != 0:
-        raise HierarchyError(
+        raise InvalidHomomorphism(
             "Homomorphism does not commute with existing paths:\n" +
             ",\n".join(["\t- from {} to {}".format(
                 s, t) for s, t in missing_typing]) + "."

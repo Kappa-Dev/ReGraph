@@ -10,8 +10,8 @@ from regraph.neo4j.category_utils import (pullback,
                                           _check_homomorphism,
                                           _check_consistency,
                                           _check_rhs_consistency)
-from regraph.neo4j.rewriting_utils import (propagate_up, propagate_up_v2,
-                                           propagate_down, propagate_down_v2,
+from regraph.neo4j.rewriting_utils import (propagate_up,
+                                           propagate_down,
                                            preserve_tmp_typing,
                                            remove_tmp_typing)
 from regraph.default.exceptions import (HierarchyError,
@@ -216,6 +216,8 @@ class Neo4jHierarchy(object):
                                     label=g_tar._node_label)
         for q in edge_creation_queries:
             query += q
+
+        # print(query)
 
         result = self.execute(query)
 
