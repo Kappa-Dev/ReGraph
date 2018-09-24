@@ -1,8 +1,10 @@
 """Neo4j driver for regraph."""
 import uuid
 
+from neo4j.v1 import GraphDatabase
+
 from regraph.default.utils import keys_by_value, normalize_attrs
-from regraph.neo4j.cypher_utils import *
+import regraph.neo4j.cypher_utils as cu
 
 
 def generate_var_name():
@@ -12,13 +14,50 @@ def generate_var_name():
 
 
 class Neo4jGraph(object):
-    """Class implementing neo4j graph instance."""
+    """Class implementing Neo4j graph instance.
 
-    def __init__(self, label, db, set_constraint=False):
-        self._label = label
-        self._node_label = ":".join(['node', self._label])
+    This class encapsulates neo4j.v1.GraphDatabase object
+    Attributes
+    ----------
+    _db :
+    _label :
+    _node_label :
+    """
+
+    def __init__(self, db=None, uri=None,
+                 user=None, password=None,
+                 node_labels=None,
+                 unique_node_ids=True):
+        """Initialize Neo4jGraph object.
+
+        Parameters
+        ----------
+        label : str ?
+        db : neo4j.v1.GraphDatabase, optional
+        uri : str, optional
+            Uri for Neo4j database connection
+        user : str, optional
+            Username for Neo4j database connection
+        password : str, optional
+            Password for Neo4j database connection
+        unique_node_ids : bool, optional
+            Flag, if True the uniqueness constraint on the property
+            'id' of nodes is imposed, by default True
+        """
+        if db is None:
+            self._db = GraphDatabase.driver(
+                uri, auth=(user, password))
+        else:
+            self._db = db
+
+        if node_labels is not None:
+            self._node_labels = node_labels
+        else:
+            self._node_labels = []
+        # self._label = label
+        # self._node_labels = ":".join(['node', self._label])
         self._db = db
-        if set_constraint:
+        if unique_node_ids:
             self.set_constraint('id')
 
     def execute(self, query):
@@ -29,19 +68,41 @@ class Neo4jGraph(object):
 
     def clear(self):
         """Clear graph database."""
-        query = clear_graph(label=self._node_label)
+        query = cu.clear_graph(labels=self._node_labelss)
         result = self.execute(query)
         return result
 
     def set_constraint(self, prop):
-        """Set a constraint on the database."""
-        query = "CREATE " + constraint_query('n', self._label, prop)
+        """Set a uniqueness constraint on the property.
+
+        Parameters
+        ----------
+        prop : str
+            Name of the property that is required to be unique
+            for the nodes of the database
+
+
+        Returns
+        -------
+        result : 
+        """
+        query = "CREATE " + cu.constraint_query('n', self._node_labels, prop)
         result = self.execute(query)
         return result
 
     def drop_constraint(self, prop):
-        """Drop a constraint on the database."""
-        query = "DROP " + constraint_query('n', self._label, prop)
+        """Drop a uniqueness constraint on the property.
+
+        Parameters
+        ----------
+        prop : str
+            Name of the property
+
+        Returns
+        -------
+        result : 
+        """
+        query = "DROP " + cu.constraint_query('n', self._node_labels, prop)
         result = self.execute(query)
         return result
 
@@ -55,13 +116,13 @@ class Neo4jGraph(object):
             attrs = dict()
         normalize_attrs(attrs)
         query +=\
-            create_node(
+            cu.create_node(
                 node, node, 'new_id',
-                label=self._node_label,
+                labels=self._node_labels,
                 attrs=attrs,
                 literal_id=True,
                 ignore_naming=ignore_naming)[0] +\
-            return_vars(['new_id'])
+            cu.return_vars(['new_id'])
 
         result = self.execute(query)
         # print(result)
@@ -76,16 +137,16 @@ class Neo4jGraph(object):
         if attrs is None:
             attrs = dict()
         normalize_attrs(attrs)
-        query += match_nodes({
+        query += cu.match_nodes({
             source: source,
             target: target
-        }, label=self._node_label)
-        query += create_edge(
-                        edge_var='new_edge',
-                        source_var=source,
-                        target_var=target,
-                        edge_label='edge',
-                        attrs=attrs)
+        }, labels=self._node_labels)
+        query += cu.create_edge(
+            edge_var='new_edge',
+            source_var=source,
+            target_var=target,
+            edge_label='edge',
+            attrs=attrs)
         result = self.execute(query)
         # print(result)
         return result
@@ -102,19 +163,18 @@ class Neo4jGraph(object):
                 n_id, attrs = n
                 normalize_attrs(attrs)
                 q, carry_variables =\
-                    create_node(
+                    cu.create_node(
                         n_id, n_id, 'new_id_' + n_id,
-                        label=self._node_label,
+                        labels=self._node_labels,
                         attrs=attrs)
             except:
                 q, carry_variables =\
-                    create_node(
+                    cu.create_node(
                         n, n, 'new_id_' + n,
-                        label=self._node_label)
-            query += q + with_vars(carry_variables)
-        query += return_vars(carry_variables)
+                        labels=self._node_labels)
+            query += q + cu.with_vars(carry_variables)
+        query += cu.return_vars(carry_variables)
         result = self.execute(query)
-        # print(result)
         return result
 
     def add_edges_from(self, edges, profiling=False):
@@ -132,22 +192,25 @@ class Neo4jGraph(object):
                 nodes_to_match.add(v)
                 normalize_attrs(attrs)
                 edge_creation_queries.append(
-                    create_edge(edge_var=u+"_"+v,
-                                source_var=u,
-                                target_var=v,
-                                edge_label='edge',
-                                attrs=attrs))
+                    cu.create_edge(
+                        edge_var=u + "_" + v,
+                        source_var=u,
+                        target_var=v,
+                        edge_label='edge',
+                        attrs=attrs))
             except:
                 u, v = e
                 nodes_to_match.add(u)
                 nodes_to_match.add(v)
                 edge_creation_queries.append(
-                    create_edge(edge_var=u+"_"+v,
-                                source_var=u,
-                                target_var=v,
-                                edge_label='edge'))
-        query += match_nodes({n: n for n in nodes_to_match},
-                             label=self._node_label)
+                    cu.create_edge(
+                        edge_var=u + "_" + v,
+                        source_var=u,
+                        target_var=v,
+                        edge_label='edge'))
+        query += cu.match_nodes(
+            {n: n for n in nodes_to_match},
+            labels=self._node_labels)
         for q in edge_creation_queries:
             query += q
         result = self.execute(query)
@@ -161,9 +224,10 @@ class Neo4jGraph(object):
         else:
             query = ""
         query +=\
-            match_node(node, node,
-                       label=self._node_label) +\
-            delete_nodes_var([node])
+            cu.match_node(
+                node, node,
+                labels=self._node_labels) +\
+            cu.delete_nodes_var([node])
         result = self.execute(query)
         # print(result)
         return result
@@ -175,30 +239,30 @@ class Neo4jGraph(object):
         else:
             query = ""
         query +=\
-            match_edge(source, target, source, target, 'edge_var',
-                       edge_label='edge') +\
-            delete_edge_var('edge_var')
+            cu.match_edge(source, target, source, target, 'edge_var',
+                          edge_label='edge') +\
+            cu.delete_edge_var('edge_var')
         result = self.execute(query)
         # print(result)
         return result
 
     def nodes(self):
         """Return a list of nodes of the graph."""
-        query = get_nodes(label=self._node_label)
+        query = cu.get_nodes(labels=self._node_labels)
         result = self.execute(query)
         return [list(d.values())[0] for d in result]
 
     def edges(self):
         """Return the list of edges of the graph."""
-        query = get_edges(label_source=self._node_label,
-                          label_target=self._node_label,
-                          edge_label='edge')
+        query = cu.get_edges(label_source=self._node_label,
+                             label_target=self._node_label,
+                             edge_label='edge')
         result = self.execute(query)
         return [(d["n.id"], d["m.id"]) for d in result]
 
     def get_node(self, node_id):
         """Return node's attributes."""
-        query = get_node(node_id, node_label=self._node_label)
+        query = cu.get_node(node_id, node_labels=self._node_labels)
         result = self.execute(query)
         try:
             return dict(result.value()[0])
@@ -207,10 +271,10 @@ class Neo4jGraph(object):
 
     def get_edge(self, s, t):
         """Return edge attributes."""
-        query = get_edge(s, t,
-                         source_label=self._node_label,
-                         target_label=self._node_label,
-                         edge_label='edge')
+        query = cu.get_edge(s, t,
+                            source_labels=self._node_labels,
+                            target_labels=self._node_labels,
+                            edge_label='edge')
         result = self.execute(query)
         try:
             return dict(result.value()[0])
@@ -219,15 +283,15 @@ class Neo4jGraph(object):
 
     def find_successors(self, node):
         """Return node's successors id."""
-        query = successors_query(node, node,
-                                 node_label=self._node_label)
+        query = cu.successors_query(node, node,
+                                    node_labels=self._node_labels)
         succ = set(self.execute(query).value())
         return(succ)
 
     def find_predecessors(self, node):
         """Return node's predecessors id."""
-        query = predecessors_query(node, node,
-                                   node_label=self._node_label)
+        query = cu.predecessors_query(node, node,
+                                      node_labels=self._node_labels)
         pred = set(self.execute(query).value())
         return(pred)
 
@@ -241,17 +305,18 @@ class Neo4jGraph(object):
         if name is None:
             name = node
         query +=\
-            match_node('x', node,
-                       label=self._node_label) +\
-            cloning_query(
+            cu.match_node(
+                'x', node,
+                labels=self._node_labels) +\
+            cu.cloning_query(
                 original_var='x',
                 clone_var='new_node',
                 clone_id=name,
                 clone_id_var='uid',
-                node_label=self._node_label,
+                node_labels=self._node_labels,
                 preserv_typing=preserv_typing,
                 ignore_naming=ignore_naming)[0] +\
-            return_vars(['uid'])
+            cu.return_vars(['uid'])
         # print(query)
         result = self.execute(query)
         return result
@@ -268,17 +333,17 @@ class Neo4jGraph(object):
         else:
             name = "_".join(node_list)
         query +=\
-            match_nodes({n: n for n in node_list},
-                        label=self._node_label) + "\n" +\
-            merging_query(
+            cu.match_nodes({n: n for n in node_list},
+                           labels=self._node_labels) + "\n" +\
+            cu.merging_query(
                 original_vars=node_list,
                 merged_var='merged_node',
                 merged_id=name,
                 merged_id_var='new_id',
-                node_label=self._node_label,
+                node_labels=self._node_labels,
                 edge_label='edge',
                 ignore_naming=ignore_naming)[0] +\
-            return_vars(['new_id'])
+            cu.return_vars(['new_id'])
         # print(query)
         result = self.execute(query)
         # print(result.value())
@@ -297,18 +362,18 @@ class Neo4jGraph(object):
         else:
             name = "_".join(node_list)
         query +=\
-            match_nodes({n: n for n in node_list},
-                        label=self._node_label) + "\n" +\
-            merging_query1(
+            cu.match_nodes({n: n for n in node_list},
+                           labels=self._node_labels) + "\n" +\
+            cu.merging_query1(
                 original_vars=node_list,
                 merged_var='merged_node',
                 merged_id=name,
                 merged_id_var='new_id',
-                node_label=self._node_label,
+                node_labels=self._node_labels,
                 edge_label='edge',
                 merge_typing=merge_typing,
                 ignore_naming=ignore_naming)[0] +\
-            return_vars(['new_id'])
+            cu.return_vars(['new_id'])
         # print(query)
         result = self.execute(query)
         return result
@@ -316,9 +381,10 @@ class Neo4jGraph(object):
     def find_matching(self, pattern, nodes=None):
         """Find matchings of a pattern in the graph."""
         if len(pattern.nodes()) != 0:
-            result = self.execute(find_matching(
-                pattern, nodes,
-                node_label=self._node_label, edge_label='edge'))
+            result = self.execute(
+                cu.find_matching(
+                    pattern, nodes,
+                    node_labels=self._node_labels, edge_label='edge'))
             instances = list()
 
             for record in result:
@@ -368,9 +434,9 @@ class Neo4jGraph(object):
         # of the instance
         if len(instance) > 0:
             query += "// Match nodes and edges of the instance \n"
-            query += match_pattern_instance(
+            query += cu.match_pattern_instance(
                 rule.lhs, lhs_vars, match_instance_vars,
-                node_label=self._node_label, edge_label='edge')
+                node_labels=self._node_labels, edge_label='edge')
             query += "\n\n"
         else:
             query += "// Empty instance \n\n"
@@ -412,25 +478,25 @@ class Neo4jGraph(object):
                 else:
                     clone_id_var = "p_" + str(n) + "_id"
 
-                q, carry_variables = cloning_query(
+                q, carry_variables = cu.cloning_query(
                     original_var=lhs_vars[lhs_node],
                     clone_var=p_vars[n],
                     clone_id=n,
                     clone_id_var=clone_id_var,
-                    node_label=self._node_label,
+                    node_labels=self._node_labels,
                     preserv_typing=True,
                     sucs_to_ignore=sucs_to_ignore[n],
                     preds_to_ignore=preds_to_ignore[n],
                     carry_vars=carry_variables,
                     ignore_naming=True)
                 query += q
-                query += with_vars(carry_variables)
+                query += cu.with_vars(carry_variables)
                 query += "\n\n"
 
         # Generate nodes removal subquery
         for node in rule.removed_nodes():
             query += "// Removing node '{}' of the lhs \n".format(node)
-            query += delete_nodes_var([lhs_vars[node]])
+            query += cu.delete_nodes_var([lhs_vars[node]])
             carry_variables.remove(lhs_vars[node])
             query += "\n"
 
@@ -438,12 +504,12 @@ class Neo4jGraph(object):
         for u, v in rule.removed_edges():
             if u in instance.keys() and v in instance.keys():
                 query += "// Removing edge '{}->{}' of the lhs \n".format(u, v)
-                query += delete_edge_var(
+                query += cu.delete_edge_var(
                     str(lhs_vars[u]) + "_" + str(lhs_vars[v]))
                 query += "\n"
 
         if len(rule.removed_nodes()) > 0 or len(rule.removed_edges()) > 0:
-            query += with_vars(carry_variables)
+            query += cu.with_vars(carry_variables)
 
         # Rename untouched vars as they are in P
         vars_to_rename = {}
@@ -456,7 +522,7 @@ class Neo4jGraph(object):
             query += "// Renaming vars to correspond to the vars of P\n"
             if len(carry_variables) > 0:
                 query +=\
-                    with_vars(carry_variables) +\
+                    cu.with_vars(carry_variables) +\
                     ", " + ", ".join(
                         "{} as {}".format(k, v)
                         for k, v in vars_to_rename.items()) +\
@@ -474,7 +540,7 @@ class Neo4jGraph(object):
         # Generate node attrs removal subquery
         for node, attrs in rule.removed_node_attrs().items():
             query += "// Removing properties from node '{}' of P \n".format(node)
-            query += remove_attributes(p_vars[node], attrs)
+            query += cu.remove_attributes(p_vars[node], attrs)
             query += "\n\n"
 
         # Generate edge attrs removal subquery
@@ -483,11 +549,11 @@ class Neo4jGraph(object):
             v = e[1]
             query += "// Removing properties from edge {}->{} of P \n".format(
                 u, v)
-            query += with_vars(carry_variables)
+            query += cu.with_vars(carry_variables)
             query += "MATCH ({})-[{}:edge]->({})\n".format(
-                p_vars[u], p_vars[u]+"_"+p_vars[v], p_vars[v])
-            carry_variables.add(p_vars[u]+"_"+p_vars[v])
-            query += remove_attributes(p_vars[u]+"_"+p_vars[v], attrs)
+                p_vars[u], p_vars[u] + "_" + p_vars[v], p_vars[v])
+            carry_variables.add(p_vars[u] + "_" + p_vars[v])
+            query += cu.remove_attributes(p_vars[u] + "_" + p_vars[v], attrs)
             query += "\n\n"
 
         # Generate merging subquery
@@ -496,12 +562,12 @@ class Neo4jGraph(object):
                 "// Merging nodes '{}' of the preserved part ".format(p_nodes) +\
                 "into '{}' \n".format(rhs_key)
             merged_id = "_".join(instance[rule.p_lhs[p_n]]for p_n in p_nodes)
-            q, carry_variables = merging_query1(
+            q, carry_variables = cu.merging_query1(
                 original_vars=[p_vars[n] for n in p_nodes],
                 merged_var=rhs_vars[rhs_key],
                 merged_id=merged_id,
                 merged_id_var=generate_var_name(),
-                node_label=self._node_label,
+                node_labels=self._node_labels,
                 merge_typing=True,
                 carry_vars=carry_variables,
                 ignore_naming=True)
@@ -515,9 +581,9 @@ class Neo4jGraph(object):
                 new_node_id_var = generate_var_name()
             else:
                 new_node_id_var = "rhs_" + str(rhs_node) + "_id"
-            q, carry_variables = create_node(
+            q, carry_variables = cu.create_node(
                 rhs_vars[rhs_node], rhs_node, new_node_id_var,
-                label=self._node_label,
+                labels=self._node_labels,
                 carry_vars=carry_variables,
                 ignore_naming=True)
             query += q
@@ -537,7 +603,7 @@ class Neo4jGraph(object):
             query += "// Renaming vars to correspond to the vars of rhs\n"
             if len(carry_variables) > 0:
                 query +=\
-                    with_vars(carry_variables) +\
+                    cu.with_vars(carry_variables) +\
                     ", " + ", ".join(
                         "{} as {}".format(k, v)
                         for k, v in vars_to_rename.items()) +\
@@ -555,8 +621,9 @@ class Neo4jGraph(object):
 
         # Generate node attrs addition subquery
         for rhs_node, attrs in rule.added_node_attrs().items():
-            query += "// Adding properties to the node '{}' from the rhs \n".format(rhs_node)
-            query += add_attributes(rhs_vars[rhs_node], attrs)
+            query += "// Adding properties to the node " +\
+                "'{}' from the rhs \n".format(rhs_node)
+            query += cu.add_attributes(rhs_vars[rhs_node], attrs)
 
         # Generate edges addition subquery
         # query += (
@@ -565,11 +632,11 @@ class Neo4jGraph(object):
         # )
         for u, v in rule.added_edges():
             query += "// Adding edge '{}->{}' from the rhs \n".format(u, v)
-            query += create_edge(
-                        edge_var=rhs_vars[u]+"_"+rhs_vars[v],
-                        source_var=rhs_vars[u],
-                        target_var=rhs_vars[v],
-                        edge_label='edge')
+            query += cu.create_edge(
+                edge_var=rhs_vars[u] + "_" + rhs_vars[v],
+                source_var=rhs_vars[u],
+                target_var=rhs_vars[v],
+                edge_label='edge')
             # query += (
             #     "WITH added_edges + {{source: {}.id, ".format(rhs_vars[u]) +
             #     "target: {}.id}} as added_edges, ".format(rhs_vars[v]) +
@@ -582,13 +649,14 @@ class Neo4jGraph(object):
         for e, attrs in rule.added_edge_attrs().items():
             u = e[0]
             v = e[1]
-            query += "// Adding properties to the node '{}' from the rhs \n".format(rhs_node)
-            query += with_vars(carry_variables)
+            query += "// Adding properties to the node " +\
+                "'{}' from the rhs \n".format(rhs_node)
+            query += cu.with_vars(carry_variables)
             query += "MATCH ({})-[{}:edge]->({})\n".format(
-                rhs_vars[u], rhs_vars[u]+"_"+rhs_vars[v], rhs_vars[v])
-            carry_variables.add(rhs_vars[u]+"_"+rhs_vars[v])
-            query += add_attributes(rhs_vars[u]+"_"+rhs_vars[v], attrs)
-            query += with_vars(carry_variables)
+                rhs_vars[u], rhs_vars[u] + "_" + rhs_vars[v], rhs_vars[v])
+            carry_variables.add(rhs_vars[u] + "_" + rhs_vars[v])
+            query += cu.add_attributes(rhs_vars[u] + "_" + rhs_vars[v], attrs)
+            query += cu.with_vars(carry_variables)
             query += "\n\n"
 
         # Genearate rhs_typing
@@ -596,15 +664,15 @@ class Neo4jGraph(object):
             for node in rhs_typing[graph].keys():
                 if node in rule.added_nodes():
                     query += (
-                        with_vars(carry_variables) +
+                        cu.with_vars(carry_variables) +
                         "OPTIONAL MATCH ({}:node:{} {{id:'{}'}})\n".format(
-                            node+'_'+graph, graph, rhs_typing[graph][node]) +
+                            node + '_' + graph, graph, rhs_typing[graph][node]) +
                         "MERGE ({})-[:tmp_typing]->({})\n".format(
-                            rhs_vars[node], node+'_'+graph)
+                            rhs_vars[node], node + '_' + graph)
                     )
 
         query += "// Return statement \n"
-        query += return_vars(carry_variables)
+        query += cu.return_vars(carry_variables)
 
         # Dictionary defining a mapping from the generated
         # unique variable names to the names of nodes of the rhs
