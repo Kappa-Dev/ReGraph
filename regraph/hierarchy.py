@@ -38,7 +38,7 @@ from regraph.primitives import (get_relabeled_graph,
 from regraph.utils import (is_subdict,
                            keys_by_value,
                            normalize_attrs,
-                           )
+                           json_dict_to_attrs)
 from regraph.rules import Rule
 from regraph.exceptions import (HierarchyError,
                                 TotalityWarning,
@@ -1577,6 +1577,10 @@ class Hierarchy(nx.DiGraph, AttributeContainter):
             relation_json["from"] = u
             relation_json["to"] = v
             json_data["relations"].append(relation_json)
+        attrs = {}
+        for key, value in self.attrs.items():
+            attrs[key] = value.to_json()
+        json_data["attrs"] = attrs
         return json_data
 
     @classmethod
@@ -1649,6 +1653,12 @@ class Hierarchy(nx.DiGraph, AttributeContainter):
                     relation_data["from"],
                     relation_data["to"],
                     rel, attrs)
+
+        if "attrs" in json_data.keys():
+            hierarchy.attrs = json_dict_to_attrs(json_data["attrs"])
+        # for k, v in json_data["attrs"].items():
+        #     hierarchy.add_attrs(
+        #         {k: json_dict_to_attrs(v)})
 
         return hierarchy
 

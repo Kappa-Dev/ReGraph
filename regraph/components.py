@@ -25,7 +25,7 @@ TODO:
 """
 import copy
 
-from regraph.attribute_sets import AttributeSet, FiniteSet
+from regraph.attribute_sets import AttributeSet
 from regraph.category_utils import compose
 from regraph.primitives import (equal,
                                 graph_to_json,
@@ -42,6 +42,7 @@ class AttributeContainter(object):
 
     def attrs_to_json(self):
         """Convert attributes to json."""
+        normalize_attrs(self.attrs)
         json_data = dict()
         for key, value in self.attrs.items():
             json_data[key] = value.to_json()

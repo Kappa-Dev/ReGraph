@@ -125,6 +125,14 @@ class AttributeSet(object):
                         init_args[i] = tuple(element)
             return getattr(sys.modules[__name__], json_data["type"])(init_args)
 
+    def toset(self):
+        if isinstance(self, FiniteSet):
+            return self.fset
+        else:
+            raise ValueError(
+                "Cannot convert AttributeSet of type "
+                "'{}' to a Python set".format(type(self)))
+
 
 class FiniteSet(AttributeSet):
     """Wrapper for finite sets as attribute sets.

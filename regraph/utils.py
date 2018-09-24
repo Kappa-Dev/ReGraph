@@ -129,14 +129,14 @@ def to_list(value):
         return [value]
 
 
-def normalize_attrs(attrs_):
+def normalize_attrs(attrs):
     """Normalize node attributes."""
-    if attrs_ is not None:
-        for k, v in list(attrs_.items()):
+    if attrs is not None:
+        for k, v in list(attrs.items()):
             if not isinstance(v, AttributeSet):
-                attrs_[k] = FiniteSet(v)
-                if attrs_[k].is_empty():
-                    del attrs_[k]
+                attrs[k] = FiniteSet(v)
+                if attrs[k].is_empty():
+                    del attrs[k]
     return
 
 

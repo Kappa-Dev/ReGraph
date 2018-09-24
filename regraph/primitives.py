@@ -1122,18 +1122,27 @@ def graph_to_json(graph):
     return j_data
 
 
-def graph_to_d3_json(graph):
+def graph_to_d3_json(graph,
+                     attrs=True,
+                     node_attrs_to_attach=None,
+                     edge_attrs_to_attach=None):
     """Create a JSON representation of a graph."""
     j_data = {"links": [], "nodes": []}
     # dump nodes
     for node in graph.nodes():
         node_data = {}
         node_data["id"] = node
-        if graph.node[node] is not None:
-            attrs = {}
+        if attrs:
+            normalize_attrs(graph.node[node])
+            attrs_json = dict()
             for key, value in graph.node[node].items():
-                attrs[key] = value.to_json()
-            node_data["attrs"] = attrs
+                attrs_json[key] = value.to_json()
+            node_data["attrs"] = attrs_json
+        else:
+            if node_attrs_to_attach is not None:
+                for key in node_attrs_to_attach:
+                    if key in graph.node[node].keys():
+                        node_data[key] = list(graph.node[node][key])
         j_data["nodes"].append(node_data)
 
     # dump edges
@@ -1141,11 +1150,17 @@ def graph_to_d3_json(graph):
         edge_data = {}
         edge_data["source"] = s
         edge_data["target"] = t
-        if graph.edge[s][t] is not None:
-            attrs = {}
+        if attrs:
+            normalize_attrs(graph.edge[s][t])
+            attrs_json = dict()
             for key, value in graph.edge[s][t].items():
-                attrs[key] = value.to_json()
-            edge_data["attrs"] = attrs
+                attrs_json[key] = value.to_json()
+            edge_data["attrs"] = attrs_json
+        else:
+            if edge_attrs_to_attach is not None:
+                for key in edge_attrs_to_attach:
+                    if key in graph.edge[s][t].keys():
+                        edge_data[key] = list(graph.edge[s][t][key])
         j_data["links"].append(edge_data)
     return j_data
 
