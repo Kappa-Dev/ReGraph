@@ -26,7 +26,8 @@ class Neo4jHierarchy(object):
         """Initialize driver."""
         self._driver = GraphDatabase.driver(
             uri, auth=(user, password))
-        query = "CREATE " + cypher.constraint_query('n', 'hierarchyNode', 'id')
+        query = "CREATE " + cypher.constraint_query(
+            'n', ['hierarchyNode'], 'id')
         self.execute(query)
 
     def close(self):
@@ -88,7 +89,10 @@ class Neo4jHierarchy(object):
         except(ConstraintError):
             raise HierarchyError(
                 "The graph '{}' is already in the database.".format(graph_id))
-        g = Neo4jGraph(graph_id, self, set_constraint=True)
+        g = Neo4jGraph(
+            driver=self._driver,
+            node_labels=[graph_id],
+            unique_node_ids=True)
         if node_list is not None:
             g.add_nodes_from(node_list)
         if edge_list is not None:
@@ -121,7 +125,7 @@ class Neo4jHierarchy(object):
                     edge_var='recennect_typing',
                     source_var='pred',
                     target_var='suc',
-                    edge_label='typing')
+                    edge_labels=['typing'])
             )
             self.execute(query)
         # Clear the graph and drop the constraint on the ids
@@ -134,19 +138,19 @@ class Neo4jHierarchy(object):
                 cypher.match_node(
                     var_name="graph_to_rm",
                     node_id=graph_id,
-                    label='hierarchyNode') +
+                    node_labels=['hierarchyNode']) +
                 "OPTIONAL MATCH (pred)-[:hierarchyEdge]->(n)-[:hierarchyEdge]->(suc)\n" +
                 "WITH pred, suc WHERE pred IS NOT NULL\n" +
                 cypher.create_edge(
                     edge_var='recennect_typing',
                     source_var='pred',
                     target_var='suc',
-                    edge_label='hierarchyEdge')
+                    edge_labels=['hierarchyEdge'])
             )
             self.execute(query)
         query = cypher.match_node(var_name="graph_to_rm",
                                   node_id=graph_id,
-                                  label='hierarchyNode')
+                                  node_label=['hierarchyNode'])
         query += cypher.delete_nodes_var(["graph_to_rm"])
         self.execute(query)
 
@@ -158,7 +162,8 @@ class Neo4jHierarchy(object):
         if res.single() is None:
             raise HierarchyError(
                 "The graph '{}' is not in the database.".format(label))
-        g = Neo4jGraph(label, self)
+        g = Neo4jGraph(self._driver,
+                       node_labels=[label], edge_labels=["edge"])
         return g
 
     def add_typing(self, source, target, mapping, attrs=None, check=True):
@@ -207,16 +212,16 @@ class Neo4jHierarchy(object):
                     edge_var="typ_" + u + "_" + v,
                     source_var=u + "_src",
                     target_var=v + "_tar",
-                    edge_label='typing',
+                    edge_labels=['typing'],
                     attrs=tmp_attrs))
 
         query += cypher.match_nodes(
             {n + "_src": n for n in nodes_to_match_src},
-            label=g_src._node_label)
+            node_labels=g_src._node_labels)
         query += cypher.with_vars([s + "_src" for s in nodes_to_match_src])
         query += cypher.match_nodes(
             {n + "_tar": n for n in nodes_to_match_tar},
-            label=g_tar._node_label)
+            node_labels=g_tar._node_labels)
         for q in edge_creation_queries:
             query += q
 
@@ -260,12 +265,12 @@ class Neo4jHierarchy(object):
             query2 = (
                 cypher.match_nodes(
                     var_id_dict={'g_src': source, 'g_tar': target},
-                    label='hierarchyNode') +
+                    node_labels=['hierarchyNode']) +
                 cypher.create_edge(
                     edge_var='new_hierarchy_edge',
                     source_var='g_src',
                     target_var='g_tar',
-                    edge_label='hierarchyEdge',
+                    edge_labels=['hierarchyEdge'],
                     attrs=attrs) +
                 cypher.with_vars(["new_hierarchy_edge"]) +
                 "MATCH (:node:{})-[t:typing]-(:node:{})\n".format(
@@ -366,8 +371,8 @@ class Neo4jHierarchy(object):
         """Get all the ids of the successors of a graph."""
         query = cypher.successors_query(var_name='g',
                                         node_id=graph_label,
-                                        node_label='hierarchyNode',
-                                        edge_label='hierarchyEdge')
+                                        node_labels=['hierarchyNode'],
+                                        edge_labels=['hierarchyEdge'])
         succ = self.execute(query).value()
         if succ[0] is None:
             succ = []
@@ -377,8 +382,8 @@ class Neo4jHierarchy(object):
         """Get all the ids of the predecessors of a graph."""
         query = cypher.predecessors_query(var_name='g',
                                           node_id=graph_label,
-                                          node_label='hierarchyNode',
-                                          edge_label='hierarchyEdge')
+                                          node_labels=['hierarchyNode'],
+                                          edge_labels=['hierarchyEdge'])
         preds = self.execute(query).value()
         if preds[0] is None:
             preds = []

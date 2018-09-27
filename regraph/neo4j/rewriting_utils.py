@@ -23,24 +23,25 @@ def propagate_up(rewritten_graph, predecessor):
         "WITH node_to_clone, collect(n) as sucs, collect(t) as typ_sucs, "
         "count(n) as number_of_img\n" +
         "WHERE number_of_img >= 2 AND node_to_clone IS NOT NULL\n"
-        )
+    )
     query1 += (
         "FOREACH(t IN typ_sucs | DELETE t)\n" +
         "WITH node_to_clone, sucs, number_of_img-1 as number_of_clone\n"
-        )
+    )
     carry_vars.update(['node_to_clone', 'sucs'])
     query1 += (
         cypher.multiple_cloning_query(
-                    original_var='node_to_clone',
-                    clone_var='cloned_node',
-                    clone_id='clone_id',
-                    clone_id_var='clone_id',
-                    number_of_clone_var='number_of_clone',
-                    node_label='node:'+predecessor,
-                    preserv_typing=True,
-                    carry_vars=carry_vars,
-                    ignore_naming=True,
-                    multiple_rows=True)[0]
+            original_var='node_to_clone',
+            clone_var='cloned_node',
+            clone_id='clone_id',
+            clone_id_var='clone_id',
+            number_of_clone_var='number_of_clone',
+            node_labels=['node', predecessor],
+            edge_labels=['edge'],
+            preserv_typing=True,
+            carry_vars=carry_vars,
+            ignore_naming=True,
+            multiple_rows=True)[0]
     )
     carry_vars.difference_update(['cloned_node', 'clone_id'])
     query1 += (
@@ -51,11 +52,11 @@ def propagate_up(rewritten_graph, predecessor):
         "\tFOREACH(source in [nodes_to_typ[i]] |\n"
         "\t\tFOREACH(target in [sucs[i]] |\n"
         "\t\t\t" + cypher.create_edge(
-                    edge_var='restored_typing',
-                    source_var='source',
-                    target_var='target',
-                    edge_label='typing') + ")))\n"
-        )
+            edge_var='restored_typing',
+            source_var='source',
+            target_var='target',
+            edge_labels=['typing']) + ")))\n"
+    )
     query1 += "RETURN clone_ids"
 
     # Remove nodes and nodes attrs
@@ -72,18 +73,18 @@ def propagate_up(rewritten_graph, predecessor):
         "WHERE x IS NOT NULL AND " +
         cypher.nb_of_attrs_mismatch('n', 'x') + " <> 0\n"
         "WITH n, x, [x, n] as node_to_merge_props\n"
-        )
+    )
     carry_vars.update(['n', 'x'])
     query2 += (
         cypher.merge_properties_from_list(
-                    list_var='node_to_merge_props',
-                    new_props_var='new_props',
-                    carry_vars=carry_vars,
-                    method='intersection') +
+            list_var='node_to_merge_props',
+            new_props_var='new_props',
+            carry_vars=carry_vars,
+            method='intersection') +
         "WITH n.id as n_id, " + ", ".join(carry_vars) + "\n"
         "SET n = new_props\n" +
         "SET n.id = n_id\n"
-        )
+    )
 
     # Remove edges and edges attrs
     carry_vars = set()
@@ -100,16 +101,16 @@ def propagate_up(rewritten_graph, predecessor):
         "WHERE rel IS NOT NULL AND " +
         cypher.nb_of_attrs_mismatch('rel_pred', 'rel') + " <> 0\n"
         "WITH rel, rel_pred, [rel_pred, rel] as edges_to_merge_props\n"
-        )
+    )
     carry_vars.update(['rel_pred', 'rel'])
     query3 += (
         cypher.merge_properties_from_list(
-                    list_var='edges_to_merge_props',
-                    new_props_var='new_props',
-                    carry_vars=carry_vars,
-                    method='intersection') +
+            list_var='edges_to_merge_props',
+            new_props_var='new_props',
+            carry_vars=carry_vars,
+            method='intersection') +
         "SET rel_pred = new_props\n"
-        )
+    )
 
     print(query1)
     print(query2)
@@ -216,24 +217,24 @@ def propagate_down(rewritten_graph, successor):
             rewritten_graph, successor) +
         "WITH n, collect(node_to_merge) as nodes_to_merge, " +
         ", ".join(carry_vars) + "\n"
-        "WHERE n IS NOT NULL AND size(nodes_to_merge) >= 2\n" 
+        "WHERE n IS NOT NULL AND size(nodes_to_merge) >= 2\n"
     )
     carry_vars.add('n')
     carry_vars.add('nodes_to_merge')
     query1 += (
         cypher.merging_from_list(
-                        list_var='nodes_to_merge',
-                        merged_var='merged_node',
-                        merged_id='id',
-                        merged_id_var='merged_id',
-                        node_label='node:'+successor,
-                        edge_label='edge',
-                        merge_typing=True,
-                        carry_vars=carry_vars,
-                        ignore_naming=True,
-                        multiple_rows=True,
-                        multiple_var='n')[0]
-        )
+            list_var='nodes_to_merge',
+            merged_var='merged_node',
+            merged_id='id',
+            merged_id_var='merged_id',
+            node_labels=['node', successor],
+            edge_labels=['edge'],
+            merge_typing=True,
+            carry_vars=carry_vars,
+            ignore_naming=True,
+            multiple_rows=True,
+            multiple_var='n')[0]
+    )
     carry_vars.remove('merged_node')
     carry_vars.remove('merged_id')
     query1 += "RETURN collect(merged_id) as merged_nodes"
@@ -261,12 +262,12 @@ def propagate_down(rewritten_graph, successor):
     carry_vars.add('node_img')
     query2 += (
         cypher.merge_properties_from_list(
-                    list_var='nodes_to_merge_props',
-                    new_props_var='new_props',
-                    carry_vars=carry_vars,
-                    method='union') +
+            list_var='nodes_to_merge_props',
+            new_props_var='new_props',
+            carry_vars=carry_vars,
+            method='union') +
         "SET node_img += new_props\n"
-        )
+    )
 
     # add edges in T for each edge without image in G + add new_props
     carry_vars = set()
@@ -284,12 +285,12 @@ def propagate_down(rewritten_graph, successor):
     carry_vars.update(['x', 'y', 'rel_img'])
     query3 += (
         cypher.merge_properties_from_list(
-                    list_var='edges_to_merge_props',
-                    new_props_var='new_props',
-                    carry_vars=carry_vars,
-                    method='union') +
+            list_var='edges_to_merge_props',
+            new_props_var='new_props',
+            carry_vars=carry_vars,
+            method='union') +
         "SET rel_img += new_props\n"
-        )
+    )
     print(query1)
     print(query2)
     print(query3)

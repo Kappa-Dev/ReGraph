@@ -592,6 +592,7 @@ class Neo4jGraph(object):
                 merged_id=merged_id,
                 merged_id_var=generate_var_name(),
                 node_labels=self._node_labels,
+                edge_labels=self._edge_labels,
                 merge_typing=True,
                 carry_vars=carry_variables,
                 ignore_naming=True)
