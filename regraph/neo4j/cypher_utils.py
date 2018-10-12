@@ -1,5 +1,6 @@
 """Collection of utils for Cypher queries generation."""
 from regraph.default.attribute_sets import FiniteSet
+import uuid
 
 
 def generate_labels(labels):
@@ -8,6 +9,12 @@ def generate_labels(labels):
         return ":" + ":".join(labels)
     else:
         return ""
+
+
+def generate_var_name():
+    """Generate unique variable names."""
+    uid = "uid" + str(uuid.uuid4()).replace("-", "")
+    return uid
 
 
 def set_attributes(var_name, attrs):
