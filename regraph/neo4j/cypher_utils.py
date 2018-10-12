@@ -20,19 +20,20 @@ def generate_var_name():
 def set_attributes(var_name, attrs):
     """Generate a subquery to set the attributes for some variable."""
     query = ""
-    for k, value in attrs.items():
-        if isinstance(value, FiniteSet):
-            elements = []
-            for el in value:
-                if type(el) == str:
-                    elements.append("'{}'".format(el))
-                else:
-                    elements.append("{}".format(el))
-            query += "SET {}.{}=[{}] ".format(var_name, k, ", ".join(
-                el for el in elements))
-        else:
-            raise ValueError(
-                "Unknown type of attribute '{}': '{}'".format(k, type(value)))
+    if attrs:
+        for k, value in attrs.items():
+            if isinstance(value, FiniteSet):
+                elements = []
+                for el in value:
+                    if type(el) == str:
+                        elements.append("'{}'".format(el))
+                    else:
+                        elements.append("{}".format(el))
+                query += "SET {}.{}=[{}] ".format(var_name, k, ", ".join(
+                    el for el in elements))
+            else:
+                raise ValueError(
+                    "Unknown type of attribute '{}': '{}'".format(k, type(value)))
     return query
 
 

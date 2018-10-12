@@ -1377,14 +1377,14 @@ class Rule(object):
         self.p_rhs = new_p_rhs
 
     def to_cypher(self, instance, rhs_typing=None,
-                  node_labels=None, edge_labels=None, generate_var_ids=False):
+                  node_label="node", edge_label="edge", generate_var_ids=False):
         """Convert a rule on the instance to a Cypher query.
 
         instance : dict
             Dictionary specifying an instance of the lhs of the rule
         rhs_typing : dict
-        node_labels : iterable, optional
-        edge_labels : iterable, optional
+        node_label : iterable, optional
+        edge_label : iterable, optional
         generate_var_ids : boolean
             If True the names of the variables will be generated as uuid
             (unreadable, but more secure: guaranteed to avoid any var name
@@ -1418,7 +1418,7 @@ class Rule(object):
             query += "// Match nodes and edges of the instance \n"
             query += cypher.match_pattern_instance(
                 self.lhs, lhs_vars, match_instance_vars,
-                node_labels=node_labels, edge_labels=edge_labels)
+                node_label=node_label, edge_label=edge_label)
             query += "\n\n"
         else:
             query += "// Empty instance \n\n"
@@ -1465,7 +1465,7 @@ class Rule(object):
                     clone_var=p_vars[n],
                     clone_id=n,
                     clone_id_var=clone_id_var,
-                    node_labels=node_labels,
+                    node_label=node_label,
                     preserv_typing=True,
                     sucs_to_ignore=sucs_to_ignore[n],
                     preds_to_ignore=preds_to_ignore[n],
@@ -1549,8 +1549,8 @@ class Rule(object):
                 merged_var=rhs_vars[rhs_key],
                 merged_id=merged_id,
                 merged_id_var=cypher.generate_var_name(),
-                node_labels=node_labels,
-                edge_labels=edge_labels,
+                node_label=node_label,
+                edge_label=edge_label,
                 merge_typing=True,
                 carry_vars=carry_variables,
                 ignore_naming=True)
@@ -1566,7 +1566,7 @@ class Rule(object):
                 new_node_id_var = "rhs_" + str(rhs_node) + "_id"
             q, carry_variables = cypher.create_node(
                 rhs_vars[rhs_node], rhs_node, new_node_id_var,
-                node_labels=node_labels,
+                node_label=node_label,
                 carry_vars=carry_variables,
                 ignore_naming=True)
             query += q
@@ -1619,7 +1619,7 @@ class Rule(object):
                 edge_var=rhs_vars[u] + "_" + rhs_vars[v],
                 source_var=rhs_vars[u],
                 target_var=rhs_vars[v],
-                edge_labels=edge_labels)
+                edge_label=edge_label)
             # query += (
             #     "WITH added_edges + {{source: {}.id, ".format(rhs_vars[u]) +
             #     "target: {}.id}} as added_edges, ".format(rhs_vars[v]) +
