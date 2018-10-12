@@ -3,12 +3,12 @@ from regraph.default.attribute_sets import FiniteSet
 import uuid
 
 
-def generate_labels(labels):
-    """Concatenate a collection of labels according to Cypher syntax."""
-    if labels:
-        return ":" + ":".join(labels)
-    else:
-        return ""
+def set_labels(var_name, labels):
+    """Set labels to a var."""
+    query = ""
+    for label in labels:
+        query += "SET {}:{}\n".format(var_name, label)
+    return query
 
 
 def generate_var_name():
@@ -117,7 +117,7 @@ def generate_attributes(attrs):
         return ", ".join(i for i in attrs_items)
 
 
-def match_node(var_name, node_id, node_labels=None):
+def match_node(var_name, node_id, node_label):
     """Query to match a node into the variable.
 
     Parameters
@@ -129,11 +129,11 @@ def match_node(var_name, node_id, node_labels=None):
     label
         Label of the node to match, default is 'node'
     """
-    return "MATCH ({}{} {{ id : '{}' }})\n".format(
-        var_name, generate_labels(node_labels), node_id)
+    return "MATCH ({}:{} {{ id : '{}' }})\n".format(
+        var_name, node_label, node_id)
 
 
-def match_nodes(var_id_dict, node_labels=None):
+def match_nodes(var_id_dict, node_label):
     """Match a collection of nodes by their id.
 
     Parameters
@@ -145,26 +145,11 @@ def match_nodes(var_id_dict, node_labels=None):
     label : strt
         Label of the nodes to clone, default is 'node'
     """
-    if node_labels is not None and len(node_labels) == 1:
-            query =\
-                "MATCH " +\
-                ", ".join("({}:{} {{ id : '{}'}}) ".format(
-                    var_name, node_labels[0], node_id)
-                    for var_name, node_id in var_id_dict.items()) + " "
-    else:
-        query =\
-            "MATCH " +\
-            ", ".join(
-                "({} {{ id : '{}'}})".format(var_name, node_id)
-                for var_name, node_id in var_id_dict.items()) + " "
-        if node_labels is not None and len(node_labels) > 1:
-            query +=\
-                "WHERE " +\
-                " AND ".join(
-                    " AND ".join(
-                        "{}:{}".format(n, label) for label in node_labels)
-                    for n, _ in var_id_dict.items()) + " "
-
+    query =\
+        "MATCH " +\
+        ", ".join("({}:{} {{ id : '{}'}}) ".format(
+            var_name, node_label, node_id)
+            for var_name, node_id in var_id_dict.items()) + " "
     return query
 
 
@@ -194,7 +179,7 @@ def match_edge(u_var, v_var, u_id, v_id, edge_var, edge_label='edge'):
     return query
 
 
-def create_node(var_name, node_id, node_id_var, node_labels=None,
+def create_node(var_name, node_id, node_id_var, node_label,
                 attrs=None, literal_id=True, carry_vars=None,
                 ignore_naming=False):
     """Generate query for node creation.
@@ -232,8 +217,8 @@ def create_node(var_name, node_id, node_id_var, node_labels=None,
 
     if not ignore_naming:
         query = (
-            "OPTIONAL MATCH (same_id_node{}) \n".format(
-                generate_labels(node_labels)) +
+            "OPTIONAL MATCH (same_id_node:{}) \n".format(
+                node_label) +
             "WHERE same_id_node.id = {} \n".format(node_id) +
             "FOREACH(new_count \n\tIN CASE WHEN same_id_node IS NOT NULL\n"
             "\tTHEN [coalesce(same_id_node.count, 0) + 1]\n"
@@ -249,12 +234,12 @@ def create_node(var_name, node_id, node_id_var, node_labels=None,
             "UNWIND\n\tCASE WHEN same_id_node IS NOT NULL\n"
             "\tTHEN [{} + same_id_node.count]\n".format(node_id) +
             "\tELSE [{}] END AS {} \n".format(node_id, node_id_var) +
-            "\t\tCREATE ({}{} {{ id : {} }}) \n".format(
-                var_name, generate_labels(node_labels), node_id_var)
+            "\t\tCREATE ({}:{} {{ id : {} }}) \n".format(
+                var_name, node_label, node_id_var)
         )
     else:
         query =\
-            "CREATE ({}{}) \n".format(var_name, generate_labels(node_labels)) +\
+            "CREATE ({}:{}) \n".format(var_name, node_label) +\
             "SET {}.id = toString(id({})) \n".format(var_name, var_name)
         query += "WITH toString(id({})) as {} ".format(var_name, node_id_var)
         carry_vars.add(var_name)
@@ -269,7 +254,7 @@ def create_node(var_name, node_id, node_id_var, node_labels=None,
 
 
 def create_edge(edge_var, source_var, target_var,
-                edge_labels=None, attrs=None):
+                edge_label, attrs=None):
     """Generate query for edge creation.
 
     source_var
@@ -278,14 +263,14 @@ def create_edge(edge_var, source_var, target_var,
     target_var
         Name of the variable corresponding to the target
         node
-    edge_labels : iterable, optional
-        Collection of labels associated with the new edge
+    edge_label : optional
+        Labels associated with the new edge
     attrs : dict, optional
         Attributes of the new edge
     """
-    attrs_str = generate_attributes(attrs)
-    query = "MERGE ({})-[{}{} {{ {} }}]->({})\n".format(
-        source_var, edge_var, generate_labels(edge_labels), attrs_str, target_var)
+    query = "MERGE ({})-[{}:{}]->({})\n".format(
+        source_var, edge_var, edge_label, target_var) +\
+        set_attributes(edge_var, attrs)
     return query
 
 
@@ -322,7 +307,7 @@ def return_vars(var_list):
     return "RETURN {}\n".format(", ".join(var_list))
 
 
-def clear_graph(node_labels=None):
+def clear_graph(node_label):
     """Generate query for removing everything from the graph.
 
     Parameters
@@ -330,17 +315,17 @@ def clear_graph(node_labels=None):
     label
         Label of the graph to remove. If None, all the database is cleared
     """
-    if node_labels is None:
+    if node_label is None:
         query = "MATCH (n)\n"
     else:
-        query = "MATCH (n{})\n".format(generate_labels(node_labels))
+        query = "MATCH (n:{})\n".format(node_label)
     query += \
         "OPTIONAL MATCH (n)-[r]-()\n" +\
         "DELETE n, r\n"
     return query
 
 
-def get_nodes(node_labels=None):
+def get_nodes(node_label):
     """Generate query returning ids of all nodes of the graph.
 
     Parameters
@@ -348,32 +333,32 @@ def get_nodes(node_labels=None):
     label
         Label of the nodes to match, default is 'node'
     """
-    query = "MATCH (n{}) RETURN n.id\n".format(generate_labels(node_labels))
+    query = "MATCH (n:{}) RETURN n.id\n".format(node_label)
     return query
 
 
-def get_edges(source_labels=None, target_labels=None,
-              edge_labels=None):
+def get_edges(source_label, target_label,
+              edge_label):
     """Generate query for getting all the edges of the graph.
 
     Parameters
     ----------
-    source_labels : iterable, optional
-        Labels of the source nodes to match
-    target_labels : iterable, optional
-        Labels of the target nodes to match
-    edge_labels : iterable, optional
-        Labels of the edges to match
+    source_label : optional
+        Label of the source nodes to match
+    target_label : optional
+        Label of the target nodes to match
+    edge_label : iterable, optional
+        Label of the edges to match
     """
-    query = "MATCH (n{})-[r{}]->(m{})\nRETURN n.id, m.id\n".format(
-            generate_labels(source_labels),
-            generate_labels(edge_labels),
-            generate_labels(target_labels))
+    query = "MATCH (n:{})-[r:{}]->(m:{})\nRETURN n.id, m.id\n".format(
+            source_labels,
+            edge_label,
+            target_labels)
     return query
 
 
-def successors_query(var_name, node_id, node_labels=None,
-                     edge_labels=None, successor_labels=None):
+def successors_query(var_name, node_id, node_label,
+                     edge_label, successor_label):
     """Generate query for getting the ids of all the successors of a node.
 
     Parameters
@@ -382,28 +367,28 @@ def successors_query(var_name, node_id, node_labels=None,
         Name of the variable corresponding to the node to match
     node_id
         Id of the node to match
-    node_labels : iterable, optional
-        Labels of the node to match, default is 'node'
-    edge_labels : iterable, optional
-        Labels of the edge to match, default is 'edge'
-    successor_labels : iterable, optional
-        Labels of the successors we want to find,
+    node_label : optional
+        Label of the node to match, default is 'node'
+    edge_label : optional
+        Label of the edge to match, default is 'edge'
+    successor_label : optional
+        Label of the successors we want to find,
         'node_label' is used if None.
     """
     if successor_labels is None:
-        successor_labels = node_labels
+        successor_labels = node_label
     query = (
-        "OPTIONAL MATCH ({}{} {{id : '{}'}})-[{}]-> (suc{})".format(
-            var_name, generate_labels(node_labels),
-            node_id, generate_labels(edge_labels),
-            generate_labels(successor_labels)) +
+        "OPTIONAL MATCH ({}:{} {{id : '{}'}})-[:{}]-> (suc:{})".format(
+            var_name, node_label,
+            node_id, edge_label,
+            successor_labels) +
         "RETURN suc.id"
     )
     return query
 
 
-def predecessors_query(var_name, node_id, node_labels=None,
-                       edge_labels=None, predecessor_labels=None):
+def predecessors_query(var_name, node_id, node_label,
+                       edge_label, predecessor_label):
     """Generate query for getting the ids of all the predecessors of a node.
 
     Parameters
@@ -412,27 +397,27 @@ def predecessors_query(var_name, node_id, node_labels=None,
         Name of the variable corresponding to the node to match
     node_id
         Id of the node to match
-    node_labels : iterable, optional
+    node_label
         Label of the node to match
-    edge_labels : iterable, optional
+    edge_label
         Label of the edge to match
-    predecessor_labels : iterable, optional
+    predecessor_label
         Label of the predecessors we want to find. node_label if None.
     """
     if predecessor_labels is None:
-        predecessor_labels = node_labels
+        predecessor_labels = node_label
     query = (
-        "OPTIONAL MATCH (pred{})-[{}]-> ({}{} {{id : '{}'}})".format(
-            generate_labels(predecessor_labels),
-            generate_labels(edge_labels),
-            var_name, generate_labels(node_labels), node_id) +
+        "OPTIONAL MATCH (pred:{})-[:{}]-> ({}:{} {{id : '{}'}})".format(
+            predecessor_labels,
+            edge_label,
+            var_name, node_label, node_id) +
         "RETURN pred.id"
     )
     return query
 
 
 def cloning_query(original_var, clone_var, clone_id, clone_id_var,
-                  node_labels=None, preserv_typing=False,
+                  node_label, preserv_typing=False,
                   sucs_to_ignore=None, preds_to_ignore=None,
                   carry_vars=None, ignore_naming=False):
     """Generate query for cloning a node.
@@ -447,8 +432,8 @@ def cloning_query(original_var, clone_var, clone_id, clone_id_var,
         Id to use for the new node that corresponds to the clone
     clone_id_var : str
         Name of the variable for the id of the new clone node
-    node_labels
-        Labels of the node to clone, default is 'node'
+    node_label
+        Label of the node to clone, default is 'node'
     preserv_typing : boolean
         If True, typing edges are preserved on the clone
     sucs_to_ignore : iterable
@@ -481,8 +466,8 @@ def cloning_query(original_var, clone_var, clone_id, clone_id_var,
         query += (
             "// create a node corresponding to the clone\n" +
             # "CREATE ({}:node) \n".format(clone_var, clone_var) +
-            "CREATE ({}{}) \n".format(
-                clone_var, generate_labels(node_labels)) +
+            "CREATE ({}:{}) \n".format(
+                clone_var, node_label) +
             "WITH {}, toString(id({})) as {}, {}.id as original_old, ".format(
                 clone_var, clone_var, clone_id_var, original_var) +
             ", ".join(carry_vars) + " \n" +
@@ -502,8 +487,8 @@ def cloning_query(original_var, clone_var, clone_id, clone_id_var,
     else:
         query += (
             "// search for a node with the same id as the clone id\n" +
-            "OPTIONAL MATCH (same_id_node{} {{ id : '{}'}}) \n".format(
-                generate_labels(node_labels), clone_id) +
+            "OPTIONAL MATCH (same_id_node:{} {{ id : '{}'}}) \n".format(
+                node_label, clone_id) +
             "WITH same_id_node,  " +
             "CASE WHEN same_id_node IS NOT NULL "
             "THEN (coalesce(same_id_node.count, 0) + 1) " +
@@ -518,8 +503,8 @@ def cloning_query(original_var, clone_var, clone_id, clone_id_var,
             ", ".join(carry_vars) + "\n" +
             "// create a node corresponding to the clone\n" +
             # "CREATE ({}:node) \n".format(clone_var, clone_id_var) +
-            "CREATE ({}{}) \n".format(
-                clone_var, generate_labels(node_labels)) +
+            "CREATE ({}:{}) \n".format(
+                clone_var, node_label) +
             "WITH same_id_node, same_id_node_new_count, {}, {}, "
             "{}.id as original_old, ".format(
                 clone_var, clone_id_var, original_var) +
@@ -623,7 +608,7 @@ def cloning_query(original_var, clone_var, clone_id, clone_id_var,
 
 
 def merging_query(original_vars, merged_var, merged_id, merged_id_var,
-                  node_labels=None, edge_labels=None,
+                  node_label, edge_label,
                   carry_vars=None, ignore_naming=False):
     """Generate query for merging nodes.
 
@@ -638,10 +623,10 @@ def merging_query(original_vars, merged_var, merged_id, merged_id_var,
         Id to use for the new node that corresponds to the merged node
     merged_id_var : str
         Name of the variable for the id of the new merged node
-    node_labels
-        Labels of the nodes to merge
-    edge_labels
-        Labels of the edges to merge
+    node_label
+        Label of the nodes to merge
+    edge_label
+        Label of the edges to merge
     carry_vars : str
         Collection of variables to carry
 
@@ -680,8 +665,8 @@ def merging_query(original_vars, merged_var, merged_id, merged_id_var,
     else:
         query += (
             "// search for a node with the same id as the clone id\n" +
-            "OPTIONAL MATCH (same_id_node{} {{ id : '{}'}}) \n".format(
-                generate_labels(node_labels), merged_id) +
+            "OPTIONAL MATCH (same_id_node:{} {{ id : '{}'}}) \n".format(
+                node_label, merged_id) +
             "WITH same_id_node,  " +
             "CASE WHEN same_id_node IS NOT NULL "
             "THEN (coalesce(same_id_node.count, 0) + 1) " +
@@ -704,12 +689,12 @@ def merging_query(original_vars, merged_var, merged_id, merged_id_var,
 
     query += (
         "// find and merge multiple relations resulting from the node merge\n"
-        "OPTIONAL MATCH ({})-[out_rel{}]->(suc)\n".format(
-            merged_var, generate_labels(edge_labels)) +
+        "OPTIONAL MATCH ({})-[out_rel:{}]->(suc)\n".format(
+            merged_var, edge_label) +
         "WITH collect({neighbor: suc, edge: out_rel}) as suc_maps, " +
         ", ".join(carry_vars) + "\n" +
-        "OPTIONAL MATCH (pred)-[in_rel{}]->({})\n".format(
-            generate_labels(edge_labels), merged_var) +
+        "OPTIONAL MATCH (pred)-[in_rel:{}]->({})\n".format(
+            edge_label, merged_var) +
         "WHERE pred.id <> {}.id\n".format(merged_var) +
         "WITH collect({neighbor: pred, edge: in_rel}) as pred_maps, suc_maps, " +
         ", ".join(carry_vars) + "\n" +
@@ -733,7 +718,7 @@ def merging_query(original_vars, merged_var, merged_id, merged_id_var,
 
 
 def merging_query1(original_vars, merged_var, merged_id, merged_id_var,
-                   node_labels=None, edge_labels=None, merge_typing=False,
+                   node_label, edge_label, merge_typing=False,
                    carry_vars=None, ignore_naming=False):
     """Generate query for merging nodes.
 
@@ -748,9 +733,9 @@ def merging_query1(original_vars, merged_var, merged_id, merged_id_var,
         Id to use for the new node that corresponds to the merged node
     merged_id_var : str
         Name of the variable for the id of the new merged node
-    node_labels
-        Labels of the nodes to merge, default is 'node'
-    edge_labels
+    node_label
+        Label of the nodes to merge, default is 'node'
+    edge_label
         Labels of the edges to merge, default is 'edge'
     carry_vars : str
         Collection of variables to carry
@@ -804,8 +789,8 @@ def merging_query1(original_vars, merged_var, merged_id, merged_id_var,
     else:
         query += (
             "// search for a node with the same id as the clone id\n" +
-            "OPTIONAL MATCH (same_id_node{} {{ id : '{}'}}) \n".format(
-                generate_labels(node_labels), merged_id) +
+            "OPTIONAL MATCH (same_id_node:{} {{ id : '{}'}}) \n".format(
+                node_label, merged_id) +
             "WITH same_id_node,  " +
             "CASE WHEN same_id_node IS NOT NULL "
             "THEN (coalesce(same_id_node.count, 0) + 1) " +
@@ -836,23 +821,23 @@ def merging_query1(original_vars, merged_var, merged_id, merged_id_var,
     )
 
     query += (
-        "OPTIONAL MATCH ({})-[out_rel{}]->(suc)\n".format(
-            merged_var, generate_labels(edge_labels)) +
+        "OPTIONAL MATCH ({})-[out_rel:{}]->(suc)\n".format(
+            merged_var, edge_label) +
         "WITH suc_maps + collect({id: id(suc), neighbor: suc, edge: out_rel}) as suc_maps, " +
         "pred_maps, " + ", ".join(carry_vars) + "\n" +
-        "OPTIONAL MATCH (pred)-[in_rel{}]->({})\n".format(
-            generate_labels(edge_labels), merged_var) +
+        "OPTIONAL MATCH (pred)-[in_rel:{}]->({})\n".format(
+            edge_label, merged_var) +
         "WITH pred_maps + collect({id: id(pred), neighbor: pred, edge: in_rel}) as pred_maps, " +
         "suc_maps, " + ", ".join(carry_vars) + "\n"
     )
     for n in original_vars[1:]:
         query += (
-            "OPTIONAL MATCH ({})-[out_rel{}]->(suc)\n".format(
-                n, generate_labels(edge_labels)) +
+            "OPTIONAL MATCH ({})-[out_rel:{}]->(suc)\n".format(
+                n, edge_label) +
             "WITH suc_maps + collect({id: id(suc), neighbor: suc, edge: out_rel}) as suc_maps, " +
             "pred_maps, " + ", ".join(carry_vars) + "\n" +
-            "OPTIONAL MATCH (pred)-[in_rel{}]->({})\n".format(
-                generate_labels(edge_labels), n) +
+            "OPTIONAL MATCH (pred)-[in_rel:{}]->({})\n".format(
+                edge_label, n) +
             "WITH pred_maps + collect({id: id(pred), neighbor: pred, edge: in_rel}) as pred_maps, " +
             "suc_maps, " + ", ".join(carry_vars) + "\n"
         )
@@ -896,12 +881,12 @@ def merging_query1(original_vars, merged_var, merged_id, merged_id_var,
         "\t\t\tvalues + {key: k, value: v}))), 'key') as self_loop_props, " +
         ", ".join(carry_vars) + "\n" +
         "FOREACH(suc IN filter(suc IN suc_nodes WHERE NOT id(suc) in self_loops) |\n"
-        "\tMERGE ({})-[new_rel{}]->(suc)\n".format(merged_var, generate_labels(edge_labels)) +
+        "\tMERGE ({})-[new_rel:{}]->(suc)\n".format(merged_var, edge_label) +
         "\tSET new_rel = apoc.map.fromValues(REDUCE(pairs=[], k in keys(suc_props[toString(id(suc))]) | \n"
         "\t\t pairs + [k, REDUCE(values=[], v in suc_props[toString(id(suc))][k] | \n"
         "\t\t\tvalues + CASE WHEN v.value IN values THEN [] ELSE v.value END)])))\n"
         "FOREACH(pred IN filter(pred IN pred_nodes WHERE NOT id(pred) in self_loops) |\n"
-        "\tMERGE (pred)-[new_rel{}]->({})\n".format(generate_labels(edge_labels), merged_var) +
+        "\tMERGE (pred)-[new_rel:{}]->({})\n".format(edge_label, merged_var) +
         "\tSET new_rel = apoc.map.fromValues(REDUCE(pairs=[], k in keys(pred_props[toString(id(pred))]) | \n"
         "\t\t pairs + [k, REDUCE(values=[], v in pred_props[toString(id(pred))][k] | \n"
         "\t\t\tvalues + CASE WHEN v.value IN values THEN [] ELSE v.value END)])))\n"
@@ -909,8 +894,8 @@ def merging_query1(original_vars, merged_var, merged_id, merged_id_var,
     query += (
         "// add self loop \n"
         "FOREACH(dummy in CASE WHEN length(self_loops) > 0 THEN [NULL] ELSE [] END |\n"
-        "\tMERGE ({})-[new_rel{}]->({})\n".format(
-            merged_var, generate_labels(edge_labels), merged_var) +
+        "\tMERGE ({})-[new_rel:{}]->({})\n".format(
+            merged_var, edge_label, merged_var) +
         "\tSET new_rel = apoc.map.fromValues(REDUCE(pairs=[], k in keys(self_loop_props) |\n"
         "\t\tpairs + [k, REDUCE(values=[], v in self_loop_props[k] |\n"
         "\t\t\tvalues + CASE WHEN v.value IN values THEN [] ELSE v.value END)])))\n"
@@ -952,8 +937,7 @@ def merging_query1(original_vars, merged_var, merged_id, merged_id_var,
 
     return query, carry_vars
 
-
-def find_matching(pattern, nodes=None, node_labels=None, edge_labels=None):
+def find_matching(pattern, nodes, node_label, edge_label):
     """Query that performs pattern match in the graph.
 
     Parameters
@@ -962,20 +946,20 @@ def find_matching(pattern, nodes=None, node_labels=None, edge_labels=None):
         Graph object representing a pattern to search for
     nodes : iterable, optional
         Collection of ids of nodes to constraint the search space of matching
-    node_labels
-        Labels of the node to match, default is 'node'
+    node_label
+        Label of the node to match, default is 'node'
     edge_label
         Label of the edges to match, default is 'edge'
     """
     query =\
         "MATCH {}".format(
             ", ".join(
-                "({}{})".format(n, generate_labels(node_labels))
+                "({}:{})".format(n, node_label)
                 for n in pattern.nodes()))
     if len(pattern.edges()) > 0:
         query += ", {}".format(
-            ", ".join("({})-[{}]->({})".format(
-                u, generate_labels(edge_labels), v)
+            ", ".join("({})-[:{}]->({})".format(
+                u, edge_label, v)
                 for u, v in pattern.edges())) + "\n"
     else:
         query += "\n"
@@ -1008,7 +992,7 @@ def find_matching(pattern, nodes=None, node_labels=None, edge_labels=None):
 
 
 def match_pattern_instance(pattern, pattern_vars, instance,
-                           node_labels=None, edge_labels=None):
+                           node_label, edge_label):
     """Query to match an instance of the pattern.
 
     Parameters
@@ -1020,20 +1004,20 @@ def match_pattern_instance(pattern, pattern_vars, instance,
         Instance of the pattern in the graph, dictionary
         whose keys are node ids of the pattern and whose
         values are ids of the nodes of the graph
-    node_labels :
-    edge_labels :
+    node_label :
+    edge_label :
     """
     query =\
-        match_nodes(instance, node_labels=node_labels)
+        match_nodes(instance, node_label=node_label)
 
     if len(pattern.edges()) > 0:
         query +=\
             ", " +\
             ", ".join(
-                "({})-[{}{}]->({})".format(
+                "({})-[{}:{}]->({})".format(
                     pattern_vars[u],
                     str(pattern_vars[u]) + "_" + str(pattern_vars[v]),
-                    generate_labels(edge_labels),
+                    edge_label,
                     pattern_vars[v])
                 for u, v in pattern.edges())
     else:
@@ -1041,31 +1025,27 @@ def match_pattern_instance(pattern, pattern_vars, instance,
     return query
 
 
-def get_node(node_id, node_labels=None):
+def get_node(node_id, node_label):
     """Get node by its id (match and return it)."""
     return match_node(
-        "n", node_id, node_labels=node_labels) + return_vars(["n"])
+        "n", node_id, node_label=node_label) + return_vars(["n"])
 
 
-def get_edge(s, t, source_labels=None, target_labels=None, edge_labels=None):
+def get_edge(s, t, source_label, target_label, edge_label):
     """Get edge by the ids of its incident nodes."""
     query =\
-        "MATCH (n{} {{id: '{}'}})-[rel{}]->(m{} {{id: '{}'}})".format(
-            generate_labels(source_labels),
-            s,
-            generate_labels(edge_labels),
-            generate_labels(target_labels),
-            t) +\
+        "MATCH (n:{} {{id: '{}'}})-[rel:{}]->(m:{} {{id: '{}'}})".format(
+            source_label, s, edge_label, target_label, t) +\
         "RETURN rel\n"
 
     return query
 
 
-def constraint_query(node_var, node_labels, node_property):
+def constraint_query(node_var, node_label, node_property):
     """Generate query for creating a constraint on a property."""
-    query = "CONSTRAINT ON ({}{}) ASSERT {}.{} IS UNIQUE".format(
+    query = "CONSTRAINT ON ({}:{}) ASSERT {}.{} IS UNIQUE".format(
         node_var,
-        generate_labels(node_labels),
+        node_label,
         node_var,
         node_property
     )
@@ -1817,8 +1797,8 @@ def merging_from_list(list_var, merged_var, merged_id, merged_id_var,
 
 
 def multiple_cloning_query(original_var, clone_var, clone_id, clone_id_var,
-                           number_of_clone_var=None,
-                           node_labels=None, edge_labels=None, preserv_typing=False,
+                           number_of_clone_var,
+                           node_label, edge_label, preserv_typing=False,
                            sucs_to_ignore=None, preds_to_ignore=None,
                            carry_vars=None, ignore_naming=False,
                            multiple_rows=False):
@@ -1877,8 +1857,8 @@ def multiple_cloning_query(original_var, clone_var, clone_id, clone_id_var,
         query += (
             "// create a node corresponding to the clone\n" +
             # "CREATE ({}:node) \n".format(clone_var, clone_var) +
-            "CREATE ({}{}) \n".format(
-                clone_var, generate_labels(node_labels)) +
+            "CREATE ({}:{}) \n".format(
+                clone_var, node_label) +
             "WITH {}, toString(id({})) as {}, {}.id as original_old, ".format(
                 clone_var, clone_var, clone_id_var, original_var) +
             ", ".join(carry_vars) + " \n" +
@@ -1898,8 +1878,8 @@ def multiple_cloning_query(original_var, clone_var, clone_id, clone_id_var,
     else:
         query += (
             "// search for a node with the same id as the clone id\n" +
-            "OPTIONAL MATCH (same_id_node{} {{ id : '{}'}}) \n".format(
-                generate_labels(node_labels), clone_id) +
+            "OPTIONAL MATCH (same_id_node:{} {{ id : '{}'}}) \n".format(
+                node_label, clone_id) +
             "WITH same_id_node,  " +
             "CASE WHEN same_id_node IS NOT NULL "
             "THEN (coalesce(same_id_node.count, 0) + 1) " +
@@ -1914,8 +1894,8 @@ def multiple_cloning_query(original_var, clone_var, clone_id, clone_id_var,
             ", ".join(carry_vars) + "\n" +
             "// create a node corresponding to the clone\n" +
             # "CREATE ({}:node) \n".format(clone_var, clone_id_var) +
-            "CREATE ({}{}) \n".format(
-                clone_var, generate_labels(node_labels)) +
+            "CREATE ({}:{}) \n".format(
+                clone_var, node_label) +
             "WITH same_id_node, same_id_node_new_count, {}, {}, "
             "{}.id as original_old, ".format(
                 clone_var, clone_id_var, original_var) +
@@ -1990,8 +1970,8 @@ def multiple_cloning_query(original_var, clone_var, clone_id, clone_id_var,
     )
     query += (
         "// match successors and out-edges of a node to be cloned\n" +
-        "OPTIONAL MATCH ({})-[out_edge{}]->(suc) \n".format(
-            original_var, generate_labels(edge_labels)) +
+        "OPTIONAL MATCH ({})-[out_edge:{}]->(suc) \n".format(
+            original_var, edge_label) +
         "WHERE NOT suc.id IS NULL AND NOT suc.id IN sucIgnore\n" +
         "WITH collect({neighbor: suc, id: suc.id, edge: out_edge}) as suc_maps, predIgnore, " +
         ", ".join(carry_vars) + " \n"
@@ -2000,8 +1980,8 @@ def multiple_cloning_query(original_var, clone_var, clone_id, clone_id_var,
     carry_vars.add("suc_maps")
     query += (
         "// match predecessors and in-edges of a node to be cloned\n" +
-        "OPTIONAL MATCH (pred)-[in_edge{}]->({}) \n".format(
-            generate_labels(edge_labels), original_var) +
+        "OPTIONAL MATCH (pred)-[in_edge:{}]->({}) \n".format(
+            edge_label, original_var) +
         "WHERE NOT pred.id IS NULL AND NOT pred.id IN predIgnore\n" +
         "WITH collect({neighbor: pred, id: pred.id, edge: in_edge}) as pred_maps, " +
         ", ".join(carry_vars) + " \n"
@@ -2016,8 +1996,8 @@ def multiple_cloning_query(original_var, clone_var, clone_id, clone_id_var,
         "\t\t\t\tTHEN orig_ids_to_clone[suc_map.id] \n"
         "\t\t\tWHEN suc_map.neighbor IS NOT NULL\n"
         "\t\t\t\tTHEN [suc_map.neighbor] ELSE [] END |\n"
-        "\t\tMERGE ({})-[new_edge{}]->(suc) \n".format(
-            clone_var, generate_labels(edge_labels)) +
+        "\t\tMERGE ({})-[new_edge:{}]->(suc) \n".format(
+            clone_var, edge_label) +
         "\t\tSET new_edge = suc_map.edge))\n"
         "FOREACH (pred_map IN pred_maps | \n"
         "\tFOREACH (pred IN CASE\n"
@@ -2025,16 +2005,16 @@ def multiple_cloning_query(original_var, clone_var, clone_id, clone_id_var,
         "\t\t\t\tTHEN orig_ids_to_clone[pred_map.id] \n"
         "\t\t\tWHEN pred_map.neighbor IS NOT NULL\n"
         "\t\t\t\tTHEN [pred_map.neighbor] ELSE [] END |\n"
-        "\t\tMERGE (pred)-[new_edge{}]->({}) \n".format(
-            generate_labels(edge_labels), clone_var) +
+        "\t\tMERGE (pred)-[new_edge:{}]->({}) \n".format(
+            edge_label, clone_var) +
         "\t\tSET new_edge = pred_map.edge))\n" +
         "// copy self loop\n" +
         "FOREACH (suc_map IN suc_maps | \n"
         "\tFOREACH (self_loop IN "
         "CASE WHEN suc_map.neighbor = {} THEN [suc_map.edge] ELSE [] END |\n".format(
             original_var) +
-        "\t\tMERGE ({})-[new_edge{}]->({}) \n".format(
-            clone_var, generate_labels(edge_labels), clone_var) +
+        "\t\tMERGE ({})-[new_edge:{}]->({}) \n".format(
+            clone_var, edge_label, clone_var) +
         "\t\tSET new_edge = self_loop))\n"
     )
     carry_vars.remove("suc_maps")
