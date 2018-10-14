@@ -18,7 +18,7 @@ def propagate_up(rewritten_graph, predecessor):
     carry_vars = set()
     query1 = (
         "// Matching of the nodes to clone in '{}'\n".format(predecessor) +
-        "OPTIONAL MATCH (node_to_clone:node:{})-[t:typing]->(n:node:{})\n".format(
+        "OPTIONAL MATCH (node_to_clone:{})-[t:typing]->(n:{})\n".format(
             predecessor, rewritten_graph) +
         "WITH node_to_clone, collect(n) as sucs, collect(t) as typ_sucs, "
         "count(n) as number_of_img\n" +
@@ -63,8 +63,8 @@ def propagate_up(rewritten_graph, predecessor):
     carry_vars = set()
     query2 = (
         "// Removal of nodes in '{}'\n".format(predecessor) +
-        "MATCH (n:node:{})\n".format(predecessor) +
-        "OPTIONAL MATCH (n)-[:typing]->(x:node:{})\n".format(rewritten_graph) +
+        "MATCH (n:{})\n".format(predecessor) +
+        "OPTIONAL MATCH (n)-[:typing]->(x:{})\n".format(rewritten_graph) +
         "FOREACH(dummy IN CASE WHEN x IS NULL THEN [1] ELSE [] END |\n" +
         "\t" + cypher.delete_nodes_var(['n']) + ")\n"
         "// Removal of node properties in '{}'\n".format(predecessor) +
@@ -90,9 +90,9 @@ def propagate_up(rewritten_graph, predecessor):
     carry_vars = set()
     query3 = (
         "// Removal of edges attributes in '{}'\n".format(predecessor) +
-        "MATCH (n:node:{})-[rel_pred:edge]->(m:node:{})\n".format(
+        "MATCH (n:{})-[rel_pred:edge]->(m:{})\n".format(
             predecessor, predecessor) +
-        "OPTIONAL MATCH (x:node:{})-[rel:edge]->(y:node:{})".format(
+        "OPTIONAL MATCH (x:node:{})-[rel:edge]->(y:{})".format(
             rewritten_graph, rewritten_graph) +
         "WHERE (n)-[:typing]->(x) AND (m)-[:typing]->(y)\n" +
         "FOREACH(dummy IN CASE WHEN rel IS NULL THEN [1] ELSE [] END |\n" +
@@ -213,7 +213,7 @@ def propagate_down(rewritten_graph, successor):
     query1 = (
         "\n// Matching of the nodes to merge in '{}'\n".format(successor) +
         "WITH [] as merged_nodes\n"
-        "OPTIONAL MATCH (n:node:{})-[:typing]->(node_to_merge:node:{})\n".format(
+        "OPTIONAL MATCH (n:{})-[:typing]->(node_to_merge:{})\n".format(
             rewritten_graph, successor) +
         "WITH n, collect(node_to_merge) as nodes_to_merge, " +
         ", ".join(carry_vars) + "\n"
@@ -245,13 +245,13 @@ def propagate_down(rewritten_graph, successor):
     carry_vars = set()
     query2 = (
         "\n// Addition of nodes and properties in '{}'\n".format(successor) +
-        "MATCH (n:node:{})\n".format(rewritten_graph) +
-        "OPTIONAL MATCH (n)<-[:typing*0..]-(:node)-[:typing*]->(existing_img:node:{})\n".format(
+        "MATCH (n:{})\n".format(rewritten_graph) +
+        "OPTIONAL MATCH (n)<-[:typing*0..]-()-[:typing*]->(existing_img:{})\n".format(
             successor) +
         "FOREACH(dummy IN CASE WHEN existing_img IS NOT NULL THEN [1] ELSE [] END |\n" +
         "\tMERGE (n)-[:typing]->(existing_img))\n" +
         cypher.with_vars(['n']) +
-        "MERGE (n)-[:typing]->(node_img:node:{})\n".format(successor) +
+        "MERGE (n)-[:typing]->(node_img:{})\n".format(successor) +
         "WITH n, node_img\n" +
         "FOREACH(dummy IN CASE WHEN node_img.id IS NULL THEN [1] ELSE [] END |\n" +
         "\tSET node_img.id = id(node_img))\n" +
@@ -273,9 +273,9 @@ def propagate_down(rewritten_graph, successor):
     carry_vars = set()
     query3 = (
         "\n// Addition of edges and properties in '{}'\n".format(successor) +
-        "MATCH (n:node:{})-[rel:edge]->(m:node:{}), ".format(
+        "MATCH (n:{})-[rel:edge]->(m:{}), ".format(
             rewritten_graph, rewritten_graph) +
-        "(n)-[:typing]->(x:node:{}), (m)-[:typing]->(y:node:{})\n".format(
+        "(n)-[:typing]->(x:node:{}), (m)-[:typing]->(y:{})\n".format(
             successor, successor) +
         "MERGE (x)-[rel_img:edge]->(y)\n" +
         "WITH x, y, rel, rel_img WHERE " +
@@ -384,7 +384,7 @@ def propagate_down(rewritten_graph, successor):
 
 def remove_tmp_typing(rewritten_graph):
     query = (
-        "MATCH (n:node:{})-[t:tmp_typing]->(:node)\n".format(rewritten_graph) +
+        "MATCH (n:{})-[t:tmp_typing]->()\n".format(rewritten_graph) +
         "DELETE t\n"
     )
     return query
@@ -392,8 +392,13 @@ def remove_tmp_typing(rewritten_graph):
 
 def preserve_tmp_typing(rewritten_graph):
     query = (
-        "MATCH (n:node:{})-[t:tmp_typing]->(m:node)\n".format(rewritten_graph) +
-        "DELETE t\n" +
-        "MERGE (n)-[:typing]->(m)\n"
+        "MATCH (n:{})-[t:tmp_typing]->(m)\n".format(rewritten_graph) +
+        "OPTIONAL MATCH (:hierarchyNode {{id: '{}'}})".format(
+            rewritten_graph) +
+        "-[skeleton_rel:hierarchyEdge]->(:hierarchyNode {id: labels(m)[0]}) \n" +
+        "FOREACH( dummy IN (CASE skeleton_rel WHEN null THEN [] ELSE [1] END) | \n" +
+        "\tDELETE t\n" +
+        "\tMERGE (n)-[:typing]->(m)\n" +
+        ")\n"
     )
     return query

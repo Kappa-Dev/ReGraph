@@ -54,7 +54,7 @@ def total_cache_hits(result):
 
 
 def total_cache_hits_profile(profile):
-    """Compute the total number of cache hits of a query profile."""
+    """Compute the total number of cache hits of a query profi"""
     nb = 0
     for child in profile.children:
         nb += total_cache_hits_profile(child)

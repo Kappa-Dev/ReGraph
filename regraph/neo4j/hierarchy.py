@@ -5,9 +5,7 @@ from neo4j.exceptions import ConstraintError
 
 from regraph.neo4j.graphs import Neo4jGraph
 import regraph.neo4j.cypher_utils as cypher
-from regraph.neo4j.category_utils import (pullback,
-                                          pushout,
-                                          _check_homomorphism,
+from regraph.neo4j.category_utils import (_check_homomorphism,
                                           _check_consistency,
                                           _check_rhs_consistency)
 from regraph.neo4j.rewriting_utils import (propagate_up,
@@ -31,29 +29,47 @@ class Neo4jHierarchy(object):
         self.execute(query)
 
     def close(self):
-        """Close connection."""
+        """Close connection to the database."""
         self._driver.close()
 
     def execute(self, query):
         """Execute a Cypher query."""
         with self._driver.session() as session:
-            result = session.run(query)
-            return result
+            if len(query) > 0:
+                result = session.run(query)
+                return result
 
-    def clear(self):
+    def _clear(self):
         """Clear the hierarchy."""
         query = cypher.clear_graph()
         result = self.execute(query)
         # self.drop_all_constraints()
         return result
 
-    def drop_all_constraints(self):
+    def _drop_all_constraints(self):
         """Drop all the constraints on the hierarchy."""
         with self._driver.session() as session:
             for constraint in session.run("CALL db.constraints"):
                 session.run("DROP " + constraint[0])
 
-    def add_graph(self, graph_id, node_list=None, edge_list=None, graph_attrs=None):
+    def graphs(self):
+        """Return a list of graphs in the hierarchy."""
+        pass
+
+    def typings(self):
+        """Return a list of graph typing edges in the hierarchy."""
+        pass
+
+    # def rules(self):
+    #     """Return a list of rules in the hierary."""
+    #     pass
+
+    # def relations(self):
+    #     """Return a list of relations."""
+    #     pass
+
+    def add_graph(self, graph_id, node_list=None, edge_list=None,
+                  graph_attrs=None):
         """Add a graph to the hierarchy.
 
         Parameters
@@ -98,74 +114,6 @@ class Neo4jHierarchy(object):
         if edge_list is not None:
             g.add_edges_from(edge_list)
 
-    def remove_graph(self, graph_id, reconnect=False):
-        """Remove a graph from the hierarchy.
-
-        Parameters
-        ----------
-        node_id
-            Id of the graph to remove
-        reconnect : bool
-            Reconnect the descendants of the removed graph to
-            its predecessors
-
-        Raises
-        ------
-        HierarchyError
-            If graph with `graph_id` is not defined in the hierarchy
-        """
-        g = self.access_graph(graph_id)
-
-        if reconnect:
-            query = (
-                "MATCH (n:node:{})".format(graph_id) +
-                "OPTIONAL MATCH (pred)-[:typing]->(n)-[:typing]->(suc)\n" +
-                "WITH pred, suc WHERE pred IS NOT NULL\n" +
-                cypher.create_edge(
-                    edge_var='recennect_typing',
-                    source_var='pred',
-                    target_var='suc',
-                    edge_labels=['typing'])
-            )
-            self.execute(query)
-        # Clear the graph and drop the constraint on the ids
-        g.drop_constraint('id')
-        g.clear()
-
-        # Remove the hierarchyNode (and reconnect if True)
-        if reconnect:
-            query = (
-                cypher.match_node(
-                    var_name="graph_to_rm",
-                    node_id=graph_id,
-                    node_labels=['hierarchyNode']) +
-                "OPTIONAL MATCH (pred)-[:hierarchyEdge]->(n)-[:hierarchyEdge]->(suc)\n" +
-                "WITH pred, suc WHERE pred IS NOT NULL\n" +
-                cypher.create_edge(
-                    edge_var='recennect_typing',
-                    source_var='pred',
-                    target_var='suc',
-                    edge_labels=['hierarchyEdge'])
-            )
-            self.execute(query)
-        query = cypher.match_node(var_name="graph_to_rm",
-                                  node_id=graph_id,
-                                  node_label=['hierarchyNode'])
-        query += cypher.delete_nodes_var(["graph_to_rm"])
-        self.execute(query)
-
-    def access_graph(self, label):
-        """Access a graph of the hierarchy."""
-        query = "MATCH (n:hierarchyNode) WHERE n.id='{}' RETURN n".format(
-            label)
-        res = self.execute(query)
-        if res.single() is None:
-            raise HierarchyError(
-                "The graph '{}' is not in the database.".format(label))
-        g = Neo4jGraph(self._driver,
-                       node_labels=[label], edge_labels=["edge"])
-        return g
-
     def add_typing(self, source, target, mapping, attrs=None, check=True):
         """Add homomorphism to the hierarchy.
 
@@ -195,8 +143,8 @@ class Neo4jHierarchy(object):
             If a homomorphism from a graph at the source to a graph at
             the target given by `mapping` is not a valid homomorphism.
         """
-        g_src = self.access_graph(source)
-        g_tar = self.access_graph(target)
+        g_src = self._access_graph(source)
+        g_tar = self._access_graph(target)
 
         query = ""
         nodes_to_match_src = set()
@@ -215,15 +163,16 @@ class Neo4jHierarchy(object):
                     edge_labels=['typing'],
                     attrs=tmp_attrs))
 
-        query += cypher.match_nodes(
-            {n + "_src": n for n in nodes_to_match_src},
-            node_labels=g_src._node_labels)
-        query += cypher.with_vars([s + "_src" for s in nodes_to_match_src])
-        query += cypher.match_nodes(
-            {n + "_tar": n for n in nodes_to_match_tar},
-            node_labels=g_tar._node_labels)
-        for q in edge_creation_queries:
-            query += q
+        if len(nodes_to_match_src) > 0:
+            query += cypher.match_nodes(
+                {n + "_src": n for n in nodes_to_match_src},
+                node_labels=g_src._node_labels)
+            query += cypher.with_vars([s + "_src" for s in nodes_to_match_src])
+            query += cypher.match_nodes(
+                {n + "_tar": n for n in nodes_to_match_tar},
+                node_labels=g_tar._node_labels)
+            for q in edge_creation_queries:
+                query += q
 
         result = self.execute(query)
 
@@ -262,7 +211,7 @@ class Neo4jHierarchy(object):
                 raise consistency_error
 
         if valid_typing and paths_commute:
-            query2 = (
+            skeleton_query = (
                 cypher.match_nodes(
                     var_id_dict={'g_src': source, 'g_tar': target},
                     node_labels=['hierarchyNode']) +
@@ -278,33 +227,160 @@ class Neo4jHierarchy(object):
                 "REMOVE t.tmp\n"
 
             )
-            self.execute(query2)
+            self.execute(skeleton_query)
         return result
 
-    def check_typing(self, source, target):
-        """Check if a typing is a homomorphism."""
-        g_src = self.access_graph(source)
-        g_tar = self.access_graph(target)
+    def remove_node(self, node_id, reconnect=False):
+        """Remove node from the hierarchy.
 
+        Removes a node from the hierarchy, if the `reconnect`
+        parameter is set to True, adds typing from the
+        predecessors of the removed node to all its successors,
+        by composing the homomorphisms (for every predecessor `p`
+        and for every successor 's' composes two homomorphisms
+        `p`->`node_id` and `node_id`->`s`, then removes `node_id` and
+        all its incident edges, by which makes node's
+        removal a procedure of 'forgetting' one level
+        of 'abstraction').
+
+        Parameters
+        ----------
+        node_id
+            Id of a node to remove
+        reconnect : bool
+            Reconnect the descendants of the removed node to
+            its predecessors
+
+        Raises
+        ------
+        HierarchyError
+            If node with `node_id` is not defined in the hierarchy
+        """
+        g = self._access_graph(node_id)
+
+        if reconnect:
+            query = (
+                "MATCH (n:node:{})".format(node_id) +
+                "OPTIONAL MATCH (pred)-[:typing]->(n)-[:typing]->(suc)\n" +
+                "WITH pred, suc WHERE pred IS NOT NULL\n" +
+                cypher.create_edge(
+                    edge_var='recennect_typing',
+                    source_var='pred',
+                    target_var='suc',
+                    edge_labels=['typing'])
+            )
+            self.execute(query)
+        # Clear the graph and drop the constraint on the ids
+        g._drop_constraint('id')
+        g._clear()
+
+        # Remove the hierarchyNode (and reconnect if True)
+        if reconnect:
+            query = (
+                cypher.match_node(
+                    var_name="graph_to_rm",
+                    node_id=node_id,
+                    node_labels=['hierarchyNode']) +
+                "OPTIONAL MATCH (pred)-[:hierarchyEdge]->(n)-[:hierarchyEdge]->(suc)\n" +
+                "WITH pred, suc WHERE pred IS NOT NULL\n" +
+                cypher.create_edge(
+                    edge_var='recennect_typing',
+                    source_var='pred',
+                    target_var='suc',
+                    edge_labels=['hierarchyEdge'])
+            )
+            self.execute(query)
+        query = cypher.match_node(var_name="graph_to_rm",
+                                  node_id=graph_id,
+                                  node_label=['hierarchyNode'])
+        query += cypher.delete_nodes_var(["graph_to_rm"])
+        self.execute(query)
+
+    def remove_edge(self, u, v):
+        """Remove an edge from the hierarchy."""
+        pass
+
+    def _access_graph(self, graph_id):
+        """Access a graph of the hierarchy."""
+        query = "MATCH (n:hierarchyNode) WHERE n.id='{}' RETURN n".format(
+            graph_id)
+        res = self.execute(query)
+        if res.single() is None:
+            raise HierarchyError(
+                "The graph '{}' is not in the database.".format(graph_id))
+        g = Neo4jGraph(self._driver,
+                       node_labels=[graph_id], edge_labels=["edge"])
+        return g
+
+    def _check_typing(self, source, target):
+        """Check if a typing is a valid homomorphism."""
         with self._driver.session() as session:
             tx = session.begin_transaction()
             res = _check_homomorphism(tx, source, target)
             tx.commit()
         print(res)
 
-    def pullback(self, b, c, d, a):
-        self.add_graph(a)
-        query1, query2 = pullback(b, c, d, a)
-        self.execute(query1)
-        self.execute(query2)
+    def find_matching(self, graph_id, pattern,
+                      pattern_typing=None, nodes=None):
+        """Find an instance of a pattern in a specified graph.
 
-    def pushout(self, a, b, c, d):
-        self.add_graph(d)
-        queries = pushout(a, b, c, d)
-        for q in queries:
-            print(q)
-            print('--------------------')
-            self.execute(q)
+        This function takes as an input a graph and a pattern graph,
+        optionally, it also takes a dictionary specifying pattern typing
+        and a collection of nodes specifying the subgraph of the
+        original graph, where the matching should be searched in, then it
+        searches for a matching of the pattern inside of the graph (or induced
+        subragh), which corresponds to solving subgraph matching problem.
+        The matching is defined by a map from the nodes of the pattern
+        to the nodes of the graph such that:
+
+        * edges are preserved, i.e. if there is an edge between nodes `n1`
+          and `n2` in the pattern, there is an edge between the nodes of
+          the graph that correspond to the image of `n1` and `n2`, moreover,
+          the attribute dictionary of the edge between `n1` and `n2` is the
+          subdictiotary of the edge it corresponds to in the graph;
+        * the attribute dictionary of a pattern node is a subdictionary of
+          its image in the graph;
+        * (if pattern typing is specified) if node `n1` of the pattern
+          is typed by some node `t` in the graph `T` of the hierarchy,
+          then its image is also typed by `t` from the graph `T`.
+
+        Uses `networkx.isomorphism.(Di)GraphMatcher` class, which implements
+        subgraph matching algorithm.
+
+        Parameters
+        ----------
+        graph_id
+            Id of the graph in the hierarchy to search for matches
+        pattern : nx.(Di)Graph
+            Pattern graph to search for
+        pattern_typing : dict, optional
+            Dictionary defining the (partial) pattern typing,
+            where keys are graph nodes of the hierarchy and
+            values are (partial) mappings from the nodes
+            of the pattern to the nodes of its typing graph given
+            by the respective key
+        nodes : iterable
+            Subset of nodes to search for matching
+
+        Returns
+        -------
+        instances : list of dict's
+            List of instances of matching found in the graph, every instance
+            is represented with a dictionary where keys are nodes of the
+            pattern, and values are corresponding nodes of the graph.
+
+        Raises
+        ------
+        ReGraphError
+            If `graph_id` is a rule node or pattern is not valid under the
+            provided `pattern_typing`
+        """
+        graph = self._access_graph(graph_id)
+        if pattern_typing is None:
+            instances = graph.find_matching(pattern, nodes)
+        else:
+            pass
+        return instances
 
     def rewrite(self, graph_id, rule, instance, rhs_typing=None):
         """Rewrite and propagate the changes up & down.
@@ -347,9 +423,55 @@ class Neo4jHierarchy(object):
         TypingWarning
             If the rhs typing is inconsistent
         """
+
+        if rhs_typing is None:
+            rhs_typing = dict()
+
         # Rewriting of the base graph
-        g = self.access_graph(graph_id)
+        g = self._access_graph(graph_id)
         rhs_g = g.rewrite(rule, instance, rhs_typing)
+
+        # Add tmp rhs typing
+        rhs_temp_typing_query = ""
+        for graph in rhs_typing.keys():
+            rhs_typed_vars = {
+                rhs_g[rhs_node]: "node_{}_{}".format(rhs_g[rhs_node], graph_id)
+                for rhs_node in rhs_typing[graph].keys()
+            }
+
+            # Match subquery for rhs_nodes
+            rhs_temp_typing_query +=\
+                cypher.match_nodes(
+                    {v: k for k, v in rhs_typed_vars.items()},
+                    node_labels=[graph_id]) +\
+                cypher.with_vars([v for v in rhs_typed_vars.values()])
+
+            # Add temp typing subquery
+            rhs_temp_typing_query += "OPTIONAL MATCH "
+
+            nodes_to_match = []
+            merge_subqueres = []
+            for node in rhs_typing[graph].keys():
+                rhs_typed_var = "node_{}_{}".format(rhs_g[node], graph_id)
+                rhs_typing_var = "node_{}_{}".format(
+                    rhs_typing[graph][node], graph)
+                if node in rule.added_nodes():
+                    nodes_to_match.append(
+                        "({}:{} {{id:'{}'}}), ".format(
+                            rhs_typed_var, graph_id, rhs_g[node]) +
+                        "({}:{} {{id:'{}'}})".format(
+                            rhs_typing_var, graph, rhs_typing[graph][node]))
+                    merge_subqueres.append(
+                        "MERGE ({})-[:tmp_typing]->({})".format(
+                            rhs_typed_var, rhs_typing_var)
+                    )
+            rhs_temp_typing_query += (
+                ", ".join(nodes_to_match) + "\n" +
+                "\n".join(merge_subqueres)
+            )
+
+            print(rhs_temp_typing_query)
+            self.execute(rhs_temp_typing_query)
 
         # Checking if the rhs typing is consistent
         with self._driver.session() as session:
@@ -359,13 +481,38 @@ class Neo4jHierarchy(object):
 
         if consistent_typing:
             self.execute(preserve_tmp_typing(graph_id))
+            # self.execute(remove_tmp_typing(graph_id))
         else:
             self.execute(remove_tmp_typing(graph_id))
 
-        # Propagate the changes up and down
-        self._propagation_up(graph_id)
-        self._propagation_down(graph_id)
+        # Propagate the changes up
+        self._propagate_up(graph_id)
+        # # Propagate the changes down
+        self._propagate_down(graph_id)
+
         return rhs_g
+
+    def node_type(self, graph_id, node_id):
+        """Get a list of the immediate types of a node.
+
+        Returns
+        -------
+        types : dict
+            Dictionary whose keys are ids of the graphs in the
+            hierarchy that type `graph_id` and values are the
+            nodes typing `node_id` from `graph_id`
+
+        Raises
+        ------
+        HierarchyError
+            If graph with a given id does not exist in the hierarchy or
+            the node with `node_id` is not in the graph
+        """
+        pass
+
+    def get_typing(self, source, target):
+        """Get typing dict of `source` by `target`."""
+        pass
 
     def successors(self, graph_label):
         """Get all the ids of the successors of a graph."""
@@ -389,12 +536,41 @@ class Neo4jHierarchy(object):
             preds = []
         return preds
 
-    def _propagation_up(self, rewritten_graph):
-        """Propagate the changes of a rewritten graph up."""
+    def to_nx_graph(self):
+        """Create a simple networkx graph representing the hierarchy.
+
+        Note that the relation edges are ignored.
+
+        Returns
+        -------
+        g : nx.DiGraph
+            Simple NetworkX graph representing the structure of the
+            hierarchy
+        """
+        g = nx.DiGraph()
+        for node in self.nodes():
+            g.add_node(node, self.node[node].attrs)
+        for s, t in self.edges():
+            g.add_edge(s, t, self.edge[s][t].attrs)
+        return g
+
+    def rename_graph(self, graph_id, new_graph_id):
+        """Rename a graph in the hierarchy."""
+        pass
+
+    def rename_node(self, graph_id, node, new_name):
+        """Rename a node in a graph of the hierarchy."""
+        pass
+
+    def unique_graph_id(self, prefix):
+        """Generate a new graph id starting with a prefix."""
+        pass
+
+    def _propagate_up(self, rewritten_graph):
         predecessors = self.predecessors(rewritten_graph)
-        print("Rewritting ancestors of {}...".format(rewritten_graph))
+        # print("Rewritting ancestors of {}...".format(rewritten_graph))
         for predecessor in predecessors:
-            print('--> ', predecessor)
+            # print('--> ', predecessor)
             q_clone, q_rm_node, q_rm_edge = propagate_up(
                 rewritten_graph,
                 predecessor)
@@ -406,7 +582,25 @@ class Neo4jHierarchy(object):
                 tx.run(q_rm_edge)
                 tx.commit()
         for ancestor in predecessors:
-            self._propagation_up(ancestor)
+            self._propagate_up(ancestor)
+
+    def _propagate_down(self, rewritten_graph):
+        successors = self.successors(rewritten_graph)
+        # print("Rewritting children of {}...".format(rewritten_graph))
+        for successor in successors:
+            # print('--> ', successor)
+            q_merge_node, q_add_node, q_add_edge = propagate_down(
+                rewritten_graph,
+                successor)
+            # run multiple queries in one transaction
+            with self._driver.session() as session:
+                tx = session.begin_transaction()
+                tx.run(q_merge_node).single()
+                tx.run(q_add_node).single()
+                tx.run(q_add_edge).single()
+                tx.commit()
+        for successor in successors:
+            self._propagate_down(successor)
 
     # def _propagation_up_v2(self, rewritten_graph):
     #     """Propagate the changes of a rewritten graph up."""
@@ -422,24 +616,6 @@ class Neo4jHierarchy(object):
     #             tx.commit()
     #     for ancestor in predecessors:
     #         self._propagation_up(ancestor)
-
-    def _propagation_down(self, rewritten_graph):
-        successors = self.successors(rewritten_graph)
-        print("Rewritting children of {}...".format(rewritten_graph))
-        for successor in successors:
-            print('--> ', successor)
-            q_merge_node, q_add_node, q_add_edge = propagate_down(
-                rewritten_graph,
-                successor)
-            # run multiple queries in one transaction
-            with self._driver.session() as session:
-                tx = session.begin_transaction()
-                tx.run(q_merge_node).single()
-                tx.run(q_add_node).single()
-                tx.run(q_add_edge).single()
-                tx.commit()
-        for successor in successors:
-            self._propagation_down(successor)
 
     # def _propagation_down_v2(self, rewritten_graph, changes):
     #     successors = self.successors(rewritten_graph)

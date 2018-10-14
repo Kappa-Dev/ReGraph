@@ -446,7 +446,6 @@ class Hierarchy(nx.DiGraph, AttributeContainter):
             j_data = self.to_json()
             json.dump(j_data, f)
 
-
     def graphs(self):
         """Return a list of graphs in the hierarchy."""
         return list(self.graph.keys())
