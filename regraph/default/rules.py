@@ -1486,9 +1486,10 @@ class Rule(object):
         for u, v in self.removed_edges():
             if u in instance.keys() and v in instance.keys():
                 query += "// Removing edge '{}->{}' of the lhs \n".format(u, v)
-                query += cypher.delete_edge_var(
-                    str(lhs_vars[u]) + "_" + str(lhs_vars[v]))
+                edge_var = "{}_{}".format(str(lhs_vars[u]), str(lhs_vars[v]))
+                query += cypher.delete_edge_var(edge_var)
                 query += "\n"
+                carry_variables.remove(edge_var)
 
         if len(self.removed_nodes()) > 0 or len(self.removed_edges()) > 0:
             query += cypher.with_vars(carry_variables)
