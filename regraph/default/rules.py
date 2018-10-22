@@ -1019,7 +1019,8 @@ class Rule(object):
         for node in self.rhs.nodes():
             p_nodes = keys_by_value(self.p_rhs, node)
             if len(p_nodes) == 0:
-                attrs[node] = self.rhs.node[node]
+                if len(self.rhs.node[node]) > 0:
+                    attrs[node] = self.rhs.node[node]
             new_attrs = {}
             for p_node in p_nodes:
                 new_attrs = attrs_union(new_attrs, dict_sub(
@@ -1042,7 +1043,8 @@ class Rule(object):
             s_p_nodes = keys_by_value(self.p_rhs, s)
             t_p_nodes = keys_by_value(self.p_rhs, t)
             if len(s_p_nodes) == 0 or len(t_p_nodes) == 0:
-                attrs[(s, t)] = self.rhs.edge[s][t]
+                if len(self.rhs.edge[s][t]) > 0:
+                    attrs[(s, t)] = self.rhs.edge[s][t]
             new_attrs = {}
             for s_p_node in s_p_nodes:
                 for t_p_node in t_p_nodes:
@@ -1666,6 +1668,7 @@ class Rule(object):
             query += "// Adding properties to the node " +\
                 "'{}' from the rhs \n".format(rhs_node)
             query += cypher.add_attributes(rhs_vars[rhs_node], attrs)
+            query += "\n\n"
 
         # Generate edges addition subquery
         # query += (
@@ -1674,30 +1677,31 @@ class Rule(object):
         # )
         for u, v in self.added_edges():
             query += "// Adding edge '{}->{}' from the rhs \n".format(u, v)
+            new_edge_var = rhs_vars[u] + "_" + rhs_vars[v]
             query += cypher.create_edge(
-                edge_var=rhs_vars[u] + "_" + rhs_vars[v],
+                edge_var=new_edge_var,
                 source_var=rhs_vars[u],
                 target_var=rhs_vars[v],
                 edge_label=edge_label)
-            # query += (
-            #     "WITH added_edges + {{source: {}.id, ".format(rhs_vars[u]) +
-            #     "target: {}.id}} as added_edges, ".format(rhs_vars[v]) +
-            #     ", ".join(carry_variables) + "\n"
-            # )
+            if (u, v) in self.added_edge_attrs().keys():
+                carry_variables.add(new_edge_var)
             query += "\n\n"
-        # carry_variables.add('added_edges')
 
         # Generate edge attrs addition subquery
         for e, attrs in self.added_edge_attrs().items():
             u = e[0]
             v = e[1]
             query += "// Adding properties to an edge " +\
-                "'{}' from the rhs \n".format(rhs_node)
-            query += cypher.with_vars(carry_variables)
-            query += "MATCH ({})-[{}:edge]->({})\n".format(
-                rhs_vars[u], rhs_vars[u] + "_" + rhs_vars[v], rhs_vars[v])
-            carry_variables.add(rhs_vars[u] + "_" + rhs_vars[v])
-            query += cypher.add_attributes(rhs_vars[u] + "_" + rhs_vars[v], attrs)
+                "'{}'->'{}' from the rhs \n".format(u, v)
+            query += cypher.with_vars(carry_variables) + '\n'
+
+            edge_var = rhs_vars[u] + "_" + rhs_vars[v]
+            if (u, v) not in self.added_edges():
+                query += "MATCH ({})-[{}:edge]->({})\n".format(
+                    rhs_vars[u], edge_var, rhs_vars[v])
+                carry_variables.add(edge_var)
+
+            query += cypher.add_attributes(edge_var, attrs)
             query += cypher.with_vars(carry_variables)
             query += "\n\n"
 
