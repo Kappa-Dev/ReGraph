@@ -355,7 +355,7 @@ class Rule(object):
             else:
                 raise RuleError(
                     "Node '{}' is not found in neither left-hand "
-                    "side nor preserved part".format(1))
+                    "side nor preserved part".format(n1))
 
         if len(p_keys_2) == 0:
             if n2 in self.p.nodes():
@@ -1437,8 +1437,8 @@ class Rule(object):
         self.p_lhs = new_p_lhs
         self.p_rhs = new_p_rhs
 
-    def to_cypher(self, instance, rhs_typing=None,
-                  node_label="node", edge_label="edge", generate_var_ids=False):
+    def to_cypher(self, instance, node_label="node",
+                  edge_label="edge", generate_var_ids=False):
         """Convert a rule on the instance to a Cypher query.
 
         instance : dict
@@ -1455,9 +1455,6 @@ class Rule(object):
         # var names, we need to perform escaping on these names
         # for neo4j not to complain (some symbols are forbidden in
         # Cypher's var names)
-        if rhs_typing is None:
-            rhs_typing = dict()
-
         if generate_var_ids:
             # Generate unique variable names corresponding to node names
             lhs_vars = {n: cypher.generate_var_name() for n in self.lhs.nodes()}
@@ -1526,7 +1523,7 @@ class Rule(object):
                     clone_id=n,
                     clone_id_var=clone_id_var,
                     node_label=node_label,
-                    preserv_typing=True,
+                    clone_typing=True,
                     sucs_to_ignore=sucs_to_ignore[n],
                     preds_to_ignore=preds_to_ignore[n],
                     carry_vars=carry_variables,
@@ -1538,7 +1535,7 @@ class Rule(object):
         # Generate nodes removal subquery
         for node in self.removed_nodes():
             query += "// Removing node '{}' of the lhs \n".format(node)
-            query += cypher.delete_nodes_var([lhs_vars[node]])
+            query += cypher.remove_nodes([lhs_vars[node]])
             carry_variables.remove(lhs_vars[node])
             query += "\n"
 
@@ -1547,7 +1544,7 @@ class Rule(object):
             if u in instance.keys() and v in instance.keys():
                 query += "// Removing edge '{}->{}' of the lhs \n".format(u, v)
                 edge_var = "{}_{}".format(str(lhs_vars[u]), str(lhs_vars[v]))
-                query += cypher.delete_edge_var(edge_var)
+                query += cypher.remove_edge(edge_var)
                 query += "\n"
                 carry_variables.remove(edge_var)
 
@@ -1625,7 +1622,7 @@ class Rule(object):
                 new_node_id_var = cypher.generate_var_name()
             else:
                 new_node_id_var = "rhs_" + str(rhs_node) + "_id"
-            q, carry_variables = cypher.create_node(
+            q, carry_variables = cypher.add_node(
                 rhs_vars[rhs_node], rhs_node, new_node_id_var,
                 node_label=node_label,
                 carry_vars=carry_variables,
@@ -1678,7 +1675,7 @@ class Rule(object):
         for u, v in self.added_edges():
             query += "// Adding edge '{}->{}' from the rhs \n".format(u, v)
             new_edge_var = rhs_vars[u] + "_" + rhs_vars[v]
-            query += cypher.create_edge(
+            query += cypher.add_edge(
                 edge_var=new_edge_var,
                 source_var=rhs_vars[u],
                 target_var=rhs_vars[v],
@@ -1704,18 +1701,6 @@ class Rule(object):
             query += cypher.add_attributes(edge_var, attrs)
             query += cypher.with_vars(carry_variables)
             query += "\n\n"
-
-        # Genearate rhs_typing
-        for graph in rhs_typing.keys():
-            for node in rhs_typing[graph].keys():
-                if node in self.added_nodes():
-                    query += (
-                        cypher.with_vars(carry_variables) +
-                        "OPTIONAL MATCH ({}:node:{} {{id:'{}'}})\n".format(
-                            node + '_' + graph, graph, rhs_typing[graph][node]) +
-                        "MERGE ({})-[:tmp_typing]->({})\n".format(
-                            rhs_vars[node], node + '_' + graph)
-                    )
 
         query += "// Return statement \n"
         query += cypher.return_vars(carry_variables)
