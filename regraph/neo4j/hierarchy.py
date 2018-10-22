@@ -1,4 +1,5 @@
 """Neo4j driver for regraph."""
+import networkx as nx
 
 from neo4j.v1 import GraphDatabase
 from neo4j.exceptions import ConstraintError
@@ -8,10 +9,7 @@ import regraph.neo4j.cypher_utils as cypher
 from regraph.neo4j.category_utils import (_check_homomorphism,
                                           _check_consistency,
                                           _check_rhs_consistency)
-from regraph.neo4j.rewriting_utils import (propagate_up,
-                                           propagate_down,
-                                           preserve_tmp_typing,
-                                           remove_tmp_typing)
+import regraph.neo4j.propagation_utils as propagation
 from regraph.default.exceptions import (HierarchyError,
                                         InvalidHomomorphism)
 from regraph.default.utils import normalize_attrs
@@ -423,7 +421,6 @@ class Neo4jHierarchy(object):
         TypingWarning
             If the rhs typing is inconsistent
         """
-
         if rhs_typing is None:
             rhs_typing = dict()
 
@@ -480,15 +477,15 @@ class Neo4jHierarchy(object):
             tx.commit()
 
         if consistent_typing:
-            self.execute(preserve_tmp_typing(graph_id))
+            self.execute(propagation.preserve_tmp_typing(graph_id))
             # self.execute(remove_tmp_typing(graph_id))
         else:
-            self.execute(remove_tmp_typing(graph_id))
+            self.execute(propagation.remove_tmp_typing(graph_id))
 
-        # Propagate the changes up
-        self._propagate_up(graph_id)
-        # # Propagate the changes down
-        self._propagate_down(graph_id)
+        if rule.is_restrictive():
+            self._propagate_up(graph_id, rule)
+        if rule.is_relaxing():
+            self._propagate_down(graph_id, rule)
 
         return rhs_g
 
@@ -566,65 +563,81 @@ class Neo4jHierarchy(object):
         """Generate a new graph id starting with a prefix."""
         pass
 
-    def _propagate_up(self, rewritten_graph):
-        predecessors = self.predecessors(rewritten_graph)
-        # print("Rewritting ancestors of {}...".format(rewritten_graph))
+    def _propagate_up(self, graph_id, rule):
+        predecessors = self.predecessors(graph_id)
         for predecessor in predecessors:
-            # print('--> ', predecessor)
-            q_clone, q_rm_node, q_rm_edge = propagate_up(
-                rewritten_graph,
-                predecessor)
+            clone_query = None
+            remove_node_query = None
+            remove_edge_query = None
+
+            # Propagate node clones
+            if len(rule.cloned_nodes()) > 0:
+                clone_query = propagation.clone_propagation_query(
+                    graph_id, predecessor)
+
+            # Propagate node deletes
+            if len(rule.removed_nodes()) > 0:
+                remove_node_query = propagation.remove_node_query(
+                    graph_id, predecessor)
+
+            # Propagate edge deletes
+            if len(rule.removed_edges()) > 0:
+                remove_edge_query = propagation.remove_edge_query(
+                    graph_id, predecessor)
+
             # run multiple queries in one transaction
             with self._driver.session() as session:
                 tx = session.begin_transaction()
-                tx.run(q_clone)
-                tx.run(q_rm_node)
-                tx.run(q_rm_edge)
+                if clone_query:
+                    print(clone_query)
+                    tx.run(clone_query)
+                if remove_node_query:
+                    print(remove_node_query)
+                    tx.run(remove_node_query)
+                if remove_edge_query:
+                    print(remove_edge_query)
+                    tx.run(remove_edge_query)
                 tx.commit()
         for ancestor in predecessors:
-            self._propagate_up(ancestor)
+            self._propagate_up(ancestor, rule)
 
-    def _propagate_down(self, rewritten_graph):
-        successors = self.successors(rewritten_graph)
-        # print("Rewritting children of {}...".format(rewritten_graph))
+    def _propagate_down(self, graph_id, rule):
+        successors = self.successors(graph_id)
         for successor in successors:
-            # print('--> ', successor)
-            q_merge_node, q_add_node, q_add_edge = propagate_down(
-                rewritten_graph,
-                successor)
-            # run multiple queries in one transaction
-            with self._driver.session() as session:
-                tx = session.begin_transaction()
-                tx.run(q_merge_node).single()
-                tx.run(q_add_node).single()
-                tx.run(q_add_edge).single()
-                tx.commit()
+                # Propagate merges
+                merge_query = None
+                add_nodes_query = None
+                add_edges_query = None
+
+                # Propagate node merges
+                if len(rule.merged_nodes()) > 0:
+                    # match nodes of T with the same pre-image in G and merge them
+                    merge_query = propagation.merge_propagation_query(
+                        graph_id, successor)
+
+                # Propagate node adds
+                if len(rule.added_nodes()) > 0:
+                    add_nodes_query = propagation.add_node_propagation_query(
+                        graph_id, successor)
+
+                # (Propagate edge adds
+                if len(rule.added_edges()) > 0:
+                    add_edges_query = propagation.add_edge_propagation_query(
+                        graph_id, successor)
+
+                # Run multiple queries in one transaction
+                with self._driver.session() as session:
+                    tx = session.begin_transaction()
+                    if merge_query:
+                        print(merge_query)
+                        tx.run(merge_query).single()
+                    if add_nodes_query:
+                        print(add_nodes_query)
+                        tx.run(add_nodes_query).single()
+                    if add_edges_query:
+                        print(add_edges_query)
+                        tx.run(add_edges_query).single()
+                    tx.commit()
+
         for successor in successors:
-            self._propagate_down(successor)
-
-    # def _propagation_up_v2(self, rewritten_graph):
-    #     """Propagate the changes of a rewritten graph up."""
-    #     predecessors = self.predecessors(rewritten_graph)
-    #     print("Rewritting ancestors of {}...".format(rewritten_graph))
-    #     for predecessor in predecessors:
-    #         print('--> ', predecessor)
-    #         # run multiple queries in one transaction
-    #         with self._driver.session() as session:
-    #             tx = session.begin_transaction()
-    #             query = propagate_up_v2(rewritten_graph, predecessor)
-    #             tx.run(query)
-    #             tx.commit()
-    #     for ancestor in predecessors:
-    #         self._propagation_up(ancestor)
-
-    # def _propagation_down_v2(self, rewritten_graph, changes):
-    #     successors = self.successors(rewritten_graph)
-    #     print("Rewritting children of {}...".format(rewritten_graph))
-    #     for successor in successors:
-    #         print('--> ', successor)
-    #         # run multiple queries in one transaction
-    #         with self._driver.session() as session:
-    #             tx = session.begin_transaction()
-    #             query = propagate_down_v2(rewritten_graph, successor)
-    #             tx.run(query, added_edges_list=changes['added_edges'])
-    #             tx.commit()
+            self._propagate_down(successor, rule)
