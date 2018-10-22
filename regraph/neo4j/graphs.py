@@ -1,7 +1,7 @@
 """Neo4j driver for regraph."""
 from neo4j.v1 import GraphDatabase
 
-from regraph.default.utils import keys_by_value, normalize_attrs
+from regraph.default.utils import normalize_attrs
 import regraph.neo4j.cypher_utils as cypher
 
 
@@ -118,7 +118,7 @@ class Neo4jGraph(object):
             attrs = dict()
         normalize_attrs(attrs)
         query +=\
-            cypher.create_node(
+            cypher.add_node(
                 node, node, 'new_id',
                 node_label=self._node_label,
                 attrs=attrs,
@@ -141,7 +141,7 @@ class Neo4jGraph(object):
         query += cypher.match_nodes(
             {source: source, target: target},
             node_label=self._node_label)
-        query += cypher.create_edge(
+        query += cypher.add_edge(
             edge_var='new_edge',
             source_var=source,
             target_var=target,
@@ -162,13 +162,13 @@ class Neo4jGraph(object):
                 n_id, attrs = n
                 normalize_attrs(attrs)
                 q, carry_variables =\
-                    cypher.create_node(
+                    cypher.add_node(
                         n_id, n_id, 'new_id_' + n_id,
                         node_label=self._node_label,
                         attrs=attrs)
             except ValueError:
                 q, carry_variables =\
-                    cypher.create_node(
+                    cypher.add_node(
                         n, n, 'new_id_' + n,
                         node_label=self._node_label)
             query += q + cypher.with_vars(carry_variables)
@@ -193,7 +193,7 @@ class Neo4jGraph(object):
                 nodes_to_match.add(v)
                 normalize_attrs(attrs)
                 edge_creation_queries.append(
-                    cypher.create_edge(
+                    cypher.add_edge(
                         edge_var=u + "_" + v,
                         source_var=u,
                         target_var=v,
@@ -204,7 +204,7 @@ class Neo4jGraph(object):
                 nodes_to_match.add(u)
                 nodes_to_match.add(v)
                 edge_creation_queries.append(
-                    cypher.create_edge(
+                    cypher.add_edge(
                         edge_var=u + "_" + v,
                         source_var=u,
                         target_var=v,
@@ -228,7 +228,7 @@ class Neo4jGraph(object):
             cypher.match_node(
                 node, node,
                 node_label=self._node_label) +\
-            cypher.delete_nodes_var([node])
+            cypher.remove_node([node])
         result = self.execute(query)
         return result
 
@@ -239,9 +239,10 @@ class Neo4jGraph(object):
         else:
             query = ""
         query +=\
-            cypher.match_edge(source, target, source, target, 'edge_var',
-                          edge_label='edge') +\
-            cypher.delete_edge_var('edge_var')
+            cypher.match_edge(
+                source, target, source, target, 'edge_var',
+                edge_label='edge') +\
+            cypher.remove_edge('edge_var')
         result = self.execute(query)
         return result
 
@@ -409,12 +410,11 @@ class Neo4jGraph(object):
             instances = []
         return instances
 
-    def rewrite(self, rule, instance, rhs_typing=None):
+    def rewrite(self, rule, instance):
         """Perform SqPO rewiting of the graph with a rule."""
         # Generate corresponding Cypher query
         query, rhs_vars_inverse = rule.to_cypher(
-            instance, rhs_typing, self._node_label,
-            self._edge_label)
+            instance, self._node_label, self._edge_label)
 
         # Execute query
         result = self.execute(query)

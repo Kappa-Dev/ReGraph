@@ -8,7 +8,11 @@ setup(
     description='Graph rewriting tool',
     author='Eugenia Oshurko',
     license='MIT License',
-    packages=['regraph', 'regraph.neo4j', 'regraph.default'],
+    packages=[
+        'regraph',
+        'regraph.neo4j',
+        'regraph.neo4j.cypher_utils',
+        'regraph.default'],
     package_dir={"regraph": "regraph"},
     zip_safe=False,
     install_requires=[

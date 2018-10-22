@@ -6,10 +6,6 @@ from neo4j.exceptions import ConstraintError
 
 from regraph.neo4j.graphs import Neo4jGraph
 import regraph.neo4j.cypher_utils as cypher
-from regraph.neo4j.category_utils import (_check_homomorphism,
-                                          _check_consistency,
-                                          _check_rhs_consistency)
-import regraph.neo4j.propagation_utils as propagation
 from regraph.default.exceptions import (HierarchyError,
                                         InvalidHomomorphism)
 from regraph.default.utils import normalize_attrs
@@ -154,7 +150,7 @@ class Neo4jHierarchy(object):
             nodes_to_match_src.add(u)
             nodes_to_match_tar.add(v)
             edge_creation_queries.append(
-                cypher.create_edge(
+                cypher.add_edge(
                     edge_var="typ_" + u + "_" + v,
                     source_var=u + "_src",
                     target_var=v + "_tar",
@@ -181,12 +177,12 @@ class Neo4jHierarchy(object):
             try:
                 with self._driver.session() as session:
                     tx = session.begin_transaction()
-                    valid_typing = _check_homomorphism(tx, source, target)
+                    valid_typing = cypher.check_homomorphism(tx, source, target)
                     tx.commit()
             except InvalidHomomorphism as homomorphism_error:
                 valid_typing = False
                 del_query = (
-                    "MATCH (:node:{})-[t:typing]-(:node:{})\n".format(
+                    "MATCH (:{})-[t:typing]-(:{})\n".format(
                         source, target) +
                     "DELETE t\n"
                 )
@@ -196,12 +192,12 @@ class Neo4jHierarchy(object):
             try:
                 with self._driver.session() as session:
                     tx = session.begin_transaction()
-                    paths_commute = _check_consistency(tx, source, target)
+                    paths_commute = cypher.check_consistency(tx, source, target)
                     tx.commit()
             except InvalidHomomorphism as consistency_error:
                 paths_commute = False
                 del_query = (
-                    "MATCH (:node:{})-[t:typing]-(:node:{})\n".format(
+                    "MATCH (:{})-[t:typing]-(:{})\n".format(
                         source, target) +
                     "DELETE t\n"
                 )
@@ -213,14 +209,14 @@ class Neo4jHierarchy(object):
                 cypher.match_nodes(
                     var_id_dict={'g_src': source, 'g_tar': target},
                     node_label='hierarchyNode') +
-                cypher.create_edge(
+                cypher.add_edge(
                     edge_var='new_hierarchy_edge',
                     source_var='g_src',
                     target_var='g_tar',
                     edge_label='hierarchyEdge',
                     attrs=attrs) +
                 cypher.with_vars(["new_hierarchy_edge"]) +
-                "MATCH (:node:{})-[t:typing]-(:node:{})\n".format(
+                "MATCH (:{})-[t:typing]-(:{})\n".format(
                     source, target) +
                 "REMOVE t.tmp\n"
 
@@ -258,10 +254,10 @@ class Neo4jHierarchy(object):
 
         if reconnect:
             query = (
-                "MATCH (n:node:{})".format(node_id) +
+                "MATCH (n:{})".format(node_id) +
                 "OPTIONAL MATCH (pred)-[:typing]->(n)-[:typing]->(suc)\n" +
                 "WITH pred, suc WHERE pred IS NOT NULL\n" +
-                cypher.create_edge(
+                cypher.add_edge(
                     edge_var='recennect_typing',
                     source_var='pred',
                     target_var='suc',
@@ -281,7 +277,7 @@ class Neo4jHierarchy(object):
                     node_label='hierarchyNode') +
                 "OPTIONAL MATCH (pred)-[:hierarchyEdge]->(n)-[:hierarchyEdge]->(suc)\n" +
                 "WITH pred, suc WHERE pred IS NOT NULL\n" +
-                cypher.create_edge(
+                cypher.add_edge(
                     edge_var='recennect_typing',
                     source_var='pred',
                     target_var='suc',
@@ -291,7 +287,7 @@ class Neo4jHierarchy(object):
         query = cypher.match_node(var_name="graph_to_rm",
                                   node_id=node_id,
                                   node_label='hierarchyNode')
-        query += cypher.delete_nodes_var(["graph_to_rm"])
+        query += cypher.remove_nodes(["graph_to_rm"])
         self.execute(query)
 
     def remove_edge(self, u, v):
@@ -421,73 +417,147 @@ class Neo4jHierarchy(object):
         TypingWarning
             If the rhs typing is inconsistent
         """
-        if rhs_typing is None:
-            rhs_typing = dict()
-
         # Rewriting of the base graph
         g = self._access_graph(graph_id)
-        rhs_g = g.rewrite(rule, instance, rhs_typing)
+        rhs_g = g.rewrite(rule, instance)
 
-        # Add tmp rhs typing
-        rhs_temp_typing_query = ""
+        # Additing temporary typing specified by 'rhs_typing'
+        if len(rule.added_nodes()) > 0 and rhs_typing:
+            self._add_tmp_typing(graph_id, rhs_g, rhs_typing)
+
+        # Propagation
+        if rule.is_restrictive():
+            self._propagate_up(graph_id, rule)
+        if rule.is_relaxing():
+            self._propagate_down(graph_id, graph_id, rule)
+
+        return rhs_g
+
+    def _propagate_up(self, graph_id, rule):
+        predecessors = self.predecessors(graph_id)
+        for predecessor in predecessors:
+            clone_query = None
+            remove_node_query = None
+            remove_edge_query = None
+
+            # Propagate node clones
+            if len(rule.cloned_nodes()) > 0:
+                clone_query = cypher.clone_propagation_query(
+                    graph_id, predecessor)
+
+            # Propagate node deletes
+            if len(rule.removed_nodes()) > 0 or\
+               len(rule.removed_node_attrs()) > 0:
+                remove_node_query = cypher.remove_node_propagation_query(
+                    graph_id, predecessor)
+
+            # Propagate edge deletes
+            if len(rule.removed_edges()) > 0 or\
+               len(rule.removed_edge_attrs()) > 0:
+                remove_edge_query = cypher.remove_edge_propagation_query(
+                    graph_id, predecessor)
+
+            # run multiple queries in one transaction
+            with self._driver.session() as session:
+                tx = session.begin_transaction()
+                if clone_query:
+                    print(clone_query)
+                    tx.run(clone_query)
+                if remove_node_query:
+                    print(remove_node_query)
+                    tx.run(remove_node_query)
+                if remove_edge_query:
+                    print(remove_edge_query)
+                    tx.run(remove_edge_query)
+                tx.commit()
+        for ancestor in predecessors:
+            self._propagate_up(ancestor, rule)
+
+    def _propagate_down(self, origin_graph, graph_id, rule):
+        successors = self.successors(graph_id)
+        for successor in successors:
+                # Propagate merges
+                merge_query = None
+                add_nodes_query = None
+                add_edges_query = None
+
+                # Propagate node merges
+                if len(rule.merged_nodes()) > 0:
+                    # match nodes of T with the same pre-image in G and merge them
+                    merge_query = cypher.merge_propagation_query(
+                        graph_id, successor)
+
+                # Propagate node adds
+                if len(rule.added_nodes()) > 0 or\
+                   len(rule.added_node_attrs()) > 0:
+                    add_nodes_query = cypher.add_node_propagation_query(
+                        origin_graph, graph_id, successor)
+
+                # (Propagate edge adds
+                if len(rule.added_edges()) > 0 or\
+                   len(rule.added_edge_attrs()) > 0:
+                    add_edges_query = cypher.add_edge_propagation_query(
+                        graph_id, successor)
+
+                # Run multiple queries in one transaction
+                with self._driver.session() as session:
+                    tx = session.begin_transaction()
+                    if merge_query:
+                        print(merge_query)
+                        tx.run(merge_query).single()
+                    if add_nodes_query:
+                        print(add_nodes_query)
+                        tx.run(add_nodes_query).single()
+                    if add_edges_query:
+                        print(add_edges_query)
+                        tx.run(add_edges_query).single()
+                    tx.commit()
+
+        for successor in successors:
+            self._propagate_down(origin_graph, successor, rule)
+
+    def _add_tmp_typing(self, graph_id, rhs_g, rhs_typing):
+        rhs_tmp_typing = ""
         for graph in rhs_typing.keys():
-            rhs_typed_vars = {
-                rhs_g[rhs_node]: "node_{}_{}".format(rhs_g[rhs_node], graph_id)
-                for rhs_node in rhs_typing[graph].keys()
-            }
-
-            # Match subquery for rhs_nodes
-            rhs_temp_typing_query +=\
-                cypher.match_nodes(
-                    {v: k for k, v in rhs_typed_vars.items()},
-                    node_label=graph_id) +\
-                cypher.with_vars([v for v in rhs_typed_vars.values()])
-
             # Add temp typing subquery
-            rhs_temp_typing_query += "OPTIONAL MATCH "
+            query = (
+                "// Adding temporary typing of the rhs nodes\n" +
+                "OPTIONAL MATCH "
+            )
 
             nodes_to_match = []
             merge_subqueres = []
             for node in rhs_typing[graph].keys():
-                rhs_typed_var = "node_{}_{}".format(rhs_g[node], graph_id)
-                rhs_typing_var = "node_{}_{}".format(
+                rhs_typed_var = "n{}_{}".format(rhs_g[node], graph_id)
+                rhs_typing_var = "n{}_{}".format(
                     rhs_typing[graph][node], graph)
-                if node in rule.added_nodes():
-                    nodes_to_match.append(
-                        "({}:{} {{id:'{}'}}), ".format(
-                            rhs_typed_var, graph_id, rhs_g[node]) +
-                        "({}:{} {{id:'{}'}})".format(
-                            rhs_typing_var, graph, rhs_typing[graph][node]))
-                    merge_subqueres.append(
-                        "MERGE ({})-[:tmp_typing]->({})".format(
-                            rhs_typed_var, rhs_typing_var)
-                    )
-            rhs_temp_typing_query += (
+                nodes_to_match.append(
+                    "({}:{} {{id:'{}'}}), ".format(
+                        rhs_typed_var, graph_id, rhs_g[node]) +
+                    "({}:{} {{id:'{}'}})".format(
+                        rhs_typing_var, graph, rhs_typing[graph][node]))
+                merge_subqueres.append(
+                    "MERGE ({})-[:tmp_typing]->({})".format(
+                        rhs_typed_var, rhs_typing_var)
+                )
+            query += (
                 ", ".join(nodes_to_match) + "\n" +
                 "\n".join(merge_subqueres)
+                # cypher.with_vars(["NULL"]) + "\n"
             )
+            rhs_tmp_typing += query + "\n"
+            self.execute(query)
 
-            print(rhs_temp_typing_query)
-            self.execute(rhs_temp_typing_query)
-
-        # Checking if the rhs typing is consistent
+        # Checking if the introduces rhs typing is consistent
         with self._driver.session() as session:
             tx = session.begin_transaction()
-            consistent_typing = _check_rhs_consistency(tx, graph_id)
+            consistent_typing = cypher.check_rhs_consistency(tx, graph_id)
             tx.commit()
 
         if consistent_typing:
-            self.execute(propagation.preserve_tmp_typing(graph_id))
-            # self.execute(remove_tmp_typing(graph_id))
+            self.execute(cypher.preserve_tmp_typing(graph_id))
         else:
-            self.execute(propagation.remove_tmp_typing(graph_id))
-
-        if rule.is_restrictive():
-            self._propagate_up(graph_id, rule)
-        if rule.is_relaxing():
-            self._propagate_down(graph_id, rule)
-
-        return rhs_g
+            self.execute(cypher.remove_tmp_typing(graph_id))
 
     def node_type(self, graph_id, node_id):
         """Get a list of the immediate types of a node.
@@ -505,7 +575,18 @@ class Neo4jHierarchy(object):
             If graph with a given id does not exist in the hierarchy or
             the node with `node_id` is not in the graph
         """
-        pass
+        query = (
+            "MATCH (n:{} {{id: '{}'}})\n".format(graph_id, node_id) +
+            "OPTIONAL MATCH (n)-[:typing]->(m)\n" +
+            "RETURN labels(m)[0] as successor, m.id as typing_node"
+        )
+        result = self.execute(query)
+        types = {}
+        for record in result:
+            if "successor" in record.keys() and\
+               "typing_node" in record.keys():
+                types[record["successor"]] = record["typing_node"]
+        return types
 
     def get_typing(self, source, target):
         """Get typing dict of `source` by `target`."""
@@ -562,82 +643,3 @@ class Neo4jHierarchy(object):
     def unique_graph_id(self, prefix):
         """Generate a new graph id starting with a prefix."""
         pass
-
-    def _propagate_up(self, graph_id, rule):
-        predecessors = self.predecessors(graph_id)
-        for predecessor in predecessors:
-            clone_query = None
-            remove_node_query = None
-            remove_edge_query = None
-
-            # Propagate node clones
-            if len(rule.cloned_nodes()) > 0:
-                clone_query = propagation.clone_propagation_query(
-                    graph_id, predecessor)
-
-            # Propagate node deletes
-            if len(rule.removed_nodes()) > 0:
-                remove_node_query = propagation.remove_node_query(
-                    graph_id, predecessor)
-
-            # Propagate edge deletes
-            if len(rule.removed_edges()) > 0:
-                remove_edge_query = propagation.remove_edge_query(
-                    graph_id, predecessor)
-
-            # run multiple queries in one transaction
-            with self._driver.session() as session:
-                tx = session.begin_transaction()
-                if clone_query:
-                    print(clone_query)
-                    tx.run(clone_query)
-                if remove_node_query:
-                    print(remove_node_query)
-                    tx.run(remove_node_query)
-                if remove_edge_query:
-                    print(remove_edge_query)
-                    tx.run(remove_edge_query)
-                tx.commit()
-        for ancestor in predecessors:
-            self._propagate_up(ancestor, rule)
-
-    def _propagate_down(self, graph_id, rule):
-        successors = self.successors(graph_id)
-        for successor in successors:
-                # Propagate merges
-                merge_query = None
-                add_nodes_query = None
-                add_edges_query = None
-
-                # Propagate node merges
-                if len(rule.merged_nodes()) > 0:
-                    # match nodes of T with the same pre-image in G and merge them
-                    merge_query = propagation.merge_propagation_query(
-                        graph_id, successor)
-
-                # Propagate node adds
-                if len(rule.added_nodes()) > 0:
-                    add_nodes_query = propagation.add_node_propagation_query(
-                        graph_id, successor)
-
-                # (Propagate edge adds
-                if len(rule.added_edges()) > 0:
-                    add_edges_query = propagation.add_edge_propagation_query(
-                        graph_id, successor)
-
-                # Run multiple queries in one transaction
-                with self._driver.session() as session:
-                    tx = session.begin_transaction()
-                    if merge_query:
-                        print(merge_query)
-                        tx.run(merge_query).single()
-                    if add_nodes_query:
-                        print(add_nodes_query)
-                        tx.run(add_nodes_query).single()
-                    if add_edges_query:
-                        print(add_edges_query)
-                        tx.run(add_edges_query).single()
-                    tx.commit()
-
-        for successor in successors:
-            self._propagate_down(successor, rule)
