@@ -5,16 +5,16 @@ import networkx as nx
 
 from nose.tools import raises
 
-from regraph.rules import Rule
-from regraph.hierarchy import Hierarchy
-from regraph.exceptions import (HierarchyError)
-import regraph.primitives as prim
+from regraph import Rule
+from regraph import NetworkXHierarchy
+from regraph import (HierarchyError)
+import regraph.networkx.primitives as prim
 
 
 class TestHierarchy(object):
 
     def __init__(self):
-        self.hierarchy = Hierarchy(directed=True)
+        self.hierarchy = NetworkXHierarchy(directed=True)
 
         g0 = nx.DiGraph()
         prim.add_node(g0, "circle", {"a": {1, 2, 3}})
@@ -319,7 +319,7 @@ class TestHierarchy(object):
 
     def test_to_json(self):
         res = self.hierarchy.to_json()
-        new_h = Hierarchy.from_json(res)
+        new_h = NetworkXHierarchy.from_json(res)
         assert(self.hierarchy == new_h)
 
     def test_add_rule(self):
@@ -559,7 +559,7 @@ class TestHierarchy(object):
 
     @raises(HierarchyError)
     def test_add_typing_advanced(self):
-        hierarchy = Hierarchy()
+        hierarchy = NetworkXHierarchy()
 
         g9 = nx.DiGraph()
         g9.add_nodes_from(["a", "b"])
@@ -706,7 +706,7 @@ class TestHierarchy(object):
             })
 
     def test_triangle_1(self):
-        h = Hierarchy()
+        h = NetworkXHierarchy()
 
         g1 = nx.DiGraph()
         g1.add_nodes_from([

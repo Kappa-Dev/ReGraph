@@ -51,3 +51,7 @@ class RewritingError(ReGraphException):
 
 class AttributeSetError(ReGraphException):
     """Exceptions class for errors in attribute sets."""
+
+
+class TypingWarning(ReGraphWarning):
+    """Class for warnings about wrong typings."""

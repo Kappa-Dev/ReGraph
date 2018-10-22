@@ -26,10 +26,10 @@ TODO:
 import copy
 
 from regraph.attribute_sets import AttributeSet
-from regraph.category_utils import compose
-from regraph.primitives import (equal,
-                                graph_to_json,
-                                graph_from_json)
+from regraph.networkx.category_utils import compose
+from regraph.networkx.primitives import (equal,
+                                         graph_to_json,
+                                         graph_from_json)
 from regraph.rules import Rule
 from regraph.utils import (to_set,
                            replace_source,

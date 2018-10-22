@@ -29,3 +29,5 @@ RegraphGui
 examples/.ipynb_checkpoints/
 .pylintrc
 regraph/bin/*
+examples/benchmark/scale_free/*
+examples/benchmark/pickles/logspaced_cliques.pickle

@@ -2,9 +2,9 @@
 import networkx as nx
 from networkx.exception import NetworkXNoPath
 
-from regraph.category_utils import check_homomorphism, compose
 from regraph.exceptions import RewritingError, HierarchyError
 from regraph.utils import keys_by_value, format_typing
+from regraph.networkx.category_utils import check_homomorphism, compose
 
 
 def _check_rule_typing(hierarchy, rule_id, graph_id, lhs_mapping, rhs_mapping):

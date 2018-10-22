@@ -1,10 +1,10 @@
 """Collection of tests for ReGraph attribute sets."""
 import math
-from regraph.attribute_sets import (RegexSet,
-                                    IntegerSet,
-                                    FiniteSet,
-                                    UniversalSet,
-                                    EmptySet)
+from regraph import (RegexSet,
+                     IntegerSet,
+                     FiniteSet,
+                     UniversalSet,
+                     EmptySet)
 
 
 class TestAttributeSets:

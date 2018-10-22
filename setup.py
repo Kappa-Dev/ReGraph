@@ -8,7 +8,11 @@ setup(
     description='Graph rewriting tool',
     author='Eugenia Oshurko',
     license='MIT License',
-    packages=['regraph'],
+    packages=[
+        'regraph',
+        'regraph.neo4j',
+        'regraph.neo4j.cypher_utils',
+        'regraph.networkx'],
     package_dir={"regraph": "regraph"},
     zip_safe=False,
     install_requires=[
@@ -19,5 +23,6 @@ setup(
         "lrparsing",
         "sympy",
         "greenery",
+        "neo4j-driver"
     ]
 )

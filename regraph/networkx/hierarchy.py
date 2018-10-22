@@ -23,18 +23,20 @@ import warnings
 from networkx.algorithms import isomorphism
 from networkx.exception import NetworkXNoPath
 
-from regraph import rewriting_utils
-from regraph import type_checking
+from regraph.networkx import rewriting_utils
+from regraph.networkx import type_checking
 
-from regraph.category_utils import (compose,
-                                    check_homomorphism,
-                                    is_total_homomorphism,
-                                    relation_to_span,
-                                    right_relation_dict)
-from regraph.primitives import (get_relabeled_graph,
-                                relabel_node,
-                                get_edge,
-                                equal)
+from regraph.networkx.category_utils import (compose,
+                                             check_homomorphism,
+                                             is_total_homomorphism,
+                                             relation_to_span,
+                                             right_relation_dict)
+from regraph.networkx.primitives import (get_relabeled_graph,
+                                         relabel_node,
+                                         get_edge,
+                                         graph_to_json,
+                                         graph_from_json,
+                                         equal)
 from regraph.utils import (is_subdict,
                            keys_by_value,
                            normalize_attrs,
@@ -46,15 +48,15 @@ from regraph.exceptions import (HierarchyError,
                                 RewritingError,
                                 InvalidHomomorphism,
                                 GraphError)
-from regraph.components import (AttributeContainter,
-                                GraphNode,
-                                RuleNode,
-                                Typing,
-                                RuleTyping,
-                                GraphRelation)
+from regraph.networkx.components import (AttributeContainter,
+                                         GraphNode,
+                                         RuleNode,
+                                         Typing,
+                                         RuleTyping,
+                                         GraphRelation)
 
 
-class Hierarchy(nx.DiGraph, AttributeContainter):
+class NetworkXHierarchy(nx.DiGraph, AttributeContainter):
     """Class implementing graph hierarchy.
 
     A graph hierarchy is a DAG, where nodes are graphs with attributes and
@@ -71,7 +73,7 @@ class Hierarchy(nx.DiGraph, AttributeContainter):
 
     Examples
     --------
-    >>> hierarchy = Hierarchy() # create empty hierarchy
+    >>> hierarchy = NetworkXHierarchy() # create empty hierarchy
     >>> t = nx.DiGraph([("red", "blue"), ("blue", "blue")])
     >>> hierarchy.add_graph("t", t)
     >>> g = nx.DiGraph([("a", "b"), ("c", "b"), ("b", "d")])
@@ -233,6 +235,215 @@ class Hierarchy(nx.DiGraph, AttributeContainter):
             if set(self.relation[n1][n2]) != set(hie.relation[n1][n2]):
                 return False
         return True
+
+    def to_json(self):
+        """Return json representation of the hierarchy."""
+        json_data = {
+            "rules": [],
+            "graphs": [],
+            "typing": [],
+            "rule_typing": [],
+            "relations": []
+        }
+        for node in self.nodes():
+            if isinstance(self.node[node], RuleNode):
+                json_data["rules"].append({
+                    "id": node,
+                    "rule": self.node[node].rule.to_json(),
+                    "attrs": self.node[node].attrs_to_json()
+                })
+            elif isinstance(self.node[node], GraphNode):
+                json_data["graphs"].append({
+                    "id": node,
+                    "graph": graph_to_json(self.node[node].graph),
+                    "attrs": self.node[node].attrs_to_json()
+                })
+
+            else:
+                raise HierarchyError("Unknown type of the node '{}'".format(node))
+        for s, t in self.edges():
+            if isinstance(self.edge[s][t], self.graph_typing_cls):
+                json_data["typing"].append({
+                    "from": s,
+                    "to": t,
+                    "mapping": self.edge[s][t].mapping,
+                    "attrs": self.edge[s][t].attrs_to_json()
+                })
+            elif isinstance(self.edge[s][t], self.rule_typing_cls):
+                json_data["rule_typing"].append({
+                    "from": s,
+                    "to": t,
+                    "lhs_mapping": self.edge[s][t].lhs_mapping,
+                    "rhs_mapping": self.edge[s][t].rhs_mapping,
+                    "lhs_total": self.edge[s][t].lhs_total,
+                    "rhs_total": self.edge[s][t].rhs_total,
+                    "attrs": self.edge[s][t].attrs_to_json()
+                })
+            else:
+                raise HierarchyError(
+                    "Unknown type of the edge '{}->{}'!".format(s, t))
+
+        for u, v in self.relations():
+            json_data["relations"].append({
+                "from": u,
+                "to": v,
+                "rel": {a: list(b) for a, b in self.relation[u][v].items()},
+                "attrs": self.relation_edge[u][v].attrs_to_json()
+            })
+        return json_data
+
+    @classmethod
+    def from_json(cls, json_data, ignore=None, directed=True):
+        """Create hierarchy object from JSON representation.
+
+        Parameters
+        ----------
+        json_data : dict
+            JSON-like dict containing representation of a hierarchy
+        ignore : dict, optional
+            Dictionary containing components to ignore in the process
+            of converting from JSON, dictionary should respect the
+            following format:
+            {
+                "graphs": <collection of ids of graphs to ignore>,
+                "rules": <collection of ids of rules to ignore>,
+                "typing": <collection of tuples containing typing 
+                    edges to ignore>,
+                "rule_typing": <collection of tuples containing rule 
+                    typing edges to ignore>>,
+                "relations": <collection of tuples containing
+                    relations to ignore>,
+            }
+        directed : bool, optional
+            True if graphs from JSON representation should be loaded as
+            directed graphs, False otherwise, default value -- True
+
+        Returns
+        -------
+        hierarchy : regraph.hierarchy.Hierarchy
+        """
+        hierarchy = cls()
+
+        # add graphs
+        for graph_data in json_data["graphs"]:
+            if ignore is not None and\
+               "graphs" in ignore.keys() and\
+               graph_data["id"] in ignore["graphs"]:
+                pass
+            else:
+                graph = graph_from_json(graph_data["graph"], directed)
+                if "attrs" not in graph_data.keys():
+                    attrs = dict()
+                else:
+                    attrs = AttributeContainter.attrs_from_json(
+                        graph_data["attrs"])
+
+                hierarchy.add_graph(
+                    graph_data["id"], graph, attrs)
+
+        # add rules
+        for rule_data in json_data["rules"]:
+            if ignore is not None and\
+               "rules" in ignore.keys() and\
+               rule_data["id"] in ignore["rules"]:
+                pass
+            else:
+                rule = Rule.from_json(rule_data["rule"])
+                if "attrs" not in rule_data.keys():
+                    attrs = dict()
+                else:
+                    attrs = AttributeContainter.attrs_from_json(
+                        rule_data["attrs"])
+                hierarchy.add_rule(
+                    rule_data["id"], rule, attrs)
+
+        # add typing
+        for typing_data in json_data["typing"]:
+            if ignore is not None and\
+               "typing" in ignore.keys() and\
+               (typing_data["from"], typing_data["to"]) in ignore["typing"]:
+                pass
+            else:
+                if "attrs" not in typing_data.keys():
+                    attrs = dict()
+                else:
+                    attrs = AttributeContainter.attrs_from_json(
+                        typing_data["attrs"])
+                hierarchy.add_typing(
+                    typing_data["from"],
+                    typing_data["to"],
+                    typing_data["mapping"],
+                    attrs)
+
+        # add rule typing
+        for rule_typing_data in json_data["rule_typing"]:
+            if ignore is not None and\
+               "rule_typing" in ignore.keys() and\
+               (rule_typing_data["from"], rule_typing_data["to"]) in ignore[
+                    "rule_typing"]:
+                pass
+            else:
+                if "attrs" not in rule_typing_data.keys():
+                    attrs = dict()
+                else:
+                    attrs = AttributeContainter.attrs_from_json(
+                        rule_typing_data["attrs"])
+                hierarchy.add_rule_typing(
+                    rule_typing_data["from"],
+                    rule_typing_data["to"],
+                    rule_typing_data["lhs_mapping"],
+                    rule_typing_data["rhs_mapping"],
+                    rule_typing_data["lhs_total"],
+                    rule_typing_data["rhs_total"],
+                    attrs
+                )
+
+        # add relations
+        for relation_data in json_data["relations"]:
+            if ignore is not None and\
+               "relations" in ignore.keys() and\
+               ((relation_data["from"], relation_data["to"]) in ignore[
+                    "relations"] or (relation_data["to"],
+                                     relation_data["from"]) in ignore["relations"]):
+                pass
+            else:
+                if "attrs" not in relation_data.keys():
+                    attrs = dict()
+                else:
+                    attrs = AttributeContainter.attrs_from_json(
+                        relation_data["attrs"])
+                hierarchy.add_relation(
+                    relation_data["from"],
+                    relation_data["to"],
+                    {a: set(b) for a, b in relation_data["rel"].items()},
+                    attrs
+                )
+        return hierarchy
+
+    @classmethod
+    def load(cls, filename, ignore=None, directed=True):
+        """Load the hierarchy from a file.
+
+        Parameters
+        ----------
+        Returns
+        -------
+        Raises
+        ------
+        """
+        if os.path.isfile(filename):
+            with open(filename, "r+") as f:
+                json_data = json.loads(f.read())
+                hierarchy = cls.from_json(json_data, ignore, directed)
+            return hierarchy
+        else:
+            raise ReGraphError("File '%s' does not exist!" % filename)
+
+    def export(self, filename):
+        """Export the hierarchy to a file."""
+        with open(filename, 'w') as f:
+            j_data = self.to_json()
+            json.dump(j_data, f)
 
     def graphs(self):
         """Return a list of graphs in the hierarchy."""

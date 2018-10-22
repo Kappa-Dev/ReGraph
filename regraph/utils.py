@@ -1,7 +1,7 @@
 """A collection of utils for ReGraph library."""
 import copy
 
-from regraph.parser import parser
+from regraph.command_parser import parser
 from regraph.exceptions import ReGraphError, ParsingError
 from regraph.attribute_sets import AttributeSet, FiniteSet
 
@@ -930,3 +930,8 @@ def recursive_merge(dict1, dict2):
             recursive_merge(dict1[k], v)
         else:
             dict1[k] = v
+
+def remove_forbidden(string):
+            return string.replace(" ", "_").replace(
+                "-", "_").replace(",", "_").replace(
+                "/", "_").replace(".", "_")

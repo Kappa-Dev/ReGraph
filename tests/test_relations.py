@@ -1,16 +1,17 @@
 """."""
 import networkx as nx
 
-from regraph.rules import Rule
-from regraph.hierarchy import Hierarchy
-from regraph.primitives import print_graph
-from regraph.exceptions import (HierarchyError)
-import regraph.primitives as prim
+from regraph import Rule
+from regraph import NetworkXHierarchy
+# from regraph import print_graph
+# from regraph import (HierarchyError)
+import regraph.networkx.primitives as prim
+
 
 class TestRelations(object):
 
     def __init__(self):
-        hierarchy = Hierarchy()
+        hierarchy = NetworkXHierarchy()
 
         base = nx.DiGraph()
         prim.add_nodes_from(base, [

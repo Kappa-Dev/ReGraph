@@ -1,11 +1,10 @@
 import networkx as nx
 
-from regraph.rules import Rule
+from regraph import Rule
 from regraph.utils import (valid_attributes,
                            normalize_attrs)
-from regraph.category_utils import identity
-from regraph.primitives import *
-import regraph.primitives as prim
+from regraph.networkx.category_utils import identity
+from regraph.networkx.primitives import *
 
 
 class TestPrimitives(object):
@@ -277,13 +276,13 @@ class TestPrimitives(object):
 
     def test_find_matching(self):
         pattern = nx.DiGraph()
-        prim.add_nodes_from(pattern,
+        add_nodes_from(pattern,
             [(1, {'state': 'p'}),
              (2, {'name': 'BND'}),
              (3),
              (4)]
         )
-        prim.add_edges_from(pattern,
+        add_edges_from(pattern,
             [(1, 2, {'s': 'p'}),
              (3, 2, {'s': 'u'}),
              (3, 4)]

@@ -2,7 +2,7 @@
 import networkx as nx
 import copy
 
-from regraph.primitives import *
+from regraph.networkx.primitives import *
 from regraph.utils import (keys_by_value,
                            merge_attributes,
                            restrict_mapping,
@@ -366,6 +366,9 @@ def partial_pushout(a, b, c, a_b, a_c):
 
 def pushout(a, b, c, a_b, a_c, inplace=False):
     """Find the pushour of the span b <- a -> c."""
+    def get_classes_to_merge():
+        pass
+
     check_homomorphism(a, b, a_b)
     check_homomorphism(a, c, a_c)
 
@@ -388,7 +391,6 @@ def pushout(a, b, c, a_b, a_c, inplace=False):
             else:
                 new_name = unique_node_id(d, c_n)
             add_node(d, new_name, c.node[c_n])
-
             c_d[c_n] = new_name
         # Keep nodes
         elif len(a_keys) == 1:

@@ -4,17 +4,17 @@ import copy
 import networkx as nx
 import warnings
 
-from regraph.category_utils import (compose,
-                                    compose_chain,
-                                    compose_relation_dicts,
-                                    get_unique_map_from_pushout,
-                                    get_unique_map_to_pullback,
-                                    id_of,
-                                    is_total_homomorphism,
-                                    pullback_complement,
-                                    pushout,
-                                    pushout_from_relation)
-from regraph import primitives
+from regraph.networkx.category_utils import (compose,
+                                             compose_chain,
+                                             compose_relation_dicts,
+                                             get_unique_map_from_pushout,
+                                             get_unique_map_to_pullback,
+                                             id_of,
+                                             is_total_homomorphism,
+                                             pullback_complement,
+                                             pushout,
+                                             pushout_from_relation)
+from regraph.networkx import primitives
 from regraph.exceptions import TotalityWarning
 from regraph.rules import Rule
 from regraph.utils import keys_by_value

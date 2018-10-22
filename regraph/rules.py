@@ -7,17 +7,24 @@ https://link.springer.com/chapter/10.1007/11841883_4).
 import copy
 import warnings
 
-from regraph.parser import parser
+import networkx as nx
+
+from regraph.command_parser import parser
 from regraph.utils import (keys_by_value,
                            make_canonical_commands,
                            dict_sub,
-                           attrs_union)
-from regraph.category_utils import (identity,
-                                    check_homomorphism,
-                                    pullback_complement,
-                                    pushout)
-from regraph import primitives
-from regraph.exceptions import (ReGraphWarning, ParsingError, RuleError)
+                           attrs_union,
+                           remove_forbidden,
+                           normalize_attrs)
+from regraph.networkx.category_utils import (identity,
+                                             check_homomorphism,
+                                             pullback_complement,
+                                             pushout)
+from regraph.networkx import primitives
+from regraph.networkx.plotting import plot_rule
+from regraph.exceptions import (ReGraphWarning, ParsingError,
+                                RuleError)
+import regraph.neo4j.cypher_utils as cypher
 
 
 class Rule(object):
@@ -349,16 +356,16 @@ class Rule(object):
                 p_keys_1 = [n1]
             else:
                 raise RuleError(
-                    "Node '%s' is not found in neither left-hand "
-                    "side nor preserved part" % n2)
+                    "Node '{}' is not found in neither left-hand "
+                    "side nor preserved part".format(n1))
 
         if len(p_keys_2) == 0:
             if n2 in self.p.nodes():
                 p_keys_2 = [n2]
             else:
                 raise RuleError(
-                    "Node '%s' is not found in neither left-hand "
-                    "side nor preserved part" % str(n2))
+                    "Node '{}' is not found in neither left-hand "
+                    "side nor preserved part".format(n2))
 
         for k1 in p_keys_1:
             for k2 in p_keys_2:
@@ -367,8 +374,7 @@ class Rule(object):
                     primitives.remove_edge(self.rhs, self.p_rhs[k1], self.p_rhs[k2])
                 else:
                     raise RuleError(
-                        "Edge '%s->%s' does not exist in the preserved part"
-                        % (k1, k2))
+                        "Edge '{}->{}' does not exist in the preserved part".format(k1, k2))
 
         return
 
@@ -522,6 +528,32 @@ class Rule(object):
                 node_id
             )
 
+    def inject_add_nodes_from(self, node_list):
+        """Inject an addition of a new node by the rule.
+
+        This method adds a nodes from the list (and the specified
+        attributes `attrs`) to `rhs`.
+
+        Parameters
+        ----------
+        node_list : iterable
+            Collection of nodes to add, where every element is
+            either a tuple of the form (<node_id>, <node_attrs>)
+            or a single value <node_id>
+
+        Raises
+        ------
+        RuleError
+            If some node from the list already exists in the `rhs`.
+        """
+        for n in node_list:
+            try:
+                node_id, node_attrs = n
+                self.inject_add_node(node_id, node_attrs)
+            except (TypeError, ValueError):
+                self.inject_add_node(node_id)
+        return
+
     def inject_add_edge(self, n1, n2, attrs=None):
         """Inject addition of a new edge to the rule.
 
@@ -557,6 +589,36 @@ class Rule(object):
             )
         primitives.add_edge(self.rhs, n1, n2, attrs)
         return
+
+    def inject_add_edges_from(self, edge_list):
+        """Inject addition of a new edge to the rule.
+
+        This method injects addition of edges from the list.
+
+        Parameters
+        ----------
+        edge_list : iterable
+            Collection of edges to add, where every element is
+            either a tuple of the form (<source_id>, <target_id>)
+            or (<source_id>, <target_id>, <edge_attrs>). Here
+            source and target nodes are assumed to be from the `rhs`.
+
+        Raises
+        ------
+        RuleError
+            If some of the nodes (`n1` or `n2`) do not exist
+            or if there is already an edge between them in `rhs`.
+        """
+        for e in edge_list:
+            if len(e) == 2:
+                self.inject_add_edge(e[0], e[1])
+            elif len(e) == 3:
+                self.inject_add_edge(e[0], e[1], e[2])
+            else:
+                raise RuleError(
+                    "Was expecting 2 or 3 elements per tuple, got %s." %
+                    str(len(e))
+                )
 
     def inject_merge_nodes(self, node_list, node_id=None):
         """Inject merge of a collection of nodes by the rule.
@@ -958,8 +1020,9 @@ class Rule(object):
         attrs = dict()
         for node in self.rhs.nodes():
             p_nodes = keys_by_value(self.p_rhs, node)
-            # if len(p_nodes) == 0:
-            #     attrs[node] = self.rhs.node[node]
+            if len(p_nodes) == 0:
+                if len(self.rhs.node[node]) > 0:
+                    attrs[node] = self.rhs.node[node]
             new_attrs = {}
             for p_node in p_nodes:
                 new_attrs = attrs_union(new_attrs, dict_sub(
@@ -981,6 +1044,9 @@ class Rule(object):
         for s, t in self.rhs.edges():
             s_p_nodes = keys_by_value(self.p_rhs, s)
             t_p_nodes = keys_by_value(self.p_rhs, t)
+            if len(s_p_nodes) == 0 or len(t_p_nodes) == 0:
+                if len(self.rhs.edge[s][t]) > 0:
+                    attrs[(s, t)] = self.rhs.edge[s][t]
             new_attrs = {}
             for s_p_node in s_p_nodes:
                 for t_p_node in t_p_nodes:
@@ -992,6 +1058,8 @@ class Rule(object):
                                 self.p.edge[s_p_node][t_p_node]
                             )
                         )
+            if len(new_attrs) > 0:
+                attrs[(s, t)] = new_attrs
         return attrs
 
     def merged_nodes(self):
@@ -1061,6 +1129,7 @@ class Rule(object):
                 new_attrs = attrs_union(new_attrs, dict_sub(
                     self.lhs.node[node], self.p.node[p_node]))
             if len(new_attrs) > 0:
+                normalize_attrs(new_attrs)
                 attrs[node] = new_attrs
         return attrs
 
@@ -1089,6 +1158,7 @@ class Rule(object):
                             )
                         )
             if len(new_attrs) > 0:
+                normalize_attrs(new_attrs)
                 attrs[(s, t)] = new_attrs
         return attrs
 
@@ -1159,28 +1229,29 @@ class Rule(object):
 
         """
         commands = ""
+        for lhs_node, p_nodes in self.cloned_nodes().items():
+            new_names = set()
+            for p_node in p_nodes:
+                if p_node != lhs_node:
+                    new_names.add(p_node)
+            for name in new_names:
+                commands += "CLONE %s AS %s.\n" % (lhs_node, name)
         for node in self.removed_nodes():
             commands += "DELETE_NODE %s.\n" % node
         for u, v in self.removed_edges():
             commands += "DELETE_EDGE %s %s.\n" % (u, v)
-        for lhs_node, p_nodes in self.cloned_nodes().items():
-            new_name = set()
-            for p_node in p_nodes:
-                if p_node != lhs_node:
-                    new_name.add(p_node)
-            commands += "CLONE %s AS %s.\n" % (lhs_node, new_name.pop())
         for node, attrs in self.removed_node_attrs().items():
             commands += "DELETE_NODE_ATTRS %s %s.\n" % (node, attrs)
         for (u, v), attrs in self.removed_edge_attrs().items():
             commands += "DELETE_EDGE_ATTRS %s %s %s.\n" % (u, v, attrs)
 
+        for node, p_nodes in self.merged_nodes().items():
+            commands += "MERGE [%s] AS '%s'.\n" %\
+                (", ".join([str(n) for n in p_nodes]), str(node))
         for node in self.added_nodes():
             commands += "ADD_NODE %s %s.\n" % (node, self.rhs.node[node])
         for (u, v) in self.added_edges():
             commands += "ADD_EDGE %s %s %s.\n" % (u, v, self.rhs.edge[u][v])
-        for node, p_nodes in self.merged_nodes().items():
-            commands += "MERGE [%s] AS '%s'.\n" %\
-                (", ".join([str(n) for n in p_nodes]), str(node))
         for node, attrs in self.added_node_attrs().items():
             commands += "ADD_NODE_ATTRS %s %s.\n" % (node, attrs)
         for (u, v), attrs in self.added_edge_attrs().items():
@@ -1338,3 +1409,332 @@ class Rule(object):
         p_nodes = keys_by_value(self.p_rhs, n)
         for p_node in p_nodes:
             primitives.add_node_attrs(self.p, p_node, attrs)
+
+    def _remove_attrs(self):
+        for n in self.lhs.nodes():
+            self.lhs.node[n] = dict()
+        for n in self.p.nodes():
+            self.p.node[n] = dict()
+        for n in self.rhs.nodes():
+            self.rhs.node[n] = dict()
+
+        for u, v in self.lhs.edges():
+            self.lhs.edge[u][v] = dict()
+        for u, v in self.p.edges():
+            self.p.edge[u][v] = dict()
+        for u, v in self.rhs.edges():
+            self.rhs.edge[u][v] = dict()
+
+    def _escape(self):
+
+        lhs_relabel = {}
+        for node in self.lhs.nodes():
+            new_name = remove_forbidden(node)
+            lhs_relabel[node] = new_name
+
+        p_relabel = {}
+        for node in self.p.nodes():
+            new_name = remove_forbidden(node)
+            p_relabel[node] = new_name
+
+        rhs_relabel = {}
+        for node in self.rhs.nodes():
+            new_name = remove_forbidden(node)
+            rhs_relabel[node] = new_name
+
+        nx.relabel_nodes(self.lhs, lhs_relabel, copy=False)
+        nx.relabel_nodes(self.p, p_relabel, copy=False)
+        nx.relabel_nodes(self.rhs, rhs_relabel, copy=False)
+
+        new_p_lhs = dict()
+        for k, v in self.p_lhs.items():
+            new_key = remove_forbidden(k)
+            new_v = remove_forbidden(v)
+            new_p_lhs[new_key] = new_v
+
+        new_p_rhs = dict()
+        for k, v in self.p_rhs.items():
+            new_key = remove_forbidden(k)
+            new_v = remove_forbidden(v)
+            new_p_rhs[new_key] = new_v
+
+        self.p_lhs = new_p_lhs
+        self.p_rhs = new_p_rhs
+
+    def to_cypher(self, instance, node_label="node",
+                  edge_label="edge", generate_var_ids=False):
+        """Convert a rule on the instance to a Cypher query.
+
+        instance : dict
+            Dictionary specifying an instance of the lhs of the rule
+        rhs_typing : dict
+        node_label : iterable, optional
+        edge_label : iterable, optional
+        generate_var_ids : boolean
+            If True the names of the variables will be generated as uuid
+            (unreadable, but more secure: guaranteed to avoid any var name
+            collisions)
+        """
+        # If names of nodes of the rule graphs (L, P, R) are used as
+        # var names, we need to perform escaping on these names
+        # for neo4j not to complain (some symbols are forbidden in
+        # Cypher's var names)
+        if generate_var_ids:
+            # Generate unique variable names corresponding to node names
+            lhs_vars = {n: cypher.generate_var_name() for n in self.lhs.nodes()}
+            p_vars = {n: cypher.generate_var_name() for n in self.p.nodes()}
+            rhs_vars = {n: cypher.generate_var_name() for n in self.rhs.nodes()}
+        else:
+            # rule._escape()
+            lhs_vars = {n: "lhs_" + str(n) for n in self.lhs.nodes()}
+            p_vars = {n: "p_" + str(n) for n in self.p.nodes()}
+            rhs_vars = {n: "rhs_" + str(n) for n in self.rhs.nodes()}
+
+        # Variables of the nodes of instance
+        match_instance_vars = {lhs_vars[k]: v for k, v in instance.items()}
+        query = ""
+
+        # If instance is not empty, generate Cypher that matches the nodes
+        # of the instance
+        if len(instance) > 0:
+            query += "// Match nodes and edges of the instance \n"
+            query += cypher.match_pattern_instance(
+                self.lhs, lhs_vars, match_instance_vars,
+                node_label=node_label, edge_label=edge_label)
+            query += "\n\n"
+        else:
+            query += "// Empty instance \n\n"
+
+        # Add instance nodes to the set of vars to carry
+        carry_variables = set(match_instance_vars.keys())
+        for u, v in self.lhs.edges():
+            carry_variables.add(str(lhs_vars[u]) + "_" + str(lhs_vars[v]))
+
+        # Generate cloning subquery
+        for lhs_node, p_nodes in self.cloned_nodes().items():
+            query += "// Cloning node '{}' of the lhs \n".format(lhs_node)
+            clones = set()
+            preds_to_ignore = dict()
+            sucs_to_ignore = dict()
+            for p_node in p_nodes:
+                if p_node != lhs_node:
+                    clones.add(p_node)
+                    preds_to_ignore[p_node] = set()
+                    sucs_to_ignore[p_node] = set()
+                    for u, v in self.removed_edges():
+                        if u == p_node:
+                            try:
+                                sucs_to_ignore[p_node].add(instance[v])
+                            except(KeyError):
+                                sucs_to_ignore[p_node].add(v)
+                        if v == p_node:
+                            try:
+                                preds_to_ignore[p_node].add(instance[u])
+                            except(KeyError):
+                                preds_to_ignore[p_node].add(u)
+            for n in clones:
+                query +=\
+                    "// Create clone corresponding to '{}' ".format(n) +\
+                    "of the preserved part\n"
+                if generate_var_ids:
+                    clone_id_var = cypher.generate_var_name()
+                else:
+                    clone_id_var = "p_" + str(n) + "_id"
+
+                q, carry_variables = cypher.cloning_query(
+                    original_var=lhs_vars[lhs_node],
+                    clone_var=p_vars[n],
+                    clone_id=n,
+                    clone_id_var=clone_id_var,
+                    node_label=node_label,
+                    clone_typing=True,
+                    sucs_to_ignore=sucs_to_ignore[n],
+                    preds_to_ignore=preds_to_ignore[n],
+                    carry_vars=carry_variables,
+                    ignore_naming=True)
+                query += q
+                query += cypher.with_vars(carry_variables)
+                query += "\n\n"
+
+        # Generate nodes removal subquery
+        for node in self.removed_nodes():
+            query += "// Removing node '{}' of the lhs \n".format(node)
+            query += cypher.remove_nodes([lhs_vars[node]])
+            carry_variables.remove(lhs_vars[node])
+            query += "\n"
+
+        # Generate edges removal subquery
+        for u, v in self.removed_edges():
+            if u in instance.keys() and v in instance.keys():
+                query += "// Removing edge '{}->{}' of the lhs \n".format(u, v)
+                edge_var = "{}_{}".format(str(lhs_vars[u]), str(lhs_vars[v]))
+                query += cypher.remove_edge(edge_var)
+                query += "\n"
+                carry_variables.remove(edge_var)
+
+        if len(self.removed_nodes()) > 0 or len(self.removed_edges()) > 0:
+            query += cypher.with_vars(carry_variables)
+
+        # Rename untouched vars as they are in P
+        vars_to_rename = {}
+        for n in self.lhs.nodes():
+            if n not in self.removed_nodes():
+                new_var_name = p_vars[keys_by_value(self.p_lhs, n)[0]]
+                vars_to_rename[lhs_vars[n]] = new_var_name
+                carry_variables.remove(lhs_vars[n])
+        if len(vars_to_rename) > 0:
+            query += "// Renaming vars to correspond to the vars of P\n"
+            if len(carry_variables) > 0:
+                query +=\
+                    cypher.with_vars(carry_variables) +\
+                    ", " + ", ".join(
+                        "{} as {}".format(k, v)
+                        for k, v in vars_to_rename.items()) +\
+                    " "
+            else:
+                query +=\
+                    "WITH " + ", ".join(
+                        "{} as {}".format(k, v)
+                        for k, v in vars_to_rename.items()) +\
+                    " "
+            query += "\n\n"
+        for k, v in vars_to_rename.items():
+            carry_variables.add(v)
+
+        # Generate node attrs removal subquery
+        for node, attrs in self.removed_node_attrs().items():
+            query += "// Removing properties from node '{}' of P \n".format(node)
+            query += cypher.remove_attributes(p_vars[node], attrs)
+            query += "\n\n"
+
+        # Generate edge attrs removal subquery
+        for e, attrs in self.removed_edge_attrs().items():
+            u = e[0]
+            v = e[1]
+            query += "// Removing properties from edge {}->{} of P \n".format(
+                u, v)
+            query += cypher.with_vars(carry_variables)
+            query += "MATCH ({})-[{}:edge]->({})\n".format(
+                p_vars[u], p_vars[u] + "_" + p_vars[v], p_vars[v])
+            carry_variables.add(p_vars[u] + "_" + p_vars[v])
+            query += cypher.remove_attributes(p_vars[u] + "_" + p_vars[v], attrs)
+            query += "\n\n"
+
+        # Generate merging subquery
+        for rhs_key, p_nodes in self.merged_nodes().items():
+            query +=\
+                "// Merging nodes '{}' of the preserved part ".format(p_nodes) +\
+                "into '{}' \n".format(rhs_key)
+            merged_id = "_".join(instance[self.p_lhs[p_n]]for p_n in p_nodes)
+            q, carry_variables = cypher.merging_query1(
+                original_vars=[p_vars[n] for n in p_nodes],
+                merged_var=rhs_vars[rhs_key],
+                merged_id=merged_id,
+                merged_id_var=cypher.generate_var_name(),
+                node_label=node_label,
+                edge_label=edge_label,
+                merge_typing=True,
+                carry_vars=carry_variables,
+                ignore_naming=True)
+            query += q
+            query += "\n\n"
+
+        # Generate nodes addition subquery
+        for rhs_node in self.added_nodes():
+            query += "// Adding node '{}' from the rhs \n".format(rhs_node)
+            if generate_var_ids:
+                new_node_id_var = cypher.generate_var_name()
+            else:
+                new_node_id_var = "rhs_" + str(rhs_node) + "_id"
+            q, carry_variables = cypher.add_node(
+                rhs_vars[rhs_node], rhs_node, new_node_id_var,
+                node_label=node_label,
+                carry_vars=carry_variables,
+                ignore_naming=True)
+            query += q
+            query += "\n\n"
+
+        # Rename untouched vars as they are in rhs
+        vars_to_rename = {}
+        for n in self.rhs.nodes():
+            if n not in self.added_nodes() and\
+               n not in self.merged_nodes().keys():
+                prev_var_name = p_vars[keys_by_value(self.p_rhs, n)[0]]
+                vars_to_rename[prev_var_name] = rhs_vars[n]
+                if prev_var_name in carry_variables:
+                    carry_variables.remove(prev_var_name)
+
+        if len(vars_to_rename) > 0:
+            query += "// Renaming vars to correspond to the vars of rhs\n"
+            if len(carry_variables) > 0:
+                query +=\
+                    cypher.with_vars(carry_variables) +\
+                    ", " + ", ".join(
+                        "{} as {}".format(k, v)
+                        for k, v in vars_to_rename.items()) +\
+                    " "
+            else:
+                query +=\
+                    "WITH " + ", ".join(
+                        "{} as {}".format(k, v)
+                        for k, v in vars_to_rename.items()) +\
+                    " "
+            query += "\n\n"
+
+        for k, v in vars_to_rename.items():
+            carry_variables.add(v)
+
+        # Generate node attrs addition subquery
+        for rhs_node, attrs in self.added_node_attrs().items():
+            query += "// Adding properties to the node " +\
+                "'{}' from the rhs \n".format(rhs_node)
+            query += cypher.add_attributes(rhs_vars[rhs_node], attrs)
+            query += "\n\n"
+
+        # Generate edges addition subquery
+        # query += (
+        #     "WITH [] as added_edges, " +
+        #     ", ".join(carry_variables) + "\n"
+        # )
+        for u, v in self.added_edges():
+            query += "// Adding edge '{}->{}' from the rhs \n".format(u, v)
+            new_edge_var = rhs_vars[u] + "_" + rhs_vars[v]
+            query += cypher.add_edge(
+                edge_var=new_edge_var,
+                source_var=rhs_vars[u],
+                target_var=rhs_vars[v],
+                edge_label=edge_label)
+            if (u, v) in self.added_edge_attrs().keys():
+                carry_variables.add(new_edge_var)
+            query += "\n\n"
+
+        # Generate edge attrs addition subquery
+        for e, attrs in self.added_edge_attrs().items():
+            u = e[0]
+            v = e[1]
+            query += "// Adding properties to an edge " +\
+                "'{}'->'{}' from the rhs \n".format(u, v)
+            query += cypher.with_vars(carry_variables) + '\n'
+
+            edge_var = rhs_vars[u] + "_" + rhs_vars[v]
+            if (u, v) not in self.added_edges():
+                query += "MATCH ({})-[{}:edge]->({})\n".format(
+                    rhs_vars[u], edge_var, rhs_vars[v])
+                carry_variables.add(edge_var)
+
+            query += cypher.add_attributes(edge_var, attrs)
+            query += cypher.with_vars(carry_variables)
+            query += "\n\n"
+
+        query += "// Return statement \n"
+        query += cypher.return_vars(carry_variables)
+
+        # Dictionary defining a mapping from the generated
+        # unique variable names to the names of nodes of the rhs
+        rhs_vars_inverse = {v: k for k, v in rhs_vars.items()}
+
+        print(query)
+        return query, rhs_vars_inverse
+
+    def plot(self, filename=None, title=None):
+        plot_rule(self, filename, title)
