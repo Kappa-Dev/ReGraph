@@ -21,7 +21,8 @@ from regraph.default.category_utils import (identity,
                                             pullback_complement,
                                             pushout)
 from regraph.default import primitives
-from regraph.default.exceptions import (ReGraphWarning, ParsingError, RuleError)
+from regraph.default.exceptions import (ReGraphWarning, ParsingError,
+                                        RuleError)
 import regraph.neo4j.cypher_utils as cypher
 
 
@@ -525,6 +526,32 @@ class Rule(object):
                 node_id
             )
 
+    def inject_add_nodes_from(self, node_list):
+        """Inject an addition of a new node by the rule.
+
+        This method adds a nodes from the list (and the specified
+        attributes `attrs`) to `rhs`.
+
+        Parameters
+        ----------
+        node_list : iterable
+            Collection of nodes to add, where every element is
+            either a tuple of the form (<node_id>, <node_attrs>)
+            or a single value <node_id>
+
+        Raises
+        ------
+        RuleError
+            If some node from the list already exists in the `rhs`.
+        """
+        for n in node_list:
+            try:
+                node_id, node_attrs = n
+                self.inject_add_node(node_id, node_attrs)
+            except (TypeError, ValueError):
+                self.inject_add_node(node_id)
+        return
+
     def inject_add_edge(self, n1, n2, attrs=None):
         """Inject addition of a new edge to the rule.
 
@@ -560,6 +587,36 @@ class Rule(object):
             )
         primitives.add_edge(self.rhs, n1, n2, attrs)
         return
+
+    def inject_add_edges_from(self, edge_list):
+        """Inject addition of a new edge to the rule.
+
+        This method injects addition of edges from the list.
+
+        Parameters
+        ----------
+        edge_list : iterable
+            Collection of edges to add, where every element is
+            either a tuple of the form (<source_id>, <target_id>)
+            or (<source_id>, <target_id>, <edge_attrs>). Here
+            source and target nodes are assumed to be from the `rhs`.
+
+        Raises
+        ------
+        RuleError
+            If some of the nodes (`n1` or `n2`) do not exist
+            or if there is already an edge between them in `rhs`.
+        """
+        for e in edge_list:
+            if len(e) == 2:
+                self.inject_add_edge(e[0], e[1])
+            elif len(e) == 3:
+                self.inject_add_edge(e[0], e[1], e[2])
+            else:
+                raise RuleError(
+                    "Was expecting 2 or 3 elements per tuple, got %s." %
+                    str(len(e))
+                )
 
     def inject_merge_nodes(self, node_list, node_id=None):
         """Inject merge of a collection of nodes by the rule.
@@ -984,6 +1041,8 @@ class Rule(object):
         for s, t in self.rhs.edges():
             s_p_nodes = keys_by_value(self.p_rhs, s)
             t_p_nodes = keys_by_value(self.p_rhs, t)
+            if len(s_p_nodes) == 0 or len(t_p_nodes) == 0:
+                attrs[(s, t)] = self.rhs.edge[s][t]
             new_attrs = {}
             for s_p_node in s_p_nodes:
                 for t_p_node in t_p_nodes:
@@ -1435,7 +1494,6 @@ class Rule(object):
             preds_to_ignore = dict()
             sucs_to_ignore = dict()
             for p_node in p_nodes:
-                print(p_node)
                 if p_node != lhs_node:
                     clones.add(p_node)
                     preds_to_ignore[p_node] = set()
@@ -1633,7 +1691,7 @@ class Rule(object):
         for e, attrs in self.added_edge_attrs().items():
             u = e[0]
             v = e[1]
-            query += "// Adding properties to the node " +\
+            query += "// Adding properties to an edge " +\
                 "'{}' from the rhs \n".format(rhs_node)
             query += cypher.with_vars(carry_variables)
             query += "MATCH ({})-[{}:edge]->({})\n".format(

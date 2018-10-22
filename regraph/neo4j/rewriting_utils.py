@@ -36,8 +36,8 @@ def propagate_up(rewritten_graph, predecessor):
             clone_id='clone_id',
             clone_id_var='clone_id',
             number_of_clone_var='number_of_clone',
-            node_labels=['node', predecessor],
-            edge_labels=['edge'],
+            node_label=predecessor,
+            edge_label='edge',
             preserv_typing=True,
             carry_vars=carry_vars,
             ignore_naming=True,
@@ -55,7 +55,7 @@ def propagate_up(rewritten_graph, predecessor):
             edge_var='restored_typing',
             source_var='source',
             target_var='target',
-            edge_labels=['typing']) + ")))\n"
+            edge_label='typing') + ")))\n"
     )
     query1 += "RETURN clone_ids"
 
@@ -227,8 +227,8 @@ def propagate_down(rewritten_graph, successor):
             merged_var='merged_node',
             merged_id='id',
             merged_id_var='merged_id',
-            node_labels=['node', successor],
-            edge_labels=['edge'],
+            node_label=successor,
+            edge_label='edge',
             merge_typing=True,
             carry_vars=carry_vars,
             ignore_naming=True,

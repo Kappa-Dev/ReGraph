@@ -416,8 +416,6 @@ class Neo4jGraph(object):
             instance, rhs_typing, self._node_label,
             self._edge_label)
 
-        print("Rewriting rule to Cypher: \n")
-        print(query)
         # Execute query
         result = self.execute(query)
         # Retrieve a dictionary mapping the nodes of the rhs to the nodes

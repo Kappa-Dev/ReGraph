@@ -308,7 +308,7 @@ def return_vars(var_list):
     return "RETURN {}\n".format(", ".join(var_list))
 
 
-def clear_graph(node_label):
+def clear_graph(node_label=None):
     """Generate query for removing everything from the graph.
 
     Parameters
@@ -352,14 +352,14 @@ def get_edges(source_label, target_label,
         Label of the edges to match
     """
     query = "MATCH (n:{})-[r:{}]->(m:{})\nRETURN n.id, m.id\n".format(
-            source_labels,
+            source_label,
             edge_label,
-            target_labels)
+            target_label)
     return query
 
 
 def successors_query(var_name, node_id, node_label,
-                     edge_label, successor_label):
+                     edge_label, successor_label=None):
     """Generate query for getting the ids of all the successors of a node.
 
     Parameters
@@ -376,20 +376,20 @@ def successors_query(var_name, node_id, node_label,
         Label of the successors we want to find,
         'node_label' is used if None.
     """
-    if successor_labels is None:
-        successor_labels = node_label
+    if successor_label is None:
+        successor_label = node_label
     query = (
         "OPTIONAL MATCH ({}:{} {{id : '{}'}})-[:{}]-> (suc:{})".format(
             var_name, node_label,
             node_id, edge_label,
-            successor_labels) +
+            successor_label) +
         "RETURN suc.id"
     )
     return query
 
 
 def predecessors_query(var_name, node_id, node_label,
-                       edge_label, predecessor_label):
+                       edge_label, predecessor_label=None):
     """Generate query for getting the ids of all the predecessors of a node.
 
     Parameters
@@ -405,11 +405,11 @@ def predecessors_query(var_name, node_id, node_label,
     predecessor_label
         Label of the predecessors we want to find. node_label if None.
     """
-    if predecessor_labels is None:
-        predecessor_labels = node_label
+    if predecessor_label is None:
+        predecessor_label = node_label
     query = (
         "OPTIONAL MATCH (pred:{})-[:{}]-> ({}:{} {{id : '{}'}})".format(
-            predecessor_labels,
+            predecessor_label,
             edge_label,
             var_name, node_label, node_id) +
         "RETURN pred.id"
@@ -1487,7 +1487,7 @@ def clone_graph(original_graph, cloned_graph, carry_vars=None):
 
 
 def merging_from_list(list_var, merged_var, merged_id, merged_id_var,
-                      node_labels=None, edge_labels=None, merge_typing=False,
+                      node_label, edge_label, merge_typing=False,
                       carry_vars=None, ignore_naming=False,
                       multiple_rows=False, multiple_var=None):
     """Generate query for merging the nodes of a neo4j list.
@@ -1575,8 +1575,8 @@ def merging_from_list(list_var, merged_var, merged_id, merged_id_var,
     else:
         query += (
             "// search for a node with the same id as the clone id\n" +
-            "OPTIONAL MATCH (same_id_node{} {{ id : '{}'}}) \n".format(
-                generate_labels(node_labels), merged_id) +
+            "OPTIONAL MATCH (same_id_node:{} {{ id : '{}'}}) \n".format(
+                node_label, merged_id) +
             "WITH same_id_node,  " +
             "CASE WHEN same_id_node IS NOT NULL "
             "THEN (coalesce(same_id_node.count, 0) + 1) " +
@@ -1643,16 +1643,16 @@ def merging_from_list(list_var, merged_var, merged_id, merged_id_var,
         query += (
             "// accumulate all the attrs of the edges incident to the merged nodes\n"
             "WITH node_to_merge, " + ", ".join(carry_vars) + "\n"
-            "OPTIONAL MATCH (node_to_merge)-[out_rel{}]->(suc)\n".format(
-                generate_labels(edge_labels)) +
+            "OPTIONAL MATCH (node_to_merge)-[out_rel:{}]->(suc)\n".format(
+                edge_label) +
             "WITH CASE WHEN suc.id IN keys(ids_to_merged_id)\n" +
             "\t\tTHEN {id: id(ids_to_merged_id[suc.id][0]), neighbor: ids_to_merged_id[suc.id][0], edge: out_rel}\n" +
             "\t\tELSE {id: id(suc), neighbor: suc, edge: out_rel} END AS suc_map, " +
             "node_to_merge, " + ", ".join(carry_vars) + "\n" +
             "WITH collect(suc_map) as suc_maps, " +
             "node_to_merge, " + ", ".join(carry_vars) + "\n" +
-            "OPTIONAL MATCH (pred)-[in_rel{}]->(node_to_merge)\n".format(
-                generate_labels(edge_labels)) +
+            "OPTIONAL MATCH (pred)-[in_rel:{}]->(node_to_merge)\n".format(
+                edge_label) +
             "WITH CASE WHEN pred.id IN keys(ids_to_merged_id)\n" +
             "\t\tTHEN {id: id(ids_to_merged_id[pred.id][0]), neighbor: ids_to_merged_id[pred.id][0], edge: in_rel}\n" +
             "\t\tELSE {id: id(pred), neighbor: pred, edge: in_rel} END AS pred_map, " +
@@ -1665,12 +1665,12 @@ def merging_from_list(list_var, merged_var, merged_id, merged_id_var,
             "// accumulate all the attrs of the edges incident to the merged nodes\n"
             "WITH [] as suc_maps, [] as pred_maps, node_to_merge, " +
             ", ".join(carry_vars) + "\n"
-            "OPTIONAL MATCH (node_to_merge)-[out_rel{}]->(suc)\n".format(
-                generate_labels(edge_labels)) +
+            "OPTIONAL MATCH (node_to_merge)-[out_rel:{}]->(suc)\n".format(
+                edge_label) +
             "WITH suc_maps + collect({id: id(suc), neighbor: suc, edge: out_rel}) as suc_maps, " +
             "pred_maps, node_to_merge, " + ", ".join(carry_vars) + "\n" +
-            "OPTIONAL MATCH (pred)-[in_rel{}]->(node_to_merge)\n".format(
-                generate_labels(edge_labels)) +
+            "OPTIONAL MATCH (pred)-[in_rel:{}]->(node_to_merge)\n".format(
+                edge_label) +
             "WITH pred_maps + collect({id: id(pred), neighbor: pred, edge: in_rel}) as pred_maps, " +
             "suc_maps, node_to_merge, " + ", ".join(carry_vars) + "\n"
         )
@@ -1728,12 +1728,12 @@ def merging_from_list(list_var, merged_var, merged_id, merged_id_var,
     )
     query += (
         "FOREACH(suc IN filter(suc IN suc_nodes WHERE NOT id(suc) in self_loops) |\n"
-        "\tMERGE ({})-[new_rel{}]->(suc)\n".format(merged_var, generate_labels(edge_labels)) +
+        "\tMERGE ({})-[new_rel:{}]->(suc)\n".format(merged_var, edge_label) +
         "\tSET new_rel = apoc.map.fromValues(REDUCE(pairs=[], k in keys(suc_props[toString(id(suc))]) | \n"
         "\t\t pairs + [k, REDUCE(values=[], v in suc_props[toString(id(suc))][k] | \n"
         "\t\t\tvalues + CASE WHEN v.value IN values THEN [] ELSE v.value END)])))\n"
         "FOREACH(pred IN filter(pred IN pred_nodes WHERE NOT id(pred) in self_loops) |\n"
-        "\tMERGE (pred)-[new_rel{}]->({})\n".format(generate_labels(edge_labels), merged_var) +
+        "\tMERGE (pred)-[new_rel:{}]->({})\n".format(edge_label, merged_var) +
         "\tSET new_rel = apoc.map.fromValues(REDUCE(pairs=[], k in keys(pred_props[toString(id(pred))]) | \n"
         "\t\t pairs + [k, REDUCE(values=[], v in pred_props[toString(id(pred))][k] | \n"
         "\t\t\tvalues + CASE WHEN v.value IN values THEN [] ELSE v.value END)])))\n"
@@ -1741,9 +1741,9 @@ def merging_from_list(list_var, merged_var, merged_id, merged_id_var,
     query += (
         "// add self loop \n"
         "FOREACH(dummy in CASE WHEN length(self_loops) > 0 THEN [NULL] ELSE [] END |\n"
-        "\tMERGE ({})-[new_rel{}]->({})\n".format(merged_var,
-                                                  generate_labels(edge_labels),
-                                                  merged_var) +
+        "\tMERGE ({})-[new_rel:{}]->({})\n".format(merged_var,
+                                                   edge_label,
+                                                   merged_var) +
         "\tSET new_rel = apoc.map.fromValues(REDUCE(pairs=[], k in keys(self_loop_props) |\n"
         "\t\tpairs + [k, REDUCE(values=[], v in self_loop_props[k] |\n"
         "\t\t\tvalues + CASE WHEN v.value IN values THEN [] ELSE v.value END)])))\n"
