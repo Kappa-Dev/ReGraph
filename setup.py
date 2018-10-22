@@ -12,7 +12,7 @@ setup(
         'regraph',
         'regraph.neo4j',
         'regraph.neo4j.cypher_utils',
-        'regraph.default'],
+        'regraph.networkx'],
     package_dir={"regraph": "regraph"},
     zip_safe=False,
     install_requires=[

@@ -22,38 +22,38 @@ import os
 from networkx.algorithms import isomorphism
 from networkx.exception import NetworkXNoPath
 
-from regraph.default import rewriting_utils
-from regraph.default import type_checking
+from regraph.networkx import rewriting_utils
+from regraph.networkx import type_checking
 
-from regraph.default.category_utils import (compose,
-                                            check_homomorphism,
-                                            relation_to_span,
-                                            right_relation_dict)
-from regraph.default.primitives import (get_relabeled_graph,
-                                        relabel_node,
-                                        get_edge,
-                                        graph_to_json,
-                                        graph_from_json,
-                                        equal)
-from regraph.default.utils import (is_subdict,
-                                   keys_by_value,
-                                   normalize_attrs,
-                                   )
-from regraph.default.rules import Rule
-from regraph.default.exceptions import (HierarchyError,
-                                        ReGraphError,
-                                        RewritingError,
-                                        InvalidHomomorphism,
-                                        GraphError)
-from regraph.default.components import (AttributeContainter,
-                                        GraphNode,
-                                        RuleNode,
-                                        Typing,
-                                        RuleTyping,
-                                        GraphRelation)
+from regraph.networkx.category_utils import (compose,
+                                             check_homomorphism,
+                                             relation_to_span,
+                                             right_relation_dict)
+from regraph.networkx.primitives import (get_relabeled_graph,
+                                         relabel_node,
+                                         get_edge,
+                                         graph_to_json,
+                                         graph_from_json,
+                                         equal)
+from regraph.utils import (is_subdict,
+                           keys_by_value,
+                           normalize_attrs,
+                           )
+from regraph.rules import Rule
+from regraph.exceptions import (HierarchyError,
+                                ReGraphError,
+                                RewritingError,
+                                InvalidHomomorphism,
+                                GraphError)
+from regraph.networkx.components import (AttributeContainter,
+                                         GraphNode,
+                                         RuleNode,
+                                         Typing,
+                                         RuleTyping,
+                                         GraphRelation)
 
 
-class Hierarchy(nx.DiGraph, AttributeContainter):
+class NetworkXHierarchy(nx.DiGraph, AttributeContainter):
     """Class implementing graph hierarchy.
 
     A graph hierarchy is a DAG, where nodes are graphs with attributes and
@@ -70,7 +70,7 @@ class Hierarchy(nx.DiGraph, AttributeContainter):
 
     Examples
     --------
-    >>> hierarchy = Hierarchy() # create empty hierarchy
+    >>> hierarchy = NetworkXHierarchy() # create empty hierarchy
     >>> t = nx.DiGraph([("red", "blue"), ("blue", "blue")])
     >>> hierarchy.add_graph("t", t)
     >>> g = nx.DiGraph([("a", "b"), ("c", "b"), ("b", "d")])

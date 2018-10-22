@@ -1,9 +1,9 @@
 """A collection of utils for ReGraph library."""
 import copy
 
-from regraph.default.parser import parser
-from regraph.default.exceptions import ReGraphError, ParsingError
-from regraph.default.attribute_sets import AttributeSet, FiniteSet
+from regraph.command_parser import parser
+from regraph.exceptions import ReGraphError, ParsingError
+from regraph.attribute_sets import AttributeSet, FiniteSet
 
 
 def json_dict_to_attrs(d):

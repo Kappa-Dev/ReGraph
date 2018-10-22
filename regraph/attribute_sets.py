@@ -31,7 +31,7 @@ import sys
 
 from greenery.lego import parse
 
-from regraph.default.exceptions import AttributeSetError
+from regraph.exceptions import AttributeSetError
 
 
 def _hashify(d):

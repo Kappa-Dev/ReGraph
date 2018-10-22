@@ -25,10 +25,10 @@ TODO:
 """
 import copy
 
-from regraph.default.attribute_sets import AttributeSet, FiniteSet
-from regraph.default.category_utils import compose
-from regraph.default.primitives import equal
-from regraph.default.utils import (to_set,
+from regraph.attribute_sets import AttributeSet, FiniteSet
+from regraph.networkx.category_utils import compose
+from regraph.networkx.primitives import equal
+from regraph.utils import (to_set,
                            replace_source,
                            replace_target,
                            normalize_attrs)

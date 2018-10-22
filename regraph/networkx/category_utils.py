@@ -2,15 +2,15 @@
 import networkx as nx
 import copy
 
-from regraph.default.primitives import *
-from regraph.default.utils import (keys_by_value,
-                                   merge_attributes,
-                                   restrict_mapping,
-                                   dict_sub,
-                                   id_of,
-                                   valid_attributes,
-                                   attrs_intersection)
-from regraph.default.exceptions import (InvalidHomomorphism, ReGraphError)
+from regraph.networkx.primitives import *
+from regraph.utils import (keys_by_value,
+                           merge_attributes,
+                           restrict_mapping,
+                           dict_sub,
+                           id_of,
+                           valid_attributes,
+                           attrs_intersection)
+from regraph.exceptions import (InvalidHomomorphism, ReGraphError)
 
 
 def subgraph(graph, nodes):

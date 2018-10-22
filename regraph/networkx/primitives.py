@@ -14,15 +14,15 @@ import networkx as nx
 from copy import deepcopy
 from networkx.algorithms import isomorphism
 
-from regraph.default.utils import (merge_attributes,
-                                   normalize_attrs,
-                                   valid_attributes,
-                                   keys_by_value,
-                                   json_dict_to_attrs)
-from regraph.default.exceptions import (ReGraphError,
-                                        GraphError,
-                                        GraphAttrsWarning)
-from regraph.default.attribute_sets import FiniteSet
+from regraph.utils import (merge_attributes,
+                           normalize_attrs,
+                           valid_attributes,
+                           keys_by_value,
+                           json_dict_to_attrs)
+from regraph.exceptions import (ReGraphError,
+                                GraphError,
+                                GraphAttrsWarning)
+from regraph.attribute_sets import FiniteSet
 
 
 def add_node(graph, node_id, attrs=None):
@@ -794,7 +794,7 @@ def merge_nodes(graph, nodes, node_id=None, method="union", edge_method="union")
 
         # Generate name for new node
         if node_id is None:
-            node_id = "_".join([str(n) for n in sorted(nodes)])
+            node_id = "_".join(sorted([str(n) for n in nodes]))
         elif node_id in graph.nodes() and (node_id not in nodes):
             raise GraphError(
                 "New name for merged node is not valid: "

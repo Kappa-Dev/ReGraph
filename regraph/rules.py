@@ -9,20 +9,21 @@ import warnings
 
 import networkx as nx
 
-from regraph.default.parser import parser
-from regraph.default.utils import (keys_by_value,
-                                   make_canonical_commands,
-                                   dict_sub,
-                                   attrs_union,
-                                   remove_forbidden,
-                                   normalize_attrs)
-from regraph.default.category_utils import (identity,
-                                            check_homomorphism,
-                                            pullback_complement,
-                                            pushout)
-from regraph.default import primitives
-from regraph.default.exceptions import (ReGraphWarning, ParsingError,
-                                        RuleError)
+from regraph.command_parser import parser
+from regraph.utils import (keys_by_value,
+                           make_canonical_commands,
+                           dict_sub,
+                           attrs_union,
+                           remove_forbidden,
+                           normalize_attrs)
+from regraph.networkx.category_utils import (identity,
+                                             check_homomorphism,
+                                             pullback_complement,
+                                             pushout)
+from regraph.networkx import primitives
+from regraph.networkx.plotting import plot_rule
+from regraph.exceptions import (ReGraphWarning, ParsingError,
+                                RuleError)
 import regraph.neo4j.cypher_utils as cypher
 
 
@@ -1711,3 +1712,6 @@ class Rule(object):
 
         print(query)
         return query, rhs_vars_inverse
+
+    def plot(self, filename=None, title=None):
+        plot_rule(self, filename, title)
