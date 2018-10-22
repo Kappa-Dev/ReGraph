@@ -1,6 +1,8 @@
 """Collection of generic utils for Cypher queries generation."""
 import uuid
 
+from regraph.default.attribute_sets import FiniteSet
+
 
 def delete_var(var, detach=False, breakline=True):
     """Query for deleting the input variable.
