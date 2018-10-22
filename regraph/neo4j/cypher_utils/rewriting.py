@@ -1,7 +1,7 @@
 """Collection of utils for generation of rewriting-related queries."""
 from . import generic
 
-from regraph.default.attribute_sets import FiniteSet
+from regraph.attribute_sets import FiniteSet
 
 
 def add_node(var_name, node_id, node_id_var, node_label,

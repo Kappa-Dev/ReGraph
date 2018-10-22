@@ -1,7 +1,7 @@
 """Collection of generic utils for Cypher queries generation."""
 import uuid
 
-from regraph.default.attribute_sets import FiniteSet
+from regraph.attribute_sets import FiniteSet
 
 
 def delete_var(var, detach=False, breakline=True):
@@ -93,7 +93,7 @@ def match_node(var_name, node_id, node_label):
         var_name, node_label, node_id)
 
 
-def match_nodes(var_id_dict, node_label):
+def match_nodes(var_id_dict, node_label=None):
     """Match a collection of nodes by their id.
 
     Parameters
@@ -105,10 +105,14 @@ def match_nodes(var_id_dict, node_label):
     label : str
         Label of the nodes to match
     """
+    node_label_str = ""
+    if node_label:
+        node_label_str = ":{}".format(node_label)
+
     query =\
         "MATCH " +\
-        ", ".join("({}:{} {{ id : '{}'}}) ".format(
-            var_name, node_label, node_id)
+        ", ".join("({}{} {{ id : '{}'}}) ".format(
+            var_name, node_label_str, node_id)
             for var_name, node_id in var_id_dict.items()) + " "
     return query
 

@@ -6,9 +6,9 @@ from neo4j.exceptions import ConstraintError
 
 from regraph.neo4j.graphs import Neo4jGraph
 import regraph.neo4j.cypher_utils as cypher
-from regraph.default.exceptions import (HierarchyError,
-                                        InvalidHomomorphism)
-from regraph.default.utils import normalize_attrs
+from regraph.exceptions import (HierarchyError,
+                                InvalidHomomorphism)
+from regraph.utils import normalize_attrs
 
 
 class Neo4jHierarchy(object):
@@ -310,7 +310,7 @@ class Neo4jHierarchy(object):
         """Check if a typing is a valid homomorphism."""
         with self._driver.session() as session:
             tx = session.begin_transaction()
-            res = _check_homomorphism(tx, source, target)
+            res = cypher._check_homomorphism(tx, source, target)
             tx.commit()
         print(res)
 

@@ -1,9 +1,11 @@
 """Category operations used by neo4j graph rewriting tool."""
 
-import regraph.neo4j.cypher_utils as cypher
+from . import generic
+from . import rewriting
 
-from regraph.default.exceptions import (InvalidHomomorphism, HierarchyError,
-                                        TypingWarning)
+
+from regraph.exceptions import (HierarchyError,
+                                TypingWarning)
 
 
 def pullback(b, c, d, a=None, inplace=False):
@@ -28,16 +30,16 @@ def pullback(b, c, d, a=None, inplace=False):
     # For each pair, collect all the merged properties
     # create a new node and set the properties
     query1 += (
-        cypher.merge_properties(
+        generic.merge_properties(
                     var_list=["n", "m"],
                     new_props_var='new_props',
                     method='intersection',
                     carry_vars=carry_vars) +
-        cypher.create_node(
+        rewriting.add_node(
                     var_name="new_node_a",
                     node_id="pb",
                     node_id_var="id_var",
-                    label='node:'+a,
+                    node_label=a,
                     carry_vars=carry_vars,
                     ignore_naming=True)[0] +
         "SET new_node_a += new_props\n" +
@@ -47,13 +49,13 @@ def pullback(b, c, d, a=None, inplace=False):
     carry_vars.remove("new_props")
     # Add the typing edges
     query1 += (
-        cypher.with_vars(carry_vars) + "\n" +
-        cypher.create_edge(
+        generic.with_vars(carry_vars) + "\n" +
+        rewriting.add_edge(
                     edge_var='new_typing_to_n',
                     source_var='new_node_a',
                     target_var='n',
                     edge_label='typing') + "\n" +
-        cypher.create_edge(
+        rewriting.add_edge(
                     edge_var='new_typing_to_m',
                     source_var='new_node_a',
                     target_var='m',
@@ -70,7 +72,7 @@ def pullback(b, c, d, a=None, inplace=False):
         )
     # Collect all the merged properties of the edges r1 and r2
     query2 += (
-        cypher.merge_properties(
+        generic.merge_properties(
                     var_list=["r1", "r2"],
                     new_props_var='new_props',
                     method='intersection',
@@ -108,7 +110,7 @@ def pushout(a, b, c, d=None, inplace=False):
 
     query1 = (
         "\n// We copy the nodes of B in D\n" +
-        cypher.clone_graph(
+        generic.clone_graph(
                     original_graph=b,
                     cloned_graph=d)[0]
         )
@@ -117,16 +119,16 @@ def pushout(a, b, c, d=None, inplace=False):
         "\n// We create the images of the exclusive nodes of C\n" +
         "MATCH (m:{})\n".format(c) +
         "WHERE NOT (m)<-[:typing]-(:{})\n".format(a) +
-        cypher.create_node(
+        rewriting.add_node(
                     var_name="new_node_d",
                     node_id="pb",
                     node_id_var="id_var",
-                    label='node:'+d,
+                    node_label=d,
                     carry_vars={"m"},
                     ignore_naming=True)[0] +
         "SET new_node_d += properties(m)\n" +
         "SET new_node_d.id = toString(id(new_node_d))\n" +
-        cypher.create_edge(
+        rewriting.add_edge(
                     edge_var='new_typing',
                     source_var='m',
                     target_var='new_node_d',
@@ -137,12 +139,12 @@ def pushout(a, b, c, d=None, inplace=False):
         "\n// We add the missing typing edges between C and D " +
         "and merge the properties\n" +
         "MATCH " + c_to_d.format("m", c, a, b, "x", d) + "\n" +
-        cypher.create_edge(
+        rewriting.add_edge(
                     edge_var='new_typing',
                     source_var='m',
                     target_var='x',
                     edge_label='typing') +
-        cypher.merge_properties(
+        generic.merge_properties(
                     var_list=["m", "x"],
                     new_props_var='new_props',
                     method='union') +
@@ -158,9 +160,9 @@ def pushout(a, b, c, d=None, inplace=False):
         "FOREACH(_ IN CASE WHEN rel_d IS NULL THEN [1] ELSE [] END |\n" +
         "\tMERGE (x)-[new_rel:edge]->(y)\n" +
         "\tON CREATE SET new_rel = properties(rel_c) )\n" +
-        cypher.with_vars(['rel_c', 'rel_d']) + "\n" +
+        generic.with_vars(['rel_c', 'rel_d']) + "\n" +
         "WHERE rel_d IS NOT NULL\n" +
-        cypher.merge_properties(
+        generic.merge_properties(
                     var_list=["rel_c", "rel_d"],
                     new_props_var='new_props',
                     method='union') +
@@ -183,19 +185,19 @@ def pushout(a, b, c, d=None, inplace=False):
         )
     carry_vars.update(["number_of_nodes"])
     query5 += (
-        cypher.merging_from_list(
+        rewriting.merging_from_list(
                         list_var='nodes_to_merge',
                         merged_var='merged_node',
                         merged_id='id',
                         merged_id_var='merged_id',
-                        node_label='node:'+d,
+                        node_label=d,
                         edge_label='edge',
                         merge_typing=True,
                         carry_vars=carry_vars,
                         ignore_naming=True,
                         multiple_rows=True,
                         multiple_var='m')[0] + "\n" +
-        cypher.return_vars(["merged_id"])
+        generic.return_vars(["merged_id"])
         )
 
     return query1, query2, query3, query4, query5

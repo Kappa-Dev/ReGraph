@@ -1,13 +1,15 @@
 """."""
 
-from regraph.default.hierarchy import Hierarchy
+from regraph.networkx.hierarchy import NetworkXHierarchy
 
-from regraph.default.rules import Rule
+from regraph.neo4j.hierarchy import Neo4jHierarchy
 
-from regraph.default.exceptions import *
+from regraph.rules import Rule
 
-from regraph.default.plotting import *
+from regraph.exceptions import *
 
-from regraph.default.primitives import *
+from regraph.networkx.plotting import *
 
-from regraph.default.attribute_sets import *
+from regraph.networkx.primitives import *
+
+from regraph.attribute_sets import *

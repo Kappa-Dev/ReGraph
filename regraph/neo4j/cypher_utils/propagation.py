@@ -1,8 +1,7 @@
 """Collection of utils for generation of propagation-related Cypher queries."""
 import warnings
 
-from regraph.default.exceptions import (TypingWarning)
-from regraph.default.exceptions import (InvalidHomomorphism)
+from regraph.exceptions import (TypingWarning, InvalidHomomorphism)
 
 from . import generic
 from . import rewriting

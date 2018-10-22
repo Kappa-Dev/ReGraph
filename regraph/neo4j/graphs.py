@@ -1,7 +1,7 @@
 """Neo4j driver for regraph."""
 from neo4j.v1 import GraphDatabase
 
-from regraph.default.utils import normalize_attrs
+from regraph.utils import normalize_attrs
 import regraph.neo4j.cypher_utils as cypher
 
 
@@ -62,7 +62,7 @@ class Neo4jGraph(object):
                 result = session.run(query)
                 return result
 
-    def clear(self):
+    def _clear(self):
         """Clear graph database.
 
         Returns
@@ -92,7 +92,7 @@ class Neo4jGraph(object):
         result = self.execute(query)
         return result
 
-    def drop_constraint(self, prop):
+    def _drop_constraint(self, prop):
         """Drop a uniqueness constraint on the property.
 
         Parameters
@@ -228,7 +228,7 @@ class Neo4jGraph(object):
             cypher.match_node(
                 node, node,
                 node_label=self._node_label) +\
-            cypher.remove_node([node])
+            cypher.remove_node(node)
         result = self.execute(query)
         return result
 
@@ -287,7 +287,8 @@ class Neo4jGraph(object):
         """Return node's successors id."""
         query = cypher.successors_query(
             node, node,
-            node_label=self._node_label)
+            node_label=self._node_label,
+            edge_label=self._edge_label)
         succ = set(self.execute(query).value())
         return(succ)
 
@@ -295,11 +296,12 @@ class Neo4jGraph(object):
         """Return node's predecessors id."""
         query = cypher.predecessors_query(
             node, node,
-            node_label=self._node_label)
+            node_label=self._node_label,
+            edge_label=self._edge_label)
         pred = set(self.execute(query).value())
         return(pred)
 
-    def clone_node(self, node, name=None, preserv_typing=False,
+    def clone_node(self, node, name=None, clone_typing=True,
                    ignore_naming=False, profiling=False):
         """Clone a node of the graph."""
         if profiling:
@@ -318,7 +320,7 @@ class Neo4jGraph(object):
                 clone_id=name,
                 clone_id_var='uid',
                 node_label=self._node_label,
-                preserv_typing=preserv_typing,
+                clone_typing=clone_typing,
                 ignore_naming=ignore_naming)[0] +\
             cypher.return_vars(['uid'])
         result = self.execute(query)
