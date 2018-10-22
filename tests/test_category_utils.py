@@ -5,11 +5,11 @@ from nose.tools import assert_equals
 
 from regraph import (get_relabeled_graph,
                      print_graph)
-from regraph.default.utils import assert_graph_eq
-from regraph.default.category_utils import (pullback,
-                                            pushout,
-                                            pullback_complement,
-                                            nary_pullback)
+from regraph.utils import assert_graph_eq
+from regraph.networkx.category_utils import (pullback,
+                                             pushout,
+                                             pullback_complement,
+                                             nary_pullback)
 
 
 def assert_edges_undir(edges1, edges2):

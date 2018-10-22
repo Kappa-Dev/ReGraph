@@ -3,8 +3,8 @@ import networkx as nx
 from regraph import Rule
 from regraph import keys_by_value
 from regraph import RuleError
-from regraph.default.category_utils import check_homomorphism
-import regraph.default.primitives as prim
+from regraph.networkx.category_utils import check_homomorphism
+import regraph.networkx.primitives as prim
 
 
 class TestRule(object):

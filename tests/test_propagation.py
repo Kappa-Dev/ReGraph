@@ -1,17 +1,17 @@
 """Test of the hierarchy functionality with all typings being partial."""
 import networkx as nx
 
-from regraph import Hierarchy
+from regraph import NetworkXHierarchy
 from regraph import Rule
 from regraph import RewritingError
-from regraph.default import primitives
+from regraph.networkx import primitives
 
 
 class TestPropagation(object):
 
     def __init__(self):
-        hierarchy = Hierarchy()
-        hierarchy = Hierarchy()
+        hierarchy = NetworkXHierarchy()
+        hierarchy = NetworkXHierarchy()
         colors = nx.DiGraph()
         primitives.add_nodes_from(
             colors,

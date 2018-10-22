@@ -11,9 +11,9 @@ class TestGraphs(object):
         self.h = Neo4jHierarchy(uri="bolt://localhost:7687",
                                 user="neo4j",
                                 password="admin")
-        self.h.clear()
+        self.h._clear()
         self.h.add_graph('TestGraph')
-        self.g = self.h.access_graph('TestGraph')
+        self.g = self.h._access_graph('TestGraph')
         nodes = [
             ("a", {"name": "EGFR", "state": "p"}),
             ("b", {"name": "BND"}),
@@ -26,7 +26,7 @@ class TestGraphs(object):
             ("i", {"name": "BND"}),
             ("j", {"name": "G1-S/CDK", "state": "p"}),
             "k", "l", "m"
-            ]
+        ]
         edges = [
             ("a", "b", {"s": "p"}),
             ("d", "b", {"s": "u"}),
@@ -46,13 +46,13 @@ class TestGraphs(object):
             ("k", "m"),
             ("m", "k"),
             ("e", "b", {"s": "u"})
-            ]
+        ]
         self.g.add_nodes_from(nodes)
         self.g.add_edges_from(edges)
 
     @classmethod
     def teardown_class(self):
-        self.h.clear()
+        self.h._clear()
         self.h.close()
 
     def test_add_node(self):
@@ -108,12 +108,12 @@ class TestGraphs(object):
             elif (k == 'id'):
                 assert(attrs_node[k] != attrs_clone[k])
         # Assert that the 2 nodes have the same successors
-        succ_node = self.g.find_successors(node)
-        succ_clone = self.g.find_successors(clone)
+        succ_node = self.g.successors(node)
+        succ_clone = self.g.successors(clone)
         assert(succ_node == succ_clone)
         # Assert that the 2 nodes have the same predecessors
-        pred_node = self.g.find_predecessors(node)
-        pred_clone = self.g.find_predecessors(clone)
+        pred_node = self.g.predecessors(node)
+        pred_clone = self.g.predecessors(clone)
         assert(pred_node == pred_clone)
         # Assert that the edges properties are correctly cloned
 
@@ -121,11 +121,11 @@ class TestGraphs(object):
         # Old node and edges 1
         n1 = "e"
         attrs_n1 = self.g.get_node(n1)
-        succ_n1 = self.g.find_successors(n1)
+        succ_n1 = self.g.successors(n1)
         attrs_edge_out_n1 = {}
         for neighbor in succ_n1:
             attrs_edge_out_n1[neighbor] = self.g.get_edge(n1, neighbor)
-        pred_n1 = self.g.find_predecessors(n1)
+        pred_n1 = self.g.predecessors(n1)
         attrs_edge_in_n1 = {}
         for neighbor in pred_n1:
             attrs_edge_in_n1[neighbor] = self.g.get_edge(neighbor, n1)
@@ -133,11 +133,11 @@ class TestGraphs(object):
         # Old node and edges 2
         n2 = "g"
         attrs_n2 = self.g.get_node(n2)
-        succ_n2 = self.g.find_successors(n2)
+        succ_n2 = self.g.successors(n2)
         attrs_edge_out_n2 = {}
         for neighbor in succ_n2:
             attrs_edge_out_n2[neighbor] = self.g.get_edge(n2, neighbor)
-        pred_n2 = self.g.find_predecessors(n2)
+        pred_n2 = self.g.predecessors(n2)
         attrs_edge_in_n2 = {}
         for neighbor in pred_n2:
             attrs_edge_in_n2[neighbor] = self.g.get_edge(neighbor, n2)
@@ -149,12 +149,12 @@ class TestGraphs(object):
         print(res)
         print('-----')
         attrs_merged = self.g.get_node(merged_node)
-        succ_merged = self.g.find_successors(merged_node)
+        succ_merged = self.g.successors(merged_node)
         attrs_edge_out_merged = {}
         for neighbor in succ_merged:
             attrs_edge_out_merged[neighbor] = self.g.get_edge(merged_node,
                                                               neighbor)
-        pred_merged = self.g.find_predecessors(merged_node)
+        pred_merged = self.g.predecessors(merged_node)
         attrs_edge_in_merged = {}
         for neighbor in pred_merged:
             attrs_edge_in_merged[neighbor] = self.g.get_edge(neighbor,
