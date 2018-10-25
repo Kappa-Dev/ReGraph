@@ -710,7 +710,8 @@ def merging_query1(original_vars, merged_var, merged_id, merged_id_var,
     return query, carry_vars
 
 
-def find_matching(pattern, nodes, node_label, edge_label):
+def find_matching(pattern, node_label, edge_label,
+                  nodes=None, pattern_typing=None):
     """Query that performs pattern match in the graph.
 
     Parameters
@@ -743,24 +744,34 @@ def find_matching(pattern, nodes, node_label, edge_label):
                 "{}.id IN [{}]".format(
                     pattern_n, ", ".join("'{}'".format(n) for n in nodes))
                 for pattern_n in pattern.nodes()) + "\n"
-    else:
-        nodes_with_attrs = []
-        for n, attrs in pattern.nodes(data=True):
-            if len(attrs) != 0:
-                for k in attrs.keys():
-                    for el in attrs[k]:
-                        if type(el) == str:
-                            nodes_with_attrs.append((n, k, "'{}'".format(el)))
-                        else:
-                            nodes_with_attrs.append((n, k, "{}".format(el)))
-        if len(nodes_with_attrs) != 0:
-            query += (
-                "WHERE " +
-                " AND ".join(["{} IN {}.{}".format(
-                    v, n, k) for n, k, v in nodes_with_attrs]) + "\n"
-            )
+
+    if pattern_typing is not None:
+        for typing_graph, mapping in pattern_typing.items():
+            query +=\
+                "WHERE " + " AND ".join(
+                    "({})-[:typing]->(:{} {{id: '{}'}})".format(
+                        n, typing_graph, pattern_typing[typing_graph][n])
+                    for n in pattern.nodes() if n in pattern_typing[typing_graph].keys()
+                ) + "\n "
+
+    nodes_with_attrs = []
+    for n, attrs in pattern.nodes(data=True):
+        if len(attrs) != 0:
+            for k in attrs.keys():
+                for el in attrs[k]:
+                    if type(el) == str:
+                        nodes_with_attrs.append((n, k, "'{}'".format(el)))
+                    else:
+                        nodes_with_attrs.append((n, k, "{}".format(el)))
+    if len(nodes_with_attrs) != 0:
+        query += (
+            "WHERE " +
+            " AND ".join(["{} IN {}.{}".format(
+                v, n, k) for n, k, v in nodes_with_attrs]) + "\n"
+        )
 
     query += "RETURN {}".format(", ".join(pattern.nodes()))
+
     return query
 
 

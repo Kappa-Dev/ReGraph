@@ -7,8 +7,9 @@ from neo4j.exceptions import ConstraintError
 from regraph.neo4j.graphs import Neo4jGraph
 import regraph.neo4j.cypher_utils as cypher
 from regraph.exceptions import (HierarchyError,
-                                InvalidHomomorphism)
-from regraph.utils import normalize_attrs
+                                InvalidHomomorphism,
+                                RewritingError)
+from regraph.utils import (normalize_attrs, keys_by_value)
 
 
 class Neo4jHierarchy(object):
@@ -107,6 +108,14 @@ class Neo4jHierarchy(object):
             g.add_nodes_from(node_list)
         if edge_list is not None:
             g.add_edges_from(edge_list)
+
+    def valid_typing(self, source, target):
+        """Check if the typing is valid."""
+        with self._driver.session() as session:
+            tx = session.begin_transaction()
+            valid_typing = cypher.check_homomorphism(tx, source, target)
+            tx.commit()
+        return valid_typing
 
     def add_typing(self, source, target, mapping, attrs=None, check=True):
         """Add homomorphism to the hierarchy.
@@ -312,7 +321,6 @@ class Neo4jHierarchy(object):
             tx = session.begin_transaction()
             res = cypher._check_homomorphism(tx, source, target)
             tx.commit()
-        print(res)
 
     def find_matching(self, graph_id, pattern,
                       pattern_typing=None, nodes=None):
@@ -370,13 +378,13 @@ class Neo4jHierarchy(object):
             provided `pattern_typing`
         """
         graph = self._access_graph(graph_id)
-        if pattern_typing is None:
-            instances = graph.find_matching(pattern, nodes)
-        else:
-            pass
+        instances = graph.find_matching(
+            pattern, pattern_typing=pattern_typing, nodes=nodes)
+
         return instances
 
-    def rewrite(self, graph_id, rule, instance, rhs_typing=None):
+    def rewrite(self, graph_id, rule, instance,
+                rhs_typing=None, strict=True):
         """Rewrite and propagate the changes up & down.
 
         Rewriting in the hierarchy cosists of an application of the
@@ -409,6 +417,8 @@ class Neo4jHierarchy(object):
             the typing graph given by the respective key of the value
             (note that a node from the rhs can be typed by a set of nodes of
             some graph, e.g. if we want to perform merging of some types, etc).
+        strict : bool, optional
+            Rewriting is strict when propagation down is not allowed
 
         Raises
         ------
@@ -417,6 +427,12 @@ class Neo4jHierarchy(object):
         TypingWarning
             If the rhs typing is inconsistent
         """
+        if rhs_typing is None:
+            rhs_typing = {}
+
+        if strict is True:
+            self._check_rhs_typing(graph_id, rule, instance, rhs_typing)
+
         # Rewriting of the base graph
         g = self._access_graph(graph_id)
         rhs_g = g.rewrite(rule, instance)
@@ -428,7 +444,7 @@ class Neo4jHierarchy(object):
         # Propagation
         if rule.is_restrictive():
             self._propagate_up(graph_id, rule)
-        if rule.is_relaxing():
+        if strict is False and rule.is_relaxing():
             self._propagate_down(graph_id, graph_id, rule)
 
         return rhs_g
@@ -461,13 +477,10 @@ class Neo4jHierarchy(object):
             with self._driver.session() as session:
                 tx = session.begin_transaction()
                 if clone_query:
-                    print(clone_query)
                     tx.run(clone_query)
                 if remove_node_query:
-                    print(remove_node_query)
                     tx.run(remove_node_query)
                 if remove_edge_query:
-                    print(remove_edge_query)
                     tx.run(remove_edge_query)
                 tx.commit()
         for ancestor in predecessors:
@@ -503,13 +516,10 @@ class Neo4jHierarchy(object):
                 with self._driver.session() as session:
                     tx = session.begin_transaction()
                     if merge_query:
-                        print(merge_query)
                         tx.run(merge_query).single()
                     if add_nodes_query:
-                        print(add_nodes_query)
                         tx.run(add_nodes_query).single()
                     if add_edges_query:
-                        print(add_edges_query)
                         tx.run(add_edges_query).single()
                     tx.commit()
 
@@ -558,6 +568,110 @@ class Neo4jHierarchy(object):
             self.execute(cypher.preserve_tmp_typing(graph_id))
         else:
             self.execute(cypher.remove_tmp_typing(graph_id))
+
+    def _check_rhs_typing(self, graph_id, rule, instance, rhs_typing):
+        # Check the rhs typing can be consistently inferred
+        if rule.is_relaxing():
+            for s in self.successors(graph_id):
+                # check if there are no untyped new nodes
+                for n in rule.added_nodes():
+                    if s not in rhs_typing.keys() or\
+                       n not in rhs_typing[s].keys():
+                        raise RewritingError(
+                            "Rewriting is strict (no propagation of types is "
+                            "allowed), typing of the node '{}' "
+                            "in rhs is required (typing by the following "
+                            "graph stays unresolved: '{}')!".format(n, s))
+
+                # check if there are no merges of different types
+                merges = {}
+                for rhs_node, p_nodes in rule.merged_nodes().items():
+                    merged_types = set(
+                        [self.node_type(
+                            graph_id, instance[rule.p_lhs[n]])[s] for n in p_nodes])
+                    if len(merged_types) > 1:
+                        raise RewritingError(
+                            "Rewriting is strict (no propagation of merges is "
+                            "allowed), merging of the nodes [{}] (matched as [{}] in "
+                            "P) requires merge of nodes [{}] "
+                            "in the graph '{}')!".format(
+                                ", ".join([instance[rule.p_lhs[n]] for n in p_nodes]),
+                                ", ".join(p_nodes),
+                                ", ".join(t for t in merged_types), s))
+                    merges[rhs_node] = list(merged_types)[0]
+
+                # check if there are no forbidden edges
+                preserved_nodes = {}
+                for n in rule.rhs.nodes():
+                    if n not in rule.merged_nodes() and\
+                       n not in rule.added_nodes():
+                        preserved_nodes[n] = list(
+                            keys_by_value(rule.p_rhs, n))[0]
+
+                for source, target in rule.added_edges():
+                    if source in rule.added_nodes():
+                        source_typing = rhs_typing[s][source]
+                    elif source in merges.keys():
+                        source_typing = merges[source]
+                    else:
+                        p_source = keys_by_value(rule.p_rhs, source)[0]
+                        source_typing = self.node_type(
+                            graph_id, instance[rule.p_lhs[p_source]])[s]
+
+                    if target in rule.added_nodes():
+                        target_typing = rhs_typing[s][target]
+                    elif target in merges.keys():
+                        target_typing = merges[target]
+                    else:
+                        p_target = keys_by_value(rule.p_rhs, target)[0]
+                        target_typing = self.node_type(
+                            graph_id, instance[rule.p_lhs[p_target]])[s]
+
+                    if not self.exists_edge(s, source_typing, target_typing):
+                        raise RewritingError(
+                            "Rewriting is strict, and addition of an edge "
+                            "'{}'->'{}' from R is not allowed as there ".format(
+                                source, target) +
+                            "is no edge '{}'->'{}'' in the graph '{}')!".format(
+                                source_typing, target_typing, s))
+
+                print(preserved_nodes)
+
+                for n, attrs in rule.added_node_attrs().items():
+                    if n in rule.added_nodes():
+                        typing = rhs_typing[s][n]
+                    elif n in merges.keys():
+                        typing = merges[n]
+                    else:
+                        typing = preserved_nodes[n]
+                    if not self.node_attributes_included(graph_id, s, n, typing):
+                        raise RewritingError(
+                            "Rewriting is strict, and some attributes of " +
+                            "'{}' from P added by the rule are not present in ".format(n) +
+                            "'{}' of the graph {}!".format(typing, s))
+
+                for (source, target), attrs in rule.added_edge_attrs().items():
+                    if source in rule.added_nodes():
+                        source_typing = rhs_typing[s][source]
+                    elif source in merges.keys():
+                        source_typing = merges[source]
+                    else:
+                        source_typing = preserved_nodes[source]
+                    if target in rule.added_nodes():
+                        target_typing = rhs_typing[s][target]
+                    elif target in merges.keys():
+                        target_typing = merges[target]
+                    else:
+                        target_typing = preserved_nodes[target]
+                    if not self.edge_attributes_included(
+                        graph_id, s, (source, target),
+                            (source_typing, target_typing)):
+                        raise RewritingError(
+                            "Rewriting is strict, and some attributes of " +
+                            "'{}'->'{}' from P added by the rule are not present in ".format(
+                                source, target) +
+                            "'{}'->'{}' of the graph {}!".format(
+                                source_typing, target_typing, s))
 
     def node_type(self, graph_id, node_id):
         """Get a list of the immediate types of a node.
@@ -643,3 +757,39 @@ class Neo4jHierarchy(object):
     def unique_graph_id(self, prefix):
         """Generate a new graph id starting with a prefix."""
         pass
+
+    def exists_edge(self, graph_id, s, t):
+        """Test if an edge 's'->'t' exists in 'graph_id'."""
+        query = cypher.exists_edge(
+            s, t,
+            node_label=graph_id, edge_label="edge")
+        result = self.execute(query)
+        for record in result:
+            if "result" in record.keys():
+                return record["result"]
+
+    def edge_attributes_included(self, g1, g2, e1, e2):
+        query = (
+            cypher.match_edge("s1", "t1", e1[0], e1[0], "rel1") +
+            "WITH rel1\n" +
+            cypher.match_edge("s2", "t2", e2[0], e2[0], "rel2") +
+            "WITH rel1, rel2, \n" +
+            "\t" + cypher.attributes_inclusion("rel1", "rel2", "invalid") + " \n" +
+            "RETURN invalid <> 0 as result"
+        )
+        result = self.execute(query)
+        for record in result:
+            if "result" in record.keys():
+                return record["result"]
+
+    def node_attributes_included(self, g1, g2, n1, n2):
+        query = (
+            cypher.match_nodes({"n1": n1, "n2": n2}) +
+            "WITH n1, n2, \n" +
+            "\t" + cypher.attributes_inclusion("n1", "n2", "invalid") + " \n" +
+            "RETURN invalid <> 0 as result"
+        )
+        result = self.execute(query)
+        for record in result:
+            if "result" in record.keys():
+                return record["result"]

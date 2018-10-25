@@ -7,6 +7,9 @@ from . import generic
 from . import rewriting
 
 
+# def check_functional()
+
+
 def check_homomorphism(tx, domain, codomain, total=True):
     """Check if the homomorphism is valid.
 
@@ -73,7 +76,9 @@ def check_homomorphism(tx, domain, codomain, total=True):
                 x, y) for x, y in xy_ids])
         )
 
-    # Check if all the properties of a node of the domain are in its image
+    # "CASE WHEN size(apoc.text.regexGroups(m_props, 'IntegerSet\\[(\\d+|minf)-(\\d+|inf)\\]') AS value"
+
+    # Check if all the attributes of a node of the domain are in its image
     query3 = (
         "MATCH (n:{})-[:typing]->(m:{})\n".format(
             domain, codomain) +
@@ -83,8 +88,11 @@ def check_homomorphism(tx, domain, codomain, total=True):
         "\tinvalid + CASE\n" +
         "\t\tWHEN NOT k IN keys(m_props) THEN 1\n" +
         "\t\tELSE REDUCE(invalid_values = 0, v in n_props[k] |\n" +
-        "\t\t\tinvalid_values + CASE\n" +
-        "\t\t\t\tWHEN NOT v IN m_props[k] THEN 1 ELSE 0 END)\n" +
+        "\t\t\tinvalid_values + CASE m_props[k][0]\n" +
+        "\t\t\t\tWHEN 'IntegerSet' THEN CASE WHEN toInt(v) IS NULL THEN 1 ELSE 0 END\n" +
+        "\t\t\t\tWHEN 'StringSet' THEN CASE WHEN toString(v) <> v THEN 1 ELSE 0 END\n" +
+        "\t\t\t\tWHEN 'BooleanSet' THEN CASE WHEN v=true OR v=false THEN 0 ELSE 1 END\n" +
+        "\t\t\t\tELSE CASE WHEN NOT v IN m_props[k] THEN 1 ELSE 0 END END)\n" +
         "\t\tEND) AS invalid, n_id, m_id\n" +
         "WHERE invalid <> 0\n" +
         "RETURN n_id, m_id, invalid\n"
@@ -95,12 +103,12 @@ def check_homomorphism(tx, domain, codomain, total=True):
         invalid_typings.append((record['n_id'], record['m_id']))
     if len(invalid_typings) != 0:
         raise InvalidHomomorphism(
-            "Node properties are not preserved!\n" +
-            "\n".join(["Properties of nodes source: '{}'".format(n) +
+            "Node attributes are not preserved!\n" +
+            "\n".join(["Attributes of nodes source: '{}' ".format(n) +
                        "and target: '{}' do not match!".format(m)
                        for n, m in invalid_typings]))
 
-    # Check if all the properties of an edge of the domain are in its image
+    # Check if all the attributes of an edge of the domain are in its image
     query4 = (
         "MATCH (n:{})-[rel_orig:edge]->(m:{})\n".format(
             domain, domain) +
@@ -114,8 +122,11 @@ def check_homomorphism(tx, domain, codomain, total=True):
         "\tinvalid + CASE\n" +
         "\t\tWHEN NOT k IN keys(rel_img_props) THEN 1\n" +
         "\t\tELSE REDUCE(invalid_values = 0, v in rel_orig_props[k] |\n" +
-        "\t\t\tinvalid_values + CASE\n" +
-        "\t\t\t\tWHEN NOT v IN rel_img_props[k] THEN 1 ELSE 0 END)\n" +
+        "\t\t\tinvalid_values + CASE rel_img_props[k][0]\n" +
+        "\t\t\t\tWHEN 'IntegerSet' THEN CASE WHEN toInt(v) IS NULL THEN 1 ELSE 0 END\n" +
+        "\t\t\t\tWHEN 'StringSet' THEN CASE WHEN toString(v) <> v THEN 1 ELSE 0 END\n" +
+        "\t\t\t\tWHEN 'BooleanSet' THEN CASE WHEN v=true OR v=false THEN 0 ELSE 1 END\n" +
+        "\t\t\t\tELSE CASE WHEN NOT v IN rel_img_props[k] THEN 1 ELSE 0 END END)\n" +
         "\t\tEND) AS invalid, n_id, m_id, x_id, y_id\n" +
         "WHERE invalid <> 0\n" +
         "RETURN n_id, m_id, x_id, y_id, invalid\n"
@@ -127,9 +138,9 @@ def check_homomorphism(tx, domain, codomain, total=True):
                               record['x_id'], record['y_id']))
     if len(invalid_edges) != 0:
         raise InvalidHomomorphism(
-            "Edge properties are not preserved!\n" +
-            "\n".join(["Properties of edges ({})->({})".format(n, m) +
-                       "and ({})->({}) do not match!".format(x, y)
+            "Edge attributes are not preserved!\n" +
+            "\n".join(["Attributes of edges '{}'->'{}' ".format(n, m) +
+                       "and '{}'->'{}' do not match!".format(x, y)
                        for n, m, x, y in invalid_edges])
         )
 
@@ -172,7 +183,6 @@ def check_consistency(tx, source, target):
         "RETURN pred_label, suc_label, s_id, t_id\n"
     )
 
-    print(query)
     result = tx.run(query)
 
     missing_typing = []
@@ -199,7 +209,6 @@ def check_rhs_consistency(tx, graph_id):
         "WITH DISTINCT t_i\n" +
         "RETURN collect(t_i.id)\n"
     )
-    print(query1)
 
     # If graph doesn't have multiple paths to the same successorts
     # then there is nothing to check
@@ -298,7 +307,7 @@ def remove_node_propagation_query(graph_id, predecessor_id):
         "OPTIONAL MATCH (n)-[:typing]->(x:{})\n".format(graph_id) +
         "FOREACH(dummy IN CASE WHEN x IS NULL THEN [1] ELSE [] END |\n" +
         "\t" + rewriting.remove_nodes(['n']) + ")\n"
-        "// Removal of node properties in '{}'\n".format(predecessor_id) +
+        "// Removal of node attributes in '{}'\n".format(predecessor_id) +
         "WITH n, x\n".format(
             predecessor_id, graph_id) +
         "WHERE x IS NOT NULL AND " +
@@ -389,7 +398,7 @@ def add_node_propagation_query(origin_graph_id, graph_id, successor_id):
     carry_vars = set()
     # add nodes in T for each node without image in G + add new_props
     query = (
-        "// Addition of nodes and properties in '{}'\n".format(
+        "// Addition of nodes and attributes in '{}'\n".format(
             successor_id) +
         "MATCH (n:{})\n".format(graph_id) +
         "OPTIONAL MATCH (n)<-[:typing*0..]-()-[:typing*]->(existing_img:{})\n".format(
@@ -429,7 +438,7 @@ def add_edge_propagation_query(graph_id, successor_id):
     carry_vars = set()
     # add edges in T for each edge without image in G + add new_props
     query = (
-        "\n// Addition of edges and properties in '{}'\n".format(
+        "\n// Addition of edges and attributes in '{}'\n".format(
             successor_id) +
         "MATCH (n:{})-[rel:edge]->(m:{}), ".format(
             graph_id, graph_id) +
@@ -458,7 +467,6 @@ def remove_tmp_typing(rewritten_graph):
         "MATCH (n:{})-[t:tmp_typing]->()\n".format(rewritten_graph) +
         "DELETE t\n"
     )
-    print(query)
     return query
 
 
@@ -478,5 +486,4 @@ def preserve_tmp_typing(rewritten_graph):
         "\tMERGE (n)-[:transitive_typing]->(m)\n" +
         ")\n"
     )
-    print(query)
     return query

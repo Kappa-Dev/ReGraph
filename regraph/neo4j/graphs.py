@@ -160,13 +160,14 @@ class Neo4jGraph(object):
         for n in nodes:
             try:
                 n_id, attrs = n
-                normalize_attrs(attrs)
+                normalize_attrs(
+                    attrs)
                 q, carry_variables =\
                     cypher.add_node(
                         n_id, n_id, 'new_id_' + n_id,
                         node_label=self._node_label,
                         attrs=attrs)
-            except ValueError:
+            except ValueError as e:
                 q, carry_variables =\
                     cypher.add_node(
                         n, n, 'new_id_' + n,
@@ -393,14 +394,16 @@ class Neo4jGraph(object):
         if len(uid_records) > 0:
             return uid_records[0]
 
-    def find_matching(self, pattern, nodes=None):
+    def find_matching(self, pattern, nodes=None, pattern_typing=None):
         """Find matchings of a pattern in the graph."""
         if len(pattern.nodes()) != 0:
             result = self.execute(
                 cypher.find_matching(
-                    pattern, nodes,
+                    pattern,
                     node_label=self._node_label,
-                    edge_label=self._edge_label))
+                    edge_label=self._edge_label,
+                    nodes=nodes,
+                    pattern_typing=pattern_typing))
             instances = list()
 
             for record in result:

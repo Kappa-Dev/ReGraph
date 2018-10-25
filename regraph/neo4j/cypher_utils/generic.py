@@ -3,6 +3,8 @@ import uuid
 
 from regraph.attribute_sets import FiniteSet
 
+RESERVED_SET_NAMES = ["IntegerSet", "StringSet", "BooleanSet"]
+
 
 def delete_var(var, detach=False, breakline=True):
     """Query for deleting the input variable.
@@ -47,11 +49,16 @@ def set_attributes(var_name, attrs):
                         elements.append("'{}'".format(el))
                     else:
                         elements.append("{}".format(el))
-                query += "SET {}.{}=[{}] ".format(var_name, k, ", ".join(
-                    el for el in elements))
+                if value not in RESERVED_SET_NAMES:
+                    query += "SET {}.{}=[{}] ".format(var_name, k, ", ".join(
+                        el for el in elements))
+                else:
+                    query += "SET {}.{}={} ".format(var_name, k, ", ".join(
+                        el for el in elements))
             else:
                 raise ValueError(
-                    "Unknown type of attribute '{}': '{}'".format(k, type(value)))
+                    "Unknown type of attribute '{}': '{}'".format(
+                        k, type(value)))
     return query
 
 
@@ -732,5 +739,30 @@ def nb_of_attrs_mismatch(source, target):
         "\t\t\tinvalid_values + CASE\n" +
         "\t\t\t\tWHEN NOT v IN {}[k] THEN 1 ELSE 0 END)\n".format(target) +
         "\t\tEND)"
+    )
+    return query
+
+
+def exists_edge(s, t, node_label, edge_label):
+    query = (
+        "RETURN EXISTS( (:{} {{ id: '{}' }})-[:{}]->(:{} {{ id: '{}' }}) ) AS result".format(
+            node_label, s, edge_label, node_label, t)
+    )
+    return query
+
+
+def attributes_inclusion(source_var, target_var, result_var):
+    query = (
+        "REDUCE(invalid = 0, k in filter(k in keys(properties({})) WHERE k <> 'id') |\n".format(
+            source_var) +
+        "\tinvalid + CASE\n" +
+        "\t\tWHEN NOT k IN keys(properties({})) THEN 1\n".format(target_var) +
+        "\t\tELSE REDUCE(invalid_values = 0, v in properties({})[k] |\n".format(source_var) +
+        "\t\t\tinvalid_values + CASE properties({})[k][0]\n".format(target_var) +
+        "\t\t\t\tWHEN 'IntegerSet' THEN CASE WHEN toInt(v) IS NULL THEN 1 ELSE 0 END\n" +
+        "\t\t\t\tWHEN 'StringSet' THEN CASE WHEN toString(v) <> v THEN 1 ELSE 0 END\n" +
+        "\t\t\t\tWHEN 'BooleanSet' THEN CASE WHEN v=true OR v=false THEN 0 ELSE 1 END\n" +
+        "\t\t\t\tELSE CASE WHEN NOT v IN properties({})[k] THEN 1 ELSE 0 END END)\n".format(target_var) +
+        "\t\tEND) AS {}".format(result_var)
     )
     return query
