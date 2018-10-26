@@ -1,23 +1,21 @@
 """Collection of tests for ReGraph_neo4j graphs."""
 
-from regraph.neo4j.hierarchy import Neo4jHierarchy
+from regraph.neo4j import Neo4jGraph
 from regraph.neo4j.cypher_utils import *
 
 
-class TestGraphs(object):
+class TestNeo4jGraph(object):
 
     @classmethod
     def setup_class(self):
-        self.h = Neo4jHierarchy(uri="bolt://localhost:7687",
+        self.g = Neo4jGraph(uri="bolt://localhost:7687",
                                 user="neo4j",
                                 password="admin")
-        self.h._clear()
-        self.h.add_graph('TestGraph')
-        self.g = self.h._access_graph('TestGraph')
+        self.g._clear()
         nodes = [
             ("a", {"name": "EGFR", "state": "p"}),
             ("b", {"name": "BND"}),
-            ("c", {"name": "Grb2", "aa": "S", "loc": 90}),
+            ("c", {"name": "Grb2", "aa": "S", "loc": {90}}),
             ("d", {"name": "SH2"}),
             ("e", {"name": "EGFR"}),
             ("f", {"name": "BND"}),
@@ -50,10 +48,10 @@ class TestGraphs(object):
         self.g.add_nodes_from(nodes)
         self.g.add_edges_from(edges)
 
-    @classmethod
-    def teardown_class(self):
-        self.h._clear()
-        self.h.close()
+    # @classmethod
+    # def teardown_class(self):
+    #     self.h._clear()
+    #     self.h.close()
 
     def test_add_node(self):
         # Case 1 : "x" is not in the graph
@@ -83,23 +81,25 @@ class TestGraphs(object):
         # Case 1 : "a" is in the graph
         node = "x"
         self.g.remove_node(node)
-        attrs_edge = self.g.get_node(node)
-        assert(attrs_edge is None)
+        attrs = self.g.get_node(node)
+        assert(attrs is None or len(attrs) == 0)
 
     def test_remove_edge(self):
         s = "a"
         t = "d"
         self.g.remove_edge(s, t)
         attrs_edge = self.g.get_edge(s, t)
-        assert(attrs_edge is None)
+        assert(attrs_edge is None or len(attrs_edge) == 0)
 
     def test_clone_node(self):
         node = "b"
         clone = "b_clone"
         self.g.clone_node(node, clone)
+
         # Assert that the 2 nodes have the same properties
         attrs_node = self.g.get_node(node)
         attrs_clone = self.g.get_node(clone)
+
         assert(set(attrs_node.keys()) == set(attrs_clone.keys()))
         for k in attrs_node.keys():
             if (k != 'id') and (k != 'count'):
