@@ -1,7 +1,10 @@
 """Collection of utils for generation of rewriting-related queries."""
 from . import generic
 
-from regraph.attribute_sets import FiniteSet
+from regraph.attribute_sets import (FiniteSet,
+                                    IntegerSet,
+                                    RegexSet)
+from regraph.exceptions import ReGraphError
 
 
 def add_node(var_name, node_id, node_id_var, node_label,
@@ -134,7 +137,22 @@ def add_attributes(var_name, attrs):
     """Generate a subquery to add attributes to an existing node."""
     query = ""
     for k, value in attrs.items():
-        if isinstance(value, FiniteSet):
+        if isinstance(value, IntegerSet):
+            if value.is_universal:
+                query += "\tSET {}.{} = 'IntegerSet')\n".format(var_name, k)
+            else:
+                raise ReGraphError(
+                    "Non universal IntegerSet is not allowed as "
+                    "an attribute value (not implemented)")
+        elif isinstance(value, RegexSet):
+            if value.is_universal:
+                query += "\tSET {}.{} = 'StringSet')\n".format(var_name, k)
+            else:
+                raise ReGraphError(
+                    "Non universal RegexSet is not allowed as "
+                    "an attribute value (not implemented)")
+        elif isinstance(value, FiniteSet):
+            # normalize elements to string
             elements = []
             for el in value:
                 if type(el) == str:
@@ -142,22 +160,21 @@ def add_attributes(var_name, attrs):
                 else:
                     elements.append("{}".format(el))
             query += (
-                "FOREACH(dummy IN CASE WHEN NOT '{}' IN keys({}) THEN [1] ELSE [] END |\n".format(
+                "FOREACH (dummy IN CASE WHEN '{}' IN keys({}) THEN [] ELSE [1] END |".format(
                     k, var_name) +
-                "\tSET {}.{} = [{}])\n".format(
-                    var_name, k, ", ".join(el for el in elements))
-            )
-            query += (
+                "\tSET {}.{} = [{}])\n".format(var_name, k, ", ".join(
+                    el for el in elements)) +
                 "FOREACH(dummy IN CASE WHEN '{}' IN keys({}) THEN [1] ELSE [] END |\n".format(
                     k, var_name) +
                 "\tFOREACH(val in [{}] |\n".format(", ".join(el for el in elements)) +
-                "\t\tFOREACH(dummy IN CASE WHEN NOT val IN {}.{} THEN [1] ELSE [] END |\n".format(
+                "\t\tFOREACH(dummy1 IN CASE WHEN NOT val IN {}.{} THEN [1] ELSE [] END |\n".format(
                     var_name, k) +
                 "\t\t\tSET {}.{} = {}.{} + [val])))\n".format(var_name, k, var_name, k)
             )
         else:
             raise ValueError(
                 "Unknown type of attribute '{}': '{}'".format(k, type(value)))
+
     return query
 
 
@@ -165,7 +182,21 @@ def remove_attributes(var_name, attrs):
     """Generate a subquery to remove attributes to an existing node."""
     query = ""
     for k, value in attrs.items():
-        if isinstance(value, FiniteSet):
+        if isinstance(value, IntegerSet):
+            if value.is_universal:
+                query += "\tSET {}.{} = [])\n".format(var_name, k)
+            else:
+                raise ReGraphError(
+                    "Non universal IntegerSet is not allowed as "
+                    "an attribute value (not implemented)")
+        elif isinstance(value, RegexSet):
+            if value.is_universal:
+                query += "\tSET {}.{} = [])\n".format(var_name, k)
+            else:
+                raise ReGraphError(
+                    "Non universal RegexSet is not allowed as "
+                    "an attribute value (not implemented)")
+        elif isinstance(value, FiniteSet):
             elements = []
             for el in value:
                 if type(el) == str:
@@ -190,8 +221,8 @@ def remove_attributes(var_name, attrs):
 
 
 def cloning_query(original_var, clone_var, clone_id, clone_id_var,
-                  node_label, clone_typing=True,
-                  sucs_to_ignore=None, preds_to_ignore=None,
+                  node_label, edge_labels, sucs_to_ignore=None,
+                  preds_to_ignore=None,
                   carry_vars=None, ignore_naming=False):
     """Generate query for cloning a node.
 
@@ -302,79 +333,57 @@ def cloning_query(original_var, clone_var, clone_id, clone_id_var,
             ", ".join("'{}'".format(n) for n in preds_to_ignore)) +
         ", ".join(carry_vars) + " \n"
     )
-    query += (
-        "// match successors and out-edges of a node to be cloned\n" +
-        "OPTIONAL MATCH ({})-[out_edge:edge]->(suc) \n".format(original_var) +
-        "WHERE NOT suc.id IS NULL AND NOT suc.id IN sucIgnore\n" +
-        "WITH collect({neighbor: suc, edge: out_edge}) as suc_maps, predIgnore, " +
-        ", ".join(carry_vars) + " \n"
-    )
 
-    carry_vars.add("suc_maps")
-    query += (
-        "// match predecessors and in-edges of a node to be cloned\n" +
-        "OPTIONAL MATCH (pred)-[in_edge:edge]->({}) \n".format(original_var) +
-        "WHERE NOT pred.id IS NULL AND NOT pred.id IN predIgnore\n" +
-        "WITH collect({neighbor: pred, edge: in_edge}) as pred_maps, " +
-        ", ".join(carry_vars) + " \n"
-    )
-    carry_vars.add("pred_maps")
+    carry_vars.add("sucIgnore")
+    carry_vars.add("predIgnore")
 
-    query += (
-        "// copy all incident edges of the original node to the clone\n" +
-        "FOREACH (suc_map IN suc_maps | \n"
-        "\tFOREACH (suc IN "
-        "CASE WHEN suc_map.neighbor IS NOT NULL THEN [suc_map.neighbor] ELSE [] END |\n"
-        "\t\tMERGE ({})-[new_edge:edge]->(suc) \n".format(clone_var) +
-        "\t\tSET new_edge = suc_map.edge))\n"
-        "FOREACH (pred_map IN pred_maps | \n"
-        "\tFOREACH (pred IN "
-        "CASE WHEN pred_map.neighbor IS NOT NULL THEN [pred_map.neighbor] ELSE [] END |\n"
-        "\t\tMERGE (pred)-[new_edge:edge]->({}) \n".format(clone_var) +
-        "\t\tSET new_edge = pred_map.edge))\n" +
-        "// copy self loop\n" +
-        "FOREACH (suc_map IN suc_maps | \n"
-        "\tFOREACH (self_loop IN "
-        "CASE WHEN suc_map.neighbor = {} THEN [suc_map.edge] ELSE [] END |\n".format(
-            original_var) +
-        "\t\tMERGE ({})-[new_edge:edge]->({}) \n".format(clone_var, clone_var) +
-        "\t\tSET new_edge = self_loop))\n"
-    )
-    carry_vars.remove("suc_maps")
-    carry_vars.remove("pred_maps")
-
-    if clone_typing:
+    for label in edge_labels:
         query += (
-            generic.with_vars(carry_vars) + "\n" +
-            "OPTIONAL MATCH ({})-[out_typ_edge:typing]->(suc_typ)\n".format(
-                original_var) +
-            "WITH collect({neighbor: suc_typ, edge: out_typ_edge}) as suc_typ_maps, " +
+            "// match successors and out-edges of a node to be cloned\n" +
+            "OPTIONAL MATCH ({})-[out_edge:{}]->(suc) \n".format(
+                original_var, label) +
+            "WHERE NOT suc.id IS NULL AND NOT suc.id IN sucIgnore\n" +
+            "WITH collect({neighbor: suc, edge: out_edge}) as suc_maps, " +
             ", ".join(carry_vars) + " \n"
         )
-        carry_vars.add("suc_typ_maps")
+
+        carry_vars.add("suc_maps")
         query += (
-            "OPTIONAL MATCH (pred_typ)-[in_typ_edge:typing]->({}) \n".format(
-                original_var) +
-            "WITH collect({neighbor: pred_typ, edge: in_typ_edge}) as pred_typ_maps, " +
+            "// match predecessors and in-edges of a node to be cloned\n" +
+            "OPTIONAL MATCH (pred)-[in_edge:{}]->({}) \n".format(
+                label, original_var) +
+            "WHERE NOT pred.id IS NULL AND NOT pred.id IN predIgnore\n" +
+            "WITH collect({neighbor: pred, edge: in_edge}) as pred_maps, " +
             ", ".join(carry_vars) + " \n"
         )
-        carry_vars.add("pred_typ_maps")
+        carry_vars.add("pred_maps")
 
         query += (
-            "// copy all incident typing edges of the original node to the clone\n" +
-            "FOREACH (suc_map IN suc_typ_maps | \n"
+            "// copy all incident edges of the original node to the clone\n" +
+            "FOREACH (suc_map IN suc_maps | \n"
             "\tFOREACH (suc IN "
             "CASE WHEN suc_map.neighbor IS NOT NULL THEN [suc_map.neighbor] ELSE [] END |\n"
-            "\t\tMERGE ({})-[new_edge:typing]->(suc) \n".format(clone_var) +
+            "\t\tCREATE ({})-[new_edge:{}]->(suc) \n".format(clone_var, label) +
             "\t\tSET new_edge = suc_map.edge))\n"
-            "FOREACH (pred_map IN pred_typ_maps | \n"
+            "FOREACH (pred_map IN pred_maps | \n"
             "\tFOREACH (pred IN "
             "CASE WHEN pred_map.neighbor IS NOT NULL THEN [pred_map.neighbor] ELSE [] END |\n"
-            "\t\tMERGE (pred)-[new_edge:typing]->({}) \n".format(clone_var) +
-            "\t\tSET new_edge = pred_map.edge))\n"
+            "\t\tCREATE (pred)-[new_edge:{}]->({}) \n".format(label, clone_var) +
+            "\t\tSET new_edge = pred_map.edge))\n" +
+            "// copy self loop\n" +
+            "FOREACH (suc_map IN suc_maps | \n"
+            "\tFOREACH (self_loop IN "
+            "CASE WHEN suc_map.neighbor = {} THEN [suc_map.edge] ELSE [] END |\n".format(
+                original_var) +
+            "\t\tCREATE ({})-[new_edge:{}]->({}) \n".format(
+                clone_var, label, clone_var) +
+            "\t\tSET new_edge = self_loop))\n"
         )
-        carry_vars.remove("suc_typ_maps")
-        carry_vars.remove("pred_typ_maps")
+        carry_vars.remove("suc_maps")
+        carry_vars.remove("pred_maps")
+        query += "WITH " + ", ".join(carry_vars) + "\n"
+    carry_vars.remove("sucIgnore")
+    carry_vars.remove("predIgnore")
 
     return query, carry_vars
 
@@ -1297,7 +1306,7 @@ def multiple_cloning_query(original_var, clone_var, clone_id, clone_id_var,
         "OPTIONAL MATCH ({})-[out_edge:{}]->(suc) \n".format(
             original_var, edge_label) +
         "WHERE NOT suc.id IS NULL AND NOT suc.id IN sucIgnore\n" +
-        "WITH collect({neighbor: suc, id: suc.id, edge: out_edge}) as suc_maps, predIgnore, " +
+        "WITH collect({neighbor: suc, id: suc.id, edge: out_edge}) as suc_maps, " +
         ", ".join(carry_vars) + " \n"
     )
 

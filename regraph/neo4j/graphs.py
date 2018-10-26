@@ -2,7 +2,7 @@
 from neo4j.v1 import GraphDatabase
 
 from regraph.utils import normalize_attrs
-import regraph.neo4j.cypher_utils as cypher
+from . import cypher_utils as cypher
 
 
 class Neo4jGraph(object):
@@ -219,6 +219,94 @@ class Neo4jGraph(object):
             result = self.execute(query)
             return result
 
+    def add_node_attrs(self, node, attrs):
+        """Add attributes to the node."""
+        normalize_attrs(attrs)
+        query = (
+            cypher.match_node("n", node, self._node_label) +
+            cypher.add_attributes("n", attrs)
+        )
+        result = self.execute(query)
+        return result
+
+    def set_node_attrs(self, node, attrs, update=False):
+        """Overwrite all the node attributes.
+
+        node :
+            Id of the node whose attrs should be set
+        attrs : dict
+            Dictionary containing attrs
+        update : optional
+            If is set to False, updates only the attributes
+            whose keys are in 'attrs', all the attributes not
+            mentioned in 'attrs' stay the same. Otherwise,
+            overwrites all the attributes (default: False)
+        """
+        normalize_attrs(attrs)
+        query = (
+            cypher.match_node("n", node, self._node_label) +
+            cypher.set_attributes("n", attrs, update)
+        )
+        result = self.execute(query)
+        return result
+
+    def remove_node_attrs(self, node, attrs):
+        """Remove attributes from the node."""
+        normalize_attrs(attrs)
+        query = (
+            cypher.match_node(
+                "n", node, self._node_label) +
+            cypher.remove_attributes("n", attrs)
+        )
+        result = self.execute(query)
+        return result
+
+    def add_edge_attrs(self, source, target, attrs):
+        """Add attributes to the edge."""
+        normalize_attrs(attrs)
+        query = (
+            cypher.match_edge(
+                "s", "t", source, target, "rel", self._edge_label) +
+            cypher.add_attributes("rel", attrs)
+        )
+        result = self.execute(query)
+        return result
+
+    def set_edge_attrs(self, source, target, attrs, update=False):
+        """Overwrite all the edge attributes.
+
+        source :
+            Id of the source node of the edge
+        target :
+            Id of the target node of the edge
+        attrs : dict
+            Dictionary containing attrs
+        update : optional
+            If is set to False, updates only the attributes
+            whose keys are in 'attrs', all the attributes not
+            mentioned in 'attrs' stay the same. Otherwise,
+            overwrites all the attributes (default: False)
+        """
+        normalize_attrs(attrs)
+        query = (
+            cypher.match_edge(
+                "s", "t", source, target, "rel", self._edge_label) +
+            cypher.set_attributes("rel", attrs, update)
+        )
+        result = self.execute(query)
+        return result
+
+    def remove_edge_attrs(self, source, target, attrs):
+        """Remove attributes from the edge."""
+        normalize_attrs(attrs)
+        query = (
+            cypher.match_edge(
+                "s", "t", source, target, "rel", self._edge_label) +
+            cypher.remove_attributes("rel", attrs)
+        )
+        result = self.execute(query)
+        return result
+
     def remove_node(self, node, profiling=False):
         """Remove a node from the graph db."""
         if profiling:
@@ -262,27 +350,53 @@ class Neo4jGraph(object):
         result = self.execute(query)
         return [(d["n.id"], d["m.id"]) for d in result]
 
-    def get_node(self, node_id):
+    def get_node_attrs(self, node_id):
         """Return node's attributes."""
-        query = cypher.get_node(node_id, node_label=self._node_label)
+        query = cypher.get_node_attrs(
+            node_id, self._node_label,
+            "attributes")
         result = self.execute(query)
-        try:
-            return dict(result.value()[0])
-        except(IndexError):
-            return None
+        return cypher.properties_to_attributes(
+            result, "attributes")
+
+    def get_node(self, node_id):
+        """Call 'get_node_attrs'."""
+        return self.get_node_attrs(node_id)
+
+    def get_edge_attrs(self, s, t):
+        """Return edge attributes."""
+        query = cypher.get_edge_attrs(
+            s, t, self._edge_label,
+            "attributes")
+        result = self.execute(query)
+        return cypher.properties_to_attributes(
+            result, "attributes")
 
     def get_edge(self, s, t):
-        """Return edge attributes."""
-        query = cypher.get_edge(
+        """Call 'get_edge_attrs'."""
+        return self.get_edge_attrs(s, t)
+
+    def exists_edge(self, s, t):
+        """Test if an edge 's'->'t' exists."""
+        query = cypher.exists_edge(
             s, t,
-            source_label=self._node_label,
-            target_label=self._node_label,
+            node_label=self._node_label,
             edge_label=self._edge_label)
         result = self.execute(query)
-        try:
-            return dict(result.value()[0])
-        except(IndexError):
-            return None
+        for record in result:
+            if "result" in record.keys():
+                return record["result"]
+
+    def relabel_node(self, node_id, new_id):
+        """Change the 'id' property of the node."""
+        attrs = {"id": new_id}
+        normalize_attrs(attrs)
+        query = (
+            cypher.match_node("n", node_id) +
+            cypher.set_node_attrs("n", attrs, update=False)
+        )
+        result = self.execute(query)
+        return result
 
     def successors(self, node):
         """Return node's successors id."""
@@ -302,9 +416,12 @@ class Neo4jGraph(object):
         pred = set(self.execute(query).value())
         return(pred)
 
-    def clone_node(self, node, name=None, clone_typing=True,
+    def clone_node(self, node, name=None, edge_labels=None,
                    ignore_naming=False, profiling=False):
         """Clone a node of the graph."""
+        if edge_labels is None:
+            edge_labels = [self._edge_label]
+
         if profiling:
             query = "PROFILE\n"
         else:
@@ -321,9 +438,10 @@ class Neo4jGraph(object):
                 clone_id=name,
                 clone_id_var='uid',
                 node_label=self._node_label,
-                clone_typing=clone_typing,
+                edge_labels=edge_labels,
                 ignore_naming=ignore_naming)[0] +\
             cypher.return_vars(['uid'])
+
         result = self.execute(query)
         uid_records = []
         for record in result:

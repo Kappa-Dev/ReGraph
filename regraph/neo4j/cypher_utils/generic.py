@@ -1,7 +1,11 @@
 """Collection of generic utils for Cypher queries generation."""
 import uuid
 
-from regraph.attribute_sets import FiniteSet
+from regraph.attribute_sets import (FiniteSet,
+                                    IntegerSet,
+                                    RegexSet)
+from regraph.exceptions import ReGraphError
+
 
 RESERVED_SET_NAMES = ["IntegerSet", "StringSet", "BooleanSet"]
 
@@ -37,12 +41,26 @@ def generate_var_name():
     return uid
 
 
-def set_attributes(var_name, attrs):
+def set_attributes(var_name, attrs, update=False):
     """Generate a subquery to set the attributes for some variable."""
     query = ""
     if attrs:
         for k, value in attrs.items():
-            if isinstance(value, FiniteSet):
+            if isinstance(value, IntegerSet):
+                if value.is_universal:
+                    query += "\tSET {}.{} = 'IntegerSet'\n".format(var_name, k)
+                else:
+                    raise ReGraphError(
+                        "Non universal IntegerSet is not allowed as "
+                        "an attribute value (not implemented)")
+            elif isinstance(value, RegexSet):
+                if value.is_universal:
+                    query += "\tSET {}.{} = 'StringSet'\n".format(var_name, k)
+                else:
+                    raise ReGraphError(
+                        "Non universal RegexSet is not allowed as "
+                        "an attribute value (not implemented)")
+            elif isinstance(value, FiniteSet):
                 elements = []
                 for el in value:
                     if type(el) == str:
@@ -50,15 +68,23 @@ def set_attributes(var_name, attrs):
                     else:
                         elements.append("{}".format(el))
                 if value not in RESERVED_SET_NAMES:
-                    query += "SET {}.{}=[{}] ".format(var_name, k, ", ".join(
+                    query += "SET {}.{}=[{}]\n".format(var_name, k, ", ".join(
                         el for el in elements))
                 else:
-                    query += "SET {}.{}={} ".format(var_name, k, ", ".join(
+                    query += "SET {}.{}={}\n".format(var_name, k, ", ".join(
                         el for el in elements))
             else:
                 raise ValueError(
                     "Unknown type of attribute '{}': '{}'".format(
                         k, type(value)))
+        if update is True:
+            # remove all the attributes not mentioned in 'attrs'
+            query += (
+                "SET {} = apoc.map.clean(properties({}), \n".format(var_name, var_name) +
+                "\tfilter(x IN keys({}) WHERE NOT x IN [{}]), [])".format(
+                    var_name,
+                    ", ".join(k for k in attrs.keys()))
+            )
     return query
 
 
@@ -69,7 +95,21 @@ def generate_attributes(attrs):
     else:
         attrs_items = []
         for k, value in attrs.items():
-            if isinstance(value, FiniteSet):
+            if isinstance(value, IntegerSet):
+                if value.is_universal:
+                    attrs_items.append("{}: 'IntegerSet'\n".format(k))
+                else:
+                    raise ReGraphError(
+                        "Non universal IntegerSet is not allowed as "
+                        "an attribute value (not implemented)")
+            elif isinstance(value, RegexSet):
+                if value.is_universal:
+                    attrs_items.append("{}: 'StringSet'\n".format(k))
+                else:
+                    raise ReGraphError(
+                        "Non universal RegexSet is not allowed as "
+                        "an attribute value (not implemented)")
+            elif isinstance(value, FiniteSet):
                 elements = []
                 for el in value:
                     if type(el) == str:
@@ -211,7 +251,8 @@ def get_edges(source_label, target_label,
 
 
 def successors_query(var_name, node_id, node_label,
-                     edge_label, successor_label=None):
+                     edge_label, successor_label=None,
+                     undirected=True):
     """Generate query for getting the ids of all the successors of a node.
 
     Parameters
@@ -230,10 +271,15 @@ def successors_query(var_name, node_id, node_label,
     """
     if successor_label is None:
         successor_label = node_label
+    if undirected is True:
+        arrow = ">"
+    else:
+        arrow = ""
     query = (
-        "OPTIONAL MATCH ({}:{} {{id : '{}'}})-[:{}]-> (suc:{})".format(
+        "OPTIONAL MATCH ({}:{} {{id : '{}'}})-[:{}]-{} (suc:{})".format(
             var_name, node_label,
             node_id, edge_label,
+            arrow,
             successor_label) +
         "RETURN suc.id"
     )
@@ -269,10 +315,10 @@ def predecessors_query(var_name, node_id, node_label,
     return query
 
 
-def get_node(node_id, node_label):
-    """Get node by its id (match and return it)."""
-    return match_node(
-        "n", node_id, node_label=node_label) + return_vars(["n"])
+# def get_node(node_id, node_label):
+#     """Get node by its id (match and return it)."""
+#     return match_node(
+#         "n", node_id, node_label=node_label) + return_vars(["n"])
 
 
 def get_edge(s, t, source_label, target_label, edge_label):
@@ -766,3 +812,47 @@ def attributes_inclusion(source_var, target_var, result_var):
         "\t\tEND) AS {}".format(result_var)
     )
     return query
+
+
+def get_node_attrs(node_id, node_label, attrs_var):
+    """Query for retreiving node's attributes."""
+    query = (
+        "MATCH (n:{} {{ id: '{}' }}) \n".format(
+            node_label, node_id) +
+        "RETURN properties(n) as {}\n".format(attrs_var)
+    )
+    return query
+
+
+def get_edge_attrs(source_id, targe_id, edge_label, attrs_var):
+    """Query for retreiving edge's attributes."""
+    query = (
+        "MATCH ({{ id: '{}' }})-[rel:{}]->({{ id: '{}' }}) \n".format(
+            source_id, edge_label, targe_id) +
+        "RETURN properties(rel) as {}\n".format(attrs_var)
+    )
+    return query
+
+
+def properties_to_attributes(result, var_name):
+    """Retrieve attributes from raw Neo4j property dict."""
+    attrs = {}
+    for record in result:
+        if var_name in record.keys():
+            raw_dict = record[var_name]
+            if 'id' in raw_dict:
+                del raw_dict['id']
+            for k, v in raw_dict.items():
+                try:
+                    if len(v) == 1:
+                        if v[0] == "IntegerSet":
+                            attrs[k] = IntegerSet.universal()
+                        elif v[0] == "StringSet":
+                            attrs[k] = RegexSet.universal()
+                        else:
+                            attrs[k] = FiniteSet(v)
+                    else:
+                        attrs[k] = FiniteSet(v)
+                except TypeError:
+                    attrs[k] = FiniteSet([v])
+    return attrs
