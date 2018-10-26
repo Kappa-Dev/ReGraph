@@ -1,11 +1,13 @@
 """Hierarchy whose graph nodes are equipped with constraints."""
-from regraph.hierarchy import Hierarchy, AttributeContainter
+from regraph.networkx.hierarchy import NetworkXHierarchy
+from regraph.networkx.components import (AttributeContainter,
+                                         RuleNode,
+                                         Typing,
+                                         RuleTyping,
+                                         GraphRelation)
 from regraph.mu import parse_formula
 from regraph.primitives import (equal, graph_to_json, graph_from_json)
-from regraph.components import (RuleNode,
-                                Typing,
-                                RuleTyping,
-                                GraphRelation)
+
 from regraph.utils import (normalize_attrs)
 from regraph.exceptions import (ParsingError, HierarchyError)
 
@@ -91,7 +93,7 @@ class MuGraphNode(AttributeContainter):
         return graph, attrs, formulae
 
 
-class MuHierarchy(Hierarchy):
+class MuHierarchy(NetworkXHierarchy):
     """Hierarchy with mu-calculus verification methods.
 
     Extends the hierarchy class with mu-calculus functionality,
