@@ -4,24 +4,61 @@ import networkx as nx
 from neo4j.v1 import GraphDatabase
 from neo4j.exceptions import ConstraintError
 
-from regraph.neo4j.graphs import Neo4jGraph
-import regraph.neo4j.cypher_utils as cypher
+from . import Neo4jGraph
+from . import cypher_utils as cypher
 from regraph.exceptions import (HierarchyError,
                                 InvalidHomomorphism,
                                 RewritingError)
 from regraph.utils import (normalize_attrs, keys_by_value)
 
 
-class Neo4jHierarchy(object):
+class Hierarchy():
+    pass
+
+
+class Neo4jHierarchy(Hierarchy):
     """Class implementing neo4j hierarchy driver."""
 
     def __init__(self, uri, user, password):
         """Initialize driver."""
+        # The following idea is cool but it's not so easy:
+        # as we have two types of nodes in the hierarchy:
+        # graphs and rules, as well as two types of edges:
+        # homomorphisms and relations, and so far Neo4jGraph
+        # supports only a single label for nodes and for edges
+        # Neo4jGraph.__init__(
+        #     self, uri=uri, user=user, password=password,
+        #     node_label="hierarchyNode",
+        #     edge_label="hierarchyEdge")
+
         self._driver = GraphDatabase.driver(
             uri, auth=(user, password))
+
+        self._graph_label = "graph"
+        self._typing_label = "homomorphism"
+        self._relation_label = "binaryRelation"
+
         query = "CREATE " + cypher.constraint_query(
-            'n', 'hierarchyNode', 'id')
+            'n', self._graph_label, 'id')
         self.execute(query)
+
+    def __str__(self):
+        """String representation of the hierarchy."""
+        res = ""
+        res += "\nGraphs: \n"
+        for n in self.graphs():
+            res += " {} {}\n".format(n, self.graph_attrs(n))
+
+        res += "\nTyping homomorphisms: \n"
+        for n1, n2 in self.typings():
+            res += "{} -> {}\n".format(n1, n2, self.typing_attrs(n1, n2))
+
+        res += "\nRelations:\n"
+        for n1, n2 in self.relations():
+            res += "{}-{}: {}\n".format(
+                n1, n2, self.relation_attrs(n1, n2))
+
+        return res
 
     def close(self):
         """Close connection to the database."""
@@ -49,22 +86,34 @@ class Neo4jHierarchy(object):
 
     def graphs(self):
         """Return a list of graphs in the hierarchy."""
-        pass
+        query = cypher.get_nodes(node_label=self._graph_label)
+        result = self.execute(query)
+        return [list(d.values())[0] for d in result]
 
     def typings(self):
         """Return a list of graph typing edges in the hierarchy."""
-        pass
+        query = cypher.get_edges(
+            self._graph_label,
+            self._graph_label,
+            self._typing_label)
+        result = self.execute(query)
+        return [(d["n.id"], d["m.id"]) for d in result]
 
     # def rules(self):
     #     """Return a list of rules in the hierary."""
     #     pass
 
-    # def relations(self):
-    #     """Return a list of relations."""
-    #     pass
+    def relations(self):
+        """Return a list of relations."""
+        query = cypher.get_edges(
+            self._graph_label,
+            self._graph_label,
+            self._relation_label)
+        result = self.execute(query)
+        return [(d["n.id"], d["m.id"]) for d in result]
 
     def add_graph(self, graph_id, node_list=None, edge_list=None,
-                  graph_attrs=None):
+                  attrs=None):
         """Add a graph to the hierarchy.
 
         Parameters
@@ -90,12 +139,13 @@ class Neo4jHierarchy(object):
             # Create a node in the hierarchy
             query = "CREATE ({}:{} {{ id : '{}' }}) \n".format(
                 'new_graph',
-                'hierarchyNode',
+                self._graph_label,
                 graph_id)
-            if graph_attrs is not None:
+            if attrs is not None:
+                normalize_attrs(attrs)
                 query += cypher.set_attributes(
                     var_name='new_graph',
-                    attrs=graph_attrs)
+                    attrs=attrs)
             self.execute(query)
         except(ConstraintError):
             raise HierarchyError(
@@ -108,6 +158,21 @@ class Neo4jHierarchy(object):
             g.add_nodes_from(node_list)
         if edge_list is not None:
             g.add_edges_from(edge_list)
+
+    def graph_attrs(self, graph_id):
+        """Return attributes attached to the graph in the hierarchy."""
+        query = cypher.get_node_attrs(
+            graph_id, self._graph_label, "attributes")
+        result = self.execute(query)
+        return cypher.properties_to_attributes(result, "attributes")
+
+    def typing_attrs(self, source_id, target_id):
+        """Return attributes attached to the typing in the hierarchy."""
+        query = cypher.get_edge_attrs(
+            source_id, target_id, self._typing_label,
+            "attributes")
+        result = self.execute(query)
+        cypher.properties_to_attributes(result, "attributes")
 
     def valid_typing(self, source, target):
         """Check if the typing is valid."""
@@ -163,7 +228,7 @@ class Neo4jHierarchy(object):
                     edge_var="typ_" + u + "_" + v,
                     source_var=u + "_src",
                     target_var=v + "_tar",
-                    edge_label='typing',
+                    edge_label="typing",
                     attrs=tmp_attrs))
 
         if len(nodes_to_match_src) > 0:
@@ -217,12 +282,12 @@ class Neo4jHierarchy(object):
             skeleton_query = (
                 cypher.match_nodes(
                     var_id_dict={'g_src': source, 'g_tar': target},
-                    node_label='hierarchyNode') +
+                    node_label=self._graph_label) +
                 cypher.add_edge(
                     edge_var='new_hierarchy_edge',
                     source_var='g_src',
                     target_var='g_tar',
-                    edge_label='hierarchyEdge',
+                    edge_label=self._typing_label,
                     attrs=attrs) +
                 cypher.with_vars(["new_hierarchy_edge"]) +
                 "MATCH (:{})-[t:typing]-(:{})\n".format(
@@ -233,7 +298,123 @@ class Neo4jHierarchy(object):
             self.execute(skeleton_query)
         return result
 
-    def remove_node(self, node_id, reconnect=False):
+    def add_relation(self, left, right, relation, attrs=None):
+        """Add relation to the hierarchy.
+
+        This method adds a relation between two graphs in
+        the hierarchy corresponding to the nodes with ids
+        `left` and `right`, the relation itself is defined
+        by a dictionary `relation`, where a key is a node in
+        the `left` graph and its corresponding value is a set
+        of nodes from the `right` graph to which the node is
+        related. Relations in the hierarchy are symmetric
+        (see example below).
+
+        Parameters
+        ----------
+        left
+            Id of the hierarchy's node represening the `left` graph
+        right
+            Id of the hierarchy's node represening the `right` graph
+        relation : dict
+            Dictionary representing a relation of nodes from `left`
+            to the nodes from `right`, a key of the dictionary is
+            assumed to be a node from `left` and its value a set
+            of ids of related nodes from `right`
+        attrs : dict
+            Dictionary containing attributes of the new relation
+
+        Raises
+        ------
+        HierarchyError
+            This error is raised in the following cases:
+
+                * node with id `left`/`right` is not defined in the hierarchy;
+                * node with id `left`/`right` is not a graph;
+                * a relation between `left` and `right` already exists;
+                * some node ids specified in `relation` are not found in the
+                `left`/`right` graph.
+
+        Examples
+        --------
+        >>> hierarchy = Neo4jHierarchy()
+        >>> g1 = nx.DiGraph([("a", "b"), ("a", "a")])
+        >>> g2 = nx.DiGraph([(1, 2), (2, 3)])
+        >>> hierarchy.add_graph("G1", g1)
+        >>> hierarchy.add_graph("G2", g2)
+        >>> hierarchy.add_relation("G1", "G2", {"a": {1, 2}, "b": 3})
+        >>> hierarchy.relation["G1"]["G2"].rel
+        {'a': {1, 2}, 'b': {3}}
+        >>> hierarchy.relation["G2"]["G1"].rel
+        {1: {'a'}, 2: {'a'}, 3: {'b'}}
+        """
+        # normalize relation dict
+        new_relation_dict = dict()
+        for key, values in relation.items():
+            if type(values) == set:
+                new_relation_dict[key] = values
+            elif type(values) == str:
+                new_relation_dict[key] = {values}
+            else:
+                try:
+                    new_set = set()
+                    for v in values:
+                        new_set.add(v)
+                    new_relation_dict[key] = new_set
+                except TypeError:
+                    new_relation_dict[key] = {values}
+        relation = new_relation_dict
+
+        if attrs is not None:
+            normalize_attrs(attrs)
+
+        g_left = self._access_graph(left)
+        g_right = self._access_graph(right)
+
+        query = ""
+        rel_creation_queries = []
+        nodes_to_match_left = set()
+        nodes_to_match_right = set()
+        for key, values in new_relation_dict.items():
+            nodes_to_match_left.add(key)
+            for value in values:
+                nodes_to_match_right.add(value)
+                rel_creation_queries.append(
+                    cypher.add_edge(
+                        edge_var="rel_" + key + "_" + value,
+                        source_var="n" + key + "_left",
+                        target_var="n" + value + "_right",
+                        edge_label="relation"))
+
+        if len(nodes_to_match_left) > 0:
+            query += cypher.match_nodes(
+                {"n" + n + "_left": n for n in nodes_to_match_left},
+                node_label=g_left._node_label)
+            query += cypher.with_vars(
+                ["n" + s + "_left" for s in nodes_to_match_left])
+            query += cypher.match_nodes(
+                {"n" + n + "_right": n for n in nodes_to_match_right},
+                node_label=g_right._node_label)
+            for q in rel_creation_queries:
+                query += q
+        print(query)
+        rel_addition_result = self.execute(query)
+        skeleton_query = (
+            cypher.match_nodes(
+                var_id_dict={'g_left': left, 'g_right': right},
+                node_label=self._graph_label) +
+            cypher.add_edge(
+                edge_var='new_hierarchy_edge',
+                source_var='g_left',
+                target_var='g_right',
+                edge_label=self._relation_label,
+                attrs=attrs)
+        )
+        print(skeleton_query)
+        skeleton_addition_result = self.execute(skeleton_query)
+        return (rel_addition_result, skeleton_addition_result)
+
+    def remove_graph(self, node_id, reconnect=False):
         """Remove node from the hierarchy.
 
         Removes a node from the hierarchy, if the `reconnect`
@@ -270,42 +451,59 @@ class Neo4jHierarchy(object):
                     edge_var='recennect_typing',
                     source_var='pred',
                     target_var='suc',
-                    edge_label='typing')
+                    edge_label="typing")
             )
             self.execute(query)
         # Clear the graph and drop the constraint on the ids
         g._drop_constraint('id')
         g._clear()
 
-        # Remove the hierarchyNode (and reconnect if True)
+        # Remove the graph (and reconnect if True)
         if reconnect:
             query = (
                 cypher.match_node(
                     var_name="graph_to_rm",
                     node_id=node_id,
-                    node_label='hierarchyNode') +
-                "OPTIONAL MATCH (pred)-[:hierarchyEdge]->(n)-[:hierarchyEdge]->(suc)\n" +
+                    node_label=self._graph_label) +
+                "OPTIONAL MATCH (pred)-[:{}]->(n)-[:{}]->(suc)\n".format(
+                    self._typing_label) +
                 "WITH pred, suc WHERE pred IS NOT NULL\n" +
                 cypher.add_edge(
                     edge_var='recennect_typing',
                     source_var='pred',
                     target_var='suc',
-                    edge_label='hierarchyEdge')
+                    edge_label="typing")
             )
             self.execute(query)
         query = cypher.match_node(var_name="graph_to_rm",
                                   node_id=node_id,
-                                  node_label='hierarchyNode')
+                                  node_label=self._graph_label)
         query += cypher.remove_nodes(["graph_to_rm"])
         self.execute(query)
 
-    def remove_edge(self, u, v):
-        """Remove an edge from the hierarchy."""
+    def remove_typing(self, u, v):
+        """Remove a typing from the hierarchy."""
         pass
+
+    def remove_relation(self, u, v):
+        """Remove a relation from the hierarchy."""
+
+    def adjacent_relations(self, graph_id):
+        """Return a list of related graphs."""
+        query = cypher.successors_query(
+            var_name='g',
+            node_id=graph_id,
+            node_label=self._graph_label,
+            edge_label=self._relation_label,
+            undirected=True)
+        succ = self.execute(query).value()
+        if succ[0] is None:
+            succ = []
+        return succ
 
     def _access_graph(self, graph_id):
         """Access a graph of the hierarchy."""
-        query = "MATCH (n:hierarchyNode) WHERE n.id='{}' RETURN n".format(
+        query = "MATCH (n:graph) WHERE n.id='{}' RETURN n".format(
             graph_id)
         res = self.execute(query)
         if res.single() is None:
@@ -561,13 +759,17 @@ class Neo4jHierarchy(object):
         # Checking if the introduces rhs typing is consistent
         with self._driver.session() as session:
             tx = session.begin_transaction()
-            consistent_typing = cypher.check_rhs_consistency(tx, graph_id)
+            consistent_typing = cypher.check_rhs_consistency(
+                tx, graph_id, self._graph_label, self._typing_label)
             tx.commit()
 
         if consistent_typing:
-            self.execute(cypher.preserve_tmp_typing(graph_id))
+            self.execute(
+                cypher.preserve_tmp_typing(
+                    graph_id, self._graph_label, self._typing_label))
         else:
-            self.execute(cypher.remove_tmp_typing(graph_id))
+            self.execute(
+                cypher.remove_tmp_typing(graph_id))
 
     def _check_rhs_typing(self, graph_id, rule, instance, rhs_typing):
         # Check the rhs typing can be consistently inferred
@@ -710,8 +912,8 @@ class Neo4jHierarchy(object):
         """Get all the ids of the successors of a graph."""
         query = cypher.successors_query(var_name='g',
                                         node_id=graph_label,
-                                        node_label='hierarchyNode',
-                                        edge_label='hierarchyEdge')
+                                        node_label=self._graph_label,
+                                        edge_label=self._typing_label)
         succ = self.execute(query).value()
         if succ[0] is None:
             succ = []
@@ -721,8 +923,8 @@ class Neo4jHierarchy(object):
         """Get all the ids of the predecessors of a graph."""
         query = cypher.predecessors_query(var_name='g',
                                           node_id=graph_label,
-                                          node_label='hierarchyNode',
-                                          edge_label='hierarchyEdge')
+                                          node_label=self._graph_label,
+                                          edge_label=self._typing_label)
         preds = self.execute(query).value()
         if preds[0] is None:
             preds = []
@@ -740,9 +942,9 @@ class Neo4jHierarchy(object):
             hierarchy
         """
         g = nx.DiGraph()
-        for node in self.nodes():
+        for node in self.graphs():
             g.add_node(node, self.node[node].attrs)
-        for s, t in self.edges():
+        for s, t in self.typings():
             g.add_edge(s, t, self.edge[s][t].attrs)
         return g
 

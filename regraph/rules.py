@@ -1547,7 +1547,7 @@ class Rule(object):
                     clone_id=n,
                     clone_id_var=clone_id_var,
                     node_label=node_label,
-                    clone_typing=True,
+                    edge_labels=["edge", "typing", "related"],
                     sucs_to_ignore=sucs_to_ignore[n],
                     preds_to_ignore=preds_to_ignore[n],
                     carry_vars=carry_variables,

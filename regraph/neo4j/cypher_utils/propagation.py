@@ -198,14 +198,15 @@ def check_consistency(tx, source, target):
     return True
 
 
-def check_rhs_consistency(tx, graph_id):
+def check_rhs_consistency(tx, graph_id, graph_label, typing_label):
     """Check consistency of typing of the rhs of the rule."""
     query1 = (
         "// Checking consistency of introduced rhs\n"
-        "MATCH (G:hierarchyNode)\n"
+        "MATCH (G:{})\n".format(graph_label) +
         "WHERE G.id = '{}'\n".format(graph_id) +
-        "OPTIONAL MATCH (t_i:hierarchyNode)\n" +
-        "WHERE (t_i)<-[:hierarchyEdge*1..]-(G)-[:hierarchyEdge*1..]->(t_i)\n" +
+        "OPTIONAL MATCH (t_i:{})\n".format(graph_label) +
+        "WHERE (t_i)<-[:{}*1..]-(G)-[:{}*1..]->(t_i)\n".format(
+            typing_label, typing_label) +
         "WITH DISTINCT t_i\n" +
         "RETURN collect(t_i.id)\n"
     )
@@ -470,13 +471,14 @@ def remove_tmp_typing(rewritten_graph):
     return query
 
 
-def preserve_tmp_typing(rewritten_graph):
+def preserve_tmp_typing(rewritten_graph, graph_label, typing_label):
     query = (
         "// Replacing ':tmp_typing' with ':typing'\n"
         "MATCH (n:{})-[t:tmp_typing]->(m)\n".format(rewritten_graph) +
-        "OPTIONAL MATCH (:hierarchyNode {{id: '{}'}})".format(
-            rewritten_graph) +
-        "-[skeleton_rel:hierarchyEdge]->(:hierarchyNode {id: labels(m)[0]}) \n" +
+        "OPTIONAL MATCH (:{} {{id: '{}'}})".format(
+            graph_label, rewritten_graph) +
+        "-[skeleton_rel:{}]->(:{} {id: labels(m)[0]}) \n".format(
+            typing_label, graph_label) +
         "FOREACH( dummy IN (CASE skeleton_rel WHEN null THEN [] ELSE [1] END) | \n" +
         "\tDELETE t\n" +
         "\tMERGE (n)-[:typing]->(m)\n" +
