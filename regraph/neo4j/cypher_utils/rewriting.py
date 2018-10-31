@@ -755,9 +755,13 @@ def find_matching(pattern, node_label, edge_label,
                 for pattern_n in pattern.nodes()) + "\n"
 
     if pattern_typing is not None:
+        if nodes is not None and len(nodes) > 0:
+            query += " AND "
+        else:
+            query += " WHERE "
         for typing_graph, mapping in pattern_typing.items():
             query +=\
-                "WHERE " + " AND ".join(
+                " AND ".join(
                     "({})-[:typing]->(:{} {{id: '{}'}})".format(
                         n, typing_graph, pattern_typing[typing_graph][n])
                     for n in pattern.nodes() if n in pattern_typing[typing_graph].keys()
@@ -780,7 +784,6 @@ def find_matching(pattern, node_label, edge_label,
         )
 
     query += "RETURN {}".format(", ".join(pattern.nodes()))
-
     return query
 
 

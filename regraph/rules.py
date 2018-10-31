@@ -20,7 +20,7 @@ from regraph.networkx.category_utils import (identity,
                                              check_homomorphism,
                                              pullback_complement,
                                              pushout)
-from regraph.networkx import primitives
+from regraph import primitives
 from regraph.networkx.plotting import plot_rule
 from regraph.exceptions import (ReGraphWarning, ParsingError,
                                 RuleError)
@@ -133,9 +133,18 @@ class Rule(object):
             can be parsed by `regraph.parser.parse`.
 
         """
-        p = copy.deepcopy(pattern)
-        lhs = copy.deepcopy(pattern)
-        rhs = copy.deepcopy(pattern)
+        lhs = nx.DiGraph()
+        for n in pattern.nodes():
+            attrs = primitives.get_node(pattern, n)
+            primitives.add_node(lhs, n, attrs)
+
+        for u, v in pattern.edges():
+            attrs = primitives.get_edge(pattern, u, v)
+            primitives.add_edge(lhs, u, v, attrs)
+
+        p = copy.deepcopy(lhs)
+        rhs = copy.deepcopy(lhs)
+
         p_lhs = dict([(n, n) for n in pattern.nodes()])
         p_rhs = dict([(n, n) for n in pattern.nodes()])
 
@@ -1481,9 +1490,12 @@ class Rule(object):
         # Cypher's var names)
         if generate_var_ids:
             # Generate unique variable names corresponding to node names
-            lhs_vars = {n: cypher.generate_var_name() for n in self.lhs.nodes()}
-            p_vars = {n: cypher.generate_var_name() for n in self.p.nodes()}
-            rhs_vars = {n: cypher.generate_var_name() for n in self.rhs.nodes()}
+            lhs_vars = {
+                n: cypher.generate_var_name() for n in self.lhs.nodes()}
+            p_vars = {
+                n: cypher.generate_var_name() for n in self.p.nodes()}
+            rhs_vars = {
+                n: cypher.generate_var_name() for n in self.rhs.nodes()}
         else:
             # rule._escape()
             lhs_vars = {n: "lhs_" + str(n) for n in self.lhs.nodes()}
@@ -1733,7 +1745,6 @@ class Rule(object):
         # unique variable names to the names of nodes of the rhs
         rhs_vars_inverse = {v: k for k, v in rhs_vars.items()}
 
-        print(query)
         return query, rhs_vars_inverse
 
     def plot(self, filename=None, title=None):

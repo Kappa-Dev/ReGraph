@@ -12,12 +12,16 @@ from regraph.exceptions import (HierarchyError,
 from regraph.utils import (normalize_attrs, keys_by_value)
 
 
-class Hierarchy():
-    pass
-
-
-class Neo4jHierarchy(Hierarchy):
+class Neo4jHierarchy(object):
     """Class implementing neo4j hierarchy driver."""
+
+    # factories of node/edge dictionaries
+    graph_dict_factory = dict
+    # rule_dict_factory = dict
+    typing_dict_factory = dict
+    # rule_lhs_typing_dict_factory = dict
+    # rule_rhs_typing_dict_factory = dict
+    rel_dict_factory = dict
 
     def __init__(self, uri, user, password):
         """Initialize driver."""
@@ -158,6 +162,9 @@ class Neo4jHierarchy(Hierarchy):
             g.add_nodes_from(node_list)
         if edge_list is not None:
             g.add_edges_from(edge_list)
+
+    def add_empty_graph(self, graph_id, attrs):
+        self.add_graph(graph_id, attrs=attrs)
 
     def graph_attrs(self, graph_id):
         """Return attributes attached to the graph in the hierarchy."""
@@ -397,7 +404,6 @@ class Neo4jHierarchy(Hierarchy):
                 node_label=g_right._node_label)
             for q in rel_creation_queries:
                 query += q
-        print(query)
         rel_addition_result = self.execute(query)
         skeleton_query = (
             cypher.match_nodes(
@@ -410,7 +416,7 @@ class Neo4jHierarchy(Hierarchy):
                 edge_label=self._relation_label,
                 attrs=attrs)
         )
-        print(skeleton_query)
+
         skeleton_addition_result = self.execute(skeleton_query)
         return (rel_addition_result, skeleton_addition_result)
 
@@ -645,7 +651,7 @@ class Neo4jHierarchy(Hierarchy):
         if strict is False and rule.is_relaxing():
             self._propagate_down(graph_id, graph_id, rule)
 
-        return rhs_g
+        return self, rhs_g
 
     def _propagate_up(self, graph_id, rule):
         predecessors = self.predecessors(graph_id)
@@ -728,10 +734,6 @@ class Neo4jHierarchy(Hierarchy):
         rhs_tmp_typing = ""
         for graph in rhs_typing.keys():
             # Add temp typing subquery
-            query = (
-                "// Adding temporary typing of the rhs nodes\n" +
-                "OPTIONAL MATCH "
-            )
 
             nodes_to_match = []
             merge_subqueres = []
@@ -748,13 +750,20 @@ class Neo4jHierarchy(Hierarchy):
                     "MERGE ({})-[:tmp_typing]->({})".format(
                         rhs_typed_var, rhs_typing_var)
                 )
-            query += (
-                ", ".join(nodes_to_match) + "\n" +
-                "\n".join(merge_subqueres)
-                # cypher.with_vars(["NULL"]) + "\n"
-            )
-            rhs_tmp_typing += query + "\n"
-            self.execute(query)
+
+            if len(nodes_to_match) > 0:
+                query = (
+                    "// Adding temporary typing of the rhs nodes\n" +
+                    "OPTIONAL MATCH "
+                )
+
+                query += (
+                    ", ".join(nodes_to_match) + "\n" +
+                    "\n".join(merge_subqueres)
+                    # cypher.with_vars(["NULL"]) + "\n"
+                )
+                rhs_tmp_typing += query + "\n"
+                self.execute(query)
 
         # Checking if the introduces rhs typing is consistent
         with self._driver.session() as session:
@@ -837,8 +846,6 @@ class Neo4jHierarchy(Hierarchy):
                             "is no edge '{}'->'{}'' in the graph '{}')!".format(
                                 source_typing, target_typing, s))
 
-                print(preserved_nodes)
-
                 for n, attrs in rule.added_node_attrs().items():
                     if n in rule.added_nodes():
                         typing = rhs_typing[s][n]
@@ -906,7 +913,57 @@ class Neo4jHierarchy(Hierarchy):
 
     def get_typing(self, source, target):
         """Get typing dict of `source` by `target`."""
-        pass
+        query = cypher.get_typing(source, target, "typing")
+        result = self.execute(query)
+        typing = {}
+        for record in result:
+            typing[record["node"]] = record["type"]
+        return typing
+
+    def get_relation(self, left, right):
+        query = cypher.get_typing(left, right, "relation")
+        result = self.execute(query)
+        relation = {}
+        for record in result:
+            if record["node"] in relation.keys():
+                relation[record["node"]].add(record["type"])
+            else:
+                relation[record["node"]] = {record["type"]}
+        return relation
+
+    def set_node_typing(self, source_graph, target_graph, node_id, type_id):
+        """Set typing to of a particular node."""
+        query = cypher.set_intergraph_edge(
+            source_graph, target_graph, node_id, type_id,
+            "typing")
+        result = self.execute(query)
+
+    def set_node_attrs(self, node_id, attrs):
+        skeleton = self._access_graph(self._graph_label)
+        skeleton.set_node_attrs(node_id, attrs)
+
+    def set_edge_attrs(self, source, target, attrs):
+        skeleton = self._access_graph(self._graph_label)
+        skeleton.set_edge_attrs(source, target, attrs)
+
+    def set_node_relation(self, source_graph, target_graph, node_id, type_id):
+        """Set typing to of a particular node."""
+        query = cypher.set_intergraph_edge(
+            source_graph, target_graph, node_id, type_id,
+            "relation")
+        result = self.execute(query)
+
+    def get_graph(self, graph_id):
+        return self._access_graph(graph_id)
+
+    def get_graph_attrs(self, graph_id):
+        """Return node's attributes."""
+        query = cypher.get_node_attrs(
+            graph_id, self._graph_label,
+            "attributes")
+        result = self.execute(query)
+        return cypher.properties_to_attributes(
+            result, "attributes")
 
     def successors(self, graph_label):
         """Get all the ids of the successors of a graph."""

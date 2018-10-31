@@ -45,12 +45,14 @@ def add_node(graph, node_id, attrs=None):
     """
     if isinstance(graph, nx.DiGraph) or\
        isinstance(graph, nx.Graph):
-        new_attrs = deepcopy(attrs)
-        if new_attrs is None:
+        if attrs is None:
             new_attrs = dict()
+        else:
+            new_attrs = deepcopy(attrs)
+            print(new_attrs)
+            normalize_attrs(new_attrs)
         if node_id not in graph.nodes():
             graph.add_node(node_id)
-            normalize_attrs(new_attrs)
             graph.node[node_id] = new_attrs
         else:
             raise GraphError("Node '%s' already exists!" % node_id)
@@ -76,16 +78,15 @@ def add_nodes_from(graph, node_list):
     >>> G = nx.Graph()
     >>> add_nodes_from(G, [1, (2, {"a": 1}), 3])
     """
-    if isinstance(graph, nx.DiGraph) or\
-       isinstance(graph, nx.Graph):
-        for n in node_list:
+    for n in node_list:
+        if type(n) != str:
             try:
                 node_id, node_attrs = n
                 add_node(graph, node_id, node_attrs)
             except (TypeError, ValueError):
                 add_node(graph, n)
-    elif isinstance(graph, Neo4jGraph):
-        graph.add_nodes_from(node_list)
+        else:
+            add_node(graph, n)
 
 
 def add_node_attrs(graph, node, attrs):
@@ -396,7 +397,7 @@ def add_edge_attrs(graph, s, t, attrs):
         If an edge between `s` and `t` does not exist.
     """
     new_attrs = deepcopy(attrs)
-    if not graph.has_edge(s, t):
+    if not exists_edge(graph, s, t):
         raise(
             GraphError("Edge '%s->%s' does not exist" %
                        (str(s), str(t)))

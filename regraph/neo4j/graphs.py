@@ -139,12 +139,12 @@ class Neo4jGraph(object):
             attrs = dict()
         normalize_attrs(attrs)
         query += cypher.match_nodes(
-            {source: source, target: target},
+            {"n_" + source: source, "n_" + target: target},
             node_label=self._node_label)
         query += cypher.add_edge(
             edge_var='new_edge',
-            source_var=source,
-            target_var=target,
+            source_var="n_" + source,
+            target_var="n_" + target,
             edge_label=self._edge_label,
             attrs=attrs)
         result = self.execute(query)
@@ -158,16 +158,22 @@ class Neo4jGraph(object):
             query = ""
         carry_variables = set()
         for n in nodes:
-            try:
-                n_id, attrs = n
-                normalize_attrs(
-                    attrs)
-                q, carry_variables =\
-                    cypher.add_node(
-                        n_id, n_id, 'new_id_' + n_id,
-                        node_label=self._node_label,
-                        attrs=attrs)
-            except ValueError as e:
+            if type(n) != str:
+                try:
+                    n_id, attrs = n
+                    normalize_attrs(
+                        attrs)
+                    q, carry_variables =\
+                        cypher.add_node(
+                            n_id, n_id, 'new_id_' + n_id,
+                            node_label=self._node_label,
+                            attrs=attrs)
+                except ValueError as e:
+                    q, carry_variables =\
+                        cypher.add_node(
+                            n, n, 'new_id_' + n,
+                            node_label=self._node_label)
+            else:
                 q, carry_variables =\
                     cypher.add_node(
                         n, n, 'new_id_' + n,
@@ -404,7 +410,10 @@ class Neo4jGraph(object):
             node, node,
             node_label=self._node_label,
             edge_label=self._edge_label)
-        succ = set(self.execute(query).value())
+        result = self.execute(query).value()
+        succ = set()
+        if result != [None]:
+            succ = set(result)
         return(succ)
 
     def predecessors(self, node):
@@ -413,7 +422,10 @@ class Neo4jGraph(object):
             node, node,
             node_label=self._node_label,
             edge_label=self._edge_label)
-        pred = set(self.execute(query).value())
+        result = self.execute(query).value()
+        pred = set()
+        if result != [None]:
+            pred = set(result)
         return(pred)
 
     def clone_node(self, node, name=None, edge_labels=None,

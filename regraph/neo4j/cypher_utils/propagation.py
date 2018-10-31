@@ -9,6 +9,24 @@ from . import rewriting
 
 # def check_functional()
 
+def get_typing(domain, codomain, typing_label):
+    query = (
+        "MATCH (n:{})-[:{}]-(m:{})\n".format(
+            domain, typing_label, codomain) +
+        "RETURN n.id as node, m.id as type"
+    )
+    return query
+
+
+def set_intergraph_edge(domain, codomain, domain_node,
+                        codomain_node, typing_label):
+    query = (
+        "MATCH (n:{} {{ id: '{}' }}), (m:{} {{ id: '{}' }})\n".format(
+            domain, domain_node, codomain, codomain_node) +
+        "CREATE (n)-[:{}]->(m)".format(typing_label)
+    )
+    return query
+
 
 def check_homomorphism(tx, domain, codomain, total=True):
     """Check if the homomorphism is valid.
@@ -477,7 +495,7 @@ def preserve_tmp_typing(rewritten_graph, graph_label, typing_label):
         "MATCH (n:{})-[t:tmp_typing]->(m)\n".format(rewritten_graph) +
         "OPTIONAL MATCH (:{} {{id: '{}'}})".format(
             graph_label, rewritten_graph) +
-        "-[skeleton_rel:{}]->(:{} {id: labels(m)[0]}) \n".format(
+        "-[skeleton_rel:{}]->(:{} {{id: labels(m)[0]}}) \n".format(
             typing_label, graph_label) +
         "FOREACH( dummy IN (CASE skeleton_rel WHEN null THEN [] ELSE [1] END) | \n" +
         "\tDELETE t\n" +

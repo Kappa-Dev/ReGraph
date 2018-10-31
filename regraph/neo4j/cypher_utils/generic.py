@@ -81,7 +81,7 @@ def set_attributes(var_name, attrs, update=False):
             # remove all the attributes not mentioned in 'attrs'
             query += (
                 "SET {} = apoc.map.clean(properties({}), \n".format(var_name, var_name) +
-                "\tfilter(x IN keys({}) WHERE NOT x IN [{}]), [])".format(
+                "\tfilter(x IN keys({}) WHERE NOT x IN ['{}']), [])".format(
                     var_name,
                     ", ".join(k for k in attrs.keys()))
             )
@@ -276,7 +276,7 @@ def successors_query(var_name, node_id, node_label,
     else:
         arrow = ""
     query = (
-        "OPTIONAL MATCH ({}:{} {{id : '{}'}})-[:{}]-{} (suc:{})".format(
+        "OPTIONAL MATCH (n{}:{} {{id : '{}'}})-[:{}]-{} (suc:{})".format(
             var_name, node_label,
             node_id, edge_label,
             arrow,
@@ -306,7 +306,7 @@ def predecessors_query(var_name, node_id, node_label,
     if predecessor_label is None:
         predecessor_label = node_label
     query = (
-        "OPTIONAL MATCH (pred:{})-[:{}]-> ({}:{} {{id : '{}'}})".format(
+        "OPTIONAL MATCH (pred:{})-[:{}]-> (n{}:{} {{id : '{}'}})".format(
             predecessor_label,
             edge_label,
             var_name, node_label, node_id) +
@@ -423,9 +423,24 @@ def props_union(var_list, new_props_var, carry_vars=None):
             new_props_var) +\
         "\t\tvalues + CASE WHEN v.value IN values THEN [] ELSE v.value END)])) as {}, ".format(
             new_props_var) +\
+        ", ".join(carry_vars) + "\n" +\
+        +  merge_with_symbolic_sets(new_props_var, new_props_var) + "," +\
         ", ".join(carry_vars) + "\n"
 
     carry_vars.add(new_props_var)
+    return query
+
+
+def merge_with_symbolic_sets(prop_var, new_props_var):
+    query = (
+        "WITH apoc.map.fromValues(REDUCE(values=[], k in keys({}) |\n".format(
+            prop_var) +
+        "\tvalues + [k, CASE WHEN 'StringSet' in {}[k] \n".format(prop_var) +
+        "\t\tTHEN 'StringSet' \n" +
+        "\t\tELSE CASE WHEN 'IntegerSet' IN {}[k]\n".format(prop_var) +
+        "\t\t\tTHEN 'IntegerSet'\n" +
+        "\t\t\tELSE {}[k] END END])) as {}".format(prop_var, new_props_var)
+    )
     return query
 
 
@@ -440,7 +455,7 @@ def props_union_from_list(list_var, new_props_var, carry_vars=None):
     query = "UNWIND {} as prop_to_merge\n".format(list_var)
 
     query += (
-        "// accumulate all the attrs of the nodes to be merged\n" +
+        "// accumulate all the attrs of the elements to be merged\n" +
         "WITH [] as new_props, prop_to_merge, " + ", ".join(carry_vars) + "\n" +
         "WITH new_props + REDUCE(pairs = [], k in filter(k in keys(prop_to_merge) WHERE k <> 'id') | \n" +
         "\tpairs + REDUCE(inner_pairs = [], v in prop_to_merge[k] | \n" +
@@ -463,6 +478,8 @@ def props_union_from_list(list_var, new_props_var, carry_vars=None):
         "WITH apoc.map.fromValues(REDUCE(pairs=[], k in keys(new_props) | \n"
         "\tpairs + [k, REDUCE(values=[], v in new_props[k] | \n"
         "\t\tvalues + CASE WHEN v.value IN values THEN [] ELSE v.value END)])) as new_props, " +
+        ", ".join(carry_vars) + "\n" +
+        merge_with_symbolic_sets("new_props", "new_props") + "," +
         ", ".join(carry_vars) + "\n"
     )
     return query

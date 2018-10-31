@@ -31,12 +31,14 @@ from regraph.networkx.category_utils import (compose,
                                              is_total_homomorphism,
                                              relation_to_span,
                                              right_relation_dict)
-from regraph.networkx.primitives import (get_relabeled_graph,
-                                         relabel_node,
-                                         get_edge,
-                                         graph_to_json,
-                                         graph_from_json,
-                                         equal)
+from regraph.primitives import (get_relabeled_graph,
+                                relabel_node,
+                                get_edge,
+                                graph_to_json,
+                                graph_from_json,
+                                equal,
+                                update_node_attrs,
+                                update_edge_attrs)
 from regraph.utils import (is_subdict,
                            keys_by_value,
                            normalize_attrs,
@@ -87,7 +89,6 @@ class NetworkXHierarchy(nx.DiGraph, AttributeContainter):
 
     """
 
-    # Similar to NetworkX node_dict_factory:
     # factories of node/edge dictionaries
     graph_dict_factory = dict
     rule_dict_factory = dict
@@ -515,6 +516,13 @@ class NetworkXHierarchy(nx.DiGraph, AttributeContainter):
             self.typing[graph_id] = dict()
         return
 
+    def add_empty_graph(self, graph_id, attrs):
+        if self.directed is True:
+            graph_obj = nx.DiGraph
+        else:
+            graph_obj = nx.Graph
+        self.add_graph(graph_id, graph_obj, attrs=attrs)
+
     def add_rule(self, rule_id, rule, rule_attrs=None):
         """Add rule to the hierarchy.
 
@@ -908,6 +916,18 @@ class NetworkXHierarchy(nx.DiGraph, AttributeContainter):
         self.relation[right].update(
             {left: self.relation_edge[right][left].rel})
         return
+
+    def set_node_attrs(self, node_id, attrs):
+        update_node_attrs(self, node_id, attrs)
+
+    def set_edge_attrs(self, source, target, attrs):
+        update_edge_attrs(self, source, target, attrs)
+
+    def get_graph(self, graph_id):
+        return self.node[graph_id].graph
+
+    def get_graph_attrs(self, graph_id):
+        return self.node[graph_id].attrs
 
     def add_cycle(self, nodes, **attr):
         """Method of adding cycle to the graph hierarchy."""
@@ -1970,6 +1990,13 @@ class NetworkXHierarchy(nx.DiGraph, AttributeContainter):
         else:
             path = nx.shortest_path(self, source, target)
             return self.compose_path_typing(path)
+
+    def get_relation(self, left, right):
+        return self.edge[left][right].rel
+
+    def set_node_typing(self, source_graph, target_graph, node_id, type_id):
+        """Set typing to of a particular node."""
+        self.edge[source_graph][target_graph].mapping[node_id] = type_id
 
     def get_rule_typing(self, source, target):
         """Get typing dict of `source` by `target` (`source` is rule)."""
