@@ -23,7 +23,7 @@ def set_intergraph_edge(domain, codomain, domain_node,
     query = (
         "MATCH (n:{} {{ id: '{}' }}), (m:{} {{ id: '{}' }})\n".format(
             domain, domain_node, codomain, codomain_node) +
-        "CREATE (n)-[:{}]->(m)".format(typing_label)
+        "MERGE (n)-[:{}]->(m)".format(typing_label)
     )
     return query
 

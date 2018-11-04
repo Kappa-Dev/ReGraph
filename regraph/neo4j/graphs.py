@@ -410,11 +410,12 @@ class Neo4jGraph(object):
             node, node,
             node_label=self._node_label,
             edge_label=self._edge_label)
-        result = self.execute(query).value()
+        result = self.execute(query)
         succ = set()
-        if result != [None]:
-            succ = set(result)
-        return(succ)
+        for record in result:
+            if record["suc"] is not None:
+                succ.add(record["suc"])
+        return succ
 
     def predecessors(self, node):
         """Return node's predecessors id."""
@@ -422,11 +423,12 @@ class Neo4jGraph(object):
             node, node,
             node_label=self._node_label,
             edge_label=self._edge_label)
-        result = self.execute(query).value()
+        result = self.execute(query)
         pred = set()
-        if result != [None]:
-            pred = set(result)
-        return(pred)
+        for record in result:
+            if record["pred"] is not None:
+                pred.add(record["pred"])
+        return pred
 
     def clone_node(self, node, name=None, edge_labels=None,
                    ignore_naming=False, profiling=False):

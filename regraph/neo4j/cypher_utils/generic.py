@@ -276,12 +276,12 @@ def successors_query(var_name, node_id, node_label,
     else:
         arrow = ""
     query = (
-        "OPTIONAL MATCH (n{}:{} {{id : '{}'}})-[:{}]-{} (suc:{})".format(
+        "OPTIONAL MATCH (n{}:{} {{id : '{}'}})-[:{}]-{} (suc:{})\n".format(
             var_name, node_label,
             node_id, edge_label,
             arrow,
             successor_label) +
-        "RETURN suc.id"
+        "RETURN suc.id as suc"
     )
     return query
 
@@ -306,11 +306,11 @@ def predecessors_query(var_name, node_id, node_label,
     if predecessor_label is None:
         predecessor_label = node_label
     query = (
-        "OPTIONAL MATCH (pred:{})-[:{}]-> (n{}:{} {{id : '{}'}})".format(
+        "OPTIONAL MATCH (pred:{})-[:{}]-> (n{}:{} {{id : '{}'}})\n".format(
             predecessor_label,
             edge_label,
             var_name, node_label, node_id) +
-        "RETURN pred.id"
+        "RETURN pred.id as pred"
     )
     return query
 

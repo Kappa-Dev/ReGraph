@@ -512,9 +512,9 @@ class Neo4jHierarchy(object):
         query = "MATCH (n:graph) WHERE n.id='{}' RETURN n".format(
             graph_id)
         res = self.execute(query)
-        if res.single() is None:
-            raise HierarchyError(
-                "The graph '{}' is not in the database.".format(graph_id))
+        # if res.single() is None:
+        #     raise HierarchyError(
+        #         "The graph '{}' is not in the database.".format(graph_id))
         g = Neo4jGraph(self._driver,
                        node_label=graph_id, edge_label="edge")
         return g

@@ -49,7 +49,6 @@ def add_node(graph, node_id, attrs=None):
             new_attrs = dict()
         else:
             new_attrs = deepcopy(attrs)
-            print(new_attrs)
             normalize_attrs(new_attrs)
         if node_id not in graph.nodes():
             graph.add_node(node_id)
