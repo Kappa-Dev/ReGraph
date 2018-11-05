@@ -81,9 +81,9 @@ def set_attributes(var_name, attrs, update=False):
             # remove all the attributes not mentioned in 'attrs'
             query += (
                 "SET {} = apoc.map.clean(properties({}), \n".format(var_name, var_name) +
-                "\tfilter(x IN keys({}) WHERE NOT x IN ['{}']), [])".format(
+                "\tfilter(x IN keys({}) WHERE NOT x IN [{}]), [])".format(
                     var_name,
-                    ", ".join(k for k in attrs.keys()))
+                    ", ".join("'{}'".format(k) for k in attrs.keys()))
             )
     return query
 
