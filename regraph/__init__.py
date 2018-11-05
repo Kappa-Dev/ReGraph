@@ -10,6 +10,6 @@ from regraph.exceptions import *
 
 from regraph.networkx.plotting import *
 
-from regraph.networkx.primitives import *
+from regraph.primitives import *
 
 from regraph.attribute_sets import *
