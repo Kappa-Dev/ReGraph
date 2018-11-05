@@ -518,9 +518,9 @@ class NetworkXHierarchy(nx.DiGraph, AttributeContainter):
 
     def add_empty_graph(self, graph_id, attrs):
         if self.directed is True:
-            graph_obj = nx.DiGraph
+            graph_obj = nx.DiGraph()
         else:
-            graph_obj = nx.Graph
+            graph_obj = nx.Graph()
         self.add_graph(graph_id, graph_obj, attrs=attrs)
 
     def add_rule(self, rule_id, rule, rule_attrs=None):
@@ -917,17 +917,26 @@ class NetworkXHierarchy(nx.DiGraph, AttributeContainter):
             {left: self.relation_edge[right][left].rel})
         return
 
-    def set_node_attrs(self, node_id, attrs):
-        update_node_attrs(self, node_id, attrs)
-
-    def set_edge_attrs(self, source, target, attrs):
-        update_edge_attrs(self, source, target, attrs)
-
     def get_graph(self, graph_id):
-        return self.node[graph_id].graph
+            return self.node[graph_id].graph
+
+    def get_node_attrs(self, node_id):
+            return self.node[node_id].attrs
 
     def get_graph_attrs(self, graph_id):
-        return self.node[graph_id].attrs
+            return self.get_node_attrs(graph_id)
+
+    def set_node_attrs(self, node_id, attrs):
+        self.node[node_id].update_attrs(attrs)
+
+    def set_graph_attrs(self, graph_id, attrs):
+        self.set_node_attrs(graph_id, attrs)
+
+    def set_edge_attrs(self, source, target, attrs):
+        self.edge[source][target].update_attrs(attrs)
+
+    def set_typing_attrs(self, source, target, attrs):
+        self.set_edge_attrs(source, target, attrs)
 
     def add_cycle(self, nodes, **attr):
         """Method of adding cycle to the graph hierarchy."""
@@ -1992,7 +2001,7 @@ class NetworkXHierarchy(nx.DiGraph, AttributeContainter):
             return self.compose_path_typing(path)
 
     def get_relation(self, left, right):
-        return self.edge[left][right].rel
+        return self.relation[left][right]
 
     def set_node_typing(self, source_graph, target_graph, node_id, type_id):
         """Set typing to of a particular node."""

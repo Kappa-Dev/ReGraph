@@ -166,21 +166,6 @@ class Neo4jHierarchy(object):
     def add_empty_graph(self, graph_id, attrs):
         self.add_graph(graph_id, attrs=attrs)
 
-    def graph_attrs(self, graph_id):
-        """Return attributes attached to the graph in the hierarchy."""
-        query = cypher.get_node_attrs(
-            graph_id, self._graph_label, "attributes")
-        result = self.execute(query)
-        return cypher.properties_to_attributes(result, "attributes")
-
-    def typing_attrs(self, source_id, target_id):
-        """Return attributes attached to the typing in the hierarchy."""
-        query = cypher.get_edge_attrs(
-            source_id, target_id, self._typing_label,
-            "attributes")
-        result = self.execute(query)
-        cypher.properties_to_attributes(result, "attributes")
-
     def valid_typing(self, source, target):
         """Check if the typing is valid."""
         with self._driver.session() as session:
@@ -493,6 +478,7 @@ class Neo4jHierarchy(object):
 
     def remove_relation(self, u, v):
         """Remove a relation from the hierarchy."""
+        pass
 
     def adjacent_relations(self, graph_id):
         """Return a list of related graphs."""
@@ -956,6 +942,15 @@ class Neo4jHierarchy(object):
     def get_graph(self, graph_id):
         return self._access_graph(graph_id)
 
+    def get_node_attrs(self, node_id):
+        """Return node's attributes."""
+        query = cypher.get_node_attrs(
+            node_id, self._graph_label,
+            "attributes")
+        result = self.execute(query)
+        return cypher.properties_to_attributes(
+            result, "attributes")
+
     def get_graph_attrs(self, graph_id):
         """Return node's attributes."""
         query = cypher.get_node_attrs(
@@ -964,6 +959,20 @@ class Neo4jHierarchy(object):
         result = self.execute(query)
         return cypher.properties_to_attributes(
             result, "attributes")
+
+    def get_typing_attrs(self, source_id, target_id):
+        """Return attributes attached to the typing in the hierarchy."""
+        query = cypher.get_edge_attrs(
+            source_id, target_id, self._typing_label,
+            "attributes")
+        result = self.execute(query)
+        cypher.properties_to_attributes(result, "attributes")
+
+    def set_graph_attrs(self, graph_id, attrs):
+        self.set_node_attrs(graph_id, attrs)
+
+    def set_typing_attrs(self, source, target, attrs):
+        self.set_edge_attrs(source, target, attrs)
 
     def successors(self, graph_label):
         """Get all the ids of the successors of a graph."""
