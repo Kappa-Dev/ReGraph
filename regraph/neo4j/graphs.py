@@ -1,8 +1,11 @@
 """Neo4j driver for regraph."""
+import warnings
 from neo4j.v1 import GraphDatabase
 
 from regraph.utils import normalize_attrs
+from regraph.exceptions import TypedNeo4jGraphError, ReGraphWarning
 from . import cypher_utils as cypher
+from . import hierarchy
 
 
 class Neo4jGraph(object):
@@ -57,6 +60,7 @@ class Neo4jGraph(object):
 
     def execute(self, query):
         """Execute a Cypher query."""
+        print(query)
         with self._driver.session() as session:
             if len(query) > 0:
                 result = session.run(query)
@@ -569,3 +573,146 @@ class Neo4jGraph(object):
             rhs_vars_inverse[k]: v for k, v in rhs_g.items()
         }
         return rhs_g
+
+
+class TypedNeo4jGraph(hierarchy.Neo4jHierarchy):
+    """Class implementing two level hiearchy.
+
+    Top level represents a data instance, while bottom level represents
+    a graphical schema.
+    """
+
+    def __init__(self, uri, user, password,
+                 schema_graph=None, data_graph=None,
+                 typing=None):
+        """Initialize driver.
+
+        Parameters:
+        ----------
+        uri : str
+            Uri of bolt listener, for example 'bolt://127.0.0.1:7687'
+        user : str
+            Neo4j database user id
+        password : str
+            Neo4j database password
+        schema_graph : dict, optional
+            Schema graph to initialize the TypedGraph in JSON representation:
+            {"nodes": <networkx_like_nodes>, "edges": <networkx_like_edges>}.
+            By default is empty.
+        data_graph : dict, optional
+            Data graph to initialize the TypedGraph in JSON representation:
+            {"nodes": <networkx_like_nodes>, "edges": <networkx_like_edges>}.
+            By default is empty.
+        typing : dict, optional
+            Dictionary contaning typing of data nodes by schema nodes. By default is
+            empty.
+        """
+        if data_graph is not None:
+            if schema_graph is None:
+                raise TypedNeo4jGraphError(
+                    "Cannot initialize a typed graph by "
+                    "empty schema and non-empty data: "
+                    "typing should be total")
+            if len(typing) == 0:
+                raise TypedNeo4jGraphError(
+                    "Cannot initialize a typed graph with "
+                    "non-total typing '{}'".format(typing))
+        else:
+            data_graph = {"nodes": [], "edges": []}
+
+        if schema_graph is None:
+            schema_graph = {"nodes": [], "edges": []}
+        if typing is None:
+            typing = dict()
+
+        self._driver = GraphDatabase.driver(
+            uri, auth=(user, password))
+
+        self._graph_label = "graph"
+        self._typing_label = "homomorphism"
+        self._relation_label = "binaryRelation"
+
+        self._data_label = "node"
+        self._schema_label = "type"
+
+        query = "CREATE " + cypher.constraint_query(
+            'n', self._graph_label, 'id')
+        self.execute(query)
+
+        # create data/schema nodes
+        skeleton = self._access_graph(
+            self._graph_label, self._typing_label)
+        skeleton_nodes = skeleton.nodes()
+        if self._data_label not in skeleton_nodes:
+            self.add_graph(
+                self._data_label,
+                node_list=data_graph["nodes"],
+                edge_list=data_graph["edges"])
+        else:
+            if len(data_graph["nodes"]) > 0:
+                old_data = self._access_graph(self._data_label)
+                if len(old_data.nodes()) > 0:
+                    warnings.warn(
+                        "Data graph was non-empty and was overwritten with "
+                        "provided nodes and edges!", ReGraphWarning
+                    )
+                old_data._clear()
+                old_data.add_nodes_from(data_graph["nodes"])
+                old_data.add_edges_from(data_graph["edges"])
+
+        if self._schema_label not in skeleton_nodes:
+            self.add_graph(
+                self._schema_label,
+                node_list=schema_graph["nodes"],
+                edge_list=schema_graph["edges"])
+        else:
+            if len(schema_graph["nodes"]) > 0:
+                old_schema = self._access_graph(self._schema_label)
+                if len(old_schema.nodes()) > 0:
+                    warnings.warn(
+                        "Schema graph was non-empty and was overwritten with "
+                        "provided nodes and edges!", ReGraphWarning
+                    )
+                old_schema._clear()
+                old_schema.add_nodes_from(schema_graph["nodes"])
+                old_schema.add_edges_from(schema_graph["edges"])
+        if (self._data_label, self._schema_label) not in skeleton.edges():
+            self.add_typing(self._data_label, self._schema_label, typing)
+
+    def find_data_matching(self, pattern,
+                           pattern_typing=None, nodes=None):
+        return self.find_matching(
+            self._data_label,
+            pattern,
+            pattern_typing={
+                self._schema_label: pattern_typing
+            },
+            nodes=nodes)
+
+    def find_schema_matching(self, pattern, nodes=None):
+        return self.find_matching(
+            self._schema_label,
+            pattern,
+            nodes=nodes)
+
+    def rewrite_data(self, rule, instance,
+                     rhs_typing=None, strict=False):
+        return self.rewrite(
+            self._data_label,
+            rule=rule,
+            instance=instance,
+            rhs_typing={
+                self._schema_label: rhs_typing
+            },
+            strict=strict)
+
+    def rewrite_schema(self, rule, instance,
+                       p_typing=None, strict=False):
+        return self.rewrite(
+            self._schema_label,
+            rule=rule,
+            instance=instance,
+            p_typing={
+                self._data_label: p_typing
+            },
+            strict=strict)

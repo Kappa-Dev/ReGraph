@@ -216,13 +216,13 @@ def check_consistency(tx, source, target):
     return True
 
 
-def check_rhs_consistency(tx, graph_id, graph_label, typing_label):
+def check_tmp_consistency(tx, source, target, typing_label):
     """Check consistency of typing of the rhs of the rule."""
     query1 = (
         "// Checking consistency of introduced rhs\n"
-        "MATCH (G:{})\n".format(graph_label) +
-        "WHERE G.id = '{}'\n".format(graph_id) +
-        "OPTIONAL MATCH (t_i:{})\n".format(graph_label) +
+        "MATCH (G:{})\n".format(source) +
+        "WHERE G.id = '{}'\n".format(source) +
+        "OPTIONAL MATCH (t_i:{})\n".format(target) +
         "WHERE (t_i)<-[:{}*1..]-(G)-[:{}*1..]->(t_i)\n".format(
             typing_label, typing_label) +
         "WITH DISTINCT t_i\n" +
@@ -239,7 +239,7 @@ def check_rhs_consistency(tx, graph_id, graph_label, typing_label):
     for graph in multiple_paths_successors:
         query2 = (
             "MATCH (n:{})-[:tmp_typing]->()-[:typing*0..]->(m:{})\n".format(
-                graph_id, graph) +
+                source, graph) +
             "WITH n, collect(DISTINCT m.id) as imgs\n" +
             "WHERE size(imgs) > 1\n" +
             "RETURN n.id as n_id, imgs\n"
@@ -480,30 +480,46 @@ def add_edge_propagation_query(graph_id, successor_id):
     return query
 
 
-def remove_tmp_typing(rewritten_graph):
+def remove_tmp_typing(rewritten_graph, direction="successors"):
+    if direction == "predecessors":
+        left_arrow = "<"
+        right_arrow = ""
+    else:
+        left_arrow = ""
+        right_arrow = ">"
     query = (
         "Removing ':tmp_typing' relationships."
-        "MATCH (n:{})-[t:tmp_typing]->()\n".format(rewritten_graph) +
+        "MATCH (n:{}){}-[t:tmp_typing]-{}()\n".format(
+            rewritten_graph, left_arrow, right_arrow) +
         "DELETE t\n"
     )
     return query
 
 
-def preserve_tmp_typing(rewritten_graph, graph_label, typing_label):
+def preserve_tmp_typing(rewritten_graph, graph_label, typing_label,
+                        direction="successors"):
+    if direction == "predecessors":
+        left_arrow = "<"
+        right_arrow = ""
+    else:
+        left_arrow = ""
+        right_arrow = ">"
     query = (
         "// Replacing ':tmp_typing' with ':typing'\n"
-        "MATCH (n:{})-[t:tmp_typing]->(m)\n".format(rewritten_graph) +
+        "MATCH (n:{}){}-[t:tmp_typing]-{}(m)\n".format(
+            rewritten_graph, left_arrow, right_arrow) +
         "OPTIONAL MATCH (:{} {{id: '{}'}})".format(
             graph_label, rewritten_graph) +
-        "-[skeleton_rel:{}]->(:{} {{id: labels(m)[0]}}) \n".format(
-            typing_label, graph_label) +
+        "{}-[skeleton_rel:{}]-{}(:{} {{id: labels(m)[0]}}) \n".format(
+            left_arrow, typing_label, right_arrow, graph_label) +
         "FOREACH( dummy IN (CASE skeleton_rel WHEN null THEN [] ELSE [1] END) | \n" +
         "\tDELETE t\n" +
-        "\tMERGE (n)-[:typing]->(m)\n" +
+        "\tMERGE (n){}-[:typing]-{}(m)\n".format(left_arrow, right_arrow) +
         ")\n" +
         "FOREACH( dummy IN (CASE skeleton_rel WHEN null THEN [1] ELSE [] END) | \n" +
         "\tDELETE t\n" +
-        "\tMERGE (n)-[:transitive_typing]->(m)\n" +
+        "\tMERGE (n){}-[:transitive_typing]-{}(m)\n".format(
+            left_arrow, right_arrow) +
         ")\n"
     )
     return query

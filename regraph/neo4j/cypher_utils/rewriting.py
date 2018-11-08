@@ -777,8 +777,12 @@ def find_matching(pattern, node_label, edge_label,
                     else:
                         nodes_with_attrs.append((n, k, "{}".format(el)))
     if len(nodes_with_attrs) != 0:
+        if pattern_typing is not None or\
+           (nodes is not None and len(nodes) > 0):
+            query += " AND "
+        else:
+            query += " WHERE "
         query += (
-            "WHERE " +
             " AND ".join(["{} IN {}.{}".format(
                 v, n, k) for n, k, v in nodes_with_attrs]) + "\n"
         )
@@ -1304,6 +1308,9 @@ def multiple_cloning_query(original_var, clone_var, clone_id, clone_id_var,
             ", ".join("'{}'".format(n) for n in preds_to_ignore)) +
         ", ".join(carry_vars) + " \n"
     )
+    carry_vars.add("predIgnore")
+    carry_vars.add("sucIgnore")
+
     query += (
         "// match successors and out-edges of a node to be cloned\n" +
         "OPTIONAL MATCH ({})-[out_edge:{}]->(suc) \n".format(
@@ -1355,6 +1362,8 @@ def multiple_cloning_query(original_var, clone_var, clone_id, clone_id_var,
     )
     carry_vars.remove("suc_maps")
     carry_vars.remove("pred_maps")
+    carry_vars.remove("predIgnore")
+    carry_vars.remove("sucIgnore")
 
     if preserv_typing:
         query += (

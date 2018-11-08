@@ -55,3 +55,7 @@ class AttributeSetError(ReGraphException):
 
 class TypingWarning(ReGraphWarning):
     """Class for warnings about wrong typings."""
+
+
+class TypedNeo4jGraphError(ReGraphException):
+    """Exceptions class for errors in typed neo4j graphs."""

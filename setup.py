@@ -16,7 +16,7 @@ setup(
     package_dir={"regraph": "regraph"},
     zip_safe=False,
     install_requires=[
-        "matplotlib",
+        "matplotlib==2",
         "networkx==1.11",
         "numpy",
         "pyparsing",

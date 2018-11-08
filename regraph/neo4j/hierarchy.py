@@ -1,10 +1,11 @@
 """Neo4j driver for regraph."""
+import time
 import networkx as nx
 
 from neo4j.v1 import GraphDatabase
 from neo4j.exceptions import ConstraintError
 
-from . import Neo4jGraph
+from . import graphs
 from . import cypher_utils as cypher
 from regraph.exceptions import (HierarchyError,
                                 InvalidHomomorphism,
@@ -154,7 +155,7 @@ class Neo4jHierarchy(object):
         except(ConstraintError):
             raise HierarchyError(
                 "The graph '{}' is already in the database.".format(graph_id))
-        g = Neo4jGraph(
+        g = graphs.Neo4jGraph(
             driver=self._driver,
             node_label=graph_id,
             unique_node_ids=True)
@@ -493,16 +494,13 @@ class Neo4jHierarchy(object):
             succ = []
         return succ
 
-    def _access_graph(self, graph_id):
+    def _access_graph(self, graph_id, edge_label=None):
         """Access a graph of the hierarchy."""
-        query = "MATCH (n:graph) WHERE n.id='{}' RETURN n".format(
-            graph_id)
-        res = self.execute(query)
-        # if res.single() is None:
-        #     raise HierarchyError(
-        #         "The graph '{}' is not in the database.".format(graph_id))
-        g = Neo4jGraph(self._driver,
-                       node_label=graph_id, edge_label="edge")
+        if edge_label is None:
+            edge_label = "edge"
+        g = graphs.Neo4jGraph(
+            self._driver,
+            node_label=graph_id, edge_label=edge_label)
         return g
 
     def _check_typing(self, source, target):
@@ -574,7 +572,7 @@ class Neo4jHierarchy(object):
         return instances
 
     def rewrite(self, graph_id, rule, instance,
-                rhs_typing=None, strict=True):
+                rhs_typing=None, strict=False, p_typing=None):
         """Rewrite and propagate the changes up & down.
 
         Rewriting in the hierarchy cosists of an application of the
@@ -619,24 +617,37 @@ class Neo4jHierarchy(object):
         """
         if rhs_typing is None:
             rhs_typing = {}
+        if p_typing is None:
+            p_typing = {}
 
         if strict is True:
             self._check_rhs_typing(graph_id, rule, instance, rhs_typing)
 
+        # start = time.time()
         # Rewriting of the base graph
         g = self._access_graph(graph_id)
         rhs_g = g.rewrite(rule, instance)
+        # print("\t\t\t-> Time to rewrite base: ", time.time() - start)
 
         # Additing temporary typing specified by 'rhs_typing'
+        # start = time.time()
         if len(rule.added_nodes()) > 0 and rhs_typing:
-            self._add_tmp_typing(graph_id, rhs_g, rhs_typing)
+            self._add_tmp_rhs_typing(graph_id, rhs_g, rhs_typing)
+        # print("\t\t\t-> Time to add tmp typing: ", time.time() - start)
+
+        print(rhs_g)
+        if len(rule.cloned_nodes()) > 0 and p_typing:
+            self._add_tmp_p_typing(graph_id, rule.p_rhs, rhs_g, p_typing)
 
         # Propagation
+        # start = time.time()
         if rule.is_restrictive():
             self._propagate_up(graph_id, rule)
+        # print("\t\t\t-> Time to propagate up: ", time.time() - start)
+        # start = time.time()
         if strict is False and rule.is_relaxing():
             self._propagate_down(graph_id, graph_id, rule)
-
+        # print("\t\t\t-> Time to propagate down: ", time.time() - start)
         return self, rhs_g
 
     def _propagate_up(self, graph_id, rule):
@@ -667,6 +678,7 @@ class Neo4jHierarchy(object):
             with self._driver.session() as session:
                 tx = session.begin_transaction()
                 if clone_query:
+                    print(clone_query)
                     tx.run(clone_query)
                 if remove_node_query:
                     tx.run(remove_node_query)
@@ -716,7 +728,61 @@ class Neo4jHierarchy(object):
         for successor in successors:
             self._propagate_down(origin_graph, successor, rule)
 
-    def _add_tmp_typing(self, graph_id, rhs_g, rhs_typing):
+    def _add_tmp_p_typing(self, graph_id, p_rhs, rhs_g, p_typing):
+        for graph in p_typing.keys():
+            nodes_to_match = []
+            # merge_subqueres = []
+            for node, p_node in p_typing[graph].items():
+                p_typed_var = "n{}_{}".format(node, graph)
+                p_typing_var = "n{}_{}".format(rhs_g[p_rhs[p_node]], graph_id)
+                nodes_to_match = (
+                    "({}:{} {{id:'{}'}}), ".format(p_typed_var, graph, node) +
+                    "({}:{} {{id:'{}'}})".format(
+                        p_typing_var, graph_id, rhs_g[p_rhs[p_node]])
+                )
+                merge_subquery =\
+                    "MERGE ({})-[:tmp_typing]->({})".format(
+                        p_typed_var, p_typing_var)
+
+                query = (
+                    "// Adding temporary typing of the rhs nodes\n" +
+                    "OPTIONAL MATCH " + nodes_to_match + "\n" +
+                    merge_subquery + "\n"
+
+                )
+                print(query)
+                self.execute(query)
+            # if len(nodes_to_match) > 0:
+            #     query = (
+            #         "// Adding temporary typing of the rhs nodes\n" +
+            #         "OPTIONAL MATCH "
+            #     )
+
+            #     query += (
+            #         ", ".join(nodes_to_match) + "\n" +
+            #         "\n".join(merge_subqueres)
+            #         # cypher.with_vars(["NULL"]) + "\n"
+            #     )
+            #     print(query)
+            #     self.execute(query)
+
+        # Checking if the introduced p typing is consistent
+        with self._driver.session() as session:
+            tx = session.begin_transaction()
+            consistent_typing = cypher.check_tmp_consistency(
+                tx, self._graph_label, graph_id, self._typing_label)
+            tx.commit()
+
+        if consistent_typing:
+            self.execute(
+                cypher.preserve_tmp_typing(
+                    graph_id, self._graph_label, self._typing_label,
+                    direction="predecessors"))
+        else:
+            self.execute(
+                cypher.remove_tmp_typing(graph_id, direction="predecessors"))
+
+    def _add_tmp_rhs_typing(self, graph_id, rhs_g, rhs_typing):
         rhs_tmp_typing = ""
         for graph in rhs_typing.keys():
             # Add temp typing subquery
@@ -754,17 +820,18 @@ class Neo4jHierarchy(object):
         # Checking if the introduces rhs typing is consistent
         with self._driver.session() as session:
             tx = session.begin_transaction()
-            consistent_typing = cypher.check_rhs_consistency(
+            consistent_typing = cypher.check_tmp_consistency(
                 tx, graph_id, self._graph_label, self._typing_label)
             tx.commit()
 
         if consistent_typing:
             self.execute(
                 cypher.preserve_tmp_typing(
-                    graph_id, self._graph_label, self._typing_label))
+                    graph_id, self._graph_label, self._typing_label,
+                    direction="successors"))
         else:
             self.execute(
-                cypher.remove_tmp_typing(graph_id))
+                cypher.remove_tmp_typing(graph_id, direction="predecessors"))
 
     def _check_rhs_typing(self, graph_id, rule, instance, rhs_typing):
         # Check the rhs typing can be consistently inferred

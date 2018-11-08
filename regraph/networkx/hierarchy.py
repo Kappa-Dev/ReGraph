@@ -927,13 +927,17 @@ class NetworkXHierarchy(nx.DiGraph, AttributeContainter):
             return self.get_node_attrs(graph_id)
 
     def set_node_attrs(self, node_id, attrs):
-        self.node[node_id].update_attrs(attrs)
+        normalize_attrs(attrs)
+        for k, v in attrs:
+            self.node[node_id].attrs[k] = v
 
     def set_graph_attrs(self, graph_id, attrs):
         self.set_node_attrs(graph_id, attrs)
 
     def set_edge_attrs(self, source, target, attrs):
-        self.edge[source][target].update_attrs(attrs)
+        normalize_attrs(attrs)
+        for k, v in attrs:
+            self.edge[source][target].attrs[k] = v
 
     def set_typing_attrs(self, source, target, attrs):
         self.set_edge_attrs(source, target, attrs)
