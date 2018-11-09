@@ -628,10 +628,10 @@ class Neo4jHierarchy(object):
         rhs_g = g.rewrite(rule, instance)
 
         if rule.is_restrictive():
-            self._propagate_up(graph_id, rule)
             if len(rule.cloned_nodes()) > 0 and p_typing:
                 self._add_tmp_p_typing(
-                    graph_id, rule.p_rhs, rhs_g, p_typing)
+                    graph_id, rule, rhs_g, p_typing)
+            # self._propagate_up(graph_id, rule)
 
         if strict is False and rule.is_relaxing():
             if len(rule.added_nodes()) > 0 and rhs_typing:
@@ -718,101 +718,45 @@ class Neo4jHierarchy(object):
         for successor in successors:
             self._propagate_down(origin_graph, successor, rule)
 
-    def _add_tmp_p_typing(self, graph_id, p_rhs, rhs_g, p_typing):
+    def _add_tmp_p_typing(self, graph_id, rule, rhs_g, p_typing):
         for graph in p_typing.keys():
-            # Tag nodes that will be removed
-            p_untyped_var = "to_remove_{}".format(graph)
-            p_typing_var = "clone_{}".format(graph_id)
+            # We add attr _to_remove to an edge which will be deleted
+            # all this is happening before the propagation itself
+            for _, clones in rule.cloned_nodes().items():
+                for k, v in p_typing[graph].items():
+                    query = (
+                        "OPTIONAL MATCH (h_i:{} {{id: '{}'}})-[:typing*]->(g_i:{})\n".format(
+                            graph, k, graph_id) +
+                        "WHERE g_i.id <> '{}'\n".format(rhs_g[rule.p_rhs[v]]) +
+                        "MERGE (h_i)-[:_to_remove]->(g_i)\n"
+                    )
+                    print(query)
+                    self.execute(query)
+
+            # Check all predecessors are r
             query = (
-                "OPTIONAL MATCH ({}:{})-[:typing*]->({}:{})\n".format(
-                    p_untyped_var, graph, p_typing_var, graph_id) +
-                "WHERE {}.id IN [{}] AND ".format(
-                    p_typing_var,
-                    ", ".join(
-                        "'{}'".format(
-                            rhs_g[p_rhs[n]]) for n in set(p_typing[graph].values()))) +
-                "NOT {}.id IN [{}]\n".format(
-                    p_untyped_var, ", ".join("'{}'".format(
-                        n) for n in p_typing[graph].keys())) +
-                "SET {}._to_remove = true\n".format(p_untyped_var)
-                # "WITH {}\n".format(p_untyped_var) +
-                # "OPTIONAL MATCH ({})-[t:typing]->(succ) WHERE NOT succ:{}\n".format(p_untyped_var, graph_id) +
-                # "FOREACH(dummy in CASE WHEN t is NULL THEN [] ELSE [1] END |\n" +
-                # "\tSET succ._to_remove = true)\n" +
-                # # "\tMERGE ({})-[:to_remove]->(succ))\n".format(p_untyped_var) +
-                # "WITH {}\n".format(p_untyped_var) +
-                # "OPTIONAL MATCH (pred)-[t:typing]->({}) WHERE NOT pred:{}\n".format(p_untyped_var, graph_id) +
-                # "FOREACH(dummy in CASE WHEN t is NULL THEN [] ELSE [1] END |\n" +
-                # "\tSET pred._to_remove = true)\n"
-                # # "\tMERGE (pred)-[:to_remove]->({}))\n".format(p_untyped_var)
+                "OPTIONAL MATCH (p:{})<-[:_to_remove]-(pred)".format(graph_id) +
+                "-[t:typing]->(m:{})-[:_to_remove]->(o:{})\n".format(
+                    graph, graph_id) +
+                "WHERE p.id <> o.id\n" +
+                "RETURN CASE WHEN p IS NULL OR o IS NULL \n" +
+                "\tTHEN true ELSE \n" +
+                "\t\tCASE WHEN t IS NULL \n" +
+                "\t\t\tTHEN true ELSE false END END as res"
             )
             print(query)
+            res = self.execute(query)
+            valid = False
+            for record in res:
+                if record["res"] is True:
+                    valid = True
+            if valid is True:
+                # apply p typing
+                query = cypher.remove_targeted_typing(graph_id)
+            else:
+                # roll back to canonical
+                query = cypher.remove_targetting(graph_id)
             self.execute(query)
-
-        # Checking if the introduced p typing is consistent
-        with self._driver.session() as session:
-            tx = session.begin_transaction()
-            consistent_typing = cypher.check_consistency_with_rm(
-                tx, self._graph_label, graph_id, self._typing_label)
-            tx.commit()
-
-        # if consistent_typing:
-        #     self.execute(
-        #         cypher.preserve_tmp_typing(
-        #             graph_id, self._graph_label, self._typing_label,
-        #             direction="predecessors"))
-        # else:
-        #     self.execute(
-        #         cypher.remove_tmp_typing(graph_id, direction="predecessors"))
-            # for node, p_node in p_typing[graph].items():
-
-            #     p_typing_var = "n{}_{}".format(rhs_g[p_rhs[p_node]], graph_id)
-            #     nodes_to_match = (
-            #         "({}:{} {{id:'{}'}}), ".format(p_typed_var, graph, node) +
-            #         "({}:{} {{id:'{}'}})".format(
-            #             p_typing_var, graph_id, rhs_g[p_rhs[p_node]])
-            #     )
-            #     merge_subquery =\
-            #         "MERGE ({})-[:tmp_typing]->({})".format(
-            #             p_typed_var, p_typing_var)
-
-            #     query = (
-            #         "// Adding temporary typing of the rhs nodes\n" +
-            #         "OPTIONAL MATCH " + nodes_to_match + "\n" +
-            #         merge_subquery + "\n"
-
-            #     )
-            #     print(query)
-            #     self.execute(query)
-            # if len(nodes_to_match) > 0:
-            #     query = (
-            #         "// Adding temporary typing of the rhs nodes\n" +
-            #         "OPTIONAL MATCH "
-            #     )
-
-            #     query += (
-            #         ", ".join(nodes_to_match) + "\n" +
-            #         "\n".join(merge_subqueres)
-            #         # cypher.with_vars(["NULL"]) + "\n"
-            #     )
-            #     print(query)
-            #     self.execute(query)
-
-        # Checking if the introduced p typing is consistent
-        # with self._driver.session() as session:
-        #     tx = session.begin_transaction()
-        #     consistent_typing = cypher.check_tmp_consistency(
-        #         tx, self._graph_label, graph_id, self._typing_label)
-        #     tx.commit()
-
-        # if consistent_typing:
-        #     self.execute(
-        #         cypher.preserve_tmp_typing(
-        #             graph_id, self._graph_label, self._typing_label,
-        #             direction="predecessors"))
-        # else:
-        #     self.execute(
-        #         cypher.remove_tmp_typing(graph_id, direction="predecessors"))
 
     def _add_tmp_rhs_typing(self, graph_id, rhs_g, rhs_typing):
         rhs_tmp_typing = ""

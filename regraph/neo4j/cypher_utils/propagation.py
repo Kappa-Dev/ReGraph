@@ -492,6 +492,23 @@ def add_edge_propagation_query(graph_id, successor_id):
     )
     return query
 
+def remove_targeted_typing(rewritten_graph):
+    query = (
+        "MATCH (m:{})<-[r:_to_remove]-(n)-[path:typing*1..]->(m)\n".format(rewritten_graph) +
+        # "WHERE m.id = o.id\n" +
+        "DELETE r\n" +
+        "FOREACH(rel IN path |\n" +
+        "\tDELETE rel)\n"
+    )
+    return query
+
+def remove_targetting(rewritten_graph):
+    query = (
+        "MATCH ()-[rel:_to_remove]->(:{})\n".format(rewritten_graph) +
+        "DELETE rel\n"
+
+    )
+    return query
 
 def remove_tmp_typing(rewritten_graph, direction="successors"):
     if direction == "predecessors":
