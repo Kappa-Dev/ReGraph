@@ -418,6 +418,7 @@ class Rule(object):
             raise RuleError(
                 "Node '%s' exists in neither the left "
                 "hand side of the rule nor the preserved part" % n)
+
         if n in self.lhs.nodes():
             p_keys = keys_by_value(self.p_lhs, n)
             if len(p_keys) == 0:
@@ -1133,13 +1134,12 @@ class Rule(object):
         attrs = dict()
         for node in self.lhs.nodes():
             p_nodes = keys_by_value(self.p_lhs, node)
-            new_attrs = {}
             for p_node in p_nodes:
-                new_attrs = attrs_union(new_attrs, dict_sub(
-                    self.lhs.node[node], self.p.node[p_node]))
-            if len(new_attrs) > 0:
-                normalize_attrs(new_attrs)
-                attrs[node] = new_attrs
+                new_attrs = dict_sub(
+                    self.lhs.node[node], self.p.node[p_node])
+                if len(new_attrs) > 0:
+                    normalize_attrs(new_attrs)
+                    attrs[p_node] = new_attrs
         return attrs
 
     def removed_edge_attrs(self):
