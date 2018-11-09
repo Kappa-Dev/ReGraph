@@ -623,31 +623,21 @@ class Neo4jHierarchy(object):
         if strict is True:
             self._check_rhs_typing(graph_id, rule, instance, rhs_typing)
 
-        # start = time.time()
         # Rewriting of the base graph
         g = self._access_graph(graph_id)
         rhs_g = g.rewrite(rule, instance)
-        # print("\t\t\t-> Time to rewrite base: ", time.time() - start)
 
-        # Additing temporary typing specified by 'rhs_typing'
-        # start = time.time()
-        if len(rule.added_nodes()) > 0 and rhs_typing:
-            self._add_tmp_rhs_typing(graph_id, rhs_g, rhs_typing)
-        # print("\t\t\t-> Time to add tmp typing: ", time.time() - start)
-
-        print(rhs_g)
-        if len(rule.cloned_nodes()) > 0 and p_typing:
-            self._add_tmp_p_typing(graph_id, rule.p_rhs, rhs_g, p_typing)
-
-        # Propagation
-        # start = time.time()
         if rule.is_restrictive():
             self._propagate_up(graph_id, rule)
-        # print("\t\t\t-> Time to propagate up: ", time.time() - start)
-        # start = time.time()
+            if len(rule.cloned_nodes()) > 0 and p_typing:
+                self._add_tmp_p_typing(
+                    graph_id, rule.p_rhs, rhs_g, p_typing)
+
         if strict is False and rule.is_relaxing():
+            if len(rule.added_nodes()) > 0 and rhs_typing:
+                self._add_tmp_rhs_typing(graph_id, rhs_g, rhs_typing)
             self._propagate_down(graph_id, graph_id, rule)
-        # print("\t\t\t-> Time to propagate down: ", time.time() - start)
+
         return self, rhs_g
 
     def _propagate_up(self, graph_id, rule):
@@ -730,28 +720,70 @@ class Neo4jHierarchy(object):
 
     def _add_tmp_p_typing(self, graph_id, p_rhs, rhs_g, p_typing):
         for graph in p_typing.keys():
-            nodes_to_match = []
-            # merge_subqueres = []
-            for node, p_node in p_typing[graph].items():
-                p_typed_var = "n{}_{}".format(node, graph)
-                p_typing_var = "n{}_{}".format(rhs_g[p_rhs[p_node]], graph_id)
-                nodes_to_match = (
-                    "({}:{} {{id:'{}'}}), ".format(p_typed_var, graph, node) +
-                    "({}:{} {{id:'{}'}})".format(
-                        p_typing_var, graph_id, rhs_g[p_rhs[p_node]])
-                )
-                merge_subquery =\
-                    "MERGE ({})-[:tmp_typing]->({})".format(
-                        p_typed_var, p_typing_var)
+            # Tag nodes that will be removed
+            p_untyped_var = "to_remove_{}".format(graph)
+            p_typing_var = "clone_{}".format(graph_id)
+            query = (
+                "OPTIONAL MATCH ({}:{})-[:typing*]->({}:{})\n".format(
+                    p_untyped_var, graph, p_typing_var, graph_id) +
+                "WHERE {}.id IN [{}] AND ".format(
+                    p_typing_var,
+                    ", ".join(
+                        "'{}'".format(
+                            rhs_g[p_rhs[n]]) for n in set(p_typing[graph].values()))) +
+                "NOT {}.id IN [{}]\n".format(
+                    p_untyped_var, ", ".join("'{}'".format(
+                        n) for n in p_typing[graph].keys())) +
+                "SET {}._to_remove = true\n".format(p_untyped_var)
+                # "WITH {}\n".format(p_untyped_var) +
+                # "OPTIONAL MATCH ({})-[t:typing]->(succ) WHERE NOT succ:{}\n".format(p_untyped_var, graph_id) +
+                # "FOREACH(dummy in CASE WHEN t is NULL THEN [] ELSE [1] END |\n" +
+                # "\tSET succ._to_remove = true)\n" +
+                # # "\tMERGE ({})-[:to_remove]->(succ))\n".format(p_untyped_var) +
+                # "WITH {}\n".format(p_untyped_var) +
+                # "OPTIONAL MATCH (pred)-[t:typing]->({}) WHERE NOT pred:{}\n".format(p_untyped_var, graph_id) +
+                # "FOREACH(dummy in CASE WHEN t is NULL THEN [] ELSE [1] END |\n" +
+                # "\tSET pred._to_remove = true)\n"
+                # # "\tMERGE (pred)-[:to_remove]->({}))\n".format(p_untyped_var)
+            )
+            print(query)
+            self.execute(query)
 
-                query = (
-                    "// Adding temporary typing of the rhs nodes\n" +
-                    "OPTIONAL MATCH " + nodes_to_match + "\n" +
-                    merge_subquery + "\n"
+        # Checking if the introduced p typing is consistent
+        with self._driver.session() as session:
+            tx = session.begin_transaction()
+            consistent_typing = cypher.check_consistency_with_rm(
+                tx, self._graph_label, graph_id, self._typing_label)
+            tx.commit()
 
-                )
-                print(query)
-                self.execute(query)
+        # if consistent_typing:
+        #     self.execute(
+        #         cypher.preserve_tmp_typing(
+        #             graph_id, self._graph_label, self._typing_label,
+        #             direction="predecessors"))
+        # else:
+        #     self.execute(
+        #         cypher.remove_tmp_typing(graph_id, direction="predecessors"))
+            # for node, p_node in p_typing[graph].items():
+
+            #     p_typing_var = "n{}_{}".format(rhs_g[p_rhs[p_node]], graph_id)
+            #     nodes_to_match = (
+            #         "({}:{} {{id:'{}'}}), ".format(p_typed_var, graph, node) +
+            #         "({}:{} {{id:'{}'}})".format(
+            #             p_typing_var, graph_id, rhs_g[p_rhs[p_node]])
+            #     )
+            #     merge_subquery =\
+            #         "MERGE ({})-[:tmp_typing]->({})".format(
+            #             p_typed_var, p_typing_var)
+
+            #     query = (
+            #         "// Adding temporary typing of the rhs nodes\n" +
+            #         "OPTIONAL MATCH " + nodes_to_match + "\n" +
+            #         merge_subquery + "\n"
+
+            #     )
+            #     print(query)
+            #     self.execute(query)
             # if len(nodes_to_match) > 0:
             #     query = (
             #         "// Adding temporary typing of the rhs nodes\n" +
@@ -767,20 +799,20 @@ class Neo4jHierarchy(object):
             #     self.execute(query)
 
         # Checking if the introduced p typing is consistent
-        with self._driver.session() as session:
-            tx = session.begin_transaction()
-            consistent_typing = cypher.check_tmp_consistency(
-                tx, self._graph_label, graph_id, self._typing_label)
-            tx.commit()
+        # with self._driver.session() as session:
+        #     tx = session.begin_transaction()
+        #     consistent_typing = cypher.check_tmp_consistency(
+        #         tx, self._graph_label, graph_id, self._typing_label)
+        #     tx.commit()
 
-        if consistent_typing:
-            self.execute(
-                cypher.preserve_tmp_typing(
-                    graph_id, self._graph_label, self._typing_label,
-                    direction="predecessors"))
-        else:
-            self.execute(
-                cypher.remove_tmp_typing(graph_id, direction="predecessors"))
+        # if consistent_typing:
+        #     self.execute(
+        #         cypher.preserve_tmp_typing(
+        #             graph_id, self._graph_label, self._typing_label,
+        #             direction="predecessors"))
+        # else:
+        #     self.execute(
+        #         cypher.remove_tmp_typing(graph_id, direction="predecessors"))
 
     def _add_tmp_rhs_typing(self, graph_id, rhs_g, rhs_typing):
         rhs_tmp_typing = ""
@@ -1081,13 +1113,23 @@ class Neo4jHierarchy(object):
             g.add_edge(s, t, self.edge[s][t].attrs)
         return g
 
-    def rename_graph(self, graph_id, new_graph_id):
-        """Rename a graph in the hierarchy."""
-        pass
+    # def rename_graph(self, graph_id, new_graph_id):
+    #     """Rename a graph in the hierarchy."""
+    #     query = (
+    #         "MATCH (n:{} {{id: '{}'}})\n".format(
+    #             self._graph_label, graph_id) +
+    #         "SET n.id = '{}'".format(new_graph_id)
+    #     )
+    #     self.execute(query)
 
-    def rename_node(self, graph_id, node, new_name):
+    def rename_node(self, graph_id, node_id, new_name):
         """Rename a node in a graph of the hierarchy."""
-        pass
+        query = (
+            "MATCH (n:{} {{id: '{}'}})\n".format(
+                graph_id, node_id) +
+            "SET n.id = '{}'".format(new_name)
+        )
+        self.execute(query)
 
     def unique_graph_id(self, prefix):
         """Generate a new graph id starting with a prefix."""

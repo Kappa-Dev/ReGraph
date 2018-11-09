@@ -716,3 +716,6 @@ class TypedNeo4jGraph(hierarchy.Neo4jHierarchy):
                 self._data_label: p_typing
             },
             strict=strict)
+
+    def rename_schema_node(self, node_id, new_node_id):
+        self.rename_node(self._schema_label, node_id, new_node_id)

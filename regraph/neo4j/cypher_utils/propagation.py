@@ -216,6 +216,19 @@ def check_consistency(tx, source, target):
     return True
 
 
+def check_consistency_with_rm(tx, source, target, typing_label):
+    """Check consistency of typing after removeal of tagged nodes."""
+    consistent = True
+
+    query = (
+        "MATCH (G:{})\n".format(source) +
+        "WHERE G.id = '{}'\n".format(source) +
+        "OPTIONAL MATCH (h_i:{})\n".format(target) +
+        "WHERE (G)<-[:{}*1..]-(h_i})-[:{}*1..]->(G)\n".format(
+            typing_label, typing_label)
+    )
+
+
 def check_tmp_consistency(tx, source, target, typing_label):
     """Check consistency of typing of the rhs of the rule."""
     query1 = (
