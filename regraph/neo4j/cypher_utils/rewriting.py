@@ -734,11 +734,13 @@ def find_matching(pattern, node_label, edge_label,
     edge_label
         Label of the edges to match, default is 'edge'
     """
+    pattern_nodes = pattern.nodes()
+
     query =\
         "MATCH {}".format(
             ", ".join(
                 "({}:{})".format(n, node_label)
-                for n in pattern.nodes()))
+                for n in pattern_nodes))
     if len(pattern.edges()) > 0:
         query += ", {}".format(
             ", ".join("({})-[:{}]->({})".format(
@@ -747,19 +749,41 @@ def find_matching(pattern, node_label, edge_label,
     else:
         query += "\n"
 
-    if nodes is not None:
+    where_appeared = False
+    if len(pattern_nodes) > 1:
+        injectivity_clauses = []
+        for i, n in enumerate(pattern_nodes):
+            if i < len(pattern_nodes) - 1:
+                injectivity_clauses.append(
+                    "id({}) <> id({})".format(
+                        pattern_nodes[i], pattern_nodes[i + 1]))
+        query += "WHERE {}\n".format(
+            " AND ".join(c for c in injectivity_clauses))
+        where_appeared = True
+
+    if nodes is not None and len(nodes) > 0:
+        if where_appeared is False:
+            query += "WHERE "
+            where_appeared = True
+        else:
+            query += "AND"
         query +=\
-            "WHERE " + " AND ".join(
+            " AND ".join(
                 "{}.id IN [{}]".format(
                     pattern_n, ", ".join("'{}'".format(n) for n in nodes))
-                for pattern_n in pattern.nodes()) + "\n"
+                for pattern_n in pattern_nodes) + "\n"
 
-    if pattern_typing is not None:
-        if nodes is not None and len(nodes) > 0:
-            query += " AND "
+    if pattern_typing is not None and len(pattern_typing) > 0:
+        if where_appeared is True:
+            and_needed = True
         else:
             query += " WHERE "
+            where_appeared = True
+            and_needed = False
         for typing_graph, mapping in pattern_typing.items():
+            if and_needed and len(pattern_typing[typing_graph]) > 0:
+                query += " AND "
+                print(pattern_typing, typing_graph)
             query +=\
                 " AND ".join(
                     "({})-[:typing]->(:{} {{id: '{}'}})".format(
@@ -777,11 +801,12 @@ def find_matching(pattern, node_label, edge_label,
                     else:
                         nodes_with_attrs.append((n, k, "{}".format(el)))
     if len(nodes_with_attrs) != 0:
-        if pattern_typing is not None or\
-           (nodes is not None and len(nodes) > 0):
+        if where_appeared is True:
             query += " AND "
+            print("here 3")
         else:
             query += " WHERE "
+            where_appeared = True
         query += (
             " AND ".join(["{} IN {}.{}".format(
                 v, n, k) for n, k, v in nodes_with_attrs]) + "\n"
