@@ -634,7 +634,7 @@ class Neo4jHierarchy(object):
             # self._propagate_up(graph_id, rule)
 
         if strict is False and rule.is_relaxing():
-            if len(rule.added_nodes()) > 0 and rhs_typing:
+            if len(rule.added_nodes()) > 0 and len(rhs_typing) > 0:
                 self._add_tmp_rhs_typing(graph_id, rhs_g, rhs_typing)
             self._propagate_down(graph_id, graph_id, rule)
 
@@ -765,33 +765,34 @@ class Neo4jHierarchy(object):
 
             nodes_to_match = []
             merge_subqueres = []
-            for node in rhs_typing[graph].keys():
-                rhs_typed_var = "n{}_{}".format(rhs_g[node], graph_id)
-                rhs_typing_var = "n{}_{}".format(
-                    rhs_typing[graph][node], graph)
-                nodes_to_match.append(
-                    "({}:{} {{id:'{}'}}), ".format(
-                        rhs_typed_var, graph_id, rhs_g[node]) +
-                    "({}:{} {{id:'{}'}})".format(
-                        rhs_typing_var, graph, rhs_typing[graph][node]))
-                merge_subqueres.append(
-                    "MERGE ({})-[:tmp_typing]->({})".format(
-                        rhs_typed_var, rhs_typing_var)
-                )
+            if rhs_typing[graph]:
+                for node in rhs_typing[graph].keys():
+                    rhs_typed_var = "n{}_{}".format(rhs_g[node], graph_id)
+                    rhs_typing_var = "n{}_{}".format(
+                        rhs_typing[graph][node], graph)
+                    nodes_to_match.append(
+                        "({}:{} {{id:'{}'}}), ".format(
+                            rhs_typed_var, graph_id, rhs_g[node]) +
+                        "({}:{} {{id:'{}'}})".format(
+                            rhs_typing_var, graph, rhs_typing[graph][node]))
+                    merge_subqueres.append(
+                        "MERGE ({})-[:tmp_typing]->({})".format(
+                            rhs_typed_var, rhs_typing_var)
+                    )
 
-            if len(nodes_to_match) > 0:
-                query = (
-                    "// Adding temporary typing of the rhs nodes\n" +
-                    "OPTIONAL MATCH "
-                )
+                if len(nodes_to_match) > 0:
+                    query = (
+                        "// Adding temporary typing of the rhs nodes\n" +
+                        "OPTIONAL MATCH "
+                    )
 
-                query += (
-                    ", ".join(nodes_to_match) + "\n" +
-                    "\n".join(merge_subqueres)
-                    # cypher.with_vars(["NULL"]) + "\n"
-                )
-                rhs_tmp_typing += query + "\n"
-                self.execute(query)
+                    query += (
+                        ", ".join(nodes_to_match) + "\n" +
+                        "\n".join(merge_subqueres)
+                        # cypher.with_vars(["NULL"]) + "\n"
+                    )
+                    rhs_tmp_typing += query + "\n"
+                    self.execute(query)
 
         # Checking if the introduces rhs typing is consistent
         with self._driver.session() as session:
@@ -872,7 +873,7 @@ class Neo4jHierarchy(object):
                             "Rewriting is strict, and addition of an edge "
                             "'{}'->'{}' from R is not allowed as there ".format(
                                 source, target) +
-                            "is no edge '{}'->'{}'' in the graph '{}')!".format(
+                            "is no edge '{}'->'{}' in the graph '{}')!".format(
                                 source_typing, target_typing, s))
 
                 for n, attrs in rule.added_node_attrs().items():
