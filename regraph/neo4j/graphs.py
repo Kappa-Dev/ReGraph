@@ -697,6 +697,8 @@ class TypedNeo4jGraph(hierarchy.Neo4jHierarchy):
 
     def rewrite_data(self, rule, instance,
                      rhs_typing=None, strict=False):
+        if rhs_typing is None:
+            rhs_typing = dict()
         return self.rewrite(
             self._data_label,
             rule=rule,
@@ -719,3 +721,32 @@ class TypedNeo4jGraph(hierarchy.Neo4jHierarchy):
 
     def rename_schema_node(self, node_id, new_node_id):
         self.rename_node(self._schema_label, node_id, new_node_id)
+
+    def rename_data_node(self, node_id, new_node_id):
+        self.rename_node(self._data_label, node_id, new_node_id)
+
+    def get_data(self):
+        return self.get_graph(self._data_label)
+
+    def get_schema(self):
+        return self.get_graph(self._schema_label)
+
+    def get_data_nodes(self):
+        data = self.get_data()
+        return data.nodes()
+
+    def get_data_edges(self):
+        data = self.get_data()
+        return data.edges()
+
+    def get_schema_nodes(self):
+        schema = self.get_schema()
+        return schema.nodes()
+
+    def get_schema_edges(self):
+        schema = self.get_schema()
+        return schema.edges()
+
+    def get_node_type(self, node_id):
+        t = self.node_type(self._data_label, node_id)
+        return t[self._schema_label]
