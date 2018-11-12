@@ -1488,18 +1488,26 @@ class Rule(object):
         # var names, we need to perform escaping on these names
         # for neo4j not to complain (some symbols are forbidden in
         # Cypher's var names)
+
+        # fix the order of nodes from P
+        # this is to avoid problems with different
+        # selection of the cloning origin
+        preserved_nodes = self.p.nodes()
+        preserved_nodes_positions = {
+            n: i + 0 for i, n in enumerate(preserved_nodes)
+        }
         if generate_var_ids:
             # Generate unique variable names corresponding to node names
             lhs_vars = {
                 n: cypher.generate_var_name() for n in self.lhs.nodes()}
             p_vars = {
-                n: cypher.generate_var_name() for n in self.p.nodes()}
+                n: cypher.generate_var_name() for n in preserved_nodes}
             rhs_vars = {
                 n: cypher.generate_var_name() for n in self.rhs.nodes()}
         else:
             # rule._escape()
             lhs_vars = {n: "lhs_" + str(n) for n in self.lhs.nodes()}
-            p_vars = {n: "p_" + str(n) for n in self.p.nodes()}
+            p_vars = {n: "p_" + str(n) for n in preserved_nodes}
             rhs_vars = {n: "rhs_" + str(n) for n in self.rhs.nodes()}
 
         # Variables of the nodes of instance
@@ -1529,22 +1537,30 @@ class Rule(object):
             preds_to_ignore = dict()
             sucs_to_ignore = dict()
             for p_node in p_nodes:
-                if p_node != lhs_node:
+                if (lhs_node in p_nodes and p_node != lhs_node) or\
+                   (lhs_node not in p_nodes and preserved_nodes_positions[
+                        p_node] != 0):
                     clones.add(p_node)
-                    preds_to_ignore[p_node] = set()
-                    sucs_to_ignore[p_node] = set()
-                    for u, v in self.removed_edges():
-                        if u == p_node:
-                            try:
-                                sucs_to_ignore[p_node].add(instance[v])
-                            except(KeyError):
-                                sucs_to_ignore[p_node].add(v)
-                        if v == p_node:
-                            try:
-                                preds_to_ignore[p_node].add(instance[u])
-                            except(KeyError):
-                                preds_to_ignore[p_node].add(u)
+
             for n in clones:
+                preds_to_ignore = set()
+                sucs_to_ignore = set()
+                for u, v in self.removed_edges():
+                        if u == n and v not in p_nodes:
+                            try:
+                                sucs_to_ignore.add(
+                                    instance[self.p_lhs[v]])
+                            except(KeyError):
+                                pass
+                                # sucs_to_ignore.add(v)
+                        if v == n and u not in p_nodes:
+                            try:
+                                preds_to_ignore.add(
+                                    instance[self.p_lhs[u]])
+                            except(KeyError):
+                                pass
+                                # preds_to_ignore[p_node].add(u)
+
                 query +=\
                     "// Create clone corresponding to '{}' ".format(n) +\
                     "of the preserved part\n"
@@ -1560,8 +1576,8 @@ class Rule(object):
                     clone_id_var=clone_id_var,
                     node_label=node_label,
                     edge_labels=["edge", "typing", "related"],
-                    sucs_to_ignore=sucs_to_ignore[n],
-                    preds_to_ignore=preds_to_ignore[n],
+                    sucs_to_ignore=sucs_to_ignore,
+                    preds_to_ignore=preds_to_ignore,
                     carry_vars=carry_variables,
                     ignore_naming=True)
                 query += q
@@ -1577,9 +1593,14 @@ class Rule(object):
 
         # Generate edges removal subquery
         for u, v in self.removed_edges():
-            if u in instance.keys() and v in instance.keys():
-                query += "// Removing edge '{}->{}' of the lhs \n".format(u, v)
-                edge_var = "{}_{}".format(str(lhs_vars[u]), str(lhs_vars[v]))
+            if self.p_lhs[u] not in self.cloned_nodes().keys() and\
+               self.p_lhs[v] not in self.cloned_nodes().keys():
+                # if u in instance.keys() and v in instance.keys():
+                query += "// Removing pattern matched edges '{}->{}' of the lhs \n".format(
+                    self.p_lhs[u], self.p_lhs[v])
+                edge_var = "{}_{}".format(
+                    str(lhs_vars[self.p_lhs[u]]),
+                    str(lhs_vars[self.p_lhs[v]]))
                 query += cypher.remove_edge(edge_var)
                 query += "\n"
                 carry_variables.remove(edge_var)
@@ -1595,7 +1616,7 @@ class Rule(object):
                 vars_to_rename[lhs_vars[n]] = new_var_name
                 carry_variables.remove(lhs_vars[n])
         if len(vars_to_rename) > 0:
-            query += "// Renaming vars to correspond to the vars of P\n"
+            query += "\n// Renaming vars to correspond to the vars of P\n"
             if len(carry_variables) > 0:
                 query +=\
                     cypher.with_vars(carry_variables) +\
@@ -1612,6 +1633,29 @@ class Rule(object):
             query += "\n\n"
         for k, v in vars_to_rename.items():
             carry_variables.add(v)
+
+        # Generate removal of edges between clones
+        matches = []
+        for u, v in self.removed_edges():
+            if self.p_lhs[u] in self.cloned_nodes().keys() or\
+               self.p_lhs[v] in self.cloned_nodes().keys():
+                matches.append((
+                    "({})-[{}:{}]->({})".format(
+                        p_vars[u],
+                        p_vars[u] + "_" + p_vars[v],
+                        edge_label,
+                        p_vars[v]),
+                    p_vars[u] + "_" + p_vars[v]))
+
+        if len(matches) > 0:
+            query += "// Removing edges not bound to vars by matching (edges from/to clones)\n"
+            for edge, var in matches:
+                query += (
+                    "// Removing '{}->{}' in P \n".format(u, v) +
+                    "OPTIONAL MATCH {}\n".format(edge) +
+                    "DELETE {}\n".format(var) +
+                    cypher.with_vars(carry_variables)
+                )
 
         # Generate node attrs removal subquery
         for node, attrs in self.removed_node_attrs().items():
