@@ -4,7 +4,7 @@ from setuptools import setup
 
 setup(
     name='ReGraph',
-    version='1.0',
+    version='2.0',
     description='Graph rewriting tool',
     author='Eugenia Oshurko',
     license='MIT License',
@@ -16,8 +16,8 @@ setup(
     package_dir={"regraph": "regraph"},
     zip_safe=False,
     install_requires=[
-        "matplotlib==2",
-        "networkx==1.11",
+        "matplotlib",
+        "networkx",
         "numpy",
         "pyparsing",
         "lrparsing",

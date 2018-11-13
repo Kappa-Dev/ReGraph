@@ -52,6 +52,7 @@ def _check_consistency(hierarchy, source, target, mapping=None):
     paths_to_source = {}
     paths_from_target = {}
     for s in hierarchy.nodes():
+        print(all_paths, type(all_paths))
         if source in all_paths[s].keys():
             paths_to_source[s] = all_paths[s][source]
         if s == target:

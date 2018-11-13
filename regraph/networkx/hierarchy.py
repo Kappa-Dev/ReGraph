@@ -31,7 +31,8 @@ from regraph.networkx.category_utils import (compose,
                                              is_total_homomorphism,
                                              relation_to_span,
                                              right_relation_dict)
-from regraph.primitives import (get_relabeled_graph,
+from regraph.primitives import (assign_attrs,
+                                get_relabeled_graph,
                                 relabel_node,
                                 get_edge,
                                 graph_to_json,
@@ -156,15 +157,15 @@ class NetworkXHierarchy(nx.DiGraph, AttributeContainter):
         res += "\nGraphs (directed == {}): \n".format(self.directed)
         res += "\nNodes:\n"
         for n in self.nodes():
-            if isinstance(self.node[n], GraphNode):
+            if "graph" in self.nodes[n]:
                 res += "Graph:"
-            elif type(self.node[n]) == RuleNode:
+            elif "rule" in self.nodes[n]:
                 res += "Rule:"
             else:
                 raise HierarchyError(
                     "Hierarchy error: unknown type '{}' of "
-                    "the node '{}'".format(type(self.node[n]), n))
-            res += " {} {}\n".format(n, self.node[n].attrs)
+                    "the node '{}'".format(type(self.nodes[n]), n))
+            res += " {} {}\n".format(n, self.nodes[n].attrs)
         res += "\nTyping homomorphisms: \n"
         for n1, n2 in self.edges():
             if isinstance(self.edge[n1][n2], self.graph_typing_cls):
@@ -197,18 +198,18 @@ class NetworkXHierarchy(nx.DiGraph, AttributeContainter):
             return False
 
         for node in self.nodes():
-            if self.node[node].attrs != hie.node[node].attrs:
+            if self.nodes[node].attrs != hie.nodes[node].attrs:
                 return
-            if isinstance(self.node[node], GraphNode) and\
-               isinstance(hie.node[node], GraphNode):
+            if "graph" in self.nodes[node] and\
+               "graph" in hie.nodes[node]:
                 if not equal(
-                    self.node[node].graph,
-                    hie.node[node].graph
+                    self.nodes[node]["graph"],
+                    hie.nodes[node]["graph"]
                 ):
                     return False
-            elif isinstance(self.node[node], RuleNode) and\
-                    isinstance(hie.node[node], RuleNode):
-                if self.node[node].rule != hie.node[node].rule:
+            elif "rule" in self.nodes[node] and\
+                    "rule" in hie.nodes[node]:
+                if self.nodes[node].rule != hie.nodes[node].rule:
                     return False
             else:
                 return False
@@ -247,17 +248,17 @@ class NetworkXHierarchy(nx.DiGraph, AttributeContainter):
             "relations": []
         }
         for node in self.nodes():
-            if isinstance(self.node[node], RuleNode):
+            if "rule" in self.nodes[node]:
                 json_data["rules"].append({
                     "id": node,
-                    "rule": self.node[node].rule.to_json(),
-                    "attrs": self.node[node].attrs_to_json()
+                    "rule": self.nodes[node].rule.to_json(),
+                    "attrs": self.nodes[node].attrs_to_json()
                 })
-            elif isinstance(self.node[node], GraphNode):
+            elif "graph" in self.nodes[node]:
                 json_data["graphs"].append({
                     "id": node,
-                    "graph": graph_to_json(self.node[node].graph),
-                    "attrs": self.node[node].attrs_to_json()
+                    "graph": graph_to_json(self.nodes[node]["graph"]),
+                    "attrs": self.nodes[node].attrs_to_json()
                 })
 
             else:
@@ -506,12 +507,16 @@ class NetworkXHierarchy(nx.DiGraph, AttributeContainter):
             raise HierarchyError(
                 "Node '{}' already exists in the hierarchy!".format(graph_id))
         self.add_node(graph_id)
-        self.node[graph_id] = self.graph_node_cls(graph, attrs, **kwargs)
+        assign_attrs(
+            self.nodes[graph_id], {
+                "graph": graph,
+                "attrs": attrs
+            })
         if graph_id not in self.relation_edge.keys():
             self.relation_edge.update({graph_id: dict()})
         if graph_id not in self.relation.keys():
             self.relation.update({graph_id: dict()})
-        self.graph[graph_id] = self.node[graph_id].graph
+        self.graph[graph_id] = self.nodes[graph_id]["graph"]
         if graph_id not in self.typing.keys():
             self.typing[graph_id] = dict()
         return
@@ -572,8 +577,8 @@ class NetworkXHierarchy(nx.DiGraph, AttributeContainter):
         self.add_node(rule_id)
         if rule_attrs is not None:
             normalize_attrs(rule_attrs)
-        self.node[rule_id] = self.rule_node_cls(rule, rule_attrs)
-        self.rule[rule_id] = self.node[rule_id].rule
+        self.nodes[rule_id] = self.rule_node_cls(rule, rule_attrs)
+        self.rule[rule_id] = self.nodes[rule_id].rule
         if rule_id not in self.rule_lhs_typing.keys():
             self.rule_lhs_typing[rule_id] = dict()
         if rule_id not in self.rule_rhs_typing.keys():
@@ -626,8 +631,8 @@ class NetworkXHierarchy(nx.DiGraph, AttributeContainter):
                 "no muliple edges allowed!" %
                 (source, target)
             )
-        if not isinstance(self.node[source], self.graph_node_cls):
-            if type(self.node[source]) == RuleNode:
+        if "graph" not in self.nodes[source]:
+            if "rule" in self.nodes[source]:
                 raise HierarchyError(
                     "Source node is a rule, use `add_rule_typing` "
                     "method instead!"
@@ -635,12 +640,12 @@ class NetworkXHierarchy(nx.DiGraph, AttributeContainter):
             else:
                 raise HierarchyError(
                     "Source of a typing should be a graph, `%s` is provided!" %
-                    type(self.node[source])
+                    type(self.nodes[source])
                 )
-        if not isinstance(self.node[target], self.graph_node_cls):
+        if "graph" not in self.nodes[target]:
             raise HierarchyError(
                 "Target of a typing should be a graph, `%s` is provided!" %
-                type(self.node[target])
+                type(self.nodes[target])
             )
 
         # check no cycles are produced
@@ -655,8 +660,8 @@ class NetworkXHierarchy(nx.DiGraph, AttributeContainter):
 
         # check if the homomorphism is valid
         check_homomorphism(
-            self.node[source].graph,
-            self.node[target].graph,
+            self.nodes[source]["graph"],
+            self.nodes[target]["graph"],
             mapping,
             total=True
         )
@@ -719,21 +724,21 @@ class NetworkXHierarchy(nx.DiGraph, AttributeContainter):
             raise HierarchyError(
                 "Node '%s' is not defined in the hierarchy!" % graph_id)
 
-        if type(self.node[rule_id]) != RuleNode:
+        if type(self.nodes[rule_id]) != RuleNode:
             raise HierarchyError(
                 "Source of a rule typing should be a rule, `%s` is provided!" %
-                type(self.node[rule_id])
+                type(self.nodes[rule_id])
             )
-        if not isinstance(self.node[graph_id], GraphNode):
+        if "graph" not in self.nodes[graph_id]:
             raise HierarchyError(
                 "Target of a rule typing should be a graph, "
                 "'{}' is provided!".format(
-                    type(self.node[graph_id])))
+                    type(self.nodes[graph_id])))
 
         # check if an lhs typing is valid
         check_homomorphism(
-            self.node[rule_id].rule.lhs,
-            self.node[graph_id].graph,
+            self.nodes[rule_id]["rule"].lhs,
+            self.nodes[graph_id]["graph"],
             lhs_mapping,
             total=lhs_total
         )
@@ -741,7 +746,7 @@ class NetworkXHierarchy(nx.DiGraph, AttributeContainter):
         new_rhs_mapping = rhs_mapping
         if new_rhs_mapping is None:
             new_rhs_mapping = dict()
-        rule = self.node[rule_id].rule
+        rule = self.nodes[rule_id].rule
         for node in rule.rhs.nodes():
             p_keys = keys_by_value(rule.p_rhs, node)
             if len(p_keys) == 1:
@@ -765,8 +770,8 @@ class NetworkXHierarchy(nx.DiGraph, AttributeContainter):
 
         # check if an rhs typing is valid
         check_homomorphism(
-            self.node[rule_id].rule.rhs,
-            self.node[graph_id].graph,
+            self.nodes[rule_id]["rule"].rhs,
+            self.nodes[graph_id]["graph"],
             new_rhs_mapping,
             total=rhs_total
         )
@@ -848,15 +853,15 @@ class NetworkXHierarchy(nx.DiGraph, AttributeContainter):
             raise HierarchyError(
                 "Node '%s' is not defined in the hierarchy!" % right)
 
-        if not isinstance(self.node[left], GraphNode):
+        if "graph" not in self.nodes[left]:
             raise HierarchyError(
                 "Relation can be defined on graphs, '%s' is provided" %
-                type(self.node[left])
+                type(self.nodes[left])
             )
-        if not isinstance(self.node[right], GraphNode):
+        if "graph" not in self.nodes[right]:
             raise HierarchyError(
                 "Relation can be defined on graphs, '%s' is provided" %
-                type(self.node[right])
+                type(self.nodes[right])
             )
 
         if (left, right) in self.relations():
@@ -885,14 +890,14 @@ class NetworkXHierarchy(nx.DiGraph, AttributeContainter):
 
         # check relation is well-defined on left and right side
         for key, values in relation.items():
-            if key not in self.node[left].graph.nodes():
+            if key not in self.nodes[left]["graph"].nodes():
                 raise HierarchyError(
                     "Relation is not valid: node '%s' does not "
                     "exist in a graph '%s'" %
                     (key, left)
                 )
             for v in values:
-                if v not in self.node[right].graph.nodes():
+                if v not in self.nodes[right]["graph"].nodes():
                     raise HierarchyError(
                         "Relation is not valid: node '%s' does not "
                         "exist in a graph '%s'" %
@@ -918,10 +923,10 @@ class NetworkXHierarchy(nx.DiGraph, AttributeContainter):
         return
 
     def get_graph(self, graph_id):
-            return self.node[graph_id].graph
+            return self.nodes[graph_id]["graph"]
 
     def get_node_attrs(self, node_id):
-            return self.node[node_id].attrs
+            return self.nodes[node_id].attrs
 
     def get_graph_attrs(self, graph_id):
             return self.get_node_attrs(graph_id)
@@ -929,7 +934,7 @@ class NetworkXHierarchy(nx.DiGraph, AttributeContainter):
     def set_node_attrs(self, node_id, attrs):
         normalize_attrs(attrs)
         for k, v in attrs:
-            self.node[node_id].attrs[k] = v
+            self.nodes[node_id].attrs[k] = v
 
     def set_graph_attrs(self, graph_id, attrs):
         self.set_node_attrs(graph_id, attrs)
@@ -1147,8 +1152,8 @@ class NetworkXHierarchy(nx.DiGraph, AttributeContainter):
                 (left, right)
             )
         common, left_h, right_h = relation_to_span(
-            self.node[left].graph,
-            self.node[right].graph,
+            self.nodes[left]["graph"],
+            self.nodes[right]["graph"],
             self.relation[left][right],
             edges,
             attrs,
@@ -1162,7 +1167,7 @@ class NetworkXHierarchy(nx.DiGraph, AttributeContainter):
                 "Graph '%s' is not defined in the hierarchy!"
                 % graph_id
             )
-        if node_id not in self.node[graph_id].graph.nodes():
+        if node_id not in self.nodes[graph_id]["graph"].nodes:
             raise HierarchyError(
                 "Graph '%s' does not have a node with id '%s'!"
                 % (graph_id, node_id)
@@ -1184,8 +1189,8 @@ class NetworkXHierarchy(nx.DiGraph, AttributeContainter):
     #             "Typing `%s->%s` does not exist!" %
     #             (source, target)
     #         )
-    #     if isinstance(self.node[source], GraphNode):
-    #         nodes = self.node[source].graph.nodes()
+    #     if isinstance(self.nodes[source], GraphNode):
+    #         nodes = self.nodes[source].graph.nodes()
     #         typing = self.edge[source][target]
     #         if is_total_homomorphism(nodes, typing.mapping):
     #             typing.total = True
@@ -1198,9 +1203,9 @@ class NetworkXHierarchy(nx.DiGraph, AttributeContainter):
     #                 "do not have types, please type them first!" %
     #                 (source, target, ", ".join(untyped_nodes))
     #             )
-    #     elif isinstance(self.node[source], RuleNode):
-    #         lhs_nodes = self.node[source].rule.lhs.nodes()
-    #         rhs_nodes = self.node[target].rule.rhs.nodes()
+    #     elif isinstance(self.nodes[source], RuleNode):
+    #         lhs_nodes = self.nodes[source].rule.lhs.nodes()
+    #         rhs_nodes = self.nodes[target].rule.rhs.nodes()
     #         lhs_typing = self.edge[source][target].lhs_mapping
     #         rhs_typing = self.edge[source][target].rhs_mapping
     #         if is_total_homomorphism(lhs_nodes, lhs_typing) and\
@@ -1250,7 +1255,7 @@ class NetworkXHierarchy(nx.DiGraph, AttributeContainter):
             of the path by the nodes of the target graph
         """
         s = path[0]
-        if isinstance(self.node[s], GraphNode):
+        if "graph" in self.nodes[s]:
             t = path[1]
             homomorphism = self.edge[s][t].mapping
             for i in range(2, len(path)):
@@ -1276,7 +1281,7 @@ class NetworkXHierarchy(nx.DiGraph, AttributeContainter):
 
     def _path_from_rule(self, path):
         s = path[0]
-        return isinstance(self.node[s], RuleNode)
+        return "rule" in self.nodes[s]
 
     def _get_ancestors_paths(self, graph_id):
         ancestors = {}
@@ -1298,7 +1303,7 @@ class NetworkXHierarchy(nx.DiGraph, AttributeContainter):
 
     def add_node_type(self, graph_id, node_id, typing_dict):
         """Type a node in a graph according to `typing_dict`."""
-        if node_id not in self.node[graph_id].graph.nodes():
+        if node_id not in self.nodes[graph_id]["graph"].nodes():
             raise HierarchyError(
                 "Node '%s' is not defined in the hierarchy graph '%s'!" %
                 (node_id, graph_id)
@@ -1403,7 +1408,7 @@ class NetworkXHierarchy(nx.DiGraph, AttributeContainter):
 
     # def find_matching2(self, graph_id, pattern, pattern_typings=None):
     #     """find matchings of pattern in graph_id"""
-    #     graph = self.node[graph_id].graph
+    #     graph = self.nodes[graph_id].graph
     #     graph_typings = {}
     #     typing_graphs = {}
     #     if pattern_typings is None:
@@ -1414,7 +1419,7 @@ class NetworkXHierarchy(nx.DiGraph, AttributeContainter):
     #             if typing is None:
     #                 typing = {}
     #             graph_typings[typ_id] = typing
-    #             typing_graphs[typ_id] = self.node[typ_id].graph
+    #             typing_graphs[typ_id] = self.nodes[typ_id].graph
     # return find_match(graph, pattern, graph_typings, pattern_typings,
     # typing_graphs)
 
@@ -1429,7 +1434,7 @@ class NetworkXHierarchy(nx.DiGraph, AttributeContainter):
         should be among parents of the `graph_id` graph; values are mappings
         of nodes from pattern to the typing graph;
         """
-        if type(self.node[graph_id]) == RuleNode:
+        if type(self.nodes[graph_id]) == RuleNode:
             raise ReGraphError(
                 "Pattern matching in a rule is not implemented!")
         # Check that 'typing_graph' and 'pattern_typing' are correctly
@@ -1461,7 +1466,7 @@ class NetworkXHierarchy(nx.DiGraph, AttributeContainter):
                 try:
                     check_homomorphism(
                         pattern,
-                        self.node[typing_graph].graph,
+                        self.nodes[typing_graph]["graph"],
                         mapping,
                         total=False
                     )
@@ -1473,9 +1478,9 @@ class NetworkXHierarchy(nx.DiGraph, AttributeContainter):
             pattern_typing = new_pattern_typing
 
         if nodes is not None:
-            g = self.node[graph_id].graph.subgraph(nodes)
+            g = self.nodes[graph_id]["graph"].subgraph(nodes)
         else:
-            g = self.node[graph_id].graph
+            g = self.nodes[graph_id]["graph"]
         labels_mapping = dict(
             [(n, i + 1) for i, n in
              enumerate(g.nodes())]
@@ -1514,21 +1519,21 @@ class NetworkXHierarchy(nx.DiGraph, AttributeContainter):
                            pattern_node in typing.keys():
                             if g_typing[typing_graph][node] == typing[
                                     pattern_node]:
-                                if is_subdict(pattern.node[pattern_node],
-                                              g.node[node]):
+                                if is_subdict(pattern.nodes[pattern_node],
+                                              g.nodes[node]):
                                     match = True
                             else:
                                 # there is no mapping of this node in the
                                 # typing by `typing_graph`
                                 pass
                         else:
-                            if is_subdict(pattern.node[pattern_node],
-                                          g.node[node]):
+                            if is_subdict(pattern.nodes[pattern_node],
+                                          g.nodes[node]):
                                 match = True
                     if match:
                         matching_nodes.add(node)
                 else:
-                    if is_subdict(pattern.node[pattern_node], g.node[node]):
+                    if is_subdict(pattern.nodes[pattern_node], g.nodes[node]):
                         matching_nodes.add(node)
         reduced_graph = g.subgraph(matching_nodes)
         instances = []
@@ -1569,8 +1574,8 @@ class NetworkXHierarchy(nx.DiGraph, AttributeContainter):
                             if g_typing[typing_graph][node] != typing[
                                     pattern_node]:
                                 break
-                        if not is_subdict(pattern.node[pattern_node],
-                                          subgraph.node[node]):
+                        if not is_subdict(pattern.nodes[pattern_node],
+                                          subgraph.nodes[node]):
                             break
                     else:
                         continue
@@ -1595,14 +1600,14 @@ class NetworkXHierarchy(nx.DiGraph, AttributeContainter):
 
     def find_rule_matching(self, graph_id, rule_id):
         """Find matching of a rule `rule_id` form the hierarchy."""
-        if type(self.node[graph_id]) == RuleNode:
+        if type(self.nodes[graph_id]) == RuleNode:
             raise ReGraphError(
                 "Pattern matching in a rule is not implemented!")
 
-        if type(self.node[rule_id]) != RuleNode:
+        if type(self.nodes[rule_id]) != RuleNode:
             raise HierarchyError("Invalid rule `%s` to match!" % rule_id)
 
-        rule = self.node[rule_id].rule
+        rule = self.nodes[rule_id].rule
 
         lhs_typing = {}
         rhs_typing = {}
@@ -1637,7 +1642,7 @@ class NetworkXHierarchy(nx.DiGraph, AttributeContainter):
                 lhs_typing=None, rhs_typing=None, strict=False, inplace=True):
         """Rewrite and propagate the changes up & down."""
         # start = time.time()
-        if type(self.node[graph_id]) == RuleNode:
+        if type(self.nodes[graph_id]) == RuleNode:
             raise ReGraphError("Rewriting of a rule is not implemented!")
 
         if instance is None:
@@ -1754,13 +1759,13 @@ class NetworkXHierarchy(nx.DiGraph, AttributeContainter):
     def apply_rule(self, graph_id, rule_id, instance,
                    strong_typing=True, inplace=True):
         """Apply rule from the hierarchy."""
-        if type(self.node[graph_id]) == RuleNode:
+        if type(self.nodes[graph_id]) == RuleNode:
             raise ReGraphError("Rewriting of a rule is not implemented!")
 
-        if type(self.node[rule_id]) != RuleNode:
+        if type(self.nodes[rule_id]) != RuleNode:
             raise RewritingError("Invalid rewriting rule `%s`!" % rule_id)
 
-        rule = self.node[rule_id].rule
+        rule = self.nodes[rule_id].rule
 
         lhs_typing = dict()
         rhs_typing = dict()
@@ -1791,12 +1796,12 @@ class NetworkXHierarchy(nx.DiGraph, AttributeContainter):
             "relations": []
         }
         for node in self.nodes():
-            if isinstance(self.node[node], self.rule_node_cls):
-                rule_json = self.node[node].to_json()
+            if "rule" in self.nodes[node]:
+                rule_json = self.nodes[node].to_json()
                 rule_json["id"] = node
                 json_data["rules"].append(rule_json)
-            elif isinstance(self.node[node], self.graph_node_cls):
-                graph_json = self.node[node].to_json()
+            elif "graph" in self.nodes[node]:
+                graph_json = self.nodes[node].to_json()
                 graph_json["id"] = node
                 json_data["graphs"].append(graph_json)
             else:
@@ -1946,14 +1951,14 @@ class NetworkXHierarchy(nx.DiGraph, AttributeContainter):
         """Create a simple networkx graph representing the hierarchy."""
         g = nx.DiGraph()
         for node in self.nodes():
-            g.add_node(node, self.node[node].attrs)
+            g.add_node(node, self.nodes[node].attrs)
         for s, t in self.edges():
             g.add_edge(s, t, self.edge[s][t].attrs)
         return g
 
     def rename_graph(self, graph_id, new_graph_id):
         """Rename a graph in the hierarchy."""
-        graph_obj = copy.deepcopy(self.node[graph_id])
+        graph_obj = copy.deepcopy(self.nodes[graph_id])
         edges_obj = {}
 
         for s in self.successors(graph_id):
@@ -1965,7 +1970,7 @@ class NetworkXHierarchy(nx.DiGraph, AttributeContainter):
 
         self.remove_node(graph_id)
         self.add_node(new_graph_id)
-        self.node[new_graph_id] = graph_obj
+        self.nodes[new_graph_id] = graph_obj
         for (s, t), obj in edges_obj.items():
             self.add_edge(s, t)
             self.edge[s][t] = obj
@@ -1973,17 +1978,17 @@ class NetworkXHierarchy(nx.DiGraph, AttributeContainter):
 
     def rename_node(self, graph_id, node, new_name):
         """Rename a node in a graph of the hierarchy."""
-        if new_name in self.node[graph_id].graph.nodes():
+        if new_name in self.nodes[graph_id]["graph"].nodes():
             raise GraphError(
                 "Node '%s' already in graph '%s'" %
                 (new_name, graph_id)
             )
-        if node not in self.node[graph_id].graph.nodes():
+        if node not in self.nodes[graph_id]["graph"].nodes():
             raise GraphError(
                 "Node '%s' does not exist in graph %s" %
                 (node, graph_id)
             )
-        relabel_node(self.node[graph_id].graph, node, new_name)
+        relabel_node(self.nodes[graph_id]["graph"], node, new_name)
         for (source, _) in self.in_edges(graph_id):
             self.edge[source][graph_id].rename_target(node, new_name)
         for (_, target) in self.out_edges(graph_id):
@@ -2030,19 +2035,19 @@ class NetworkXHierarchy(nx.DiGraph, AttributeContainter):
                 rhs_typing.update(compose(parent_rhs, parent_typing))
         # the typing of the preserved part coresponds to the typing
         # of the right hand side
-        rule = self.node[source].rule
+        rule = self.nodes[source].rule
         p_typing = {n: rhs_typing[rule.p_rhs[n]] for n in rule.p.nodes()}
         return (lhs_typing, p_typing, rhs_typing)
 
     def new_graph_from_nodes(self, nodes, graph_id, new_name, attrs):
         """Build a subgraph from nodes and type it by these nodes."""
-        new_graph = self.node[graph_id].graph.subgraph(nodes)
+        new_graph = self.nodes[graph_id]["graph"].subgraph(nodes)
         self.add_graph(new_name, new_graph, attrs)
         self.add_typing(new_name, graph_id, {n: n for n in nodes})
 
     def child_rule_from_nodes(self, nodes, graph_id, new_name, attrs):
         """Build a subrule from nodes and type it by these nodes."""
-        pattern = self.node[graph_id].graph.subgraph(nodes)
+        pattern = self.nodes[graph_id]["graph"].subgraph(nodes)
         new_rule = Rule(pattern, pattern, pattern)
         self.add_rule(new_name, new_rule, attrs)
         mapping = {n: n for n in nodes}
@@ -2065,16 +2070,16 @@ class NetworkXHierarchy(nx.DiGraph, AttributeContainter):
         to_merge = []
         to_rename = {}
         for node in common_ids:
-            if isinstance(self.node[node], GraphNode) and\
-               isinstance(hierarchy.node[node], GraphNode):
-                if equal(self.node[node].graph, hierarchy.node[node].graph):
+            if "graph" in self.nodes[node] and\
+               "graph" in hierarchy.nodes[node]:
+                if equal(self.nodes[node]["graph"], hierarchy.nodes[node]["graph"]):
                     to_merge.append(node)
                 else:
                     new_name = self.unique_graph_id(node)
                     to_rename[node] = new_name
-            elif isinstance(self.node[node], RuleNode) and\
-                    isinstance(hierarchy.node[node], RuleNode):
-                if self.node[node].rule == hierarchy.node[node].rule:
+            elif "rule" in self.nodes[node] and\
+                    "rule" in hierarchy.nodes[node]:
+                if self.nodes[node].rule == hierarchy.nodes[node].rule:
                     to_merge.append(node)
                 else:
                     new_name = self.unique_graph_id(node)
@@ -2108,8 +2113,8 @@ class NetworkXHierarchy(nx.DiGraph, AttributeContainter):
             predecessors = hierarchy.predecessors(node)
             if node in to_merge:
                 # merge node attrs
-                self.node[node].add_attrs(
-                    hierarchy.node[node].attrs
+                self.nodes[node].add_attrs(
+                    hierarchy.nodes[node].attrs
                 )
                 visited.append(node)
                 for suc in successors:
@@ -2165,8 +2170,8 @@ class NetworkXHierarchy(nx.DiGraph, AttributeContainter):
                 else:
                     new_name = node
                 self.add_node(new_name)
-                node_obj = copy.deepcopy(hierarchy.node[node])
-                self.node[new_name] = node_obj
+                node_obj = copy.deepcopy(hierarchy.nodes[node])
+                self.nodes[new_name] = node_obj
                 visited.append(node)
                 for suc in successors:
                     if suc in visited:
@@ -2204,11 +2209,11 @@ class NetworkXHierarchy(nx.DiGraph, AttributeContainter):
         to_merge = {}
         to_rename = {}
         for n1 in self.nodes():
-            if attr in self.node[n1].attrs.keys():
-                value = self.node[n1].attrs[attr]
+            if attr in self.nodes[n1].attrs.keys():
+                value = self.nodes[n1].attrs[attr]
                 for n2 in hierarchy.nodes():
-                    if attr in hierarchy.node[n2].attrs.keys():
-                        if hierarchy.node[n2].attrs[attr] == value:
+                    if attr in hierarchy.nodes[n2].attrs.keys():
+                        if hierarchy.nodes[n2].attrs[attr] == value:
                             if n1 in to_merge.keys() or\
                                n2 in to_merge.values():
                                 raise HierarchyError(
@@ -2217,15 +2222,15 @@ class NetworkXHierarchy(nx.DiGraph, AttributeContainter):
                                     "value'%s' is ambiguous!" % (attr, value)
                                 )
                             else:
-                                if isinstance(self.node[n1], GraphNode) and\
-                                   isinstance(hierarchy.node[n2], GraphNode):
-                                    if equal(self.node[n1].graph,
-                                             hierarchy.node[n2].graph):
+                                if "graph" in self.nodes[n1] and\
+                                   "graph" in hierarchy.nodes[n2]:
+                                    if equal(self.nodes[n1]["graph"],
+                                             hierarchy.nodes[n2]["graph"]):
                                         to_merge[n1] = n2
-                                elif isinstance(self.node[n1], RuleNode) and\
-                                        isinstance(hierarchy.node[n2], RuleNode):
-                                    if self.node[n1].rule ==\
-                                       hierarchy.node[n1].rule:
+                                elif "rule" in self.nodes[n1] and\
+                                        "rule" in hierarchy.nodes[n2]:
+                                    if self.nodes[n1].rule ==\
+                                       hierarchy.nodes[n1].rule:
                                         to_merge[n1] = n2
             else:
                 continue
@@ -2261,11 +2266,11 @@ class NetworkXHierarchy(nx.DiGraph, AttributeContainter):
                 new_name = str(original_node) + "_" + str(node)
                 new_names[original_node] = new_name
                 self.rename_graph(original_node, new_name)
-                self.node[new_name].add_attrs(
-                    hierarchy.node[node].attrs
+                self.nodes[new_name].add_attrs(
+                    hierarchy.nodes[node].attrs
                 )
-                # recursive_merge(self.node[new_name].attrs,
-                # hierarchy.node[node].attrs)
+                # recursive_merge(self.nodes[new_name].attrs,
+                # hierarchy.nodes[node].attrs)
                 visited.append(node)
 
                 successors = hierarchy.successors(node)
@@ -2328,8 +2333,8 @@ class NetworkXHierarchy(nx.DiGraph, AttributeContainter):
                 else:
                     new_name = node
                 self.add_node(new_name)
-                node_obj = copy.deepcopy(hierarchy.node[node])
-                self.node[new_name] = node_obj
+                node_obj = copy.deepcopy(hierarchy.nodes[node])
+                self.nodes[new_name] = node_obj
                 visited.append(node)
 
                 successors = hierarchy.successors(node)
@@ -2385,7 +2390,7 @@ class NetworkXHierarchy(nx.DiGraph, AttributeContainter):
             new_id = self.unique_graph_id(node + suffix)
             new[node] = new_id
             self.add_node(new_id)
-            self.node[new_id] = copy.deepcopy(self.node[node])
+            self.nodes[new_id] = copy.deepcopy(self.nodes[node])
         for (source, target) in self.edges():
             if source in nodes:
                 if target in nodes:

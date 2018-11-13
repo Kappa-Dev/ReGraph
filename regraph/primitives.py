@@ -27,6 +27,11 @@ from regraph.attribute_sets import FiniteSet
 from regraph.neo4j import Neo4jGraph
 
 
+def assign_attrs(element, attrs):
+    for k, v in attrs.items():
+        element[k] = v
+
+
 def add_node(graph, node_id, attrs=None):
     """Add a node to a graph.
 
@@ -52,11 +57,12 @@ def add_node(graph, node_id, attrs=None):
             normalize_attrs(new_attrs)
         if node_id not in graph.nodes():
             graph.add_node(node_id)
-            graph.node[node_id] = new_attrs
+            for k, v in new_attrs.items():
+                graph.nodes[node_id][k] = v
         else:
             raise GraphError("Node '%s' already exists!" % node_id)
     elif isinstance(graph, Neo4jGraph):
-        graph.add_node(node_id, attrs)
+        graph.add_node(node_id, **attrs)
 
 
 def add_nodes_from(graph, node_list):
@@ -82,7 +88,7 @@ def add_nodes_from(graph, node_list):
             try:
                 node_id, node_attrs = n
                 add_node(graph, node_id, node_attrs)
-            except (TypeError, ValueError):
+            except (TypeError, ValueError) as e:
                 add_node(graph, n)
         else:
             add_node(graph, n)
@@ -169,7 +175,7 @@ def add_edge(graph, s, t, attrs=None, **attr):
                 (s, t)
             )
         # print(s, t, type(s), type(t), new_attrs, type(new_attrs))
-        graph.add_edge(s, t, attr_dict=new_attrs)
+        graph.add_edge(s, t, **new_attrs)
     elif isinstance(graph, nx.Graph):
         if (s, t) in graph.edges() or (t, s) in graph.edges():
             raise GraphError(
@@ -177,8 +183,8 @@ def add_edge(graph, s, t, attrs=None, **attr):
                 (s, t)
             )
         graph.add_edge(s, t)
-        graph.edge[s][t] = new_attrs
-        graph.edge[t][s] = new_attrs
+        graph.edges[s, t] = new_attrs
+        graph.edges[t, s] = new_attrs
     elif isinstance(graph, Neo4jGraph):
         graph.add_edge(s, t, attrs)
 
@@ -489,6 +495,7 @@ def get_node(graph, n):
     elif isinstance(graph, Neo4jGraph):
         return graph.get_node_attrs(n)
 
+
 def get_edge(graph, s, t):
     """Get edge attributes.
 
@@ -499,9 +506,9 @@ def get_edge(graph, s, t):
     t : hashable, target node id.
     """
     if isinstance(graph, nx.DiGraph):
-        return graph.edge[s][t]
+        return graph.edges[s, t]
     elif isinstance(graph, nx.Graph):
-        return merge_attributes(graph.edge[s][t], graph.edge[s][t])
+        return merge_attributes(graph.edges[s, t], graph.edges[s, t])
     elif isinstance(graph, Neo4jGraph):
         return graph.get_edge_attrs(s, t)
 
@@ -516,10 +523,10 @@ def exists_edge(graph, s, t):
     t : hashable, target node id.
     """
     if isinstance(graph, nx.DiGraph):
-        return(s in graph.edge and t in graph.edge[s])
+        return((s, t) in graph.edges)
     elif isinstance(graph, nx.Graph):
-        s_t = s in graph.edge and t in graph.edge[s]
-        t_s = t in graph.edge and s in graph.edge[t]
+        s_t = (s, t) in graph.edges
+        t_s = (t, s) in graph.edges
         return(s_t and t_s)
     elif isinstance(graph, Neo4jGraph):
         return graph.exists_edge(s, t)
@@ -571,9 +578,9 @@ def set_edge(graph, s, t, attrs):
     normalize_attrs(new_attrs)
     if isinstance(graph, nx.DiGraph) or\
        isinstance(graph, nx.Graph):
-        graph.edge[s][t] = new_attrs
+        assign_attrs(graph.edges[s, t], new_attrs)
         if not graph.is_directed():
-            graph.edge[t][s] = new_attrs
+            assign_attrs(graph.edges[t, s], new_attrs)
     elif isinstance(graph, Neo4jGraph):
         graph.set_edge_attrs(s, t, new_attrs, update=True)
 
@@ -631,7 +638,7 @@ def clone_node(graph, node_id, name=None):
             else:
                 new_node = name
 
-        graph.add_node(new_node, deepcopy(get_node(graph, node_id)))
+        graph.add_node(new_node, **deepcopy(get_node(graph, node_id)))
 
         # Connect all the edges
         if graph.is_directed():
@@ -778,7 +785,7 @@ def get_relabeled_graph(graph, mapping):
         try:
             g.add_node(
                 new_node,
-                get_node(graph, old_node))
+                **get_node(graph, old_node))
         except KeyError:
             raise GraphError("Node '%s' does not exist!" % old_node)
 
