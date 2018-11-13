@@ -3,7 +3,9 @@ import networkx as nx
 from networkx.exception import NetworkXNoPath
 
 from regraph.exceptions import RewritingError, HierarchyError
-from regraph.utils import keys_by_value, format_typing
+from regraph.utils import (keys_by_value,
+                           format_typing,
+                           normalize_typing_relation)
 from regraph.networkx.category_utils import check_homomorphism, compose
 
 
@@ -141,19 +143,7 @@ def _autocomplete_typing(hierarchy, graph_id, instance,
         if rhs_typing_rel is None:
             new_rhs_typing_rel = dict()
         else:
-            new_rhs_typing_rel = format_typing(rhs_typing_rel)
-            for g, typing_rel in new_rhs_typing_rel.items():
-                for key, values in typing_rel.items():
-                    value_set = set()
-                    if type(values) == str:
-                        value_set.add(values)
-                    else:
-                        try:
-                            for v in values:
-                                value_set.add(v)
-                        except TypeError:
-                            value_set.add(v)
-                    new_rhs_typing_rel[g][key] = value_set
+            new_rhs_typing_rel = normalize_typing_relation(rhs_typing_rel)
 
         ancestors = hierarchy.get_ancestors(graph_id)
         for anc, anc_typing in ancestors.items():

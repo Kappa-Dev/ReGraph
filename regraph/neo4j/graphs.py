@@ -750,3 +750,27 @@ class TypedNeo4jGraph(hierarchy.Neo4jHierarchy):
     def get_node_type(self, node_id):
         t = self.node_type(self._data_label, node_id)
         return t[self._schema_label]
+
+    def remove_data_node_attrs(self, node_id, attrs):
+        g = self._access_graph(self._data_label)
+        g.remove_node_attrs(node_id, attrs)
+
+    def remove_schema_node_attrs(self, node_id, attrs):
+        g = self._access_graph(self._schema_label)
+        g.remove_node_attrs(node_id, attrs)
+
+    def add_data_node_attrs(self, node_id, attrs):
+        g = self._access_graph(self._data_label)
+        g.add_node_attrs(node_id, attrs)
+
+    def add_schema_node_attrs(self, node_id, attrs):
+        g = self._access_graph(self._schema_label)
+        g.add_node_attrs(node_id, attrs)
+
+    def get_data_node(self, node_id):
+        g = self._access_graph(self._data_label)
+        return g.get_node(node_id)
+
+    def get_schema_node(self, node_id):
+        g = self._access_graph(self._schema_label)
+        return g.get_node(node_id)

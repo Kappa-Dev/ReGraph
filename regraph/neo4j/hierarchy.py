@@ -10,7 +10,9 @@ from . import cypher_utils as cypher
 from regraph.exceptions import (HierarchyError,
                                 InvalidHomomorphism,
                                 RewritingError)
-from regraph.utils import (normalize_attrs, keys_by_value)
+from regraph.utils import (normalize_attrs,
+                           keys_by_value,
+                           normalize_typing_relation)
 
 
 class Neo4jHierarchy(object):
@@ -631,7 +633,7 @@ class Neo4jHierarchy(object):
             if len(rule.cloned_nodes()) > 0 and p_typing:
                 self._add_tmp_p_typing(
                     graph_id, rule, rhs_g, p_typing)
-            # self._propagate_up(graph_id, rule)
+            self._propagate_up(graph_id, rule)
 
         if strict is False and rule.is_relaxing():
             if len(rule.added_nodes()) > 0 and len(rhs_typing) > 0:
@@ -719,6 +721,7 @@ class Neo4jHierarchy(object):
             self._propagate_down(origin_graph, successor, rule)
 
     def _add_tmp_p_typing(self, graph_id, rule, rhs_g, p_typing):
+        p_typing = normalize_typing_relation(p_typing)
         for graph in p_typing.keys():
             # We add attr _to_remove to an edge which will be deleted
             # all this is happening before the propagation itself
@@ -727,8 +730,11 @@ class Neo4jHierarchy(object):
                     query = (
                         "OPTIONAL MATCH (h_i:{} {{id: '{}'}})-[:typing*]->(g_i:{})\n".format(
                             graph, k, graph_id) +
-                        "WHERE g_i.id <> '{}'\n".format(rhs_g[rule.p_rhs[v]]) +
-                        "MERGE (h_i)-[:_to_remove]->(g_i)\n"
+                        "WHERE NOT g_i.id IN [{}]\n".format(
+                            ", ".join("'{}'".format(
+                                rhs_g[rule.p_rhs[el]]) for el in v)) +
+                        "FOREACH(dummy IN CASE WHEN h_i IS NULL THEN [] ELSE [1] END |\n" +
+                        "\tMERGE (h_i)-[:_to_remove]->(g_i))\n"
                     )
                     print(query)
                     self.execute(query)

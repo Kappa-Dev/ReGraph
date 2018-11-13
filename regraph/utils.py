@@ -885,6 +885,23 @@ def format_typing(typing):
     return new_typing
 
 
+def normalize_typing_relation(typing_rel):
+    new_typing_rel = format_typing(typing_rel)
+    for g, typing_rel in new_typing_rel.items():
+        for key, values in typing_rel.items():
+            value_set = set()
+            if type(values) == str:
+                value_set.add(values)
+            else:
+                try:
+                    for v in values:
+                        value_set.add(v)
+                except TypeError:
+                    value_set.add(v)
+            new_typing_rel[g][key] = value_set
+    return new_typing_rel
+
+
 def replace_source(n1, n2, mapping):
     mapping[n2] = mapping[n1]
     del mapping[n1]
