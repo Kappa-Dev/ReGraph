@@ -301,13 +301,13 @@ class Rule(object):
                     primitives.add_edge(
                         self.rhs,
                         self.p_rhs[pred], rhs_new_node_id,
-                        self.p.edge[pred][p_new_node_id])
+                        self.p.edges[pred, p_new_node_id])
             for suc in self.p.successors(p_new_node_id):
                 if (rhs_new_node_id, self.p_rhs[suc]) not in self.rhs.edges():
                     primitives.add_edge(
                         self.rhs,
                         rhs_new_node_id, self.p_rhs[suc],
-                        self.p.edge[p_new_node_id][suc])
+                        self.p.edges[p_new_node_id, suc])
 
         return (p_new_node_id, rhs_new_node_id)
 
@@ -879,7 +879,7 @@ class Rule(object):
                 )
             for k1 in p_keys_1:
                 for k2 in p_keys_2:
-                    self.p.edge[k1][k2] = None
+                    self.p.edges[k1, k2] = None
                     primitives.update_edge_attrs(
                         self.rhs,
                         self.p_rhs[k1],
@@ -911,7 +911,7 @@ class Rule(object):
                 )
             for k1 in p_keys_1:
                 for k2 in p_keys_2:
-                    self.p.edge[k1][k2] = None
+                    self.p.edges[k1, k2] = None
                     primitives.update_edge_attrs(
                         self.rhs,
                         self.p_rhs[k1],
@@ -1055,8 +1055,8 @@ class Rule(object):
             s_p_nodes = keys_by_value(self.p_rhs, s)
             t_p_nodes = keys_by_value(self.p_rhs, t)
             if len(s_p_nodes) == 0 or len(t_p_nodes) == 0:
-                if len(self.rhs.edge[s][t]) > 0:
-                    attrs[(s, t)] = self.rhs.edge[s][t]
+                if len(self.rhs.edges[s, t]) > 0:
+                    attrs[(s, t)] = self.rhs.edges[s, t]
             new_attrs = {}
             for s_p_node in s_p_nodes:
                 for t_p_node in t_p_nodes:
@@ -1064,8 +1064,8 @@ class Rule(object):
                         new_attrs = attrs_union(
                             new_attrs,
                             dict_sub(
-                                self.rhs.edge[s][t],
-                                self.p.edge[s_p_node][t_p_node]
+                                self.rhs.edges[s, t],
+                                self.p.edges[s_p_node, t_p_node]
                             )
                         )
             if len(new_attrs) > 0:
@@ -1162,8 +1162,8 @@ class Rule(object):
                         new_attrs = attrs_union(
                             new_attrs,
                             dict_sub(
-                                self.lhs.edge[s][t],
-                                self.p.edge[s_p_node][t_p_node]
+                                self.lhs.edges[s, t],
+                                self.p.edges[s_p_node, t_p_node]
                             )
                         )
             if len(new_attrs) > 0:
@@ -1260,7 +1260,7 @@ class Rule(object):
         for node in self.added_nodes():
             commands += "ADD_NODE %s %s.\n" % (node, self.rhs.node[node])
         for (u, v) in self.added_edges():
-            commands += "ADD_EDGE %s %s %s.\n" % (u, v, self.rhs.edge[u][v])
+            commands += "ADD_EDGE %s %s %s.\n" % (u, v, self.rhs.edges[u, v])
         for node, attrs in self.added_node_attrs().items():
             commands += "ADD_NODE_ATTRS %s %s.\n" % (node, attrs)
         for (u, v), attrs in self.added_edge_attrs().items():
@@ -1428,11 +1428,11 @@ class Rule(object):
             self.rhs.node[n] = dict()
 
         for u, v in self.lhs.edges():
-            self.lhs.edge[u][v] = dict()
+            self.lhs.edges[u, v] = dict()
         for u, v in self.p.edges():
-            self.p.edge[u][v] = dict()
+            self.p.edges[u, v] = dict()
         for u, v in self.rhs.edges():
-            self.rhs.edge[u][v] = dict()
+            self.rhs.edges[u, v] = dict()
 
     def _escape(self):
 

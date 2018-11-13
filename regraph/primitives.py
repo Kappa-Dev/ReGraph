@@ -32,6 +32,15 @@ def assign_attrs(element, attrs):
         element[k] = v
 
 
+def attrs_to_json(attrs):
+    """Convert attributes to json."""
+    normalize_attrs(attrs)
+    json_data = dict()
+    for key, value in attrs.items():
+        json_data[key] = value.to_json()
+    return json_data
+
+
 def add_node(graph, node_id, attrs=None):
     """Add a node to a graph.
 

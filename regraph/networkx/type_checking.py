@@ -8,7 +8,7 @@ from regraph.networkx.category_utils import check_homomorphism, compose
 
 
 def _check_rule_typing(hierarchy, rule_id, graph_id, lhs_mapping, rhs_mapping):
-    all_paths = nx.all_pairs_shortest_path(hierarchy)
+    all_paths = dict(nx.all_pairs_shortest_path(hierarchy))
 
     paths_from_target = {}
     for s in hierarchy.nodes():
@@ -47,12 +47,11 @@ def _check_rule_typing(hierarchy, rule_id, graph_id, lhs_mapping, rhs_mapping):
 
 
 def _check_consistency(hierarchy, source, target, mapping=None):
-    all_paths = nx.all_pairs_shortest_path(hierarchy)
+    all_paths = dict(nx.all_pairs_shortest_path(hierarchy))
 
     paths_to_source = {}
     paths_from_target = {}
     for s in hierarchy.nodes():
-        print(all_paths, type(all_paths))
         if source in all_paths[s].keys():
             paths_to_source[s] = all_paths[s][source]
         if s == target:
@@ -134,7 +133,8 @@ def _check_consistency(hierarchy, source, target, mapping=None):
 
 def _autocomplete_typing(hierarchy, graph_id, instance,
                          lhs_typing, rhs_typing_rel, p_lhs, p_rhs):
-    if len(hierarchy.successors(graph_id)) > 0:
+    successors = list(hierarchy.successors(graph_id))
+    if len(successors) > 0:
         if lhs_typing is None:
             new_lhs_typing = dict()
         else:
@@ -168,7 +168,7 @@ def _autocomplete_typing(hierarchy, graph_id, instance,
                 merged_nodes.add(r_node)
 
         for typing_graph in hierarchy.successors(graph_id):
-            typing = hierarchy.edge[graph_id][typing_graph].mapping
+            typing = hierarchy.edges[graph_id, typing_graph]["mapping"]
             # Autocomplete lhs and rhs typings
             # by immediate successors induced by an instance
             if typing_graph not in new_lhs_typing.keys():
@@ -194,7 +194,9 @@ def _autocomplete_typing(hierarchy, graph_id, instance,
                     set(new_rhs_typing_rel[ancestor].keys())
                 for node in dif:
                     type_set = set()
+                    print(ancestor_typing)
                     for el in new_rhs_typing_rel[graph][node]:
+                        print(el)
                         type_set.add(ancestor_typing[el])
                     new_rhs_typing_rel[ancestor][node] = type_set
 
@@ -294,7 +296,7 @@ def _check_totality(hierarchy, graph_id, rule, instance,
     for node in rule.rhs.nodes():
         p_nodes = keys_by_value(rule.p_rhs, node)
         for typing_graph in hierarchy.successors(graph_id):
-            typing = hierarchy.edge[graph_id][typing_graph].mapping
+            typing = hierarchy.edges[graph_id, typing_graph]["mapping"]
             # Totality can be broken in two cases
             if len(p_nodes) > 1:
                 # node will be merged
@@ -321,7 +323,7 @@ def _check_totality(hierarchy, graph_id, rule, instance,
 def _check_instance(hierarchy, graph_id, pattern, instance, pattern_typing):
     check_homomorphism(
         pattern,
-        hierarchy.node[graph_id].graph,
+        hierarchy.graph[graph_id],
         instance,
         total=True
     )
