@@ -4,7 +4,7 @@ import networkx as nx
 from regraph import NetworkXHierarchy
 from regraph import Rule
 from regraph import RewritingError
-from regraph.networkx import primitives
+from regraph import primitives
 
 
 class TestPropagation(object):

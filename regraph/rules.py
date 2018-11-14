@@ -710,7 +710,7 @@ class Rule(object):
             If node `n` does not exist in the rhs of the rule
 
         """
-        if n not in self.lhs.nodes() + self.p.nodes() + self.rhs.nodes():
+        if n not in list(self.lhs.nodes()) + list(self.p.nodes()) + list(self.rhs.nodes()):
             raise RuleError(
                 "Node '%s' exists in neither lhs, nor p, nor rhs of the rule" %
                 n)
@@ -753,13 +753,13 @@ class Rule(object):
             `lhs`, nor `p` nor `rhs`, or if an edge is incident to smth thats
             is going to be removed by the rule.
         """
-        if n1 not in self.lhs.nodes() + self.rhs.nodes() + self.p.nodes():
+        if n1 not in list(self.lhs.nodes()) + list(self.rhs.nodes()) + list(self.p.nodes()):
             raise RuleError(
                 "Node '%s' exists in neither lhs, nor p, nor rhs "
                 "of the rule" % n1
             )
 
-        if n2 not in self.lhs.nodes() + self.rhs.nodes() + self.p.nodes():
+        if n2 not in list(self.lhs.nodes()) + list(self.rhs.nodes()) + list(self.p.nodes()):
             raise RuleError(
                 "Node '%s' exists in neither lhs, nor p, nor rhs "
                 "of the rule" % n2

@@ -198,20 +198,15 @@ def add_edge(graph, s, t, attrs=None, **attr):
     if isinstance(graph, nx.DiGraph):
         if (s, t) in graph.edges():
             raise GraphError(
-                "Edge '%s'->'%s' already exists!" %
-                (s, t)
-            )
-        # print(s, t, type(s), type(t), new_attrs, type(new_attrs))
+                "Edge '{}'->'{}' already exists!".format(s, t))
         graph.add_edge(s, t, **new_attrs)
     elif isinstance(graph, nx.Graph):
         if (s, t) in graph.edges() or (t, s) in graph.edges():
             raise GraphError(
-                "Edge '%s'->'%s' already exists!" %
-                (s, t)
-            )
+                "Edge '{}'->'{}' already exists!".format(s, t))
         graph.add_edge(s, t)
-        graph.edges[s, t] = new_attrs
-        graph.edges[t, s] = new_attrs
+        assign_attrs(graph.edges[s, t], new_attrs)
+        assign_attrs(graph.edges[t, s], new_attrs)
     elif isinstance(graph, Neo4jGraph):
         graph.add_edge(s, t, attrs)
 
@@ -339,7 +334,7 @@ def remove_node(graph, node_id):
     return
 
 
-def update_node_attrs(graph, node_id, attrs):
+def update_node_attrs(graph, node_id, attrs, normalize=True):
     """Update attributes of a node.
 
     Parameters
@@ -364,10 +359,17 @@ def update_node_attrs(graph, node_id, attrs):
             GraphAttrsWarning
         )
     else:
-        normalize_attrs(new_attrs)
+        if normalize is True:
+            normalize_attrs(new_attrs)
         if isinstance(graph, nx.DiGraph) or\
            isinstance(graph, nx.Graph):
-            graph.node[node_id] = new_attrs
+            attrs_to_remove = set()
+            for k in graph.nodes[node_id].keys():
+                if k not in new_attrs.keys():
+                    attrs_to_remove.add(k)
+            graph.add_node(node_id, **new_attrs)
+            for k in attrs_to_remove:
+                del graph.node[node_id][k]
         elif isinstance(graph, Neo4jGraph):
             graph.set_node_attrs(node_id, new_attrs, update=True)
 
@@ -447,7 +449,7 @@ def add_edge_attrs(graph, s, t, attrs):
         set_edge(graph, s, t, edge_attrs)
 
 
-def update_edge_attrs(graph, s, t, attrs):
+def update_edge_attrs(graph, s, t, attrs, normalize=True):
     """Update attributes of an edge.
 
     Parameters
@@ -472,9 +474,8 @@ def update_edge_attrs(graph, s, t, attrs):
             (str(s), str(t)), GraphAttrsWarning
         )
     else:
-        new_attrs = deepcopy(attrs)
-        normalize_attrs(new_attrs)
-        set_edge(graph, s, t, new_attrs)
+        set_edge(graph, s, t, attrs, normalize=normalize)
+
 
 def remove_edge_attrs(graph, s, t, attrs):
     """Remove attrs of an edge specified by attrs.
@@ -581,7 +582,7 @@ def filter_edges_by_attributes(graph, attr_key, attr_cond):
             graph.remove_edge(s, t)
 
 
-def set_edge(graph, s, t, attrs):
+def set_edge(graph, s, t, attrs, normalize=True):
     """Set edge attrs.
 
     Parameters
@@ -601,13 +602,17 @@ def set_edge(graph, s, t, attrs):
     if not exists_edge(graph, s, t):
         raise GraphError(
             "Edge %s->%s does not exist" % (str(s), str(t)))
-
-    normalize_attrs(new_attrs)
+    if normalize is True:
+        normalize_attrs(new_attrs)
     if isinstance(graph, nx.DiGraph) or\
        isinstance(graph, nx.Graph):
-        assign_attrs(graph.edges[s, t], new_attrs)
-        if not graph.is_directed():
-            assign_attrs(graph.edges[t, s], new_attrs)
+        attrs_to_remove = set()
+        for k in graph.edges[s, t].keys():
+            if k not in new_attrs.keys():
+                attrs_to_remove.add(k)
+        graph.add_edge(s, t, **new_attrs)
+        for k in attrs_to_remove:
+            del graph.edges[s, t][k]
     elif isinstance(graph, Neo4jGraph):
         graph.set_edge_attrs(s, t, new_attrs, update=True)
 
@@ -651,7 +656,7 @@ def clone_node(graph, node_id, name=None):
         raise GraphError("Node '%s' does not exist!" % str(node_id))
 
     if isinstance(graph, nx.DiGraph) or\
-       isinstance(graph, Neo4jGraph):
+       isinstance(graph, nx.Graph):
         # generate new name for a clone
         if name is None:
             i = 1
@@ -706,6 +711,8 @@ def clone_node(graph, node_id, name=None):
 
     elif isinstance(graph, Neo4jGraph):
         new_node = graph.clone_node(node_id, name=name)
+    else:
+        raise ValueError("GOT smth else", graph)
 
     return new_node
 
@@ -1106,11 +1113,10 @@ def subtract(a, b, ba_mapping):
     [(2, 2)]
     """
 
-    if isinstance(graph, Neo4jGraph):
+    if isinstance(a, Neo4jGraph) or isinstance(b, Neo4jGraph):
         raise ReGraphError(
             "Graph subtraction is not implemented "
             "for Neo4jGraph!")
-
 
     res = type(a)()
     f = ba_mapping

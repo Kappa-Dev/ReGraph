@@ -447,6 +447,7 @@ def _apply_changes(hierarchy, upstream_changes, downstream_changes):
             # upstream changes in both related graphs
 
             if (g2, g1) in upstream_changes["relations"]:
+
                 # update left side
                 new_left_dict = dict()
                 left_dict = hierarchy.relation[g1][g2]
@@ -534,18 +535,19 @@ def _apply_changes(hierarchy, upstream_changes, downstream_changes):
     # update graphs
     for graph, (graph_m, _, graph_prime, _) in upstream_changes["graphs"].items():
         if graph_prime is not None:
-            hierarchy.graph[graph] = graph_prime
+            hierarchy.nodes[graph]["graph"] = graph_prime
         else:
-            hierarchy.graph[graph] = graph_m
-        hierarchy.graph[graph] = hierarchy.graph[graph]
+            hierarchy.nodes[graph]["graph"] = graph_m
+        hierarchy.graph[graph] = hierarchy.nodes[graph]["graph"]
 
     if "graphs" in downstream_changes.keys():
         for graph, (graph_prime, _, _) in downstream_changes["graphs"].items():
-            hierarchy.graph[graph] = graph_prime
-            hierarchy.graph[graph] = hierarchy.graph[graph]
+            hierarchy.nodes[graph]["graph"] = graph_prime
+            hierarchy.graph[graph] = hierarchy.nodes[graph]["graph"]
 
+    # update relation
     for (g1, g2), rel in rels.items():
-        old_attrs = copy.deepcopy(hierarchy.relation_edge[g1][g2]["attrs"])
+        old_attrs = copy.deepcopy(hierarchy.relation_edges[g1, g2]["attrs"])
         hierarchy.remove_relation(g1, g2)
         hierarchy.add_relation(g1, g2, rel, old_attrs)
 

@@ -32,7 +32,8 @@ from regraph.networkx.category_utils import (compose,
                                              relation_to_span,
                                              right_relation_dict)
 from regraph.primitives import (attrs_to_json,
-                                assign_attrs,
+                                update_node_attrs,
+                                set_edge,
                                 get_relabeled_graph,
                                 relabel_node,
                                 merge_attrs,
@@ -140,7 +141,7 @@ class NetworkXHierarchy(nx.DiGraph, AttributeContainter):
             self.rule_rhs_typing_dict_factory
         self.rule_rhs_typing = rrtdf()
         self.rel_dict_factory = reldf = self.rel_dict_factory
-        self.relation_edge = reldf()
+        self.relation_edges = reldf()
         self.relation = reldf()
 
         self.attrs = dict()
@@ -187,7 +188,7 @@ class NetworkXHierarchy(nx.DiGraph, AttributeContainter):
         res += "\nRelations:\n"
         for n1, n2 in self.relations():
             res += "{}-{}: {}\n".format(
-                n1, n2, str(self.relation_edge[n1][n2]["attrs"]))
+                n1, n2, str(self.relation_edges[n1, n2]["attrs"]))
 
         res += "\nattributes : \n{}\n".format(self.attrs)
         return res
@@ -201,7 +202,7 @@ class NetworkXHierarchy(nx.DiGraph, AttributeContainter):
 
         for node in self.nodes():
             if self.nodes[node]["attrs"] != hie.nodes[node]["attrs"]:
-                return
+                return False
             if self.is_graph(node) and\
                hie.is_graph(node):
                 if not equal(
@@ -274,9 +275,9 @@ class NetworkXHierarchy(nx.DiGraph, AttributeContainter):
                     "graph": graph_to_json(self.nodes[node]["graph"]),
                     "attrs": attrs_to_json(self.nodes[node]["attrs"])
                 })
-
             else:
-                raise HierarchyError("Unknown type of the node '{}'".format(node))
+                raise HierarchyError(
+                    "Unknown type of the node '{}'".format(node))
         for s, t in self.edges():
             if self.is_typing(s, t):
                 json_data["typing"].append({
@@ -304,7 +305,7 @@ class NetworkXHierarchy(nx.DiGraph, AttributeContainter):
                 "from": u,
                 "to": v,
                 "rel": {a: list(b) for a, b in self.relation[u][v].items()},
-                "attrs": attrs_to_json(self.relation_edge[u][v])
+                "attrs": attrs_to_json(self.relation_edges[u, v]["attrs"])
             })
         return json_data
 
@@ -479,13 +480,7 @@ class NetworkXHierarchy(nx.DiGraph, AttributeContainter):
 
     def relations(self):
         """Return a list of relations."""
-        rel = list()
-        for k, v in self.relation_edge.items():
-            if len(self.relation_edge[k]) > 0:
-                for v, _ in self.relation_edge[k].items():
-                    if (k, v) not in rel and (v, k) not in rel:
-                        rel.append((k, v))
-        return rel
+        return list(set(self.relation_edges.keys()))
 
     def add_graph(self, graph_id, graph, attrs=None, **kwargs):
         """Add graph to the hierarchy.
@@ -520,14 +515,17 @@ class NetworkXHierarchy(nx.DiGraph, AttributeContainter):
         if graph_id in self.nodes():
             raise HierarchyError(
                 "Node '{}' already exists in the hierarchy!".format(graph_id))
+
         self.add_node(graph_id)
-        assign_attrs(
-            self.nodes[graph_id], {
+        if attrs is not None:
+            normalize_attrs(attrs)
+        else:
+            attrs = dict()
+        update_node_attrs(
+            self, graph_id, {
                 "graph": graph,
                 "attrs": attrs
-            })
-        if graph_id not in self.relation_edge.keys():
-            self.relation_edge.update({graph_id: dict()})
+            }, normalize=False)
         if graph_id not in self.relation.keys():
             self.relation.update({graph_id: dict()})
         self.graph[graph_id] = self.nodes[graph_id]["graph"]
@@ -591,12 +589,15 @@ class NetworkXHierarchy(nx.DiGraph, AttributeContainter):
         self.add_node(rule_id)
         if attrs is not None:
             normalize_attrs(attrs)
-        assign_attrs(
-            self.nodes[rule_id],
+        else:
+            attrs = dict()
+        update_node_attrs(
+            self, rule_id,
             {
                 "rule": rule,
                 "attrs": attrs
-            })
+            },
+            normalize=False)
         self.rule[rule_id] = self.nodes[rule_id]["rule"]
         if rule_id not in self.rule_lhs_typing.keys():
             self.rule_lhs_typing[rule_id] = dict()
@@ -691,12 +692,14 @@ class NetworkXHierarchy(nx.DiGraph, AttributeContainter):
         self.add_edge(source, target)
         if attrs is not None:
             normalize_attrs(attrs)
-        assign_attrs(
-            self.edges[source, target],
+        else:
+            attrs = dict()
+        set_edge(
+            self, source, target,
             {
                 "mapping": mapping,
                 "attrs": attrs
-            })
+            }, normalize=False)
         self.typing[source][target] = self.edges[source, target]["mapping"]
         return
 
@@ -807,16 +810,18 @@ class NetworkXHierarchy(nx.DiGraph, AttributeContainter):
         self.add_edge(rule_id, graph_id)
         if attrs is not None:
             normalize_attrs(attrs)
-
-        assign_attrs(
-            self.edges[rule_id, graph_id],
+        else:
+            attrs = dict()
+        set_edge(
+            self, rule_id, graph_id,
             {
                 "lhs_mapping": lhs_mapping,
                 "rhs_mapping": new_rhs_mapping,
                 "lhs_total": lhs_total,
                 "rhs_total": rhs_total,
                 "attrs": attrs
-            })
+            },
+            normalize=False)
         self.rule_lhs_typing[rule_id][graph_id] =\
             self.edges[rule_id, graph_id]["lhs_mapping"]
         self.rule_rhs_typing[rule_id][graph_id] =\
@@ -933,20 +938,27 @@ class NetworkXHierarchy(nx.DiGraph, AttributeContainter):
 
         if attrs is not None:
             normalize_attrs(attrs)
-
+        else:
+            attrs = dict()
         pairs = set()
         for k, values in relation.items():
             for v in values:
                 pairs.add((k, v))
         right_relation = right_relation_dict(pairs)
-        rel_ab_obj = GraphRelation(relation, attrs)
-        rel_ba_obj = GraphRelation(right_relation, attrs)
-        self.relation_edge[left].update({right: rel_ab_obj})
+        rel_ab_dict = {
+            "rel": relation,
+            "attrs": attrs
+        }
+        rel_ba_dict = {
+            "rel": right_relation,
+            "attrs": attrs
+        }
+        self.relation_edges.update({(left, right): rel_ab_dict})
         self.relation[left].update(
-            {right: self.relation_edge[left][right].rel})
-        self.relation_edge[right].update({left: rel_ba_obj})
+            {right: self.relation_edges[left, right]["rel"]})
+        self.relation_edges.update({(right, left): rel_ba_dict})
         self.relation[right].update(
-            {left: self.relation_edge[right][left].rel})
+            {left: self.relation_edges[right, left]["rel"]})
         return
 
     def get_graph(self, graph_id):
@@ -960,8 +972,7 @@ class NetworkXHierarchy(nx.DiGraph, AttributeContainter):
 
     def set_node_attrs(self, node_id, attrs):
         normalize_attrs(attrs)
-        for k, v in attrs:
-            self.nodes[node_id]["attrs"][k] = v
+        self.nodes[node_id]["attrs"] = attrs
 
     def set_graph_attrs(self, graph_id, attrs):
         self.set_node_attrs(graph_id, attrs)
@@ -972,7 +983,7 @@ class NetworkXHierarchy(nx.DiGraph, AttributeContainter):
             self.edges[source, target]["attrs"][k] = v
 
     def set_typing_attrs(self, source, target, attrs):
-        self.set_edge_attrs(source, target, attrs)
+        self.set_edge_attrs(source, target, attrs, normalize=False)
 
     def add_cycle(self, nodes, **attr):
         """Method of adding cycle to the graph hierarchy."""
@@ -1048,11 +1059,9 @@ class NetworkXHierarchy(nx.DiGraph, AttributeContainter):
         nx.DiGraph.remove_node(self, node_id)
 
         # Update dicts representing relations
-        if node_id in self.relation_edge.keys():
-            del self.relation_edge[node_id]
-        for k, v in self.relation_edge.items():
-            if node_id in v.keys():
-                del self.relation_edge[k][node_id]
+        for u, v in self.relation_edges.keys():
+            if u == node_id or v == node_id:
+                del self.relation_edges[u, v]
 
         if node_id in self.relation.keys():
             del self.relation[node_id]
@@ -1111,9 +1120,9 @@ class NetworkXHierarchy(nx.DiGraph, AttributeContainter):
                 "Relation '%s-%s' is not defined in the hierarchy" %
                 (g1, g2)
             )
-        del self.relation_edge[g1][g2]
+        del self.relation_edges[g1, g2]
         del self.relation[g1][g2]
-        del self.relation_edge[g2][g1]
+        del self.relation_edges[g2, g1]
         del self.relation[g2][g1]
 
     def adjacent_relations(self, g):
@@ -1121,7 +1130,7 @@ class NetworkXHierarchy(nx.DiGraph, AttributeContainter):
         if g not in self.nodes():
             raise HierarchyError(
                 "Node '%s' is not defined in the hierarchy!" % g)
-        return list(self.relation_edge[g].keys())
+        return list(self.relation[g].keys())
 
     def relation_to_span(self, left, right, edges=False, attrs=False):
         """Convert relation to a span.
@@ -1713,163 +1722,6 @@ class NetworkXHierarchy(nx.DiGraph, AttributeContainter):
             rhs_typing,
             inplace=inplace)
 
-    def to_json(self):
-        """Return json representation of the hierarchy."""
-        json_data = {
-            "rules": [],
-            "graphs": [],
-            "typing": [],
-            "rule_typing": [],
-            "relations": []
-        }
-        for node in self.nodes():
-            if self.is_rule(node):
-                rule_json = {
-                    "rule": self.nodes[node]["rule"].to_json(),
-                    "attrs": attrs_to_json(self.nodes[node]["attrs"])
-                }
-                rule_json["id"] = node
-                json_data["rules"].append(rule_json)
-            elif self.is_graph(node):
-                graph_json = {
-                    "graph": graph_to_json(self.nodes[node]["graph"]),
-                    "attrs": attrs_to_json(self.nodes[node]["attrs"])
-                }
-                graph_json["id"] = node
-                json_data["graphs"].append(graph_json)
-            else:
-                raise HierarchyError("Unknown type of the node '%s'!" % node)
-        for s, t in self.edges():
-            if self.is_typing(s, t):
-                typing_json = {
-                    "mapping": self.edges[s, t]["mapping"],
-                    "attrs": attrs_to_json(self.edges[s, t]["attrs"])
-                }
-                typing_json["from"] = s
-                typing_json["to"] = t
-                json_data["typing"].append(typing_json)
-            elif self.is_rule_typing(s, t):
-                rule_typing_json = {
-                    "lhs_mapping": self.edges[s, t]["lhs_mapping"],
-                    "rhs_mapping": self.edges[s, t]["rhs_mapping"],
-                    "lhs_total": self.edges[s, t]["lhs_total"],
-                    "rhs_total": self.edges[s, t]["rhs_total"],
-                    "attrs": attrs_to_json(self.edges[s, t]["attrs"])
-                }
-                rule_typing_json["from"] = s
-                rule_typing_json["to"] = t
-                json_data["rule_typing"].append(rule_typing_json)
-            else:
-                raise HierarchyError(
-                    "Unknown type of the edge '%s->%s'!" % (s, t)
-                )
-        for u, v in self.relations():
-            relation_json = self.relation_edge[u][v].to_json()
-            relation_json["from"] = u
-            relation_json["to"] = v
-            json_data["relations"].append(relation_json)
-        attrs = {}
-        for key, value in self.attrs.items():
-            attrs[key] = value.to_json()
-        json_data["attrs"] = attrs
-        return json_data
-
-    @classmethod
-    def from_json(cls, json_data, ignore=None, directed=True):
-        """Create hierarchy obj from json repr."""
-        hierarchy = cls()
-
-        # add graphs
-        for graph_data in json_data["graphs"]:
-            if ignore is not None and\
-               "graphs" in ignore.keys() and\
-               graph_data["id"] in ignore["graphs"]:
-                pass
-            else:
-                graph, attrs = hierarchy.graph_node_cls.process_json(
-                    graph_data, directed)
-                hierarchy.add_graph(graph_data["id"], graph, attrs=attrs)
-
-        # add rules
-        for rule_data in json_data["rules"]:
-            if ignore is not None and\
-               "rules" in ignore.keys() and\
-               rule_data["id"] in ignore["rules"]:
-                pass
-            else:
-                rule, attrs = hierarchy.rule_node_cls.process_json(
-                    rule_data, directed)
-                hierarchy.add_rule(rule_data["id"], rule, attrs=attrs)
-
-        # add typing
-        for typing_data in json_data["typing"]:
-            if ignore is not None and\
-               "typing" in ignore.keys() and\
-               (typing_data["from"], typing_data["to"]) in ignore["typing"]:
-                pass
-            else:
-                mapping, attrs =\
-                    hierarchy.graph_typing_cls.process_json(typing_data)
-                hierarchy.add_typing(
-                    typing_data["from"],
-                    typing_data["to"],
-                    mapping, attrs)
-
-        # add rule typing
-        for rule_typing_data in json_data["rule_typing"]:
-            if ignore is not None and\
-               "rule_typing" in ignore.keys() and\
-               (rule_typing_data["from"], rule_typing_data["to"]) in ignore[
-                    "rule_typing"]:
-                pass
-            else:
-                lhs_map, rhs_map, lhs_total, rhs_total, attrs =\
-                    hierarchy.rule_typing_cls.process_json(rule_typing_data)
-                hierarchy.add_rule_typing(
-                    rule_typing_data["from"],
-                    rule_typing_data["to"],
-                    lhs_map, rhs_map, lhs_total, rhs_total, attrs)
-
-        # add relations
-        for relation_data in json_data["relations"]:
-            if ignore is not None and\
-               "relations" in ignore.keys() and\
-               ((relation_data["from"], relation_data["to"]) in ignore[
-                    "relations"] or (relation_data["to"],
-                                     relation_data["from"]) in ignore["relations"]):
-                pass
-            else:
-                rel, attrs = hierarchy.relation_cls.process_json(relation_data)
-                hierarchy.add_relation(
-                    relation_data["from"],
-                    relation_data["to"],
-                    rel, attrs)
-
-        if "attrs" in json_data.keys():
-            hierarchy.attrs = json_dict_to_attrs(json_data["attrs"])
-        # for k, v in json_data["attrs"].items():
-        #     hierarchy.add_attrs(
-        #         {k: json_dict_to_attrs(v)})
-
-        return hierarchy
-
-    @classmethod
-    def load(cls, filename, ignore=None, directed=True):
-        """Load the hierarchy from a file."""
-        if os.path.isfile(filename):
-            with open(filename, "r+") as f:
-                json_data = json.loads(f.read())
-                hierarchy = cls.from_json(json_data, ignore, directed)
-            return hierarchy
-        else:
-            raise HierarchyError("File '%s' does not exist!" % filename)
-
-    def export(self, filename):
-        """Export the hierarchy to a file."""
-        with open(filename, 'w') as f:
-            j_data = self.to_json()
-            json.dump(j_data, f)
-
     def get_ancestors(self, graph_id, maybe=None):
         """Return ancestors of a graph as well as the typing morphisms."""
         ancestors = {}
@@ -2121,8 +1973,8 @@ class NetworkXHierarchy(nx.DiGraph, AttributeContainter):
                                 self.add_edge(node, new_name)
                                 edge_dict = copy.deepcopy(
                                     hierarchy.edges[node, suc])
-                                assign_attrs(
-                                    self.edges[node, new_name], edge_dict)
+                                set_edge(
+                                    self, node, new_name, edge_dict, normalize=False)
                                 self.typing[node][new_name] = edge_dict["attrs"]
                     else:
                         _merge_node(suc)
@@ -2147,8 +1999,8 @@ class NetworkXHierarchy(nx.DiGraph, AttributeContainter):
                                 self.add_edge(new_name, node)
                                 edge_dict = copy.deepcopy(
                                     hierarchy.edges[pred, node])
-                                assign_attrs(
-                                    self.edges[new_name, node], edge_dict)
+                                set_edge(
+                                    self, new_name, node, edge_dict, normalize=False)
                                 self.typing[new_name][node] = edge_dict[
                                     "mapping"]
                     else:
@@ -2161,8 +2013,7 @@ class NetworkXHierarchy(nx.DiGraph, AttributeContainter):
                 self.add_graph(
                     new_name, hierarchy.nodes[node]["graph"],
                     hierarchy.nodes[node]["attrs"])
-                # assign_attrs(
-                #     self.nodes[new_name], node_dict)
+
                 visited.append(node)
                 for suc in successors:
                     if suc in visited:
@@ -2174,9 +2025,9 @@ class NetworkXHierarchy(nx.DiGraph, AttributeContainter):
                             self.add_edge(new_name, new_suc_name)
                             edge_dict = copy.deepcopy(
                                 hierarchy.edges[node, suc])
-                            assign_attrs(
-                                self.edges[new_name, new_suc_name],
-                                edge_dict)
+                            set_edge(
+                                self, new_name, new_suc_name,
+                                edge_dict, normalize=False)
                             self.typing[new_name][new_suc_name] = edge_dict[
                                 "mapping"]
                     else:
@@ -2192,8 +2043,8 @@ class NetworkXHierarchy(nx.DiGraph, AttributeContainter):
                             self.add_edge(new_pred_name, new_name)
                             edge_dict = copy.deepcopy(
                                 hierarchy.edges[pred, node])
-                            assign_attrs(
-                                self.edges[new_pred_name, new_name], edge_dict)
+                            set_edge(
+                                self, new_pred_name, new_name, edge_dict, normalize=False)
                             self.typing[new_pred_name][new_name] = edge_dict[
                                 "mapping"]
                     else:
@@ -2300,7 +2151,7 @@ class NetworkXHierarchy(nx.DiGraph, AttributeContainter):
                                 self.add_edge(new_name, new_suc_name)
                                 edge_dict = copy.deepcopy(
                                     hierarchy.edges[node, suc])
-                                assign_attrs(self.edges[new_name, new_suc_name], edge_dict)
+                                set_edge(self, new_name, new_suc_name, edge_dict, normalize=False)
                                 self.typing[new_name][new_suc_name] = edge_dict["mapping"]
                     else:
                         _merge_node(suc)
@@ -2328,7 +2179,7 @@ class NetworkXHierarchy(nx.DiGraph, AttributeContainter):
                                 self.add_edge(new_pred_name, new_name)
                                 edge_dict = copy.deepcopy(
                                     hierarchy.edges[pred, node])
-                                assign_attrs(self.edges[new_pred_name, new_name], edge_dict)
+                                set_edge(self, new_pred_name, new_name, edge_dict, normalize=False)
                                 self.typing[new_pred_name][new_name] = edge_dict["mapping"]
                     else:
                         _merge_node(pred)
@@ -2360,8 +2211,8 @@ class NetworkXHierarchy(nx.DiGraph, AttributeContainter):
                         if (new_name, new_suc_name) not in self.edges():
                             self.add_edge(new_name, new_suc_name)
                             edge_dict = copy.deepcopy(hierarchy.edges[node, suc])
-                            assign_attrs(
-                                self.edges[new_name, new_suc_name], edge_dict)
+                            set_edge(
+                                self, new_name, new_suc_name, edge_dict, normalize=False)
                             self.typing[new_name][new_suc_name] = edge_dict["mapping"]
                     else:
                         _merge_node(suc)
@@ -2380,8 +2231,8 @@ class NetworkXHierarchy(nx.DiGraph, AttributeContainter):
                             self.add_edge(new_pred_name, new_name)
                             edge_dict = copy.deepcopy(
                                 hierarchy.edges[pred, node])
-                            assign_attrs(
-                                self.edges[new_pred_name, new_name], edge_dict)
+                            set_edge(
+                                self, new_pred_name, new_name, edge_dict, normalize=False)
                             self.typing[new_pred_name][new_name] = edge_dict["mapping"]
                     else:
                         _merge_node(pred)

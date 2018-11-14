@@ -852,7 +852,7 @@ def make_canonical_commands(g, commands, di=False):
     return res
 
 
-def assert_graph_eq(g1, g2):
+def assert_nx_graph_eq(g1, g2):
     """Assertion function for graph equality."""
     assert(set(g1.nodes()) == set(g2.nodes()))
     if g1.is_directed() and g2.is_directed():
@@ -863,7 +863,7 @@ def assert_graph_eq(g1, g2):
     for n in g1.nodes():
         assert(g1.node[n] == g2.node[n])
     for e1, e2 in g1.edges():
-        assert(g1.edge[e1][e2] == g2.edge[e1][e2])
+        assert(g1.edges[e1, e2] == g2.edges[e1, e2])
     return
 
 

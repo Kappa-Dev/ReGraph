@@ -4,7 +4,7 @@ from regraph import Rule
 from regraph import keys_by_value
 from regraph import RuleError
 from regraph.networkx.category_utils import check_homomorphism
-import regraph.networkx.primitives as prim
+import regraph.primitives as prim
 
 
 class TestRule(object):
@@ -125,16 +125,16 @@ class TestRule(object):
         rule.inject_remove_node_attrs(3, {"a3": {False}})
         check_homomorphism(rule.p, rule.lhs, rule.p_lhs)
         check_homomorphism(rule.p, rule.rhs, rule.p_rhs)
-        assert("a3" not in rule.p.node[3])
-        assert("a3" in rule.lhs.node[3])
+        assert("a3" not in rule.p.nodes[3])
+        assert("a3" in rule.lhs.nodes[3])
         new_p_node, new_rhs_node = rule.inject_clone_node(2)
         rule.inject_remove_node_attrs(new_p_node, {"a2": {True}})
         check_homomorphism(rule.p, rule.lhs, rule.p_lhs)
         check_homomorphism(rule.p, rule.rhs, rule.p_rhs)
-        assert("a2" not in rule.p.node[new_p_node])
-        assert("a2" in rule.p.node[2])
-        assert("a2" not in rule.rhs.node[new_rhs_node])
-        assert("a2" in rule.rhs.node[2])
+        assert("a2" not in rule.p.nodes[new_p_node])
+        assert("a2" in rule.p.nodes[2])
+        assert("a2" not in rule.rhs.nodes[new_rhs_node])
+        assert("a2" in rule.rhs.nodes[2])
 
     def test_inject_remove_edge_attrs(self):
         pattern = nx.DiGraph()
@@ -146,14 +146,14 @@ class TestRule(object):
             [(1, 2, {"a12": {True}}), (3, 2, {"a32": {True}})])
         rule = Rule.from_transform(pattern)
         rule.inject_remove_edge_attrs(1, 2, {"a12": {True}})
-        assert("a12" not in rule.p.edge[1][2])
+        assert("a12" not in rule.p.edges[1, 2])
         new_p_node, new_rhs_node = rule.inject_clone_node(2)
-        assert("a12" not in rule.p.edge[1][new_p_node])
+        assert("a12" not in rule.p.edges[1, new_p_node])
         rule.inject_remove_edge_attrs(3, new_p_node, {"a32": {True}})
-        assert("a32" in rule.p.edge[3][2])
-        assert("a32" not in rule.p.edge[3][new_p_node])
-        assert("a32" in rule.rhs.edge[3][rule.p_rhs[2]])
-        assert("a32" not in rule.rhs.edge[3][new_rhs_node])
+        assert("a32" in rule.p.edges[3, 2])
+        assert("a32" not in rule.p.edges[3, new_p_node])
+        assert("a32" in rule.rhs.edges[3, rule.p_rhs[2]])
+        assert("a32" not in rule.rhs.edges[3, new_rhs_node])
 
     def test_inject_add_node(self):
         pattern = nx.DiGraph()
@@ -220,15 +220,15 @@ class TestRule(object):
         rule.inject_add_node(4)
         merge = rule.inject_merge_nodes([1, 3])
         rule.inject_add_node_attrs(2, {"a": {True}})
-        assert("a" in rule.rhs.node[2])
-        assert("a" in rule.rhs.node[clone_name_rhs])
+        assert("a" in rule.rhs.nodes[2])
+        assert("a" in rule.rhs.nodes[clone_name_rhs])
         rule.inject_add_node_attrs(clone_name_p, {"b": {True}})
-        assert("b" in rule.rhs.node[clone_name_rhs])
-        assert("b" not in rule.rhs.node[2])
+        assert("b" in rule.rhs.nodes[clone_name_rhs])
+        assert("b" not in rule.rhs.nodes[2])
         rule.inject_add_node_attrs(4, {"c": {True}})
-        assert("c" in rule.rhs.node[4])
+        assert("c" in rule.rhs.nodes[4])
         rule.inject_add_node_attrs(merge, {"d": {True}})
-        assert("d" in rule.rhs.node[merge])
+        assert("d" in rule.rhs.nodes[merge])
         check_homomorphism(rule.p, rule.lhs, rule.p_lhs)
         check_homomorphism(rule.p, rule.rhs, rule.p_rhs)
 
@@ -243,14 +243,14 @@ class TestRule(object):
         merge = rule.inject_merge_nodes([1, 3])
 
         rule.inject_add_edge_attrs(0, 1, {"a": {True}})
-        assert("a" in rule.rhs.edge[0][merge])
+        assert("a" in rule.rhs.edges[0, merge])
         rule.inject_add_edge_attrs(0, clone_name_p, {"b": {True}})
-        assert("b" in rule.rhs.edge[0][clone_name_rhs])
+        assert("b" in rule.rhs.edges[0, clone_name_rhs])
         rule.inject_add_edge_attrs(merge, clone_name_p, {"c": {True}})
-        assert("c" in rule.rhs.edge[merge][clone_name_rhs])
-        assert("c" not in rule.rhs.edge[merge][2])
+        assert("c" in rule.rhs.edges[merge, clone_name_rhs])
+        assert("c" not in rule.rhs.edges[merge, 2])
         rule.inject_add_edge_attrs(4, merge, {"d": {True}})
-        assert("d" in rule.rhs.edge[4][merge])
+        assert("d" in rule.rhs.edges[4, merge])
         check_homomorphism(rule.p, rule.lhs, rule.p_lhs)
         check_homomorphism(rule.p, rule.rhs, rule.p_rhs)
 
