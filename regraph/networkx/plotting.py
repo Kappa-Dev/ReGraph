@@ -79,25 +79,31 @@ def plot_graph(graph, filename=None, parent_pos=None, title=None):
         the graph, keys are node ids and values are pairs of x/y
         coordinates
     """
-    if not parent_pos:
-        pos = nx.spring_layout(graph)
-    else:
+    pos = None
+    fixed = None
+    if parent_pos is not None and len(parent_pos) > 0:
         pos = copy.deepcopy(parent_pos)
-        random_pos = nx.spring_layout(graph)
-        for node in graph.nodes():
-            if node not in pos:
-                pos[node] = random_pos[node]
+        fixed = list(parent_pos.keys())
 
-    nx.draw_networkx_nodes(graph, pos,
-                           node_color='green',
-                           node_size=100, arrows=True)
-    nx.draw_networkx_edges(graph, pos, alpha=0.4)
+    pos = nx.spring_layout(graph, k=0.9, pos=pos, fixed=fixed)
+    # if not parent_pos:
+
+    # else:
+    #     pos = copy.deepcopy(parent_pos)
+    #     random_pos = nx.spring_layout(graph)
+    #     for node in graph.nodes():
+    #         if node not in pos:
+    #             pos[node] = random_pos[node]
+
+    nx.draw_networkx_nodes(graph, pos, node_color=[[0.6, 0.8, 0.047]] * len(graph.nodes()),
+                           node_size=200)
+    nx.draw_networkx_edges(graph, pos, alpha=0.4, width=2.0, node_size=200)
 
     labels = {}
     for node in graph.nodes():
         labels[node] = str(node)
 
-    offset = 0.1
+    offset = 0.15
     labels_pos = copy.deepcopy(pos)
     for p in pos:  # raise text positions
         labels_pos[p][1] += offset
@@ -157,21 +163,24 @@ def plot_instance(graph, pattern, instance, filename=None,
         the graph, keys are node ids and values are pairs of x/y
         coordinates
     """
-    new_colors = ["g" if not graph.nodes()[i] in instance.values()
-                  else "r" for i, c in enumerate(graph.nodes())]
-    if not parent_pos:
-        pos = nx.spring_layout(graph)
-    else:
-        pos = copy.deepcopy(parent_pos)
-        random_pos = nx.spring_layout(graph)
-        for node in graph.nodes():
-            if node not in pos:
-                pos[node] = random_pos[node]
+    nodes = list(graph.nodes())
 
-    nx.draw_networkx_nodes(
-        graph, pos, node_color=new_colors,
-        node_size=100, arrows=True)
-    nx.draw_networkx_edges(graph, pos, alpha=0.4)
+    node_color = [0.6, 0.8, 0.047]
+    instance_color = [0.788, 0.298, 0.298]
+    new_colors = [node_color if not nodes[i] in instance.values()
+                  else instance_color for i, c in enumerate(nodes)]
+
+    pos = None
+    fixed = None
+    if parent_pos is not None and len(parent_pos) > 0:
+        pos = copy.deepcopy(parent_pos)
+        fixed = list(parent_pos.keys())
+
+    pos = nx.spring_layout(graph, k=0.9, pos=pos, fixed=fixed)
+
+    nx.draw_networkx_nodes(graph, pos, node_color=[node_color] * len(nodes),
+                           node_size=200)
+    nx.draw_networkx_edges(graph, pos, alpha=0.4, width=2.0, node_size=200)
 
     # Draw pattern edges highlighted
     edgelist = [(instance[edge[0]], instance[edge[1]])
@@ -179,12 +188,12 @@ def plot_instance(graph, pattern, instance, filename=None,
     nx.draw_networkx_edges(
         graph, pos,
         edgelist=edgelist,
-        width=3, alpha=0.5, edge_color='r')
+        width=3, alpha=0.3, edge_color=[instance_color] * len(edgelist), node_size=200)
 
     labels = {}
-    for node in graph.nodes():
+    for node in nodes:
         labels[node] = node
-    offset = 0.1
+    offset = 0.15
     labels_pos = copy.deepcopy(pos)
     for p in pos:  # raise text positions
         labels_pos[p][1] += offset
@@ -265,35 +274,38 @@ def plot_rule(rule, filename=None, title=None):
         else:
             rhs_colors.append(np.random.rand(3,))
 
-    p_pos = nx.spring_layout(rule.p)
-    lhs_pos = nx.spring_layout(rule.lhs)
-    rhs_pos = nx.spring_layout(rule.rhs)
+    p_pos = nx.spring_layout(rule.p, k=0.7)
+
+    lhs_pos = dict()
+    lhs_fixed = []
     for node in rule.lhs.nodes():
         p_keys = keys_by_value(rule.p_lhs, node)
         if len(p_keys) > 0:
             lhs_pos[node] = p_pos[p_keys[0]]
+            lhs_fixed.append(node)
+    lhs_pos = nx.spring_layout(rule.lhs, pos=lhs_pos, fixed=lhs_fixed, k=0.7)
 
+    rhs_pos = dict()
+    rhs_fixed = []
     for node in rule.rhs.nodes():
         p_keys = keys_by_value(rule.p_rhs, node)
         if len(p_keys) > 0:
             rhs_pos[node] = p_pos[p_keys[0]]
+            rhs_fixed.append(node)
+    rhs_pos = nx.spring_layout(rule.rhs, pos=rhs_pos, fixed=rhs_fixed, k=0.7)
 
     plt.subplot(1, 3, 1)
     plt.title("LHS")
     _ticks_off()
-    plt.xlim([-0.5, 1.5])
-    plt.ylim([-0.5, 1.5])
     nx.draw_networkx_nodes(rule.lhs, lhs_pos,
                            node_color=lhs_colors,
                            node_size=100, arrows=True)
-    nx.draw_networkx_edges(rule.lhs, lhs_pos, alpha=0.4)
+    nx.draw_networkx_edges(rule.lhs, lhs_pos, alpha=0.4, node_size=100)
 
     labels = {}
     for node in rule.lhs.nodes():
         labels[node] = str(node)
-        # if types:
-        #     labels[node] += ":" + str(graph.node[node].type_)
-    offset = 0.2
+    offset = 0.15
     lhs_label_pos = copy.deepcopy(lhs_pos)
     for p in lhs_pos:  # raise text positions
         lhs_label_pos[p][1] += offset
@@ -302,19 +314,17 @@ def plot_rule(rule, filename=None, title=None):
     plt.subplot(1, 3, 2)
     plt.title("P")
     _ticks_off()
-    plt.xlim([-0.5, 1.5])
-    plt.ylim([-0.5, 1.5])
     nx.draw_networkx_nodes(rule.p, p_pos,
                            node_color=p_colors,
                            node_size=100, arrows=True)
-    nx.draw_networkx_edges(rule.p, p_pos, alpha=0.4)
+    nx.draw_networkx_edges(rule.p, p_pos, alpha=0.4, node_size=100)
 
     labels = {}
     for node in rule.p.nodes():
         labels[node] = str(node)
         # if types:
         #     labels[node] += ":" + str(graph.node[node].type_)
-    offset = 0.2
+    offset = 0.15
     p_label_pos = copy.deepcopy(p_pos)
     for p in p_pos:  # raise text positions
         p_label_pos[p][1] += offset
@@ -323,17 +333,15 @@ def plot_rule(rule, filename=None, title=None):
     plt.subplot(1, 3, 3)
     plt.title("RHS")
     _ticks_off()
-    plt.xlim([-0.5, 1.5])
-    plt.ylim([-0.5, 1.5])
     nx.draw_networkx_nodes(rule.rhs, rhs_pos,
                            node_color=rhs_colors,
                            node_size=100, arrows=True)
-    nx.draw_networkx_edges(rule.rhs, rhs_pos, alpha=0.4)
+    nx.draw_networkx_edges(rule.rhs, rhs_pos, alpha=0.4, node_size=100)
 
     labels = {}
     for node in rule.rhs.nodes():
         labels[node] = str(node)
-    offset = 0.2
+    offset = 0.15
     rhs_label_pos = copy.deepcopy(rhs_pos)
     for p in rhs_pos:  # raise text positions
         rhs_label_pos[p][1] += offset
