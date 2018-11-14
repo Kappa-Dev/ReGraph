@@ -35,6 +35,7 @@ from regraph.primitives import (attrs_to_json,
                                 assign_attrs,
                                 get_relabeled_graph,
                                 relabel_node,
+                                merge_attrs,
                                 get_edge,
                                 graph_to_json,
                                 graph_from_json,
@@ -541,7 +542,7 @@ class NetworkXHierarchy(nx.DiGraph, AttributeContainter):
             graph_obj = nx.Graph()
         self.add_graph(graph_id, graph_obj, attrs=attrs)
 
-    def add_rule(self, rule_id, rule, rule_attrs=None):
+    def add_rule(self, rule_id, rule, attrs=None):
         """Add rule to the hierarchy.
 
         Parameters
@@ -551,7 +552,7 @@ class NetworkXHierarchy(nx.DiGraph, AttributeContainter):
         rule : regraph.rules.Rule
             Rule object corresponding to the new node of
             the hierarchy
-        rule_attrs : dict
+        attrs : dict
             Dictionary containing attributes of the new node
 
         Raises
@@ -588,13 +589,13 @@ class NetworkXHierarchy(nx.DiGraph, AttributeContainter):
                 rule_id
             )
         self.add_node(rule_id)
-        if rule_attrs is not None:
-            normalize_attrs(rule_attrs)
+        if attrs is not None:
+            normalize_attrs(attrs)
         assign_attrs(
             self.nodes[rule_id],
             {
                 "rule": rule,
-                "attrs": rule_attrs
+                "attrs": attrs
             })
         self.rule[rule_id] = self.nodes[rule_id]["rule"]
         if rule_id not in self.rule_lhs_typing.keys():
@@ -1723,11 +1724,17 @@ class NetworkXHierarchy(nx.DiGraph, AttributeContainter):
         }
         for node in self.nodes():
             if self.is_rule(node):
-                rule_json = self.nodes[node].to_json()
+                rule_json = {
+                    "rule": self.nodes[node]["rule"].to_json(),
+                    "attrs": attrs_to_json(self.nodes[node]["attrs"])
+                }
                 rule_json["id"] = node
                 json_data["rules"].append(rule_json)
             elif self.is_graph(node):
-                graph_json = self.nodes[node].to_json()
+                graph_json = {
+                    "graph": graph_to_json(self.nodes[node]["graph"]),
+                    "attrs": attrs_to_json(self.nodes[node]["attrs"])
+                }
                 graph_json["id"] = node
                 json_data["graphs"].append(graph_json)
             else:
@@ -1886,32 +1893,73 @@ class NetworkXHierarchy(nx.DiGraph, AttributeContainter):
         """Create a simple networkx graph representing the hierarchy."""
         g = nx.DiGraph()
         for node in self.nodes():
-            g.add_node(node, self.nodes[node]["attrs"])
+            attrs = self.nodes[node]["attrs"]
+            if attrs is None:
+                attrs = dict()
+            g.add_node(node, **attrs)
         for s, t in self.edges():
-            g.add_edge(s, t, self.edges[s, t]["attrs"])
+            attrs = self.edges[s, t]["attrs"]
+            if attrs is None:
+                attrs = dict()
+            g.add_edge(s, t, **attrs)
         return g
 
-    def rename_graph(self, graph_id, new_graph_id):
+    def rename_hierarchy_node(self, node_id, new_node_id):
         """Rename a graph in the hierarchy."""
-        graph_obj = copy.deepcopy(self.nodes[graph_id])
-        edges_obj = {}
+        # node_dict = copy.deepcopy(self.nodes[node_id])
+        # edge_dict = {}
 
-        for s in self.successors(graph_id):
-            obj = copy.deepcopy(self.edges[graph_id, s])
-            edges_obj[(new_graph_id, s)] = obj
-        for p in self.predecessors(graph_id):
-            obj = copy.deepcopy(self.edges[p, graph_id])
-            edges_obj[(p, new_graph_id)] = obj
+        # for s in self.successors(node_id):
+        #     obj = copy.deepcopy(self.edges[node_id, s])
+        #     edge_dict[(new_node_id, s)] = obj
+        # for p in self.predecessors(node_id):
+        #     obj = copy.deepcopy(self.edges[p, node_id])
+        #     edge_dict[(p, new_node_id)] = obj
 
-        self.remove_node(graph_id)
-        self.add_node(new_graph_id)
-        self.nodes[new_graph_id] = graph_obj
-        for (s, t), obj in edges_obj.items():
-            self.add_edge(s, t)
-            self.edges[s][t] = obj
+        if self.is_graph(node_id):
+            self.add_graph(
+                new_node_id, self.nodes[node_id]["graph"], self.nodes[node_id]["attrs"])
+        else:
+            self.add_rule(
+                new_node_id, self.nodes[node_id]["rule"], self.nodes[node_id]["attrs"])
+
+        successors = list(self.successors(node_id))
+        predecessors = list(self.predecessors(node_id))
+
+        for s in successors:
+            if self.is_typing(node_id, s):
+                self.add_typing(
+                    new_node_id, s,
+                    self.edges[node_id, s]["mapping"],
+                    self.edges[node_id, s]["attrs"])
+            else:
+                self.add_rule_typing(
+                    new_node_id, s,
+                    lhs_mapping=self.edges[node_id, s]["lhs_mapping"],
+                    rhs_mapping=self.edges[node_id, s]["rhs_mapping"],
+                    lhs_total=self.edges[node_id, s]["lhs_total"],
+                    rhs_total=self.edges[node_id, s]["rhs_total"],
+                    attrs=self.edges[node_id, s]["attrs"])
+
+        for p in predecessors:
+            if self.is_typing(p, node_id):
+                self.add_typing(
+                    p, new_node_id,
+                    self.edges[p, node_id]["mapping"],
+                    self.edges[p, node_id]["attrs"])
+            else:
+                self.add_rule_typing(
+                    p, new_node_id,
+                    lhs_mapping=self.edges[p, node_id]["lhs_mapping"],
+                    rhs_mapping=self.edges[p, node_id]["rhs_mapping"],
+                    lhs_total=self.edges[p, node_id]["lhs_total"],
+                    rhs_total=self.edges[p, node_id]["rhs_total"],
+                    attrs=self.edges[p, node_id]["attrs"])
+
+        self.remove_node(node_id)
         return
 
-    def rename_node(self, graph_id, node, new_name):
+    def rename_graph_node(self, graph_id, node, new_name):
         """Rename a node in a graph of the hierarchy."""
         if new_name in self.nodes[graph_id]["graph"].nodes():
             raise GraphError(
@@ -2007,7 +2055,8 @@ class NetworkXHierarchy(nx.DiGraph, AttributeContainter):
         for node in common_ids:
             if self.is_graph(node) and\
                hierarchy.is_graph(node):
-                if equal(self.nodes[node]["graph"], hierarchy.nodes[node]["graph"]):
+                if equal(self.nodes[node]["graph"],
+                         hierarchy.nodes[node]["graph"]):
                     to_merge.append(node)
                 else:
                     new_name = self.unique_graph_id(node)
@@ -2032,7 +2081,7 @@ class NetworkXHierarchy(nx.DiGraph, AttributeContainter):
                     mapping = hierarchy.edges[n1, n2]["mapping"]
                     for key, value in mapping.items():
                         if key in self.edges[n1, n2]["mapping"].keys():
-                            if self.edges[n1, n2].maping[key] != value:
+                            if self.edges[n1, n2]["mapping"][key] != value:
                                 raise HierarchyError(
                                     "Cannot merge with the input hierarchy: "
                                     "typing of nodes in `%s->%s` does not "
@@ -2048,9 +2097,9 @@ class NetworkXHierarchy(nx.DiGraph, AttributeContainter):
             predecessors = hierarchy.predecessors(node)
             if node in to_merge:
                 # merge node attrs
-                self.nodes[node].add_attrs(
-                    hierarchy.nodes[node]["attrs"]
-                )
+                merge_attrs(
+                    self.nodes[node]["attrs"],
+                    hierarchy.nodes[node]["attrs"])
                 visited.append(node)
                 for suc in successors:
                     if suc in visited:
@@ -2060,9 +2109,9 @@ class NetworkXHierarchy(nx.DiGraph, AttributeContainter):
                             for key, value in mapping.items():
                                 self.edges[node, suc]["mapping"][key] = value
                             # merge edge attrs
-                            self.edges[node, suc].add_attrs(
-                                hierarchy.edges[node, suc]
-                            )
+                            merge_attrs(
+                                self.edges[node, suc]["attrs"],
+                                hierarchy.edges[node, suc])
                         else:
                             if suc in to_rename.keys():
                                 new_name = to_rename[suc]
@@ -2070,9 +2119,11 @@ class NetworkXHierarchy(nx.DiGraph, AttributeContainter):
                                 new_name = suc
                             if (node, new_name) not in self.edges():
                                 self.add_edge(node, new_name)
-                                edge_obj = copy.deepcopy(
+                                edge_dict = copy.deepcopy(
                                     hierarchy.edges[node, suc])
-                                self.edges[node, new_name] = edge_obj
+                                assign_attrs(
+                                    self.edges[node, new_name], edge_dict)
+                                self.typing[node][new_name] = edge_dict["attrs"]
                     else:
                         _merge_node(suc)
 
@@ -2084,9 +2135,9 @@ class NetworkXHierarchy(nx.DiGraph, AttributeContainter):
                             for key, value in mapping.items():
                                 self.edges[pred, node]["mapping"][key] = value
                             # merge edge attrs
-                            self.edges[pred, node].add_attrs(
-                                hierarchy.edges[pred, node]["attrs"]
-                            )
+                            merge_attrs(
+                                self.edges[pred, node]["attrs"],
+                                hierarchy.edges[pred, node]["attrs"])
                         else:
                             if pred in to_rename.keys():
                                 new_name = to_rename[pred]
@@ -2094,9 +2145,12 @@ class NetworkXHierarchy(nx.DiGraph, AttributeContainter):
                                 new_name = pred
                             if (new_name, node) not in self.edges():
                                 self.add_edge(new_name, node)
-                                edge_obj = copy.deepcopy(
+                                edge_dict = copy.deepcopy(
                                     hierarchy.edges[pred, node])
-                                self.edges[new_name, node] = edge_obj
+                                assign_attrs(
+                                    self.edges[new_name, node], edge_dict)
+                                self.typing[new_name][node] = edge_dict[
+                                    "mapping"]
                     else:
                         _merge_node(pred)
             else:
@@ -2104,9 +2158,11 @@ class NetworkXHierarchy(nx.DiGraph, AttributeContainter):
                     new_name = to_rename[node]
                 else:
                     new_name = node
-                self.add_node(new_name)
-                node_obj = copy.deepcopy(hierarchy.nodes[node])
-                self.nodes[new_name] = node_obj
+                self.add_graph(
+                    new_name, hierarchy.nodes[node]["graph"],
+                    hierarchy.nodes[node]["attrs"])
+                # assign_attrs(
+                #     self.nodes[new_name], node_dict)
                 visited.append(node)
                 for suc in successors:
                     if suc in visited:
@@ -2116,8 +2172,13 @@ class NetworkXHierarchy(nx.DiGraph, AttributeContainter):
                             new_suc_name = suc
                         if (new_name, new_suc_name) not in self.edges():
                             self.add_edge(new_name, new_suc_name)
-                            edge_obj = copy.deepcopy(hierarchy.edges[node, suc])
-                            self.edges[new_name, new_suc_name] = edge_obj
+                            edge_dict = copy.deepcopy(
+                                hierarchy.edges[node, suc])
+                            assign_attrs(
+                                self.edges[new_name, new_suc_name],
+                                edge_dict)
+                            self.typing[new_name][new_suc_name] = edge_dict[
+                                "mapping"]
                     else:
                         _merge_node(suc)
 
@@ -2129,9 +2190,12 @@ class NetworkXHierarchy(nx.DiGraph, AttributeContainter):
                             new_pred_name = pred
                         if (new_pred_name, new_name) not in self.edges():
                             self.add_edge(new_pred_name, new_name)
-                            edge_obj = copy.deepcopy(
+                            edge_dict = copy.deepcopy(
                                 hierarchy.edges[pred, node])
-                            self.edges[new_pred_name, new_name] = edge_obj
+                            assign_attrs(
+                                self.edges[new_pred_name, new_name], edge_dict)
+                            self.typing[new_pred_name][new_name] = edge_dict[
+                                "mapping"]
                     else:
                         _merge_node(pred)
             return
@@ -2144,10 +2208,12 @@ class NetworkXHierarchy(nx.DiGraph, AttributeContainter):
         to_merge = {}
         to_rename = {}
         for n1 in self.nodes():
-            if attr in self.nodes[n1]["attrs"].keys():
+            if self.nodes[n1]["attrs"] and\
+               attr in self.nodes[n1]["attrs"].keys():
                 value = self.nodes[n1]["attrs"][attr]
                 for n2 in hierarchy.nodes():
-                    if attr in hierarchy.nodes[n2]["attrs"].keys():
+                    if hierarchy.nodes[n2]["attrs"] and\
+                       attr in hierarchy.nodes[n2]["attrs"].keys():
                         if hierarchy.nodes[n2]["attrs"][attr] == value:
                             if n1 in to_merge.keys() or\
                                n2 in to_merge.values():
@@ -2192,7 +2258,7 @@ class NetworkXHierarchy(nx.DiGraph, AttributeContainter):
         visited = []
         new_names = {}
 
-        # aux recursive function for merging by ids
+        # auxiliary recursive function for merging by ids
         def _merge_node(node):
             if node in visited:
                 return
@@ -2201,12 +2267,11 @@ class NetworkXHierarchy(nx.DiGraph, AttributeContainter):
                 original_node = keys_by_value(to_merge, node)[0]
                 new_name = str(original_node) + "_" + str(node)
                 new_names[original_node] = new_name
-                self.rename_graph(original_node, new_name)
-                self.nodes[new_name].add_attrs(
-                    hierarchy.nodes[node]["attrs"]
-                )
-                # recursive_merge(self.nodes[new_name]["attrs"],
-                # hierarchy.nodes[node]["attrs"])
+                self.rename_hierarchy_node(original_node, new_name)
+                merge_attrs(
+                    self.nodes[new_name]["attrs"],
+                    hierarchy.nodes[node]["attrs"])
+
                 visited.append(node)
 
                 successors = hierarchy.successors(node)
@@ -2223,10 +2288,9 @@ class NetworkXHierarchy(nx.DiGraph, AttributeContainter):
                                     new_name,
                                     new_names[original_suc]]["mapping"][key] = value
                             # merge edge attrs
-                            self.edges[
-                                new_name,
-                                new_names[original_suc]].add_attrs(
-                                    hierarchy.edges[node, suc]["attrs"])
+                            merge_attrs(
+                                self.edges[new_name, new_names[original_suc]]["attrs"],
+                                hierarchy.edges[node, suc]["attrs"])
                         else:
                             if suc in to_rename.keys():
                                 new_suc_name = to_rename[suc]
@@ -2234,9 +2298,10 @@ class NetworkXHierarchy(nx.DiGraph, AttributeContainter):
                                 new_suc_name = suc
                             if (new_name, new_suc_name) not in self.edges():
                                 self.add_edge(new_name, new_suc_name)
-                                edge_obj = copy.deepcopy(
+                                edge_dict = copy.deepcopy(
                                     hierarchy.edges[node, suc])
-                                self.edges[new_name, new_suc_name] = edge_obj
+                                assign_attrs(self.edges[new_name, new_suc_name], edge_dict)
+                                self.typing[new_name][new_suc_name] = edge_dict["mapping"]
                     else:
                         _merge_node(suc)
 
@@ -2251,9 +2316,9 @@ class NetworkXHierarchy(nx.DiGraph, AttributeContainter):
                                     new_names[original_pred],
                                     new_name]["mapping"][key] = value
                             # merge edge attrs
-                            self.edges[new_names[original_pred], new_name].add_attrs(
-                                hierarchy.edges[pred, node]["attrs"]
-                            )
+                            merge_attrs(
+                                self.edges[new_names[original_pred], new_name]["attrs"],
+                                hierarchy.edges[pred, node]["attrs"])
                         else:
                             if pred in to_rename.keys():
                                 new_pred_name = to_rename[pred]
@@ -2261,9 +2326,10 @@ class NetworkXHierarchy(nx.DiGraph, AttributeContainter):
                                 new_pred_name = pred
                             if (new_pred_name, new_name) not in self.edges():
                                 self.add_edge(new_pred_name, new_name)
-                                edge_obj = copy.deepcopy(
+                                edge_dict = copy.deepcopy(
                                     hierarchy.edges[pred, node])
-                                self.edges[new_pred_name, new_name] = edge_obj
+                                assign_attrs(self.edges[new_pred_name, new_name], edge_dict)
+                                self.typing[new_pred_name][new_name] = edge_dict["mapping"]
                     else:
                         _merge_node(pred)
             else:
@@ -2271,9 +2337,9 @@ class NetworkXHierarchy(nx.DiGraph, AttributeContainter):
                     new_name = to_rename[node]
                 else:
                     new_name = node
-                self.add_node(new_name)
-                node_obj = copy.deepcopy(hierarchy.nodes[node])
-                self.nodes[new_name] = node_obj
+                self.add_graph(
+                    new_name, hierarchy.nodes[node]["graph"],
+                    hierarchy.nodes[node]["attrs"])
                 visited.append(node)
 
                 successors = hierarchy.successors(node)
@@ -2293,8 +2359,10 @@ class NetworkXHierarchy(nx.DiGraph, AttributeContainter):
 
                         if (new_name, new_suc_name) not in self.edges():
                             self.add_edge(new_name, new_suc_name)
-                            edge_obj = copy.deepcopy(hierarchy.edges[node, suc])
-                            self.edges[new_name, new_suc_name] = edge_obj
+                            edge_dict = copy.deepcopy(hierarchy.edges[node, suc])
+                            assign_attrs(
+                                self.edges[new_name, new_suc_name], edge_dict)
+                            self.typing[new_name][new_suc_name] = edge_dict["mapping"]
                     else:
                         _merge_node(suc)
 
@@ -2310,9 +2378,11 @@ class NetworkXHierarchy(nx.DiGraph, AttributeContainter):
 
                         if (new_pred_name, new_name) not in self.edges():
                             self.add_edge(new_pred_name, new_name)
-                            edge_obj = copy.deepcopy(
+                            edge_dict = copy.deepcopy(
                                 hierarchy.edges[pred, node])
-                            self.edges[new_pred_name, new_name] = edge_obj
+                            assign_attrs(
+                                self.edges[new_pred_name, new_name], edge_dict)
+                            self.typing[new_pred_name][new_name] = edge_dict["mapping"]
                     else:
                         _merge_node(pred)
 
@@ -2328,8 +2398,14 @@ class NetworkXHierarchy(nx.DiGraph, AttributeContainter):
         for node in nodes:
             new_id = self.unique_graph_id(node + suffix)
             new[node] = new_id
-            self.add_node(new_id)
-            self.nodes[new_id] = copy.deepcopy(self.nodes[node])
+            if "graph" in self.nodes[node]:
+                self.add_graph(
+                    new_id, self.nodes[node]["graph"],
+                    self.nodes[node]["attrs"])
+            else:
+                self.add_rule(
+                    new_id, self.nodes[node]["rule"],
+                    self.nodes[node]["attrs"])
         for (source, target) in self.edges():
             if source in nodes:
                 if target in nodes:

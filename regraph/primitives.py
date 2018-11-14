@@ -32,12 +32,30 @@ def assign_attrs(element, attrs):
         element[k] = v
 
 
+def merge_attrs(original_dict, attrs):
+    """Add attrs to the container."""
+    if attrs is not None:
+        normalize_attrs(attrs)
+    else:
+        attrs = dict()
+    if original_dict is None:
+        original_dict = attrs
+    else:
+        for key in attrs:
+            if key in original_dict:
+                original_dict[key] = original_dict[key].union(attrs[key])
+            else:
+                original_dict[key] = attrs[key]
+    return
+
+
 def attrs_to_json(attrs):
     """Convert attributes to json."""
     normalize_attrs(attrs)
     json_data = dict()
-    for key, value in attrs.items():
-        json_data[key] = value.to_json()
+    if attrs is not None:
+        for key, value in attrs.items():
+            json_data[key] = value.to_json()
     return json_data
 
 

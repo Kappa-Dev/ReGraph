@@ -194,9 +194,7 @@ def _autocomplete_typing(hierarchy, graph_id, instance,
                     set(new_rhs_typing_rel[ancestor].keys())
                 for node in dif:
                     type_set = set()
-                    print(ancestor_typing)
                     for el in new_rhs_typing_rel[graph][node]:
-                        print(el)
                         type_set.add(ancestor_typing[el])
                     new_rhs_typing_rel[ancestor][node] = type_set
 

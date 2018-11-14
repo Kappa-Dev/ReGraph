@@ -192,13 +192,12 @@ def _propagate_up(hierarchy, graph_id, rule, instance,
                     updated_graphs[graph] =\
                         (graph_prime, graph_prime_graph, None, graph_prime_origin)
 
-                    graph_successors = hierarchy.successors(graph)
+                    graph_successors = list(hierarchy.successors(graph))
                     if graph_id in graph_successors:
                         updated_homomorphisms[(graph, graph_id)] =\
                             compose(
                                 graph_prime_origin,
                                 origin_m_origin_prime)
-
                     if len(rule.removed_nodes()) > 0 or\
                        len(rule.cloned_nodes()) > 0:
                         for suc in graph_successors:
@@ -216,7 +215,6 @@ def _propagate_up(hierarchy, graph_id, rule, instance,
                                 else:
                                     graph_prime_suc_prime = compose(
                                         graph_prime_graph, hierarchy.edges[graph, suc]["mapping"])
-
                                 updated_homomorphisms[(graph, suc)] = graph_prime_suc_prime
 
                         for pred in hierarchy.predecessors(graph):
