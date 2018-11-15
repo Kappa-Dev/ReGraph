@@ -806,8 +806,13 @@ def get_relabeled_graph(graph, mapping):
     """
     if isinstance(graph, Neo4jGraph):
         raise ReGraphError("Not available for Neo4j graphs!")
-
-    g = type(graph)()
+    elif isinstance(graph, nx.DiGraph):
+        g = nx.DiGraph()
+    elif isinstance(graph, nx.Graph):
+        g = nx.DiGraph()
+    else:
+        raise ReGraphError("Unknown type of graph: '{}'".format(
+            type(g)))
 
     old_nodes = set(mapping.keys())
 

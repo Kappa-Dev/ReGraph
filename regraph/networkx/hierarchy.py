@@ -193,51 +193,62 @@ class NetworkXHierarchy(nx.DiGraph, AttributeContainter):
         res += "\nattributes : \n{}\n".format(self.attrs)
         return res
 
-    def __eq__(self, hie):
+    def __eq__(self, hierarchy):
         """Hierarchy equality test."""
         g1 = self.to_nx_graph()
-        g2 = hie.to_nx_graph()
+        g2 = hierarchy.to_nx_graph()
         if not equal(g1, g2):
+            # print("Graphs are not equal")
             return False
 
         for node in self.nodes():
-            if self.nodes[node]["attrs"] != hie.nodes[node]["attrs"]:
+            if self.nodes[node]["attrs"] != hierarchy.nodes[node]["attrs"]:
+                # print("Attrs not equal")
                 return False
             if self.is_graph(node) and\
-               hie.is_graph(node):
+               hierarchy.is_graph(node):
                 if not equal(
                     self.nodes[node]["graph"],
-                    hie.nodes[node]["graph"]
+                    hierarchy.nodes[node]["graph"]
                 ):
+                    # print("Graphs not equal")
                     return False
             elif self.is_rule(node) and\
-                    hie.is_rule(node):
-                if self.nodes[node]["rule"] != hie.nodes[node]["rule"]:
+                    hierarchy.is_rule(node):
+                if self.nodes[node]["rule"] != hierarchy.nodes[node]["rule"]:
+                    # print("Rules not equal")
                     return False
             else:
                 return False
 
         for s, t in self.edges():
 
-            if self.edges[s, t]["attrs"] != hie.edges[s, t]["attrs"]:
+            if self.edges[s, t]["attrs"] != hierarchy.edges[s, t]["attrs"]:
+                # print("Edge attrs not equal")
                 return False
             if self.is_typing(s, t) and\
-               hie.is_typing(s, t):
+               hierarchy.is_typing(s, t):
 
-                if self.edges[s, t]["mapping"] != hie.edges[s, t]["mapping"]:
+                if self.edges[s, t]["mapping"] != hierarchy.edges[s, t]["mapping"]:
+                    # print("Typing not equal")
                     return False
             elif "lhs_typing" in self.edges[s, t] and\
-                    "lhs_typing" in hie.edges[s, t]:
-                if self.edges[s, t]["lhs_mapping"] != hie.edges[s, t]["lhs_mapping"]:
+                    "lhs_typing" in hierarchy.edges[s, t]:
+                if self.edges[s, t]["lhs_mapping"] != hierarchy.edges[s, t]["lhs_mapping"]:
                     return False
-                if self.edges[s, t]["rhs_mapping"] != hie.edges[s, t]["rhs_mapping"]:
+                if self.edges[s, t]["rhs_mapping"] != hierarchy.edges[s, t]["rhs_mapping"]:
                     return False
-                if self.edges[s, t]["lhs_total"] != hie.edges[s, t]["lhs_total"]:
+                if self.edges[s, t]["lhs_total"] != hierarchy.edges[s, t]["lhs_total"]:
                     return False
-                if self.edges[s, t]["rhs_total"] != hie.edges[s, t]["rhs_total"]:
+                if self.edges[s, t]["rhs_total"] != hierarchy.edges[s, t]["rhs_total"]:
                     return False
         for n1, n2 in self.relations():
-            if set(self.relation[n1][n2]) != set(hie.relation[n1][n2]):
+            if self.relation_edges[n1, n2]["attrs"] !=\
+               hierarchy.relation_edges[n1, n2]["attrs"]:
+                return False
+            if self.relation_edges[n1, n2]["rel"] !=\
+               hierarchy.relation_edges[n1, n2]["rel"]:
+                # print("Relations not equal")
                 return False
         return True
 
@@ -299,15 +310,21 @@ class NetworkXHierarchy(nx.DiGraph, AttributeContainter):
             else:
                 raise HierarchyError(
                     "Unknown type of the edge '{}->{}'!".format(s, t))
-
+        visited = set()
         for u, v in self.relations():
-            json_data["relations"].append({
-                "from": u,
-                "to": v,
-                "rel": {a: list(b) for a, b in self.relation[u][v].items()},
-                "attrs": attrs_to_json(self.relation_edges[u, v]["attrs"])
-            })
+            if not (u, v) in visited and not (v, u) in visited:
+                visited.add((u, v))
+                json_data["relations"].append({
+                    "from": u,
+                    "to": v,
+                    "rel": {a: list(b) for a, b in self.relation_edges[u, v]["rel"].items()},
+                    "attrs": attrs_to_json(self.relation_edges[u, v]["attrs"])
+                })
         return json_data
+
+    @classmethod
+    def copy(cls, hierarchy):
+        return copy.deepcopy(hierarchy)
 
     @classmethod
     def from_json(cls, json_data, ignore=None, directed=True):
@@ -324,9 +341,9 @@ class NetworkXHierarchy(nx.DiGraph, AttributeContainter):
             {
                 "graphs": <collection of ids of graphs to ignore>,
                 "rules": <collection of ids of rules to ignore>,
-                "typing": <collection of tuples containing typing 
+                "typing": <collection of tuples containing typing
                     edges to ignore>,
-                "rule_typing": <collection of tuples containing rule 
+                "rule_typing": <collection of tuples containing rule
                     typing edges to ignore>>,
                 "relations": <collection of tuples containing
                     relations to ignore>,
@@ -417,11 +434,12 @@ class NetworkXHierarchy(nx.DiGraph, AttributeContainter):
 
         # add relations
         for relation_data in json_data["relations"]:
+            from_g = relation_data["from"]
+            to_g = relation_data["to"]
             if ignore is not None and\
                "relations" in ignore.keys() and\
-               ((relation_data["from"], relation_data["to"]) in ignore[
-                    "relations"] or (relation_data["to"],
-                                     relation_data["from"]) in ignore["relations"]):
+               ((from_g, to_g) in ignore["relations"] or
+                    (to_g, from_g) in ignore["relations"]):
                 pass
             else:
                 if "attrs" not in relation_data.keys():
@@ -429,12 +447,13 @@ class NetworkXHierarchy(nx.DiGraph, AttributeContainter):
                 else:
                     attrs = AttributeContainter.attrs_from_json(
                         relation_data["attrs"])
-                hierarchy.add_relation(
-                    relation_data["from"],
-                    relation_data["to"],
-                    {a: set(b) for a, b in relation_data["rel"].items()},
-                    attrs
-                )
+                if (from_g, to_g) not in hierarchy.relations():
+                    hierarchy.add_relation(
+                        relation_data["from"],
+                        relation_data["to"],
+                        {a: set(b) for a, b in relation_data["rel"].items()},
+                        attrs
+                    )
         return hierarchy
 
     @classmethod
@@ -1206,7 +1225,7 @@ class NetworkXHierarchy(nx.DiGraph, AttributeContainter):
                 "Graph '%s' does not have a node with id '%s'!"
                 % (graph_id, node_id)
             )
-        types = {}
+        types = dict()
         for _, typing in self.out_edges(graph_id):
             mapping = self.edges[graph_id, typing]["mapping"]
             if node_id in mapping.keys():
@@ -1271,7 +1290,7 @@ class NetworkXHierarchy(nx.DiGraph, AttributeContainter):
         return self.is_rule(s)
 
     def _get_ancestors_paths(self, graph_id):
-        ancestors = {}
+        ancestors = dict()
         for typing in self.successors(graph_id):
             typing_ancestors = self._get_ancestors_paths(typing)
             if typing in ancestors.keys():
@@ -1306,10 +1325,10 @@ class NetworkXHierarchy(nx.DiGraph, AttributeContainter):
 
         # check consistency
         # 1. find pairs of successors that have common ancestors
-        ancestors = {}
+        ancestors = dict()
         for n in self.successors(graph_id):
             ancestors[n] = self._get_ancestors_paths(n)
-        common_ancestors = {}
+        common_ancestors = dict()
         for s1 in self.successors(graph_id):
             for s2 in self.successors(graph_id):
                 if s1 != s2 and (s1, s2) not in common_ancestors.keys() and\
@@ -1545,8 +1564,8 @@ class NetworkXHierarchy(nx.DiGraph, AttributeContainter):
 
         rule = self.nodes[rule_id]["rule"]
 
-        lhs_typing = {}
-        rhs_typing = {}
+        lhs_typing = dict()
+        rhs_typing = dict()
 
         rule_successors = self.successors(rule_id)
 
@@ -1562,7 +1581,7 @@ class NetworkXHierarchy(nx.DiGraph, AttributeContainter):
         return instances
 
     def _get_common_successors(self, node_list):
-        common_sucs = {}
+        common_sucs = dict()
         for n1 in node_list:
             for n2 in node_list:
                 if n1 != n2:
@@ -1588,11 +1607,14 @@ class NetworkXHierarchy(nx.DiGraph, AttributeContainter):
 
         # 1. Check consistency of the input
         # 1a. Autocomplete typing
-
         new_lhs_typing, new_rhs_typing =\
             type_checking._autocomplete_typing(
-                self, graph_id, instance, lhs_typing,
-                rhs_typing, rule.p_lhs, rule.p_rhs)
+                self, graph_id,
+                instance=instance,
+                lhs_typing=lhs_typing,
+                rhs_typing_rel=rhs_typing,
+                p_lhs=rule.p_lhs,
+                p_rhs=rule.p_rhs)
 
         # 1b. Check that instance is consistent with lhs & rhs typing
         type_checking._check_instance(
@@ -1724,7 +1746,7 @@ class NetworkXHierarchy(nx.DiGraph, AttributeContainter):
 
     def get_ancestors(self, graph_id, maybe=None):
         """Return ancestors of a graph as well as the typing morphisms."""
-        ancestors = {}
+        ancestors = dict()
         for _, typing in self.out_edges(graph_id):
             if maybe is not None and typing not in maybe:
                 continue
@@ -1856,8 +1878,8 @@ class NetworkXHierarchy(nx.DiGraph, AttributeContainter):
         desc = self.descendents(target)
         if source not in desc:
             return None
-        lhs_typing = {}
-        rhs_typing = {}
+        lhs_typing = dict()
+        rhs_typing = dict()
         for (_, parent) in self.out_edges(source):
             parent_lhs = self.edges[source, parent]["lhs_mapping"]
             parent_rhs = self.edges[source, parent]["rhs_mapping"]
@@ -1903,7 +1925,7 @@ class NetworkXHierarchy(nx.DiGraph, AttributeContainter):
             set(hierarchy.nodes())
         )
         to_merge = []
-        to_rename = {}
+        to_rename = dict()
         for node in common_ids:
             if self.is_graph(node) and\
                hierarchy.is_graph(node):
@@ -2056,8 +2078,8 @@ class NetworkXHierarchy(nx.DiGraph, AttributeContainter):
 
     def merge_by_attr(self, hierarchy, attr):
         """Merge with a hierarchy by nodes with matching attr."""
-        to_merge = {}
-        to_rename = {}
+        to_merge = dict()
+        to_rename = dict()
         for n1 in self.nodes():
             if self.nodes[n1]["attrs"] and\
                attr in self.nodes[n1]["attrs"].keys():
@@ -2107,7 +2129,7 @@ class NetworkXHierarchy(nx.DiGraph, AttributeContainter):
                                     "coincide with present typing!" %
                                     (str(n1), str(n2)))
         visited = []
-        new_names = {}
+        new_names = dict()
 
         # auxiliary recursive function for merging by ids
         def _merge_node(node):
@@ -2245,7 +2267,7 @@ class NetworkXHierarchy(nx.DiGraph, AttributeContainter):
         return new_names
 
     def duplicate_subgraph(self, nodes, suffix):
-        new = {}
+        new = dict()
         for node in nodes:
             new_id = self.unique_graph_id(node + suffix)
             new[node] = new_id
@@ -2277,3 +2299,20 @@ class NetworkXHierarchy(nx.DiGraph, AttributeContainter):
         desc = self.descendents(graph_id)
         for node in desc:
             self.remove_node(node)
+
+    def set_node_relation(self, left_graph, right_graph, left_node, right_node):
+        """Set relation to a particular node."""
+
+        if left_node in self.relation_edges[left_graph, right_graph]["rel"].keys():
+            self.relation_edges[left_graph, right_graph]["rel"][left_node].add(
+                right_node)
+        else:
+            self.relation_edges[left_graph, right_graph]["rel"][left_node] = {
+                right_node}
+
+        if right_node in self.relation_edges[right_graph, left_graph]["rel"].keys():
+            self.relation_edges[right_graph, left_graph]["rel"][right_node].add(
+                left_node)
+        else:
+            self.relation_edges[right_graph, left_graph]["rel"][right_node] = {
+                left_node}

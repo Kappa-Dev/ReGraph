@@ -566,6 +566,7 @@ def _apply_changes(hierarchy, upstream_changes, downstream_changes):
             }
         )
         hierarchy.typing[s][t] = hierarchy.edges[s, t]["mapping"]
+
     # update rules & rule homomorphisms
     for rule, new_rule in upstream_changes["rules"].items():
         primitives.assign_attrs(
