@@ -8,7 +8,7 @@ The **ReGraph** Python library is a generic framework for modelling graph-based 
 
 ReGraph provides various utilities for graph rewriting which can be used for modelling the evolution of a system represented by a graph subject to rewriting. The rewriting functionality is based on the sesqui-pushout rewriting procedure [7]. In addition, the library enables a user to define a typing for models (graphs) that gives specifications for the structure of the models. This later functionality allows both to preserve the specified structure during rewriting and to propagate the changes to the specifications up to the models.
 
-**ReGraph** contains a collection of utilities for rewriting graphs and hierarchies of graphs. It supports on two backends: [NetworkX](https://networkx.github.io/) graph objects and on [Neo4j](https://neo4j.com/) property graphs stored in a graph database.
+**ReGraph** contains a collection of utilities for rewriting graphs and hierarchies of graphs. It supports two backends: [NetworkX](https://networkx.github.io/) graph objects and on [Neo4j](https://neo4j.com/) property graphs stored in a graph database.
 
 ## Environment configs 
 
