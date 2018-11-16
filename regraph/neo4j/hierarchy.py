@@ -459,7 +459,7 @@ class Neo4jHierarchy(object):
                     node_id=node_id,
                     node_label=self._graph_label) +
                 "OPTIONAL MATCH (pred)-[:{}]->(n)-[:{}]->(suc)\n".format(
-                    self._typing_label) +
+                    self._typing_label, self._typing_label) +
                 "WITH pred, suc WHERE pred IS NOT NULL\n" +
                 cypher.add_edge(
                     edge_var='recennect_typing',

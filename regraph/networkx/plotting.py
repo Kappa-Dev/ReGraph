@@ -297,7 +297,6 @@ def plot_rule(rule, filename=None, title=None):
 
     # generate positions
     p_pos = nx.spring_layout(rule.p, k=0.8, scale=1.0)
-    print(p_pos, "\n\n")
 
     lhs_pos = dict()
     lhs_fixed = []
@@ -306,9 +305,11 @@ def plot_rule(rule, filename=None, title=None):
         if len(p_keys) > 0:
             lhs_pos[node] = p_pos[p_keys[0]]
             lhs_fixed.append(node)
+    if len(lhs_pos) == 0:
+        lhs_fixed = None
+        lhs_pos = None
     lhs_pos = nx.spring_layout(
         rule.lhs, pos=lhs_pos, fixed=lhs_fixed, k=0.05, scale=1.0, iterations=10)
-    print(lhs_pos, "\n\n")
 
     rhs_pos = dict()
     rhs_fixed = []
@@ -317,6 +318,9 @@ def plot_rule(rule, filename=None, title=None):
         if len(p_keys) > 0:
             rhs_pos[node] = p_pos[p_keys[0]]
             rhs_fixed.append(node)
+    if len(rhs_pos) == 0:
+        rhs_fixed = None
+        rhs_pos = None
     rhs_pos = nx.spring_layout(
         rule.rhs, pos=rhs_pos, fixed=rhs_fixed, k=0.05, scale=1.0, iterations=10)
 
