@@ -607,17 +607,18 @@ class TypedNeo4jGraph(hierarchy.Neo4jHierarchy):
             Dictionary contaning typing of data nodes by schema nodes. By default is
             empty.
         """
-        if data_graph is not None:
-            if schema_graph is None:
-                raise TypedNeo4jGraphError(
-                    "Cannot initialize a typed graph by "
-                    "empty schema and non-empty data: "
-                    "typing should be total")
-            if len(typing) == 0:
-                raise TypedNeo4jGraphError(
-                    "Cannot initialize a typed graph with "
-                    "non-total typing '{}'".format(typing))
-        else:
+        # if data_graph is not None:
+        #     if schema_graph is None:
+        #         raise TypedNeo4jGraphError(
+        #             "Cannot initialize a typed graph by "
+        #             "empty schema and non-empty data: "
+        #             "typing should be total")
+        #     if len(typing) == 0:
+        #         raise TypedNeo4jGraphError(
+        #             "Cannot initialize a typed graph with "
+        #             "non-total typing '{}'".format(typing))
+        # else:
+        if data_graph is None:
             data_graph = {"nodes": [], "edges": []}
 
         if schema_graph is None:
@@ -676,8 +677,8 @@ class TypedNeo4jGraph(hierarchy.Neo4jHierarchy):
                 old_schema._clear()
                 old_schema.add_nodes_from(schema_graph["nodes"])
                 old_schema.add_edges_from(schema_graph["edges"])
-        if (self._data_label, self._schema_label) not in skeleton.edges():
-            self.add_typing(self._data_label, self._schema_label, typing)
+        # if (self._data_label, self._schema_label) not in skeleton.edges():
+        self.add_typing(self._data_label, self._schema_label, typing)
 
     def find_data_matching(self, pattern,
                            pattern_typing=None, nodes=None):
