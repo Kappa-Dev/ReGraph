@@ -168,7 +168,7 @@ def _autocomplete_typing(hierarchy, graph_id, instance,
                 merged_nodes.add(r_node)
 
         for typing_graph in hierarchy.successors(graph_id):
-            typing = hierarchy.edges[graph_id, typing_graph]["mapping"]
+            typing = hierarchy.typing[graph_id][typing_graph]
             # Autocomplete lhs and rhs typings
             # by immediate successors induced by an instance
             if typing_graph not in new_lhs_typing.keys():
@@ -294,7 +294,7 @@ def _check_totality(hierarchy, graph_id, rule, instance,
     for node in rule.rhs.nodes():
         p_nodes = keys_by_value(rule.p_rhs, node)
         for typing_graph in hierarchy.successors(graph_id):
-            typing = hierarchy.edges[graph_id, typing_graph]["mapping"]
+            typing = hierarchy.typing[graph_id][typing_graph]
             # Totality can be broken in two cases
             if len(p_nodes) > 1:
                 # node will be merged

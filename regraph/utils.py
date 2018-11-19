@@ -863,7 +863,7 @@ def assert_nx_graph_eq(g1, g2):
     for n in g1.nodes():
         assert(g1.node[n] == g2.node[n])
     for e1, e2 in g1.edges():
-        assert(g1.edges[e1, e2] == g2.edges[e1, e2])
+        assert(g1.adj[e1][e2] == g2.adj[e1][e2])
     return
 
 

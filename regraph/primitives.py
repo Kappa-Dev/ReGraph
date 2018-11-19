@@ -23,7 +23,7 @@ from regraph.utils import (merge_attributes,
 from regraph.exceptions import (ReGraphError,
                                 GraphError,
                                 GraphAttrsWarning)
-from regraph.attribute_sets import FiniteSet
+from regraph.attribute_sets import (FiniteSet, AttributeSet)
 from regraph.neo4j import Neo4jGraph
 
 
@@ -59,6 +59,14 @@ def attrs_to_json(attrs):
     return json_data
 
 
+def attrs_from_json(json_data):
+    """Retrieve attrs from json-like dict."""
+    attrs = dict()
+    for key, value in json_data.items():
+        attrs[key] = AttributeSet.from_json(value)
+    return attrs
+
+
 def add_node(graph, node_id, attrs=None):
     """Add a node to a graph.
 
@@ -85,7 +93,7 @@ def add_node(graph, node_id, attrs=None):
         if node_id not in graph.nodes():
             graph.add_node(node_id)
             for k, v in new_attrs.items():
-                graph.nodes[node_id][k] = v
+                graph.node[node_id][k] = v
         else:
             raise GraphError("Node '%s' already exists!" % node_id)
     elif isinstance(graph, Neo4jGraph):
@@ -205,8 +213,8 @@ def add_edge(graph, s, t, attrs=None, **attr):
             raise GraphError(
                 "Edge '{}'->'{}' already exists!".format(s, t))
         graph.add_edge(s, t)
-        assign_attrs(graph.edges[s, t], new_attrs)
-        assign_attrs(graph.edges[t, s], new_attrs)
+        assign_attrs(graph.adj[s][t], new_attrs)
+        assign_attrs(graph.adj[t][s], new_attrs)
     elif isinstance(graph, Neo4jGraph):
         graph.add_edge(s, t, attrs)
 
@@ -364,7 +372,7 @@ def update_node_attrs(graph, node_id, attrs, normalize=True):
         if isinstance(graph, nx.DiGraph) or\
            isinstance(graph, nx.Graph):
             attrs_to_remove = set()
-            for k in graph.nodes[node_id].keys():
+            for k in graph.node[node_id].keys():
                 if k not in new_attrs.keys():
                     attrs_to_remove.add(k)
             graph.add_node(node_id, **new_attrs)
@@ -534,9 +542,9 @@ def get_edge(graph, s, t):
     t : hashable, target node id.
     """
     if isinstance(graph, nx.DiGraph):
-        return graph.edges[s, t]
+        return graph.adj[s][t]
     elif isinstance(graph, nx.Graph):
-        return merge_attributes(graph.edges[s, t], graph.edges[s, t])
+        return merge_attributes(graph.adj[s][t], graph.adj[s][t])
     elif isinstance(graph, Neo4jGraph):
         return graph.get_edge_attrs(s, t)
 
@@ -551,13 +559,14 @@ def exists_edge(graph, s, t):
     t : hashable, target node id.
     """
     if isinstance(graph, nx.DiGraph):
-        return((s, t) in graph.edges)
+        return((s, t) in graph.edges())
     elif isinstance(graph, nx.Graph):
-        s_t = (s, t) in graph.edges
-        t_s = (t, s) in graph.edges
-        return(s_t and t_s)
+        s_t = (s, t) in graph.edges()
+        t_s = (t, s) in graph.edges()
+        return(s_t or t_s)
     elif isinstance(graph, Neo4jGraph):
         return graph.exists_edge(s, t)
+    return False
 
 
 def filter_edges_by_attributes(graph, attr_key, attr_cond):
@@ -607,12 +616,12 @@ def set_edge(graph, s, t, attrs, normalize=True):
     if isinstance(graph, nx.DiGraph) or\
        isinstance(graph, nx.Graph):
         attrs_to_remove = set()
-        for k in graph.edges[s, t].keys():
+        for k in graph.adj[s][t].keys():
             if k not in new_attrs.keys():
                 attrs_to_remove.add(k)
         graph.add_edge(s, t, **new_attrs)
         for k in attrs_to_remove:
-            del graph.edges[s, t][k]
+            del graph.adj[s][t][k]
     elif isinstance(graph, Neo4jGraph):
         graph.set_edge_attrs(s, t, new_attrs, update=True)
 

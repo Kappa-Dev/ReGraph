@@ -51,8 +51,8 @@ class TestPrimitives(object):
         add_node(self.graph, "a", attrs)
         assert("a" in self.graph.nodes())
         normalize_attrs(attrs)
-        assert(self.graph.nodes["a"] == attrs)
-        assert(id(attrs) != id(self.graph.nodes["a"]))
+        assert(self.graph.node["a"] == attrs)
+        assert(id(attrs) != id(self.graph.node["a"]))
 
     def test_remove_node(self):
         try:
@@ -92,8 +92,8 @@ class TestPrimitives(object):
         add_edge(self.graph, s, t, attrs)
         normalize_attrs(attrs)
         assert((s, t) in self.graph.edges())
-        assert(self.graph.edges[s, t] == attrs)
-        assert(id(self.graph.edges[s, t]) != id(attrs))
+        assert(self.graph.adj[s][t] == attrs)
+        assert(id(self.graph.adj[s][t]) != id(attrs))
 
     def test_add_edge_undirected(self):
         g = self.graph.to_undirected()
@@ -109,10 +109,10 @@ class TestPrimitives(object):
         add_edge(g, s, t, attrs)
         assert((s, t) in g.edges() or (t, s) in g.edges())
         attrs = {'a': FiniteSet({1})}
-        assert(g.edges[s, t] == attrs)
-        assert(g.edges[t, s] == attrs)
-        assert(id(g.edges[s, t]) != id(attrs) and id(g.edges[t, s]) != id(attrs))
-        assert(id(g.edges[s, t]) == id(g.edges[t, s]))
+        assert(g.adj[s][t] == attrs)
+        assert(g.adj[t][s] == attrs)
+        assert(id(g.adj[s][t]) != id(attrs) and id(g.adj[t][s]) != id(attrs))
+        assert(id(g.adj[s][t]) == id(g.adj[t][s]))
 
     def test_remove_edge(self):
         g = self.graph.to_undirected()
@@ -128,29 +128,29 @@ class TestPrimitives(object):
     def test_update_node_attrs(self):
         new_attr = {"b": {1}}
         add_node_attrs(self.graph, '1', new_attr)
-        assert(id(self.graph.nodes['1']) != id(new_attr))
+        assert(id(self.graph.node['1']) != id(new_attr))
 
     def test_add_edge_attrs(self):
         g = self.graph.to_undirected()
         new_attrs = {"b": FiniteSet({1})}
         add_edge_attrs(g, '1', '2', new_attrs)
         normalize_attrs(new_attrs)
-        assert(valid_attributes(new_attrs, g.edges['1', '2']))
-        assert(valid_attributes(new_attrs, g.edges['2', '1']))
+        assert(valid_attributes(new_attrs, g.adj['1']['2']))
+        assert(valid_attributes(new_attrs, g.adj['2']['1']))
 
     def test_remove_edge_attrs(self):
         g = self.graph.to_undirected()
         attrs = {"s": FiniteSet({"p"})}
         remove_edge_attrs(g, '1', '2', attrs)
-        assert(not valid_attributes(attrs, g.edges['1', '2']))
-        assert(not valid_attributes(attrs, g.edges['2', '1']))
+        assert(not valid_attributes(attrs, g.adj['1']['2']))
+        assert(not valid_attributes(attrs, g.adj['2']['1']))
 
     def test_update_edge_attrs(self):
         g = self.graph.to_undirected()
         attrs = {"b": FiniteSet({1})}
         update_edge_attrs(g, '1', '2', attrs)
-        assert(id(g.edges['1', '2']) != id(attrs))
-        assert(id(g.edges['2', '1']) == id(g.edges['1', '2']))
+        assert(id(g.adj['1']['2']) != id(attrs))
+        assert(id(g.adj['2']['1']) == id(g.adj['1']['2']))
 
     def test_clone_node(self):
         node_to_clone = '1'
@@ -161,20 +161,20 @@ class TestPrimitives(object):
         new_name = clone_node(self.graph, node_to_clone)
 
         assert(new_name in self.graph.nodes())
-        assert(self.graph.nodes[new_name] == self.graph.nodes[node_to_clone])
+        assert(self.graph.node[new_name] == self.graph.node[node_to_clone])
         assert(
-            id(self.graph.nodes[new_name]) !=
-            id(self.graph.nodes[node_to_clone])
+            id(self.graph.node[new_name]) !=
+            id(self.graph.node[node_to_clone])
         )
         for u, _ in in_edges:
             assert((u, new_name) in self.graph.edges())
             assert(
-                self.graph.edges[u, node_to_clone] ==
-                self.graph.edges[u, new_name]
+                self.graph.adj[u][node_to_clone] ==
+                self.graph.adj[u][new_name]
             )
             assert(
-                id(self.graph.edges[u, node_to_clone]) !=
-                id(self.graph.edges[u, new_name])
+                id(self.graph.adj[u][node_to_clone]) !=
+                id(self.graph.adj[u][new_name])
             )
         for _, v in out_edges:
             assert((new_name, v) in self.graph.edges())
@@ -186,58 +186,58 @@ class TestPrimitives(object):
         new_name = 'a'
         new_node = clone_node(g, node_to_clone, new_name)
         assert(new_name in g.nodes())
-        assert(g.nodes[new_name] == self.graph.nodes[node_to_clone])
-        assert(id(g.nodes[new_name]) != id(self.graph.nodes[node_to_clone]))
+        assert(g.node[new_name] == self.graph.node[node_to_clone])
+        assert(id(g.node[new_name]) != id(self.graph.node[node_to_clone]))
         for n in neighbors:
             assert((n, new_name) in g.edges() or (new_name, n) in g.edges())
-            assert(g.edges[n, new_name] == g.edges[new_name, n])
-            assert(id(g.edges[n, new_name]) == id(g.edges[new_name, n]))
+            assert(g.adj[n][new_name] == g.adj[new_name][n])
+            assert(id(g.adj[n][new_name]) == id(g.adj[new_name][n]))
 
-            assert(g.edges[n, new_name] == g.edges[n, node_to_clone])
-            assert(id(g.edges[n, new_name]) != id(g.edges[n, node_to_clone]))
+            assert(g.adj[n][new_name] == g.adj[n][node_to_clone])
+            assert(id(g.adj[n][new_name]) != id(g.adj[n][node_to_clone]))
 
     def test_merge_nodes(self):
         g = self.graph.to_undirected()
 
-        old_attrs1 = self.graph.nodes['8']
-        old_attrs2 = self.graph.nodes['9']
-        old_edge_attrs1 = self.graph.edges['10', '8']
-        old_edge_attrs2 = self.graph.edges['10', '9']
+        old_attrs1 = self.graph.node['8']
+        old_attrs2 = self.graph.node['9']
+        old_edge_attrs1 = self.graph.adj['10']['8']
+        old_edge_attrs2 = self.graph.adj['10']['9']
         new_name = merge_nodes(self.graph, ["8", "9"])
         assert(new_name in self.graph.nodes())
         assert("8" not in self.graph.nodes())
         assert("9" not in self.graph.nodes())
-        assert(valid_attributes(old_attrs1, self.graph.nodes[new_name]))
-        assert(valid_attributes(old_attrs2, self.graph.nodes[new_name]))
+        assert(valid_attributes(old_attrs1, self.graph.node[new_name]))
+        assert(valid_attributes(old_attrs2, self.graph.node[new_name]))
         assert((new_name, new_name) in self.graph.edges())
-        assert(valid_attributes(old_edge_attrs1, self.graph.edges['10', new_name]))
-        assert(valid_attributes(old_edge_attrs2, self.graph.edges['10', new_name]))
+        assert(valid_attributes(old_edge_attrs1, self.graph.adj['10'][new_name]))
+        assert(valid_attributes(old_edge_attrs2, self.graph.adj['10'][new_name]))
 
         # test undirected case
-        old_attrs1 = g.nodes['8']
-        old_attrs2 = g.nodes['9']
-        old_edge_attrs1 = g.edges['10', '8']
-        old_edge_attrs2 = g.edges['10', '9']
+        old_attrs1 = g.node['8']
+        old_attrs2 = g.node['9']
+        old_edge_attrs1 = g.adj['10']['8']
+        old_edge_attrs2 = g.adj['10']['9']
         new_name = merge_nodes(g, ["8", "9"])
         assert(new_name in g.nodes())
         assert("8" not in g.nodes())
         assert("9" not in g.nodes())
-        assert(valid_attributes(old_attrs1, g.nodes[new_name]))
-        assert(valid_attributes(old_attrs2, g.nodes[new_name]))
+        assert(valid_attributes(old_attrs1, g.node[new_name]))
+        assert(valid_attributes(old_attrs2, g.node[new_name]))
         assert((new_name, new_name) in g.edges())
-        assert(valid_attributes(old_edge_attrs1, g.edges['10', new_name]))
-        assert(valid_attributes(old_edge_attrs1, g.edges[new_name, '10']))
-        assert(valid_attributes(old_edge_attrs2, g.edges['10', new_name]))
-        assert(valid_attributes(old_edge_attrs2, g.edges[new_name, '10']))
-        assert(g.edges['10', new_name] == g.edges[new_name, '10'])
-        assert(id(g.edges['10', new_name]) == id(g.edges[new_name, '10']))
+        assert(valid_attributes(old_edge_attrs1, g.adj['10'][new_name]))
+        assert(valid_attributes(old_edge_attrs1, g.adj[new_name]['10']))
+        assert(valid_attributes(old_edge_attrs2, g.adj['10'][new_name]))
+        assert(valid_attributes(old_edge_attrs2, g.adj[new_name]['10']))
+        assert(g.adj['10'][new_name] == g.adj[new_name]['10'])
+        assert(id(g.adj['10'][new_name]) == id(g.adj[new_name]['10']))
 
     def test_set_edge(self):
         g = self.graph.to_undirected()
-        # old_edge = g.edges['6', '7']
+        # old_edge = g.adj['6']['7']
         set_edge(g, '6', '7', {'a': 'b'})
-        # assert(id(old_edge) != id(g.edges['6', '7']))
-        assert(id(g.edges['6', '7']) == id(g.edges['7', '6']))
+        # assert(id(old_edge) != id(g.adj['6']['7']))
+        assert(id(g.adj['6']['7']) == id(g.adj['7']['6']))
 
     def test_relabel_node(self):
         g = self.graph.to_undirected()
