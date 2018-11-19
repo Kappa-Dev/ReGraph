@@ -1,5 +1,6 @@
 """Neo4j driver for regraph."""
 import time
+import copy
 import networkx as nx
 
 from neo4j.v1 import GraphDatabase
@@ -460,7 +461,7 @@ class Neo4jHierarchy(object):
                     node_id=node_id,
                     node_label=self._graph_label) +
                 "OPTIONAL MATCH (pred)-[:{}]->(n)-[:{}]->(suc)\n".format(
-                    self._typing_label) +
+                    self._typing_label, self._typing_label) +
                 "WITH pred, suc WHERE pred IS NOT NULL\n" +
                 cypher.add_edge(
                     edge_var='recennect_typing',
@@ -983,7 +984,7 @@ class Neo4jHierarchy(object):
         skeleton.set_edge_attrs(source, target, attrs)
 
     def set_node_relation(self, source_graph, target_graph, node_id, type_id):
-        """Set typing to of a particular node."""
+        """Set relation to a particular node."""
         query = cypher.set_intergraph_edge(
             source_graph, target_graph, node_id, type_id,
             "relation")
@@ -1121,3 +1122,7 @@ class Neo4jHierarchy(object):
         for record in result:
             if "result" in record.keys():
                 return record["result"]
+
+    @classmethod
+    def copy(cls, hierarchy):
+        return copy.deepcopy(hierarchy)

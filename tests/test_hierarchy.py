@@ -8,7 +8,7 @@ from nose.tools import raises
 from regraph import Rule
 from regraph import NetworkXHierarchy
 from regraph import (HierarchyError)
-import regraph.networkx.primitives as prim
+import regraph.primitives as prim
 
 
 class TestHierarchy(object):
@@ -318,6 +318,7 @@ class TestHierarchy(object):
         pass
 
     def test_to_json(self):
+        print(self.hierarchy.node["g1"]["attrs"])
         res = self.hierarchy.to_json()
         new_h = NetworkXHierarchy.from_json(res)
         assert(self.hierarchy == new_h)

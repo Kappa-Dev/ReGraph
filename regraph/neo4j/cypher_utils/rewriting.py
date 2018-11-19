@@ -734,7 +734,7 @@ def find_matching(pattern, node_label, edge_label,
     edge_label
         Label of the edges to match, default is 'edge'
     """
-    pattern_nodes = pattern.nodes()
+    pattern_nodes = list(pattern.nodes())
 
     query =\
         "MATCH {}".format(
@@ -783,7 +783,6 @@ def find_matching(pattern, node_label, edge_label,
         for typing_graph, mapping in pattern_typing.items():
             if and_needed and len(pattern_typing[typing_graph]) > 0:
                 query += " AND "
-                print(pattern_typing, typing_graph)
             query +=\
                 " AND ".join(
                     "({})-[:typing]->(:{} {{id: '{}'}})".format(
@@ -803,7 +802,6 @@ def find_matching(pattern, node_label, edge_label,
     if len(nodes_with_attrs) != 0:
         if where_appeared is True:
             query += " AND "
-            print("here 3")
         else:
             query += " WHERE "
             where_appeared = True

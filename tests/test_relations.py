@@ -5,7 +5,7 @@ from regraph import Rule
 from regraph import NetworkXHierarchy
 # from regraph import print_graph
 # from regraph import (HierarchyError)
-import regraph.networkx.primitives as prim
+import regraph.primitives as prim
 
 
 class TestRelations(object):
@@ -80,20 +80,16 @@ class TestRelations(object):
 
     def test_add_relation(self):
         self.hierarchy.add_relation(
-            "a1", "a2",
+            "a2", "a1",
             {
-                "white_circle": "right_circle",
-                "white_square": "middle_square",
-                "black_circle": "left_circle",
-                "black_circle": "right_circle"
+                "right_circle": {"white_circle", "black_circle"},
+                "middle_square": "white_square",
+                "left_circle": "black_circle"
             },
-            {"name": "Some relation"}
-        )
-        # print(self.hierarchy.relations())
-        # print(self.hierarchy.relation)
+            {"name": "Some relation"})
+
         g, l, r = self.hierarchy.relation_to_span(
-            "a1", "a2", edges=True, attrs=True
-        )
+            "a1", "a2", edges=True, attrs=True)
         # print_graph(g)
         # print(l)
         # print(r)
@@ -113,14 +109,9 @@ class TestRelations(object):
         # )
 
         new_hierarchy, _ = self.hierarchy.rewrite(
-            "base",
-            rule,
-            {"s": "square", "c": "circle"},
-            inplace=False
-        )
-        g, l, r = new_hierarchy.relation_to_span(
-            "a1", "a2"
-        )
+            "base", rule, {"s": "square", "c": "circle"}, inplace=False)
+
+        # g, l, r = new_hierarchy.relation_to_span("a1", "a2")
         # print_graph(g)
         # print(l)
         # print(r)

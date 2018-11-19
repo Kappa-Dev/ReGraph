@@ -96,19 +96,19 @@ We can plot this graph:
 Add attributes to the the nodes/edges of the graph:
 
 >>> rg.add_node_attrs(graph, 1, {"age": 20})
->>> graph.node[1]
+>>> graph.nodes[1]
 {"name": {"alice"}, "color": {"blue"}, {"age": {20}}}
 >>> rg.add_edge_attrs(graph, 1, 2, {"friends": True})
->>> graph.edge[1][2]
+>>> graph.edges[1, 2]
 {"friends": {True}}
 
 Remove attributes from the nodes/edges of the graph:
 
 >>> rg.remove_node_attrs(graph, 3, {"color": "red"})
->>> graph.node[3]
+>>> graph.nodes[3]
 {"name": {"john"}}
 >>> rg.remove_edge_attrs(graph, 3, 2, {"friends": False})
->>> graph.edge[3][2]
+>>> graph.edges[3, 2]
 {}
 
 Clone a node of the graph:
@@ -132,11 +132,11 @@ Merge two nodes of the graph.
 ["1_3", 2, "2_clone"]
 >>> graph.edges()
 [("1_3", 2), ("1_3", "2_clone")]
->>> graph.node["1_3"]
+>>> rg.get_node(graph, "1_3")
 {"name": {"alice", "john"}, "color": {"blue"}}
->>> graph.edge["1_3"][2]
+>>> rg.get_edge(graph, "1_3", 2)
 {"friends": {True}}
->>> graph.edge["1_3"]["2_clone"]
+>>> rg.get_edge(graph, "1_3", "2_clone")
 {"friends": {True}}
 
 The original nodes are removed, instead a new node corresponding
@@ -223,7 +223,7 @@ Python dictionaries, whose keys correspond to the attribute names, but whose
 values are converted by primitives to :ref:`attribute_sets` objects
 (which is reflected in their JSON serialization as well):
 
->>> type(graph.node["1_3"]["name"])
+>>> type(get_node(graph, "1_3")["name"])
 regraph.attribute_sets.FiniteSet
 
 For more details on attribute sets see the next section :ref:`advanced_attributes`.
@@ -503,8 +503,8 @@ Now, let's try to apply this rule and rewrite some graph, for example the follow
     graph = nx.DiGraph()
     nodes = ["a", "b", "c", "d"]
     edges = [("a", "b"), ("a", "c"), ("c", "d")]
-    primitives.add_nodes_from(graph, nodes)
-    primitives.add_edges_from(graph, edges)
+    rg.add_nodes_from(graph, nodes)
+    rg.add_edges_from(graph, edges)
     pos = rg.plot_graph(graph)
 
 
@@ -513,7 +513,7 @@ Now, let's try to apply this rule and rewrite some graph, for example the follow
 First, we need to find instances of the `lhs` of the rule in this graph,
 which can be done by `regraph.primitives.find_matching` function presented above:
 
->>> instances = primitives.find_matching(graph, rule1.lhs)
+>>> instances = rg.find_matching(graph, rule1.lhs)
 >>> instances
 [{1: 'a', 2: 'c', 3: 'd'}]
 
@@ -539,8 +539,8 @@ Plot the new graph and the `rhs` instance:
 ::
 
     pattern = nx.DiGraph()
-    add_nodes_from(pattern, [1, 2, 3])
-    add_edges_from(pattern, [(1, 2), (2, 3)])
+    rg.add_nodes_from(pattern, [1, 2, 3])
+    rg.add_edges_from(pattern, [(1, 2), (2, 3)])
 
     new_rule1 = Rule.from_transform(pattern)
     new_rule1.inject_clone_node(1)

@@ -14,7 +14,7 @@ from regraph.networkx.category_utils import (compose,
                                              pullback_complement,
                                              pushout,
                                              pushout_from_relation)
-from regraph.networkx import primitives
+from regraph import primitives
 from regraph.exceptions import TotalityWarning
 from regraph.rules import Rule
 from regraph.utils import keys_by_value
@@ -23,7 +23,7 @@ from regraph.utils import keys_by_value
 def _rewrite_base(hierarchy, graph_id, rule, instance,
                   lhs_typing, rhs_typing, inplace=False):
     g_m, p_g_m, g_m_g =\
-        pullback_complement(rule.p, rule.lhs, hierarchy.node[graph_id].graph,
+        pullback_complement(rule.p, rule.lhs, hierarchy.graph[graph_id],
                             rule.p_lhs, instance, inplace)
 
     g_prime, g_m_g_prime, r_g_prime = pushout(rule.p, g_m, rule.rhs,
@@ -37,7 +37,7 @@ def _rewrite_base(hierarchy, graph_id, rule, instance,
 
     for typing_graph in hierarchy.successors(graph_id):
 
-        new_hom = copy.deepcopy(hierarchy.edge[graph_id][typing_graph].mapping)
+        new_hom = copy.deepcopy(hierarchy.adj[graph_id][typing_graph]["mapping"])
         removed_nodes = set()
         new_nodes = dict()
 
@@ -182,24 +182,22 @@ def _propagate_up(hierarchy, graph_id, rule, instance,
     if rule.is_restrictive():
         for graph in nx.bfs_tree(hierarchy, graph_id, reverse=True):
             if graph != graph_id:
-                if isinstance(hierarchy.node[graph], hierarchy.graph_node_cls):
-
+                if hierarchy.is_graph(graph):
                     origin_typing = hierarchy.get_typing(graph, graph_id)
                     (graph_prime, graph_prime_graph, graph_prime_origin) =\
                         _propagate_rule_to(
-                            hierarchy.node[graph].graph,
+                            hierarchy.graph[graph],
                             origin_typing, rule, instance,
                             p_origin_m, inplace)
                     updated_graphs[graph] =\
                         (graph_prime, graph_prime_graph, None, graph_prime_origin)
 
-                    graph_successors = hierarchy.successors(graph)
+                    graph_successors = list(hierarchy.successors(graph))
                     if graph_id in graph_successors:
                         updated_homomorphisms[(graph, graph_id)] =\
                             compose(
                                 graph_prime_origin,
                                 origin_m_origin_prime)
-
                     if len(rule.removed_nodes()) > 0 or\
                        len(rule.cloned_nodes()) > 0:
                         for suc in graph_successors:
@@ -212,12 +210,11 @@ def _propagate_up(hierarchy, graph_id, rule, instance,
                                             updated_graphs[suc][3],
                                             compose(
                                                 graph_prime_graph,
-                                                hierarchy.edge[graph][suc].mapping),
+                                                hierarchy.adj[graph][suc]["mapping"]),
                                             graph_prime_origin)
                                 else:
                                     graph_prime_suc_prime = compose(
-                                        graph_prime_graph, hierarchy.edge[graph][suc].mapping)
-
+                                        graph_prime_graph, hierarchy.adj[graph][suc]["mapping"])
                                 updated_homomorphisms[(graph, suc)] = graph_prime_suc_prime
 
                         for pred in hierarchy.predecessors(graph):
@@ -236,7 +233,7 @@ def _propagate_up(hierarchy, graph_id, rule, instance,
                         for related_g in hierarchy.adjacent_relations(graph):
                             updated_relations.add((graph, related_g))
                 else:
-                    rule_to_rewrite = hierarchy.node[graph].rule
+                    rule_to_rewrite = hierarchy.node[graph]["rule"]
 
                     (lhs_origin_typing,
                      p_origin_typing,
@@ -301,7 +298,7 @@ def _propagate_up(hierarchy, graph_id, rule, instance,
                                 updated_graphs[suc][3],
                                 compose(
                                     lhs_prime_lhs,
-                                    hierarchy.edge[graph][suc].lhs_mapping),
+                                    hierarchy.adj[graph][suc]["lhs_mapping"]),
                                 lhs_prime_origin
                             )
                             rhs_prime_suc_prime = get_unique_map_to_pullback(
@@ -310,7 +307,7 @@ def _propagate_up(hierarchy, graph_id, rule, instance,
                                 updated_graphs[suc][3],
                                 compose(
                                     rhs_prime_rhs,
-                                    hierarchy.edge[graph][suc].rhs_mapping
+                                    hierarchy.adj[graph][suc]["rhs_mapping"]
                                 ),
                                 rhs_prime_origin
                             )
@@ -319,29 +316,29 @@ def _propagate_up(hierarchy, graph_id, rule, instance,
                             lhs_prime_suc_prime =\
                                 compose(
                                     lhs_prime_lhs,
-                                    hierarchy.edge[graph][suc].lhs_mapping)
+                                    hierarchy.adj[graph][suc]["lhs_mapping"])
                             rhs_prime_suc_prime =\
                                 compose(
                                     rhs_prime_rhs,
-                                    hierarchy.edge[graph][suc].rhs_mapping)
+                                    hierarchy.adj[graph][suc]["rhs_mapping"])
 
                         updated_rule_h[(graph, suc)] =\
                             (lhs_prime_suc_prime, rhs_prime_suc_prime)
 
     else:
         for pred in hierarchy.predecessors(graph_id):
-            if isinstance(hierarchy.node[pred], hierarchy.graph_node_cls):
+            if hierarchy.is_graph(pred):
                 updated_homomorphisms[(pred, graph_id)] =\
                     compose(
-                        hierarchy.edge[pred][graph_id].mapping,
+                        hierarchy.adj[pred][graph_id]["mapping"],
                         origin_m_origin_prime)
             else:
                 updated_rule_h[(pred, graph_id)] = (
                     compose(
-                        hierarchy.edge[pred][graph_id].lhs_mapping,
+                        hierarchy.adj[pred][graph_id]["lhs_mapping"],
                         origin_m_origin_prime),
                     compose(
-                        hierarchy.edge[pred][graph_id].rhs_mapping,
+                        hierarchy.adj[pred][graph_id]["rhs_mapping"],
                         origin_m_origin_prime)
                 )
 
@@ -377,7 +374,7 @@ def _propagate_down(hierarchy, origin_id, origin_construct,
 
                 (g_prime, g_g_prime, rhs_g_prime) =\
                     pushout_from_relation(
-                        hierarchy.node[graph].graph, rule.rhs,
+                        hierarchy.graph[graph], rule.rhs,
                         relation_g_rhs, inplace)
                 updated_graphs[graph] = (g_prime, g_g_prime, rhs_g_prime)
 
@@ -390,7 +387,7 @@ def _propagate_down(hierarchy, origin_id, origin_construct,
                             rhs_origin_prime,
                             compose_chain(
                                 [origin_m_origin,
-                                 hierarchy.edge[origin_id][graph].mapping,
+                                 hierarchy.adj[origin_id][graph]["mapping"],
                                  g_g_prime]),
                             rhs_g_prime)
 
@@ -405,7 +402,7 @@ def _propagate_down(hierarchy, origin_id, origin_construct,
                                         updated_graphs[pred][1],
                                         updated_graphs[pred][2],
                                         compose(
-                                            hierarchy.edge[pred][graph].mapping,
+                                            hierarchy.adj[pred][graph]["mapping"],
                                             g_g_prime),
                                         rhs_g_prime)
                     for suc in hierarchy.successors(graph):
@@ -416,7 +413,7 @@ def _propagate_down(hierarchy, origin_id, origin_construct,
                                     g_g_prime,
                                     rhs_g_prime,
                                     compose(
-                                        hierarchy.edge[graph][suc].mapping,
+                                        hierarchy.adj[graph][suc]["mapping"],
                                         updated_graphs[suc][1]),
                                     updated_graphs[suc][2])
                 if len(rule.merged_nodes()) > 0:
@@ -429,7 +426,7 @@ def _propagate_down(hierarchy, origin_id, origin_construct,
             updated_homomorphisms[(origin_id, suc)] =\
                 compose(
                     origin_m_origin,
-                    hierarchy.edge[origin_id][suc].mapping)
+                    hierarchy.adj[origin_id][suc]["mapping"])
 
     return {
         "graphs": updated_graphs,
@@ -450,6 +447,7 @@ def _apply_changes(hierarchy, upstream_changes, downstream_changes):
             # upstream changes in both related graphs
 
             if (g2, g1) in upstream_changes["relations"]:
+
                 # update left side
                 new_left_dict = dict()
                 left_dict = hierarchy.relation[g1][g2]
@@ -537,18 +535,19 @@ def _apply_changes(hierarchy, upstream_changes, downstream_changes):
     # update graphs
     for graph, (graph_m, _, graph_prime, _) in upstream_changes["graphs"].items():
         if graph_prime is not None:
-            hierarchy.node[graph].graph = graph_prime
+            hierarchy.node[graph]["graph"] = graph_prime
         else:
-            hierarchy.node[graph].graph = graph_m
-        hierarchy.graph[graph] = hierarchy.node[graph].graph
+            hierarchy.node[graph]["graph"] = graph_m
+        hierarchy.graph[graph] = hierarchy.node[graph]["graph"]
 
     if "graphs" in downstream_changes.keys():
         for graph, (graph_prime, _, _) in downstream_changes["graphs"].items():
-            hierarchy.node[graph].graph = graph_prime
-            hierarchy.graph[graph] = hierarchy.node[graph].graph
+            hierarchy.node[graph]["graph"] = graph_prime
+            hierarchy.graph[graph] = hierarchy.node[graph]["graph"]
 
+    # update relation
     for (g1, g2), rel in rels.items():
-        old_attrs = copy.deepcopy(hierarchy.relation_edge[g1][g2].attrs)
+        old_attrs = copy.deepcopy(hierarchy.relation_edges[g1, g2]["attrs"])
         hierarchy.remove_relation(g1, g2)
         hierarchy.add_relation(g1, g2, rel, old_attrs)
 
@@ -559,21 +558,34 @@ def _apply_changes(hierarchy, upstream_changes, downstream_changes):
         updated_homomorphisms.update(downstream_changes["homomorphisms"])
 
     for (s, t), mapping in updated_homomorphisms.items():
-        hierarchy.edge[s][t] = hierarchy.graph_typing_cls(
-            mapping, hierarchy.edge[s][t].attrs
+        primitives.assign_attrs(
+            hierarchy.adj[s][t],
+            {
+                "mapping": mapping,
+                "attrs": hierarchy.adj[s][t]["attrs"]
+            }
         )
-        hierarchy.typing[s][t] = hierarchy.edge[s][t].mapping
+        hierarchy.typing[s][t] = hierarchy.adj[s][t]["mapping"]
+
     # update rules & rule homomorphisms
     for rule, new_rule in upstream_changes["rules"].items():
-        hierarchy.node[rule] = hierarchy.rule_node_cls(
-            new_rule, hierarchy.node[rule].attrs
+        primitives.assign_attrs(
+            hierarchy.node[rule],
+            {
+                "rule": new_rule,
+                "attrs": hierarchy.node[rule]["attrs"]
+            }
         )
-        hierarchy.rule[rule] = hierarchy.node[rule].rule
+        hierarchy.rule[rule] = hierarchy.node[rule]["rule"]
     for (s, t), (lhs_h, rhs_h) in upstream_changes["rule_homomorphisms"].items():
-        hierarchy.edge[s][t] = hierarchy.rule_typing_cls(
-            lhs_h, rhs_h,
-            hierarchy.edge[s][t].attrs
+        primitives.assign_attrs(
+            hierarchy.adj[s][t],
+            {
+                "lhs_mapping": lhs_h,
+                "rhs_mapping": rhs_h,
+                "attrs": hierarchy.adj[s][t]["attrs"]
+            }
         )
-        hierarchy.rule_lhs_typing[s][t] = hierarchy.edge[s][t].lhs_mapping
-        hierarchy.rule_rhs_typing[s][t] = hierarchy.edge[s][t].rhs_mapping
+        hierarchy.rule_lhs_typing[s][t] = hierarchy.adj[s][t]["lhs_mapping"]
+        hierarchy.rule_rhs_typing[s][t] = hierarchy.adj[s][t]["rhs_mapping"]
     return

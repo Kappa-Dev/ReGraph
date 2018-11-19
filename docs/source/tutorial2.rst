@@ -25,7 +25,7 @@ If you missed the part of the ReGraph tutorial about primitive graph transformat
 .. _hierarchy_tutorial:
 
 ---------
-Hierarchy
+NetworkXHierarchy
 ---------
 
 A graph hierarchy is a directed acyclic graph where nodes are graphs with attributes and edges are
@@ -38,16 +38,16 @@ functionality implemented in ReGraph (for more details see the module :ref:`hier
 .. _hierarchy_creation:
 
 ^^^^^^^^^^^^^^^^^^
-Hierarchy creation
+NetworkXHierarchy creation
 ^^^^^^^^^^^^^^^^^^
 Create an empty hierarchy and add graphs to the hierarchy: ::
     
     import networkx as nx
 
-    from regraph import Hierarchy, plot_graph, primitives
+    from regraph import NetworkXHierarchy, plot_graph, primitives
 
 
-    hierarchy = Hierarchy()
+    hierarchy = NetworkXHierarchy()
 
     t = nx.DiGraph()
     primitives.add_nodes_from(
@@ -224,12 +224,12 @@ First, let's start from creating another hierarchy similar to the one in the pre
     
     import networkx as nx
 
-    from regraph import Hierarchy, Rule, RewritingError
+    from regraph import NetworkXHierarchy, Rule, RewritingError
     from regraph import primitives
     from regraph import plotting
 
 
-    hierarchy = Hierarchy()
+    hierarchy = NetworkXHierarchy()
     
     # Initialize graphs
     colors = nx.DiGraph()
@@ -450,7 +450,7 @@ done by providing a typing of the right-hand side of the rule by hierarchy graph
 
 The typing defined by this dictionary can be interpreted as follows: "graph `mm` types the node 'B_res_1' from the right-hand side with the node 'residue', graph `mmm` types the node 'X' as 'component', and graph `colors` types 'Y' as 'red".
 
-By default rewriting in a hierarchy (implemented in the `regraph.Hierarchy.rewrite` method) is not strict, i.e. it is allowed to apply rewriting rules which perform *relaxing changes* to the hierarchy graphs (add nodes/edges/attrs or merge nodes). But the previously mentioned rewriting method allows to set its input argument `strict=True`, in which case an attempt to apply any relaxing rule will lead to an exception (`regraph.RewritingError`).
+By default rewriting in a hierarchy (implemented in the `regraph.NetworkXHierarchy.rewrite` method) is not strict, i.e. it is allowed to apply rewriting rules which perform *relaxing changes* to the hierarchy graphs (add nodes/edges/attrs or merge nodes). But the previously mentioned rewriting method allows to set its input argument `strict=True`, in which case an attempt to apply any relaxing rule will lead to an exception (`regraph.RewritingError`).
 
 Let's rewrite `n1` with the rule using defaut non-strict rewriting:
 
@@ -458,7 +458,7 @@ Let's rewrite `n1` with the rule using defaut non-strict rewriting:
 
 Let's have a look on the changes to the hierarchy that were triggered by the rewriting:
 
->>> plotting.plot_instance(hierarchy.node["n1"].graph, rule.rhs, rhs_instance)
+>>> plotting.plot_instance(hierarchy.graph["n1"], rule.rhs, rhs_instance)
 
 .. image:: _static/ex2_n1_rule2_result_rhs_instance.png
 
@@ -562,7 +562,7 @@ We can see that there were found exactly two instances of the left-hand side of 
     for instance in instances:
         hierarchy.rewrite("n1", merging_rule, instance, rhs_typing=rhs_typing)
 
-    plot_graph(hierarchy.node["n1"].graph,
+    plot_graph(hierarchy.graph["n1"],
            title="Graph 'n1' after rewriting with rule 3")
 
 .. image:: _static/ex2_n1_rule3_result.png

@@ -5,7 +5,7 @@ from nose.tools import assert_equals
 
 from regraph import (get_relabeled_graph,
                      print_graph)
-from regraph.utils import assert_graph_eq
+from regraph.utils import assert_nx_graph_eq
 from regraph.networkx.category_utils import (pullback,
                                              pushout,
                                              pullback_complement,
@@ -105,7 +105,7 @@ class TestCategoryUtils:
         test_graph = get_relabeled_graph(
             self.C, {2: "circle", 3: "dark_circle", "dark_square": "dark_square"}
         )
-        assert_graph_eq(test_graph, C)
+        assert_nx_graph_eq(test_graph, C)
         assert(id(self.D) != id(C))
 
     def test_pullpack_complement_inplace(self):
@@ -117,7 +117,7 @@ class TestCategoryUtils:
         test_graph = get_relabeled_graph(
             self.C, {2: "circle", 3: "dark_circle", "dark_square": "dark_square"}
         )
-        assert_graph_eq(test_graph, C)
+        assert_nx_graph_eq(test_graph, C)
         assert(id(D_copy) == id(C))
 
     def test_pushout(self):

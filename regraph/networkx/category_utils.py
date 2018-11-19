@@ -2,7 +2,7 @@
 import networkx as nx
 import copy
 
-from regraph.networkx.primitives import *
+from regraph.primitives import *
 from regraph.utils import (keys_by_value,
                            merge_attributes,
                            restrict_mapping,
@@ -107,14 +107,14 @@ def check_homomorphism(source, target, dictionary, total=True):
         try:
             if (s1 in dictionary.keys() and s2 in dictionary.keys() and
                     not valid_attributes(
-                        source.edge[s1][s2],
-                        target.edge[dictionary[s1]][dictionary[s2]])):
+                        source.adj[s1][s2],
+                        target.adj[dictionary[s1]][dictionary[s2]])):
                 raise InvalidHomomorphism(
                     "Attributes of edges (%s)-(%s) (%s) and "
                     "(%s)-(%s) (%s) do not match!" %
-                    (s1, s2, source.edge[s1][s2], dictionary[s1],
+                    (s1, s2, source.adj[s1][s2], dictionary[s1],
                      dictionary[s2],
-                     target.edge[dictionary[s1]][dictionary[s2]]))
+                     target.adj[dictionary[s1]][dictionary[s2]]))
         except KeyError:
             pass
     return True
@@ -695,8 +695,8 @@ def relation_to_span(g1, g2, relation, edges=False, attrs=False, directed=True):
                    (right_h[n1], right_h[n2]) in g2.edges():
                     new_graph.add_edge(n1, n2)
                     common_attrs = attrs_intersection(
-                        g1.edge[left_h[n1]][left_h[n2]],
-                        g2.edge[right_h[n1]][right_h[n2]],
+                        g1.adj[left_h[n1]][left_h[n2]],
+                        g2.adj[right_h[n1]][right_h[n2]],
                     )
                     add_edge_attrs(
                         new_graph,
@@ -774,8 +774,8 @@ def pushout_from_relation(g1, g2, relation, inplace=False):
             add_edge(g12, g2_g12[u], g2_g12[v], get_edge(g2, u, v))
         else:
             edge_attrs_diff = dict_sub(
-                g2.edge[u][v],
-                g12.edge[g2_g12[u]][g2_g12[v]])
+                g2.adj[u][v],
+                g12.adj[g2_g12[u]][g2_g12[v]])
             add_edge_attrs(g12, g2_g12[u], g2_g12[v], edge_attrs_diff)
     return (g12, g1_g12, g2_g12)
 
