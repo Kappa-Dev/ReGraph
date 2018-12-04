@@ -123,6 +123,13 @@ class AttributeSet(object):
                 for i, element in enumerate(init_args):
                     if type(element) == list:
                         init_args[i] = tuple(element)
+            if json_data["type"] == "IntegerSet" and init_args is not None:
+                for i, element in enumerate(init_args):
+                    if element[0] == "-inf":
+                        init_args[i][0] = -math.inf
+                    if element[1] == "inf":
+                        init_args[i][1] = math.inf
+
             return getattr(sys.modules[__name__], json_data["type"])(init_args)
 
     def toset(self):
@@ -969,7 +976,18 @@ class IntegerSet(AttributeSet):
         """JSON represenation of IntegerSet."""
         json_data = {}
         json_data["type"] = "IntegerSet"
-        json_data["data"] = [[start, end] for start, end in self.intervals]
+        json_data["data"] = []
+        for start, end in self.intervals:
+            if math.isinf(-start):
+                new_start = "-inf"
+            else:
+                new_start = start
+            if math.isinf(end):
+                new_end = "inf"
+            else:
+                new_end = end
+        json_data["data"].append([new_start, new_end])
+
         return json_data
 
 
