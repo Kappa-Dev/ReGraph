@@ -6,6 +6,69 @@ from regraph.exceptions import ReGraphError, ParsingError
 from regraph.attribute_sets import AttributeSet, FiniteSet
 
 
+def attrs_to_json(attrs):
+    """Convert attributes to json."""
+    normalize_attrs(attrs)
+    json_data = dict()
+    if attrs is not None:
+        for key, value in attrs.items():
+            json_data[key] = value.to_json()
+    return json_data
+
+
+def attrs_from_json(json_data):
+    """Retrieve attrs from json-like dict."""
+    attrs = dict()
+    for key, value in json_data.items():
+        attrs[key] = AttributeSet.from_json(value)
+    return attrs
+
+
+def load_nodes_from_json(j_data):
+    """Load nodes from json-like dict."""
+    loaded_nodes = []
+    if "nodes" in j_data.keys():
+        j_nodes = j_data["nodes"]
+        for node in j_nodes:
+            if "id" in node.keys():
+                node_id = node["id"]
+            else:
+                raise ReGraphError(
+                    "Error loading graph: node id is not specified!")
+            attrs = None
+            if "attrs" in node.keys():
+                attrs = json_dict_to_attrs(node["attrs"])
+            loaded_nodes.append((node_id, attrs))
+    else:
+        raise ReGraphError(
+            "Error loading graph: no nodes specified!")
+    return loaded_nodes
+
+
+def load_edges_from_json(j_data):
+    """Load edges from json-like dict."""
+    loaded_edges = []
+    if "edges" in j_data.keys():
+        j_edges = j_data["edges"]
+        for edge in j_edges:
+            if "from" in edge.keys():
+                s_node = edge["from"]
+            else:
+                raise ReGraphError(
+                    "Error loading graph: edge source is not specified!")
+            if "to" in edge.keys():
+                t_node = edge["to"]
+            else:
+                raise ReGraphError(
+                    "Error loading graph: edge target is not specified!")
+            if "attrs" in edge.keys():
+                attrs = json_dict_to_attrs(edge["attrs"])
+                loaded_edges.append((s_node, t_node, attrs))
+            else:
+                loaded_edges.append((s_node, t_node))
+    return loaded_edges
+
+
 def json_dict_to_attrs(d):
     """Convert json dictionary to attributes."""
     attrs = {}
