@@ -5,9 +5,45 @@ from regraph.attribute_sets import (FiniteSet,
                                     IntegerSet,
                                     RegexSet)
 from regraph.exceptions import ReGraphError
+from regraph.utils import attrs_from_json
 
 
 RESERVED_SET_NAMES = ["IntegerSet", "StringSet", "BooleanSet"]
+
+
+def load_graph_from_json(json_data, node_label, edge_label, literal_id=True):
+    query = ""
+    if len(json_data["nodes"]) > 0:
+        query += "CREATE"
+
+    # Add nodes
+    nodes = []
+    for node_data in json_data["nodes"]:
+        node_id = node_data["id"]
+        if literal_id:
+            node_id = "'{}'".format(node_id)
+
+        attr_repr = generate_attributes(
+            attrs_from_json(node_data["attrs"]))
+
+        nodes.append(
+            "(n_{}:{} {{ id: {}, {}}})".format(
+                node_data["id"], node_label, node_id,
+                attr_repr))
+    query += ", ".join(nodes) + ","
+
+    # Add edges
+    edges = []
+    for edge_data in json_data["edges"]:
+        edges.append(
+            "(n_{})-[:{}]->(n_{})".format(
+                edge_data["from"],
+                edge_label,
+                edge_data["to"]))
+
+    query += ", ".join(edges)
+
+    return query
 
 
 def delete_var(var, detach=False, breakline=True):
@@ -48,14 +84,14 @@ def set_attributes(var_name, attrs, update=False):
         for k, value in attrs.items():
             if isinstance(value, IntegerSet):
                 if value.is_universal:
-                    query += "\tSET {}.{} = 'IntegerSet'\n".format(var_name, k)
+                    query += "\tSET {}.{} = ['IntegerSet']\n".format(var_name, k)
                 else:
                     raise ReGraphError(
                         "Non universal IntegerSet is not allowed as "
                         "an attribute value (not implemented)")
             elif isinstance(value, RegexSet):
                 if value.is_universal:
-                    query += "\tSET {}.{} = 'StringSet'\n".format(var_name, k)
+                    query += "\tSET {}.{} = ['StringSet']\n".format(var_name, k)
                 else:
                     raise ReGraphError(
                         "Non universal RegexSet is not allowed as "
@@ -64,7 +100,7 @@ def set_attributes(var_name, attrs, update=False):
                 elements = []
                 for el in value:
                     if type(el) == str:
-                        elements.append("'{}'".format(el))
+                        elements.append("'{}'".format(el.replace("'", "\\'")))
                     else:
                         elements.append("{}".format(el))
                 if value not in RESERVED_SET_NAMES:
@@ -97,14 +133,14 @@ def generate_attributes(attrs):
         for k, value in attrs.items():
             if isinstance(value, IntegerSet):
                 if value.is_universal:
-                    attrs_items.append("{}: 'IntegerSet'\n".format(k))
+                    attrs_items.append("{}: ['IntegerSet']\n".format(k))
                 else:
                     raise ReGraphError(
                         "Non universal IntegerSet is not allowed as "
                         "an attribute value (not implemented)")
             elif isinstance(value, RegexSet):
                 if value.is_universal:
-                    attrs_items.append("{}: 'StringSet'\n".format(k))
+                    attrs_items.append("{}: ['StringSet']\n".format(k))
                 else:
                     raise ReGraphError(
                         "Non universal RegexSet is not allowed as "
@@ -113,7 +149,7 @@ def generate_attributes(attrs):
                 elements = []
                 for el in value:
                     if type(el) == str:
-                        elements.append("'{}'".format(el))
+                        elements.append("'{}'".format(el.replace("'", "\\'")))
                     else:
                         elements.append("{}".format(el))
                 attrs_items.append("{}: [{}]".format(k, ", ".join(

@@ -96,9 +96,9 @@ def add_edge(edge_var, source_var, target_var,
     attrs : dict, optional
         Attributes of the new edge
     """
-    query = "MERGE ({})-[{}:{}]->({})\n".format(
-        source_var, edge_var, edge_label, target_var) +\
-        generic.set_attributes(edge_var, attrs)
+    query = "CREATE ({})-[{}:{} {{ {} }}]->({})\n".format(
+        source_var, edge_var, edge_label,
+        generic.generate_attributes(attrs), target_var)
     return query
 
 

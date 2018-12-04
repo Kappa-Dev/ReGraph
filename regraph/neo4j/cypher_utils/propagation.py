@@ -60,8 +60,10 @@ def check_homomorphism(tx, domain, codomain, total=True):
         "WHERE size(images) <> 1\n" +
         "RETURN n.id as ids, size(images) as nb_of_img\n"
     )
+
     result = tx.run(query1)
     nodes = []
+
     for record in result:
         nodes.append((record['ids'], record['nb_of_img']))
     if len(nodes) != 0:
@@ -83,6 +85,7 @@ def check_homomorphism(tx, domain, codomain, total=True):
         "WITH x_id, y_id, collect(r) as rs\n" +
         "RETURN x_id, y_id\n"
     )
+
     result = tx.run(query2)
     xy_ids = []
     for record in result:
@@ -115,6 +118,7 @@ def check_homomorphism(tx, domain, codomain, total=True):
         "WHERE invalid <> 0\n" +
         "RETURN n_id, m_id, invalid\n"
     )
+
     result = tx.run(query3)
     invalid_typings = []
     for record in result:
@@ -149,6 +153,7 @@ def check_homomorphism(tx, domain, codomain, total=True):
         "WHERE invalid <> 0\n" +
         "RETURN n_id, m_id, x_id, y_id, invalid\n"
     )
+
     result = tx.run(query4)
     invalid_edges = []
     for record in result:
@@ -170,7 +175,7 @@ def check_consistency(tx, source, target):
     query = (
         "// match all typing pairs between '{}' and '{}'\n".format(
             source, target) +
-        "MATCH (s:{}), (t:{})\n".format(
+        "MATCH (s:{})-[:typing]->(t:{})\n".format(
             source, target) +
         "WITH s, t\n"
     )
