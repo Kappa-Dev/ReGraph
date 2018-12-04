@@ -40,7 +40,7 @@ from regraph.primitives import (attrs_to_json,
                                 merge_attrs,
                                 get_edge,
                                 graph_to_json,
-                                graph_from_json,
+                                networkx_from_json,
                                 equal,
                                 update_node_attrs,
                                 update_edge_attrs)
@@ -274,7 +274,7 @@ class NetworkXHierarchy(nx.DiGraph):
             elif self.is_graph(node):
                 json_data["graphs"].append({
                     "id": node,
-                    "graph": graph_to_json(self.node[node]["graph"]),
+                    "graph": networkx_to_json(self.node[node]["graph"]),
                     "attrs": attrs_to_json(self.node[node]["attrs"])
                 })
             else:
@@ -356,7 +356,7 @@ class NetworkXHierarchy(nx.DiGraph):
                graph_data["id"] in ignore["graphs"]:
                 pass
             else:
-                graph = graph_from_json(graph_data["graph"], directed)
+                graph = networkx_from_json(graph_data["graph"], directed)
                 if "attrs" not in graph_data.keys():
                     attrs = dict()
                 else:

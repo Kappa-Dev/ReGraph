@@ -1,5 +1,6 @@
 """Neo4j driver for regraph."""
-import time
+import os
+import json
 import copy
 import networkx as nx
 
@@ -10,10 +11,13 @@ from . import graphs
 from . import cypher_utils as cypher
 from regraph.exceptions import (HierarchyError,
                                 InvalidHomomorphism,
-                                RewritingError)
+                                RewritingError,
+                                ReGraphError)
 from regraph.utils import (normalize_attrs,
                            keys_by_value,
-                           normalize_typing_relation)
+                           normalize_typing_relation,
+                           attrs_from_json,
+                           attrs_to_json)
 
 
 class Neo4jHierarchy(object):
@@ -27,8 +31,21 @@ class Neo4jHierarchy(object):
     # rule_rhs_typing_dict_factory = dict
     rel_dict_factory = dict
 
-    def __init__(self, uri, user, password):
-        """Initialize driver."""
+    def __init__(self, uri=None, user=None, password=None,
+                 driver=None):
+        """Initialize driver.
+
+        Parameters
+        ----------
+
+        uri : str, optional
+            Uri for Neo4j database connection
+        user : str, optional
+            Username for Neo4j database connection
+        password : str, optional
+            Password for Neo4j database connection
+        driver : neo4j.v1.direct.DirectDriver, optional
+        """
         # The following idea is cool but it's not so easy:
         # as we have two types of nodes in the hierarchy:
         # graphs and rules, as well as two types of edges:
@@ -39,32 +56,35 @@ class Neo4jHierarchy(object):
         #     node_label="hierarchyNode",
         #     edge_label="hierarchyEdge")
 
-        self._driver = GraphDatabase.driver(
-            uri, auth=(user, password))
+        if driver is None:
+            self._driver = GraphDatabase.driver(
+                uri, auth=(user, password))
+        else:
+            self._driver = driver
 
         self._graph_label = "graph"
         self._typing_label = "homomorphism"
         self._relation_label = "binaryRelation"
 
-        query = "CREATE " + cypher.constraint_query(
-            'n', self._graph_label, 'id')
-        self.execute(query)
+        # query = "CREATE " + cypher.constraint_query(
+        #     'n', self._graph_label, 'id')
+        # self.execute(query)
 
     def __str__(self):
         """String representation of the hierarchy."""
         res = ""
         res += "\nGraphs: \n"
         for n in self.graphs():
-            res += " {} {}\n".format(n, self.graph_attrs(n))
+            res += " {} {}\n".format(n, self.get_graph_attrs(n))
 
         res += "\nTyping homomorphisms: \n"
         for n1, n2 in self.typings():
-            res += "{} -> {}\n".format(n1, n2, self.typing_attrs(n1, n2))
+            res += "{} -> {}\n".format(n1, n2, self.get_typing_attrs(n1, n2))
 
         res += "\nRelations:\n"
         for n1, n2 in self.relations():
             res += "{}-{}: {}\n".format(
-                n1, n2, self.relation_attrs(n1, n2))
+                n1, n2, self.get_relation_attrs(n1, n2))
 
         return res
 
@@ -167,7 +187,8 @@ class Neo4jHierarchy(object):
         if edge_list is not None:
             g.add_edges_from(edge_list)
 
-    def add_empty_graph(self, graph_id, attrs):
+    def add_empty_graph(self, graph_id, attrs=None):
+        """Add empty graph to the hierarchy."""
         self.add_graph(graph_id, attrs=attrs)
 
     def valid_typing(self, source, target):
@@ -207,38 +228,30 @@ class Neo4jHierarchy(object):
             If a homomorphism from a graph at the source to a graph at
             the target given by `mapping` is not a valid homomorphism.
         """
-        g_src = self._access_graph(source)
-        g_tar = self._access_graph(target)
-
         query = ""
-        nodes_to_match_src = set()
-        nodes_to_match_tar = set()
-        edge_creation_queries = []
         tmp_attrs = {'tmp': {'true'}}
         normalize_attrs(tmp_attrs)
-        for u, v in mapping.items():
-            nodes_to_match_src.add(u)
-            nodes_to_match_tar.add(v)
-            edge_creation_queries.append(
-                cypher.add_edge(
-                    edge_var="typ_" + u + "_" + v,
-                    source_var=u + "_src",
-                    target_var=v + "_tar",
-                    edge_label="typing",
-                    attrs=tmp_attrs))
 
-        if len(nodes_to_match_src) > 0:
-            query += cypher.match_nodes(
-                {n + "_src": n for n in nodes_to_match_src},
-                node_label=g_src._node_label)
-            query += cypher.with_vars([s + "_src" for s in nodes_to_match_src])
-            query += cypher.match_nodes(
-                {n + "_tar": n for n in nodes_to_match_tar},
-                node_label=g_tar._node_label)
-            for q in edge_creation_queries:
-                query += q
-
-        result = self.execute(query)
+        if len(mapping) > 0:
+            with self._driver.session() as session:
+                tx = session.begin_transaction()
+                for u, v in mapping.items():
+                    print(u, v)
+                    query = (
+                        cypher.match_nodes(
+                            {
+                                "n_" + u + "_s": u,
+                                "n_" + v + "_t": v
+                            }) + "\n" +
+                        cypher.add_edge(
+                            edge_var="typ_" + u + "_" + v,
+                            source_var="n_" + u + "_s",
+                            target_var="n_" + v + "_t",
+                            edge_label="typing",
+                            attrs=tmp_attrs))
+                    print(query)
+                    tx.run(query)
+                tx.commit()
 
         valid_typing = True
         paths_commute = True
@@ -292,7 +305,7 @@ class Neo4jHierarchy(object):
 
             )
             self.execute(skeleton_query)
-        return result
+        # return result
 
     def add_relation(self, left, right, relation, attrs=None):
         """Add relation to the hierarchy.
@@ -671,7 +684,6 @@ class Neo4jHierarchy(object):
             with self._driver.session() as session:
                 tx = session.begin_transaction()
                 if clone_query:
-                    print(clone_query)
                     tx.run(clone_query)
                 if remove_node_query:
                     tx.run(remove_node_query)
@@ -737,7 +749,6 @@ class Neo4jHierarchy(object):
                         "FOREACH(dummy IN CASE WHEN h_i IS NULL THEN [] ELSE [1] END |\n" +
                         "\tMERGE (h_i)-[:_to_remove]->(g_i))\n"
                     )
-                    print(query)
                     self.execute(query)
 
             # Check all predecessors are r
@@ -751,7 +762,6 @@ class Neo4jHierarchy(object):
                 "\t\tCASE WHEN t IS NULL \n" +
                 "\t\t\tTHEN true ELSE false END END as res"
             )
-            print(query)
             res = self.execute(query)
             valid = False
             for record in res:
@@ -1125,4 +1135,172 @@ class Neo4jHierarchy(object):
 
     @classmethod
     def copy(cls, hierarchy):
+        """Copy Neo4jHierarchy object."""
         return copy.deepcopy(hierarchy)
+
+    @classmethod
+    def from_json(cls, uri=None, user=None, password=None,
+                  driver=None, json_data=None, ignore=None, clear=False):
+        """Create hierarchy object from JSON representation.
+
+        Parameters
+        ----------
+
+        uri : str, optional
+            Uri for Neo4j database connection
+        user : str, optional
+            Username for Neo4j database connection
+        password : str, optional
+            Password for Neo4j database connection
+        driver : neo4j.v1.direct.DirectDriver, optional
+            DB driver object
+        json_data : dict, optional
+            JSON-like dict containing representation of a hierarchy
+        ignore : dict, optional
+            Dictionary containing components to ignore in the process
+            of converting from JSON, dictionary should respect the
+            following format:
+            {
+                "graphs": <collection of ids of graphs to ignore>,
+                "rules": <collection of ids of rules to ignore>,
+                "typing": <collection of tuples containing typing
+                    edges to ignore>,
+                "rule_typing": <collection of tuples containing rule
+                    typing edges to ignore>>,
+                "relations": <collection of tuples containing
+                    relations to ignore>,
+            }
+        directed : bool, optional
+            True if graphs from JSON representation should be loaded as
+            directed graphs, False otherwise, default value -- True
+
+        Returns
+        -------
+        hierarchy : regraph.hierarchy.Hierarchy
+        """
+        hierarchy = cls(
+            uri=uri, user=user, password=password, driver=driver)
+
+        if clear is True:
+            hierarchy._clear()
+
+        # add graphs
+        for graph_data in json_data["graphs"]:
+            if ignore is not None and\
+               "graphs" in ignore.keys() and\
+               graph_data["id"] in ignore["graphs"]:
+                pass
+            else:
+                if "attrs" not in graph_data.keys():
+                    attrs = dict()
+                else:
+                    attrs = attrs_from_json(graph_data["attrs"])
+                hierarchy.add_empty_graph(graph_data["id"], attrs)
+                graph = hierarchy.get_graph(graph_data["id"])
+                graph.from_json(
+                    uri=uri, user=user,
+                    password=password, driver=driver,
+                    j_data=graph_data["graph"],
+                    node_label=graph_data["id"])
+
+        # add typing
+        for typing_data in json_data["typing"]:
+            if ignore is not None and\
+               "typing" in ignore.keys() and\
+               (typing_data["from"], typing_data["to"]) in ignore["typing"]:
+                pass
+            else:
+                if "attrs" not in typing_data.keys():
+                    attrs = dict()
+                else:
+                    attrs = attrs_from_json(typing_data["attrs"])
+                hierarchy.add_typing(
+                    typing_data["from"],
+                    typing_data["to"],
+                    typing_data["mapping"],
+                    attrs)
+
+        # add relations
+        for relation_data in json_data["relations"]:
+            from_g = relation_data["from"]
+            to_g = relation_data["to"]
+            if ignore is not None and\
+               "relations" in ignore.keys() and\
+               ((from_g, to_g) in ignore["relations"] or
+                    (to_g, from_g) in ignore["relations"]):
+                pass
+            else:
+                if "attrs" not in relation_data.keys():
+                    attrs = dict()
+                else:
+                    attrs = attrs_from_json(relation_data["attrs"])
+                if (from_g, to_g) not in hierarchy.relations():
+                    hierarchy.add_relation(
+                        relation_data["from"],
+                        relation_data["to"],
+                        {a: set(b) for a, b in relation_data["rel"].items()},
+                        attrs
+                    )
+        return hierarchy
+
+    @classmethod
+    def load(cls, filename, uri=None, user=None, password=None,
+             driver=None, ignore=None, clear=True):
+        """Load the hierarchy from a file.
+
+        Parameters
+        ----------
+        Returns
+        -------
+        Raises
+        ------
+        """
+        if os.path.isfile(filename):
+            with open(filename, "r+") as f:
+                json_data = json.loads(f.read())
+                hierarchy = cls.from_json(
+                    uri=uri, user=user, password=password, driver=driver,
+                    json_data=json_data, ignore=ignore, clear=clear)
+            return hierarchy
+        else:
+            raise ReGraphError("File '%s' does not exist!" % filename)
+
+    def to_json(self):
+        """Return json representation of the hierarchy."""
+        json_data = {
+            "rules": [],
+            "graphs": [],
+            "typing": [],
+            "rule_typing": [],
+            "relations": []
+        }
+        for graph in self.graphs():
+            json_data["graphs"].append({
+                "id": graph,
+                "graph": self.get_graph(graph).to_json(),
+                "attrs": attrs_to_json(self.get_graph_attrs(graph))
+            })
+        for s, t in self.typings():
+            json_data["typing"].append({
+                "from": s,
+                "to": t,
+                "mapping": self.get_typing(s, t),
+                "attrs": attrs_to_json(self.get_typing_attrs(s, t))
+            })
+        visited = set()
+        for u, v in self.relations():
+            if not (u, v) in visited and not (v, u) in visited:
+                visited.add((u, v))
+                json_data["relations"].append({
+                    "from": u,
+                    "to": v,
+                    "rel": {a: list(b) for a, b in self.get_relation(u, v).items()},
+                    "attrs": attrs_to_json(self.get_relation_attrs(u, v))
+                })
+        return json_data
+
+    def export(self, filename):
+        """Export the hierarchy to a file."""
+        with open(filename, 'w') as f:
+            j_data = self.to_json()
+            json.dump(j_data, f)

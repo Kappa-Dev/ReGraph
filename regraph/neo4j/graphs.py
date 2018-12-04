@@ -1,9 +1,14 @@
 """Neo4j driver for regraph."""
+import os
+import json
 import warnings
 from neo4j.v1 import GraphDatabase
 
-from regraph.utils import normalize_attrs
-from regraph.exceptions import TypedNeo4jGraphError, ReGraphWarning
+from regraph.utils import (normalize_attrs,
+                           load_nodes_from_json,
+                           load_edges_from_json,
+                           attrs_from_json)
+from regraph.exceptions import ReGraphWarning, ReGraphError
 from . import cypher_utils as cypher
 from . import hierarchy
 
@@ -54,13 +59,12 @@ class Neo4jGraph(object):
 
         self._node_label = node_label
         self._edge_label = edge_label
-
-        if unique_node_ids:
-            self.set_constraint('id')
+        # if unique_node_ids:
+        #     self.set_constraint('id')
 
     def execute(self, query):
         """Execute a Cypher query."""
-        print(query)
+        # print(query)
         with self._driver.session() as session:
             if len(query) > 0:
                 result = session.run(query)
@@ -76,6 +80,10 @@ class Neo4jGraph(object):
         query = cypher.clear_graph(self._node_label)
         result = self.execute(query)
         return result
+
+    def close(self):
+        """Close connection to the database."""
+        self._driver.close()
 
     def set_constraint(self, prop):
         """Set a uniqueness constraint on the property.
@@ -154,7 +162,7 @@ class Neo4jGraph(object):
         result = self.execute(query)
         return result
 
-    def add_nodes_from(self, nodes, profiling=False):
+    def add_nodes_from(self, nodes, ignore_naming=False, profiling=False):
         """Add nodes to the graph db."""
         if profiling:
             query = "PROFILE\n"
@@ -171,17 +179,20 @@ class Neo4jGraph(object):
                         cypher.add_node(
                             n_id, n_id, 'new_id_' + n_id,
                             node_label=self._node_label,
-                            attrs=attrs)
+                            attrs=attrs,
+                            ignore_naming=ignore_naming)
                 except ValueError as e:
                     q, carry_variables =\
                         cypher.add_node(
                             n, n, 'new_id_' + n,
-                            node_label=self._node_label)
+                            node_label=self._node_label,
+                            ignore_naming=ignore_naming)
             else:
                 q, carry_variables =\
                     cypher.add_node(
                         n, n, 'new_id_' + n,
-                        node_label=self._node_label)
+                        node_label=self._node_label,
+                        ignore_naming=ignore_naming)
             query += q + cypher.with_vars(carry_variables)
         if len(carry_variables) > 0:
             query += cypher.return_vars(carry_variables)
@@ -533,13 +544,14 @@ class Neo4jGraph(object):
     def find_matching(self, pattern, nodes=None, pattern_typing=None):
         """Find matchings of a pattern in the graph."""
         if len(pattern.nodes()) != 0:
-            result = self.execute(
-                cypher.find_matching(
-                    pattern,
-                    node_label=self._node_label,
-                    edge_label=self._edge_label,
-                    nodes=nodes,
-                    pattern_typing=pattern_typing))
+            query = cypher.find_matching(
+                pattern,
+                node_label=self._node_label,
+                edge_label=self._edge_label,
+                nodes=nodes,
+                pattern_typing=pattern_typing)
+            print(query)
+            result = self.execute(query)
             instances = list()
 
             for record in result:
@@ -574,6 +586,105 @@ class Neo4jGraph(object):
         }
         return rhs_g
 
+    def to_json(self):
+        """Create a JSON representation of a graph."""
+        j_data = {"edges": [], "nodes": []}
+        # dump nodes
+        for node in self.nodes():
+            node_data = {}
+            node_data["id"] = node
+            node_attrs = self.get_node(node)
+            if node_attrs is not None:
+                attrs = {}
+                for key, value in node_attrs.items():
+                    attrs[key] = value.to_json()
+                node_data["attrs"] = attrs
+            j_data["nodes"].append(node_data)
+
+        # dump edges
+        for s, t in self.edges():
+            edge_data = {}
+            edge_data["from"] = s
+            edge_data["to"] = t
+            edge_attrs = self.get_edge(s, t)
+            if edge_attrs is not None:
+                attrs = {}
+                for key, value in edge_attrs.items():
+                    attrs[key] = value.to_json()
+                edge_data["attrs"] = attrs
+            j_data["edges"].append(edge_data)
+        return j_data
+
+    def export(self, filename):
+        """Export graph to JSON file.
+
+        Parameters
+        ----------
+        graph : networkx.(Di)Graph
+        filename : str
+            Name of the file to save the json serialization of the graph
+
+
+        """
+        with open(filename, 'w') as f:
+            j_data = self.to_json()
+            json.dump(j_data, f)
+        return
+
+    def _nodes_from_json(self, json_data):
+        query = cypher.add_nodes_from_json(json_data, self._node_label)
+        self.execute(query)
+
+    @classmethod
+    def from_json(cls, driver=None, uri=None, user=None, password=None,
+                  j_data=None, node_label="node", edge_label="edge"):
+        """Create a Neo4jGraph from a json-like dictionary."""
+        graph = cls(
+            driver=driver, uri=uri, user=user, password=password,
+            node_label=node_label, edge_label=edge_label)
+        query = cypher.load_graph_from_json(
+            j_data, graph._node_label, graph._edge_label)
+        graph.execute(query)
+        return graph
+
+    @classmethod
+    def load(cls, driver=None, uri=None, user=None,
+             password=None, filename=None, clear=False):
+        """Load a Neo4j graph from a JSON file.
+
+        Create a `networkx.(Di)Graph` object from
+        a JSON representation stored in a file.
+
+        Parameters
+        ----------
+        filename : str
+            Name of the file to load the json serialization of the graph
+        directed : bool, optional
+            `True` if the graph to load is directed, `False` otherwise.
+            Default value `True`.
+
+        Returns
+        -------
+        nx.(Di)Graph object
+
+        Raises
+        ------
+        ReGraphError
+            If was not able to load the file
+
+        """
+        if os.path.isfile(filename):
+            with open(filename, "r+") as f:
+                j_data = json.loads(f.read())
+                return cls.from_json(driver=driver, uri=uri,
+                                     user=user, password=password,
+                                     j_data=j_data, clear=clear)
+        else:
+            raise ReGraphError(
+                "Error loading graph: file '%s' does not exist!" %
+                filename
+            )
+
 
 class TypedNeo4jGraph(hierarchy.Neo4jHierarchy):
     """Class implementing two level hiearchy.
@@ -582,9 +693,8 @@ class TypedNeo4jGraph(hierarchy.Neo4jHierarchy):
     a graphical schema.
     """
 
-    def __init__(self, uri, user, password,
-                 schema_graph=None, data_graph=None,
-                 typing=None):
+    def __init__(self, uri=None, user=None, password=None, driver=None,
+                 schema_graph=None, data_graph=None, typing=None, clear=False):
         """Initialize driver.
 
         Parameters:
@@ -607,17 +717,7 @@ class TypedNeo4jGraph(hierarchy.Neo4jHierarchy):
             Dictionary contaning typing of data nodes by schema nodes. By default is
             empty.
         """
-        # if data_graph is not None:
-        #     if schema_graph is None:
-        #         raise TypedNeo4jGraphError(
-        #             "Cannot initialize a typed graph by "
-        #             "empty schema and non-empty data: "
-        #             "typing should be total")
-        #     if len(typing) == 0:
-        #         raise TypedNeo4jGraphError(
-        #             "Cannot initialize a typed graph with "
-        #             "non-total typing '{}'".format(typing))
-        # else:
+
         if data_graph is None:
             data_graph = {"nodes": [], "edges": []}
 
@@ -625,6 +725,9 @@ class TypedNeo4jGraph(hierarchy.Neo4jHierarchy):
             schema_graph = {"nodes": [], "edges": []}
         if typing is None:
             typing = dict()
+
+        if clear is True:
+            self._clear()
 
         self._driver = GraphDatabase.driver(
             uri, auth=(user, password))
@@ -635,10 +738,6 @@ class TypedNeo4jGraph(hierarchy.Neo4jHierarchy):
 
         self._data_label = "node"
         self._schema_label = "type"
-
-        query = "CREATE " + cypher.constraint_query(
-            'n', self._graph_label, 'id')
-        self.execute(query)
 
         # create data/schema nodes
         skeleton = self._access_graph(
@@ -677,6 +776,7 @@ class TypedNeo4jGraph(hierarchy.Neo4jHierarchy):
                 old_schema._clear()
                 old_schema.add_nodes_from(schema_graph["nodes"])
                 old_schema.add_edges_from(schema_graph["edges"])
+
         # if (self._data_label, self._schema_label) not in skeleton.edges():
         self.add_typing(self._data_label, self._schema_label, typing)
 
@@ -750,6 +850,7 @@ class TypedNeo4jGraph(hierarchy.Neo4jHierarchy):
 
     def get_node_type(self, node_id):
         t = self.node_type(self._data_label, node_id)
+        print(t)
         return t[self._schema_label]
 
     def remove_data_node_attrs(self, node_id, attrs):
@@ -775,3 +876,78 @@ class TypedNeo4jGraph(hierarchy.Neo4jHierarchy):
     def get_schema_node(self, node_id):
         g = self._access_graph(self._schema_label)
         return g.get_node(node_id)
+
+    @classmethod
+    def from_json(cls, uri=None, user=None, password=None,
+                  driver=None, json_data=None, ignore=None, clear=False):
+        """Create hierarchy object from JSON representation.
+
+        Parameters
+        ----------
+
+        uri : str, optional
+            Uri for Neo4j database connection
+        user : str, optional
+            Username for Neo4j database connection
+        password : str, optional
+            Password for Neo4j database connection
+        driver : neo4j.v1.direct.DirectDriver, optional
+            DB driver object
+        json_data : dict, optional
+            JSON-like dict containing representation of a hierarchy
+        ignore : dict, optional
+            Dictionary containing components to ignore in the process
+            of converting from JSON, dictionary should respect the
+            following format:
+            {
+                "graphs": <collection of ids of graphs to ignore>,
+                "rules": <collection of ids of rules to ignore>,
+                "typing": <collection of tuples containing typing
+                    edges to ignore>,
+                "rule_typing": <collection of tuples containing rule
+                    typing edges to ignore>>,
+                "relations": <collection of tuples containing
+                    relations to ignore>,
+            }
+        directed : bool, optional
+            True if graphs from JSON representation should be loaded as
+            directed graphs, False otherwise, default value -- True
+
+        Returns
+        -------
+        hierarchy : regraph.neo4j.TypedGraph
+        """
+        g = cls(
+            uri=uri, user=user, password=password, driver=driver)
+
+        if clear is True:
+            g._clear()
+
+        # add graphs
+        for graph_data in json_data["graphs"]:
+            if graph_data["id"] in ["node", "type"]:
+                if "attrs" not in graph_data.keys():
+                    attrs = dict()
+                else:
+                    attrs = attrs_from_json(graph_data["attrs"])
+                graph = g.get_graph(graph_data["id"])
+                graph.from_json(
+                    driver=g._driver,
+                    j_data=graph_data["graph"],
+                    node_label=graph_data["id"])
+
+        # add typing
+        for typing_data in json_data["typing"]:
+            if typing_data["from"] == "node" and\
+               typing_data["to"] == "type":
+                if "attrs" not in typing_data.keys():
+                    attrs = dict()
+                else:
+                    attrs = attrs_from_json(typing_data["attrs"])
+                g.remove_typing("node", "type")
+                g.add_typing(
+                    typing_data["from"],
+                    typing_data["to"],
+                    typing_data["mapping"],
+                    attrs)
+        return g
