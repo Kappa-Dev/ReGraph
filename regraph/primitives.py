@@ -19,11 +19,15 @@ from regraph.utils import (merge_attributes,
                            normalize_attrs,
                            valid_attributes,
                            keys_by_value,
-                           json_dict_to_attrs)
+                           json_dict_to_attrs,
+                           load_nodes_from_json,
+                           load_edges_from_json,
+                           attrs_to_json,
+                           attrs_from_json)
 from regraph.exceptions import (ReGraphError,
                                 GraphError,
                                 GraphAttrsWarning)
-from regraph.attribute_sets import (FiniteSet, AttributeSet)
+from regraph.attribute_sets import (FiniteSet)
 from regraph.neo4j import Neo4jGraph
 
 
@@ -47,24 +51,6 @@ def merge_attrs(original_dict, attrs):
             else:
                 original_dict[key] = attrs[key]
     return
-
-
-def attrs_to_json(attrs):
-    """Convert attributes to json."""
-    normalize_attrs(attrs)
-    json_data = dict()
-    if attrs is not None:
-        for key, value in attrs.items():
-            json_data[key] = value.to_json()
-    return json_data
-
-
-def attrs_from_json(json_data):
-    """Retrieve attrs from json-like dict."""
-    attrs = dict()
-    for key, value in json_data.items():
-        attrs[key] = AttributeSet.from_json(value)
-    return attrs
 
 
 def add_node(graph, node_id, attrs=None):
@@ -1165,54 +1151,19 @@ def append_to_node_names(graph, token):
     )
 
 
-def graph_from_json(j_data, directed=True):
-    """Create a graph from a python dictionary."""
-    loaded_nodes = []
-    if "nodes" in j_data.keys():
-        j_nodes = j_data["nodes"]
-        for node in j_nodes:
-            if "id" in node.keys():
-                node_id = node["id"]
-            else:
-                raise ReGraphError(
-                    "Error loading graph: node id is not specified!")
-            attrs = None
-            if "attrs" in node.keys():
-                attrs = json_dict_to_attrs(node["attrs"])
-            loaded_nodes.append((node_id, attrs))
-    else:
-        raise ReGraphError(
-            "Error loading graph: no nodes specified!")
-    loaded_edges = []
-    if "edges" in j_data.keys():
-        j_edges = j_data["edges"]
-        for edge in j_edges:
-            if "from" in edge.keys():
-                s_node = edge["from"]
-            else:
-                raise ReGraphError(
-                    "Error loading graph: edge source is not specified!")
-            if "to" in edge.keys():
-                t_node = edge["to"]
-            else:
-                raise ReGraphError(
-                    "Error loading graph: edge target is not specified!")
-            if "attrs" in edge.keys():
-                attrs = json_dict_to_attrs(edge["attrs"])
-                loaded_edges.append((s_node, t_node, attrs))
-            else:
-                loaded_edges.append((s_node, t_node))
+def networkx_from_json(j_data, directed=True):
+    """Create a NetworkX graph from a json-like dictionary."""
     if directed:
         graph = nx.DiGraph()
     else:
         graph = nx.Graph()
-    add_nodes_from(graph, loaded_nodes)
-    add_edges_from(graph, loaded_edges)
+    add_nodes_from(graph, load_nodes_from_json(j_data))
+    add_edges_from(graph, load_edges_from_json(j_data))
     return graph
 
 
-def load_graph(filename, directed=True):
-    """Load a graph from a JSON file.
+def load_networkx_graph(filename, directed=True):
+    """Load a NetworkX graph from a JSON file.
 
     Create a `networkx.(Di)Graph` object from
     a JSON representation stored in a file.
@@ -1238,7 +1189,7 @@ def load_graph(filename, directed=True):
     if os.path.isfile(filename):
         with open(filename, "r+") as f:
             j_data = json.loads(f.read())
-            return graph_from_json(j_data, directed)
+            return networkx_from_json(j_data, directed)
     else:
         raise ReGraphError(
             "Error loading graph: file '%s' does not exist!" %
