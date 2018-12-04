@@ -11,6 +11,11 @@ Tutorial
     * :ref:`hierarchy_tutorial`
         * :ref:`hierarchy_creation`
         * :ref:`rewriting_in_hierarchy`
+* :ref:`totorial_part3`
+    * :ref:`neo4j_tutorial`
+        * :ref:`neo4j_graph`
+        * :ref:`typed_neo4j_graph`
+        * :ref:`neo4j_hierarchy`
 
 
 .. _tutorial_part2:
@@ -25,7 +30,7 @@ If you missed the part of the ReGraph tutorial about primitive graph transformat
 .. _hierarchy_tutorial:
 
 ---------
-NetworkXHierarchy
+Graph hierarchies
 ---------
 
 A graph hierarchy is a directed acyclic graph where nodes are graphs with attributes and edges are
@@ -37,9 +42,9 @@ functionality implemented in ReGraph (for more details see the module :ref:`hier
 
 .. _hierarchy_creation:
 
-^^^^^^^^^^^^^^^^^^
-NetworkXHierarchy creation
-^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^
+Creating a hierarchy
+^^^^^^^^^^^^^^^^^^^^
 Create an empty hierarchy and add graphs to the hierarchy: ::
     
     import networkx as nx
@@ -608,4 +613,4 @@ This example can be found in the following :download:`script <_static/tutorial2_
 See more
 --------
 
-Module reference: :ref:`hierarchy`
+Module reference: :ref:`networks_hierarchy`
