@@ -58,8 +58,8 @@ master_doc = 'index'
 
 # General information about the project.
 project = 'ReGraph'
-copyright = '2017, Eugenia Oshurko, Yves-Stan Le Cornec'
-author = 'Eugenia Oshurko, Yves-Stan Le Cornec'
+copyright = '2018, Eugenia Oshurko, Florian Peron, Yves-Stan Le Cornec'
+author = 'Eugenia Oshurko, Florian Peron, Yves-Stan Le Cornec'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -154,7 +154,7 @@ latex_elements = {
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
     (master_doc, 'ReGraph.tex', 'ReGraph Documentation',
-     'Eugenia Oshurko, Yves-Stan Le Cornec', 'manual'),
+     'Eugenia Oshurko, Florian Peron, Yves-Stan Le Cornec', 'manual'),
 ]
 
 

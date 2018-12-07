@@ -16,12 +16,20 @@ from . import hierarchy
 class Neo4jGraph(object):
     """Class implementing Neo4j graph instance.
 
-    This class encapsulates neo4j.v1.GraphDatabase object
+    This class encapsulates neo4j.v1.GraphDatabase object.
+    It provides an interface for accessing graph sitting
+    in the DB. This interface is similar (in fact is
+    intended to be as similar as possible) to the
+    `networkx.DiGraph` object.
+
     Attributes
     ----------
-    _driver
-    _node_label
-    _edge_label
+    _driver :  neo4j.v1.GraphDatabase
+        Driver providing connection to a Neo4j database
+    _node_label : str
+        Label of nodes inducing the manipulated subgraph.
+    _edge_label : str
+        Type of relations used in the manipulated subgraph.
     """
 
     def __init__(self, driver=None, uri=None,
@@ -33,16 +41,20 @@ class Neo4jGraph(object):
 
         Parameters
         ----------
-        label : str ?
         driver : neo4j.v1.direct.DirectDriver, optional
+            Driver providing connection to a Neo4j database
         uri : str, optional
-            Uri for Neo4j database connection
+            Uri for a new Neo4j database connection (bolt)
         user : str, optional
-            Username for Neo4j database connection
+            Username for the Neo4j database connection
         password : str, optional
-            Password for Neo4j database connection
+            Password for the Neo4j database connection
         node_label : optional
+            Label of nodes inducing the subgraph to scope.
+            By default `"node"`.
         edge_label : optional
+            Type of relations inducing the subgraph to scope.
+            By default `"edge"`.
         unique_node_ids : bool, optional
             Flag, if True the uniqueness constraint on the property
             'id' of nodes is imposed, by default True
@@ -59,8 +71,8 @@ class Neo4jGraph(object):
 
         self._node_label = node_label
         self._edge_label = edge_label
-        # if unique_node_ids:
-        #     self.set_constraint('id')
+        if unique_node_ids:
+            self.set_constraint('id')
 
     def execute(self, query):
         """Execute a Cypher query."""
@@ -689,22 +701,57 @@ class Neo4jGraph(object):
 class TypedNeo4jGraph(hierarchy.Neo4jHierarchy):
     """Class implementing two level hiearchy.
 
+    This class encapsulates neo4j.v1.GraphDatabase object.
+    It provides an interface for accessing typed graphs
+    sitting in the Neo4j DB. Our system is assumed to
+    consist of two graphs (the data graph) and (the schema graph)
+    connected with a graph homomorphisms (defining typing of
+    the data graph by the schema graph).
+
+    Attributes
+    ----------
+    _driver :  neo4j.v1.GraphDatabase
+        Driver providing connection to a Neo4j database
+    _graph_label : str
+    _typing_label : str
+    _graph_edge_label : str
+    _graph_typing_label : str
+    _schema_node_label : str
+        Label of nodes inducing the schema graph.
+    _data_node_label : str
+
     Top level represents a data instance, while bottom level represents
     a graphical schema.
     """
 
-    def __init__(self, uri=None, user=None, password=None, driver=None,
-                 schema_graph=None, data_graph=None, typing=None, clear=False):
+    def __init__(self, 
+                 uri=None, user=None, password=None, driver=None,
+                 schema_graph=None, data_graph=None, typing=None, clear=False,
+                 graph_label="graph",
+                 typing_label="homomorphism",
+                 graph_edge_label="edge",
+                 graph_typing_label="typing",
+                 schema_node_label="type", data_node_label="node"):
         """Initialize driver.
 
         Parameters:
         ----------
-        uri : str
+        uri : str, optional
             Uri of bolt listener, for example 'bolt://127.0.0.1:7687'
-        user : str
+        user : str, optional
             Neo4j database user id
-        password : str
+        password : str, optional
             Neo4j database password
+        driver : neo4j.v1.direct.DirectDriver, optional
+        graph_label : str, optional
+            Label to use for skeleton nodes representing graphs.
+        typing_label : str, optional
+            Relation type to use for skeleton edges
+            representing homomorphisms.
+        graph_edge_label : str, optional
+            Relation type to use for all graph edges.
+        graph_typing_label : str, optional
+            Relation type to use for edges encoding homomorphisms.
         schema_graph : dict, optional
             Schema graph to initialize the TypedGraph in JSON representation:
             {"nodes": <networkx_like_nodes>, "edges": <networkx_like_edges>}.
@@ -714,8 +761,8 @@ class TypedNeo4jGraph(hierarchy.Neo4jHierarchy):
             {"nodes": <networkx_like_nodes>, "edges": <networkx_like_edges>}.
             By default is empty.
         typing : dict, optional
-            Dictionary contaning typing of data nodes by schema nodes. By default is
-            empty.
+            Dictionary contaning typing of data nodes by schema nodes.
+            By default is empty.
         """
 
         if data_graph is None:
@@ -734,23 +781,25 @@ class TypedNeo4jGraph(hierarchy.Neo4jHierarchy):
 
         self._graph_label = "graph"
         self._typing_label = "homomorphism"
-        self._relation_label = "binaryRelation"
 
-        self._data_label = "node"
-        self._schema_label = "type"
+        self._graph_edge_label = "edge"
+        self._graph_typing_label = "typing"
+
+        self._schema_node_label = "type"
+        self._data_node_label = "node"
 
         # create data/schema nodes
         skeleton = self._access_graph(
             self._graph_label, self._typing_label)
         skeleton_nodes = skeleton.nodes()
-        if self._data_label not in skeleton_nodes:
+        if self._data_node_label not in skeleton_nodes:
             self.add_graph(
-                self._data_label,
+                self._data_node_label,
                 node_list=data_graph["nodes"],
                 edge_list=data_graph["edges"])
         else:
             if len(data_graph["nodes"]) > 0:
-                old_data = self._access_graph(self._data_label)
+                old_data = self._access_graph(self._data_node_label)
                 if len(old_data.nodes()) > 0:
                     warnings.warn(
                         "Data graph was non-empty and was overwritten with "
@@ -760,14 +809,14 @@ class TypedNeo4jGraph(hierarchy.Neo4jHierarchy):
                 old_data.add_nodes_from(data_graph["nodes"])
                 old_data.add_edges_from(data_graph["edges"])
 
-        if self._schema_label not in skeleton_nodes:
+        if self._schema_node_label not in skeleton_nodes:
             self.add_graph(
-                self._schema_label,
+                self._schema_node_label,
                 node_list=schema_graph["nodes"],
                 edge_list=schema_graph["edges"])
         else:
             if len(schema_graph["nodes"]) > 0:
-                old_schema = self._access_graph(self._schema_label)
+                old_schema = self._access_graph(self._schema_node_label)
                 if len(old_schema.nodes()) > 0:
                     warnings.warn(
                         "Schema graph was non-empty and was overwritten with "
@@ -777,22 +826,22 @@ class TypedNeo4jGraph(hierarchy.Neo4jHierarchy):
                 old_schema.add_nodes_from(schema_graph["nodes"])
                 old_schema.add_edges_from(schema_graph["edges"])
 
-        # if (self._data_label, self._schema_label) not in skeleton.edges():
-        self.add_typing(self._data_label, self._schema_label, typing)
+        # if (self._data_node_label, self._schema_node_label) not in skeleton.edges():
+        self.add_typing(self._data_node_label, self._schema_node_label, typing)
 
     def find_data_matching(self, pattern,
                            pattern_typing=None, nodes=None):
         return self.find_matching(
-            self._data_label,
+            self._data_node_label,
             pattern,
             pattern_typing={
-                self._schema_label: pattern_typing
+                self._schema_node_label: pattern_typing
             },
             nodes=nodes)
 
     def find_schema_matching(self, pattern, nodes=None):
         return self.find_matching(
-            self._schema_label,
+            self._schema_node_label,
             pattern,
             nodes=nodes)
 
@@ -801,36 +850,36 @@ class TypedNeo4jGraph(hierarchy.Neo4jHierarchy):
         if rhs_typing is None:
             rhs_typing = dict()
         return self.rewrite(
-            self._data_label,
+            self._data_node_label,
             rule=rule,
             instance=instance,
             rhs_typing={
-                self._schema_label: rhs_typing
+                self._schema_node_label: rhs_typing
             },
             strict=strict)
 
     def rewrite_schema(self, rule, instance,
                        p_typing=None, strict=False):
         return self.rewrite(
-            self._schema_label,
+            self._schema_node_label,
             rule=rule,
             instance=instance,
             p_typing={
-                self._data_label: p_typing
+                self._data_node_label: p_typing
             },
             strict=strict)
 
     def rename_schema_node(self, node_id, new_node_id):
-        self.rename_node(self._schema_label, node_id, new_node_id)
+        self.rename_node(self._schema_node_label, node_id, new_node_id)
 
     def rename_data_node(self, node_id, new_node_id):
-        self.rename_node(self._data_label, node_id, new_node_id)
+        self.rename_node(self._data_node_label, node_id, new_node_id)
 
     def get_data(self):
-        return self.get_graph(self._data_label)
+        return self.get_graph(self._data_node_label)
 
     def get_schema(self):
-        return self.get_graph(self._schema_label)
+        return self.get_graph(self._schema_node_label)
 
     def get_data_nodes(self):
         data = self.get_data()
@@ -849,32 +898,32 @@ class TypedNeo4jGraph(hierarchy.Neo4jHierarchy):
         return schema.edges()
 
     def get_node_type(self, node_id):
-        t = self.node_type(self._data_label, node_id)
+        t = self.node_type(self._data_node_label, node_id)
         print(t)
-        return t[self._schema_label]
+        return t[self._schema_node_label]
 
     def remove_data_node_attrs(self, node_id, attrs):
-        g = self._access_graph(self._data_label)
+        g = self._access_graph(self._data_node_label)
         g.remove_node_attrs(node_id, attrs)
 
     def remove_schema_node_attrs(self, node_id, attrs):
-        g = self._access_graph(self._schema_label)
+        g = self._access_graph(self._schema_node_label)
         g.remove_node_attrs(node_id, attrs)
 
     def add_data_node_attrs(self, node_id, attrs):
-        g = self._access_graph(self._data_label)
+        g = self._access_graph(self._data_node_label)
         g.add_node_attrs(node_id, attrs)
 
     def add_schema_node_attrs(self, node_id, attrs):
-        g = self._access_graph(self._schema_label)
+        g = self._access_graph(self._schema_node_label)
         g.add_node_attrs(node_id, attrs)
 
     def get_data_node(self, node_id):
-        g = self._access_graph(self._data_label)
+        g = self._access_graph(self._data_node_label)
         return g.get_node(node_id)
 
     def get_schema_node(self, node_id):
-        g = self._access_graph(self._schema_label)
+        g = self._access_graph(self._schema_node_label)
         return g.get_node(node_id)
 
     @classmethod

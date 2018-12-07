@@ -11,11 +11,11 @@ Tutorial
     * :ref:`hierarchy_tutorial`
         * :ref:`hierarchy_creation`
         * :ref:`rewriting_in_hierarchy`
-* :ref:`totorial_part3`
+* :ref:`tutorial_part3`
     * :ref:`neo4j_tutorial`
-        * :ref:`neo4j_graph`
-        * :ref:`typed_neo4j_graph`
-        * :ref:`neo4j_hierarchy`
+        * :ref:`neo4j_graph_tutorial`
+        * :ref:`typed_neo4j_graph_tutorial`
+        * :ref:`neo4j_hierarchy_tutorial`
 
 
 .. _tutorial_part2:

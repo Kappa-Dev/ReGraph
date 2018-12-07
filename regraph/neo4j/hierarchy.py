@@ -21,18 +21,43 @@ from regraph.utils import (normalize_attrs,
 
 
 class Neo4jHierarchy(object):
-    """Class implementing neo4j hierarchy driver."""
+    """Class implementing Neo4j-based graph hierarchy.
+
+    Skeleton + fused data graph
+
+    Attributes
+    ----------
+    _driver : neo4j.v1.GraphDatabase
+        Driver providing connection to a Neo4j database.
+    _graph_label : str
+        Label to use for skeleton nodes representing graphs.
+    _typing_label : str
+        Relation type to use for skeleton edges
+        representing homomorphisms.
+    _relation_label : str
+        Relation type to use for skeleton edges
+        representing relations.
+    _graph_edge_label : str
+        Relation type to use for all graph edges.
+    _graph_typing_label : str
+        Relation type to use for edges encoding homomorphisms.
+    _graph_relation_label : str
+        Relation type to use for edges encoding relations.
+    """
 
     # factories of node/edge dictionaries
     graph_dict_factory = dict
-    # rule_dict_factory = dict
     typing_dict_factory = dict
-    # rule_lhs_typing_dict_factory = dict
-    # rule_rhs_typing_dict_factory = dict
     rel_dict_factory = dict
 
     def __init__(self, uri=None, user=None, password=None,
-                 driver=None):
+                 driver=None,
+                 graph_label="graph",
+                 typing_label="homomorphism",
+                 relation_label="binaryRelation",
+                 graph_edge_label="edge",
+                 graph_typing_label="typing",
+                 graph_relation_label="relation"):
         """Initialize driver.
 
         Parameters
@@ -45,6 +70,21 @@ class Neo4jHierarchy(object):
         password : str, optional
             Password for Neo4j database connection
         driver : neo4j.v1.direct.DirectDriver, optional
+            Driver providing connection to a Neo4j database.
+        graph_label : str, optional
+            Label to use for skeleton nodes representing graphs.
+        typing_label : str, optional
+            Relation type to use for skeleton edges
+            representing homomorphisms.
+        relation_label : str, optional
+            Relation type to use for skeleton edges
+            representing relations.
+        graph_edge_label : str, optional
+            Relation type to use for all graph edges.
+        graph_typing_label : str, optional
+            Relation type to use for edges encoding homomorphisms.
+        graph_relation_label : str, optional
+            Relation type to use for edges encoding relations.
         """
         # The following idea is cool but it's not so easy:
         # as we have two types of nodes in the hierarchy:
@@ -62,13 +102,16 @@ class Neo4jHierarchy(object):
         else:
             self._driver = driver
 
-        self._graph_label = "graph"
-        self._typing_label = "homomorphism"
-        self._relation_label = "binaryRelation"
+        self._graph_label = graph_label
+        self._typing_label = typing_label
+        self._relation_label = relation_label
+        self._graph_edge_label = graph_edge_label
+        self._graph_typing_label = graph_typing_label
+        self._graph_relation_label = graph_relation_label
 
-        # query = "CREATE " + cypher.constraint_query(
-        #     'n', self._graph_label, 'id')
-        # self.execute(query)
+        query = "CREATE " + cypher.constraint_query(
+            'n', self._graph_label, 'id')
+        self.execute(query)
 
     def __str__(self):
         """String representation of the hierarchy."""
