@@ -897,6 +897,10 @@ class TypedNeo4jGraph(hierarchy.Neo4jHierarchy):
         schema = self.get_schema()
         return schema.edges()
 
+    def get_data_typing(self):
+        return self.get_typing(
+            self._data_node_label, self._schema_node_label)
+
     def get_node_type(self, node_id):
         t = self.node_type(self._data_node_label, node_id)
         print(t)
