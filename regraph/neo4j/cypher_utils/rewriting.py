@@ -734,6 +734,7 @@ def find_matching(pattern, node_label, edge_label,
     edge_label
         Label of the edges to match, default is 'edge'
     """
+    # normalize pattern typing
     pattern_nodes = list(pattern.nodes())
 
     query =\
