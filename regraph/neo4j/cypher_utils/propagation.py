@@ -181,9 +181,8 @@ def check_consistency(tx, source, target):
     )
     query += (
         "// match all the predecessors of 's' and successors of 't'\n"
-        "MATCH (pred), (suc)\n" +
-        "WHERE (pred)-[:typing*0..]->(s)\n" +
-        "\tAND (t)-[:typing*0..]->(suc)\n" +
+        "MATCH (pred)-[:typing*0..]->(s), (t)-[:typing*0..]->(suc) \n"
+        "WHERE NOT pred = s AND NOT suc = t\n" +
         "WITH s, t, collect(DISTINCT pred) as pred_list, " +
         "collect(DISTINCT suc) as suc_list\n"
     )
@@ -205,7 +204,6 @@ def check_consistency(tx, source, target):
         "WHERE new_typing IS NULL\n" +
         "RETURN pred_label, suc_label, s_id, t_id\n"
     )
-
     result = tx.run(query)
 
     missing_typing = []

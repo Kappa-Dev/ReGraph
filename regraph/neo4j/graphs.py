@@ -76,7 +76,6 @@ class Neo4jGraph(object):
 
     def execute(self, query):
         """Execute a Cypher query."""
-        # print(query)
         with self._driver.session() as session:
             if len(query) > 0:
                 result = session.run(query)
@@ -562,7 +561,6 @@ class Neo4jGraph(object):
                 edge_label=self._edge_label,
                 nodes=nodes,
                 pattern_typing=pattern_typing)
-            print(query)
             result = self.execute(query)
             instances = list()
 
@@ -781,6 +779,7 @@ class TypedNeo4jGraph(hierarchy.Neo4jHierarchy):
 
         self._graph_label = "graph"
         self._typing_label = "homomorphism"
+        self._relation_label = None
 
         self._graph_edge_label = "edge"
         self._graph_typing_label = "typing"
@@ -789,54 +788,57 @@ class TypedNeo4jGraph(hierarchy.Neo4jHierarchy):
         self._data_node_label = "node"
 
         # create data/schema nodes
-        skeleton = self._access_graph(
-            self._graph_label, self._typing_label)
-        skeleton_nodes = skeleton.nodes()
-        if self._data_node_label not in skeleton_nodes:
-            self.add_graph(
-                self._data_node_label,
-                node_list=data_graph["nodes"],
-                edge_list=data_graph["edges"])
-        else:
-            if len(data_graph["nodes"]) > 0:
-                old_data = self._access_graph(self._data_node_label)
-                if len(old_data.nodes()) > 0:
-                    warnings.warn(
-                        "Data graph was non-empty and was overwritten with "
-                        "provided nodes and edges!", ReGraphWarning
-                    )
-                old_data._clear()
-                old_data.add_nodes_from(data_graph["nodes"])
-                old_data.add_edges_from(data_graph["edges"])
+        # skeleton = self._access_graph(
+        #     self._graph_label, self._typing_label)
+        # skeleton_nodes = skeleton.nodes()
+        # if self._data_node_label not in skeleton_nodes:
+        #     self.add_graph(
+        #         self._data_node_label,
+        #         node_list=data_graph["nodes"],
+        #         edge_list=data_graph["edges"])
+        # else:
+        #     if len(data_graph["nodes"]) > 0:
+        #         old_data = self._access_graph(self._data_node_label)
+        #         if len(old_data.nodes()) > 0:
+        #             warnings.warn(
+        #                 "Data graph was non-empty and was overwritten with "
+        #                 "provided nodes and edges!", ReGraphWarning
+        #             )
+        #         old_data._clear()
+        #         old_data.add_nodes_from(data_graph["nodes"])
+        #         old_data.add_edges_from(data_graph["edges"])
 
-        if self._schema_node_label not in skeleton_nodes:
-            self.add_graph(
-                self._schema_node_label,
-                node_list=schema_graph["nodes"],
-                edge_list=schema_graph["edges"])
-        else:
-            if len(schema_graph["nodes"]) > 0:
-                old_schema = self._access_graph(self._schema_node_label)
-                if len(old_schema.nodes()) > 0:
-                    warnings.warn(
-                        "Schema graph was non-empty and was overwritten with "
-                        "provided nodes and edges!", ReGraphWarning
-                    )
-                old_schema._clear()
-                old_schema.add_nodes_from(schema_graph["nodes"])
-                old_schema.add_edges_from(schema_graph["edges"])
+        # if self._schema_node_label not in skeleton_nodes:
+        #     self.add_graph(
+        #         self._schema_node_label,
+        #         node_list=schema_graph["nodes"],
+        #         edge_list=schema_graph["edges"])
+        # else:
+        #     if len(schema_graph["nodes"]) > 0:
+        #         old_schema = self._access_graph(self._schema_node_label)
+        #         if len(old_schema.nodes()) > 0:
+        #             warnings.warn(
+        #                 "Schema graph was non-empty and was overwritten with "
+        #                 "provided nodes and edges!", ReGraphWarning
+        #             )
+        #         old_schema._clear()
+        #         old_schema.add_nodes_from(schema_graph["nodes"])
+        #         old_schema.add_edges_from(schema_graph["edges"])
 
-        # if (self._data_node_label, self._schema_node_label) not in skeleton.edges():
-        self.add_typing(self._data_node_label, self._schema_node_label, typing)
+        # # if (self._data_node_label, self._schema_node_label) not in skeleton.edges():
+        # self.add_typing(self._data_node_label, self._schema_node_label, typing)
 
     def find_data_matching(self, pattern,
                            pattern_typing=None, nodes=None):
+        schema_typing = None
+        if pattern_typing is not None:
+            schema_typing = {
+                self._schema_node_label: pattern_typing
+            }
         return self.find_matching(
             self._data_node_label,
             pattern,
-            pattern_typing={
-                self._schema_node_label: pattern_typing
-            },
+            pattern_typing=schema_typing,
             nodes=nodes)
 
     def find_schema_matching(self, pattern, nodes=None):
@@ -903,7 +905,6 @@ class TypedNeo4jGraph(hierarchy.Neo4jHierarchy):
 
     def get_node_type(self, node_id):
         t = self.node_type(self._data_node_label, node_id)
-        print(t)
         return t[self._schema_node_label]
 
     def remove_data_node_attrs(self, node_id, attrs):
@@ -930,77 +931,80 @@ class TypedNeo4jGraph(hierarchy.Neo4jHierarchy):
         g = self._access_graph(self._schema_node_label)
         return g.get_node(node_id)
 
-    @classmethod
-    def from_json(cls, uri=None, user=None, password=None,
-                  driver=None, json_data=None, ignore=None, clear=False):
-        """Create hierarchy object from JSON representation.
+    # @classmethod
+    # def from_json(cls, uri=None, user=None, password=None,
+    #               driver=None, json_data=None, ignore=None, clear=False):
+    #     """Create hierarchy object from JSON representation.
 
-        Parameters
-        ----------
+    #     Parameters
+    #     ----------
 
-        uri : str, optional
-            Uri for Neo4j database connection
-        user : str, optional
-            Username for Neo4j database connection
-        password : str, optional
-            Password for Neo4j database connection
-        driver : neo4j.v1.direct.DirectDriver, optional
-            DB driver object
-        json_data : dict, optional
-            JSON-like dict containing representation of a hierarchy
-        ignore : dict, optional
-            Dictionary containing components to ignore in the process
-            of converting from JSON, dictionary should respect the
-            following format:
-            {
-                "graphs": <collection of ids of graphs to ignore>,
-                "rules": <collection of ids of rules to ignore>,
-                "typing": <collection of tuples containing typing
-                    edges to ignore>,
-                "rule_typing": <collection of tuples containing rule
-                    typing edges to ignore>>,
-                "relations": <collection of tuples containing
-                    relations to ignore>,
-            }
-        directed : bool, optional
-            True if graphs from JSON representation should be loaded as
-            directed graphs, False otherwise, default value -- True
+    #     uri : str, optional
+    #         Uri for Neo4j database connection
+    #     user : str, optional
+    #         Username for Neo4j database connection
+    #     password : str, optional
+    #         Password for Neo4j database connection
+    #     driver : neo4j.v1.direct.DirectDriver, optional
+    #         DB driver object
+    #     json_data : dict, optional
+    #         JSON-like dict containing representation of a hierarchy
+    #     ignore : dict, optional
+    #         Dictionary containing components to ignore in the process
+    #         of converting from JSON, dictionary should respect the
+    #         following format:
+    #         {
+    #             "graphs": <collection of ids of graphs to ignore>,
+    #             "rules": <collection of ids of rules to ignore>,
+    #             "typing": <collection of tuples containing typing
+    #                 edges to ignore>,
+    #             "rule_typing": <collection of tuples containing rule
+    #                 typing edges to ignore>>,
+    #             "relations": <collection of tuples containing
+    #                 relations to ignore>,
+    #         }
+    #     directed : bool, optional
+    #         True if graphs from JSON representation should be loaded as
+    #         directed graphs, False otherwise, default value -- True
 
-        Returns
-        -------
-        hierarchy : regraph.neo4j.TypedGraph
-        """
-        g = cls(
-            uri=uri, user=user, password=password, driver=driver)
+    #     Returns
+    #     -------
+    #     hierarchy : regraph.neo4j.TypedGraph
+    #     """
+    #     print("Started creating object")
+    #     g = cls(
+    #         uri=uri, user=user, password=password, driver=driver)
+    #     print("Finished creating object")
 
-        if clear is True:
-            g._clear()
+    #     if clear is True:
+    #         g._clear()
 
-        # add graphs
-        for graph_data in json_data["graphs"]:
-            if graph_data["id"] in ["node", "type"]:
-                if "attrs" not in graph_data.keys():
-                    attrs = dict()
-                else:
-                    attrs = attrs_from_json(graph_data["attrs"])
-                graph = g.get_graph(graph_data["id"])
-                graph.from_json(
-                    driver=g._driver,
-                    j_data=graph_data["graph"],
-                    node_label=graph_data["id"])
+    #     print("Started filling up graphs")
+    #     # add graphs
+    #     for graph_data in json_data["graphs"]:
+    #         if graph_data["id"] in ["node", "type"]:
+    #             if "attrs" not in graph_data.keys():
+    #                 attrs = dict()
+    #             else:
+    #                 attrs = attrs_from_json(graph_data["attrs"])
+    #             g.add_graph(
+    #                 graph_data["id"],)
+    #     print("Finished filling up graphs")
 
-        # add typing
-        for typing_data in json_data["typing"]:
-            if typing_data["from"] == "node" and\
-               typing_data["to"] == "type":
-                if "attrs" not in typing_data.keys():
-                    attrs = dict()
-                else:
-                    attrs = attrs_from_json(typing_data["attrs"])
-                g.remove_typing("node", "type")
-                g.add_typing(
-                    typing_data["from"],
-                    typing_data["to"],
-                    typing_data["mapping"],
-                    attrs)
-        return g
+    #     print("Started additng typing")
+    #     # add typing
+    #     for typing_data in json_data["typing"]:
+    #         if typing_data["from"] == "node" and\
+    #            typing_data["to"] == "type":
+    #             if "attrs" not in typing_data.keys():
+    #                 attrs = dict()
+    #             else:
+    #                 attrs = attrs_from_json(typing_data["attrs"])
+    #             g.remove_typing("node", "type")
+    #             g.add_typing(
+    #                 typing_data["from"],
+    #                 typing_data["to"],
+    #                 typing_data["mapping"],
+    #                 attrs)
+    #     print("Finished addiing typing")
+    #     return g

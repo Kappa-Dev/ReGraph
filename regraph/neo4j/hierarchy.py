@@ -279,7 +279,6 @@ class Neo4jHierarchy(object):
             with self._driver.session() as session:
                 tx = session.begin_transaction()
                 for u, v in mapping.items():
-                    print(u, v)
                     query = (
                         cypher.match_nodes(
                             {
@@ -292,7 +291,6 @@ class Neo4jHierarchy(object):
                             target_var="n_" + v + "_t",
                             edge_label="typing",
                             attrs=tmp_attrs))
-                    print(query)
                     tx.run(query)
                 tx.commit()
 
