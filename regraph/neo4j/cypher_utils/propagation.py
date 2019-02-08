@@ -9,7 +9,7 @@ from . import rewriting
 
 # def check_functional()
 
-def get_typing(domain, codomain, typing_label):
+def get_typing(domain, codomain, typing_label, attrs=None):
     query = (
         "MATCH (n:{})-[:{}]-(m:{})\n".format(
             domain, typing_label, codomain) +
@@ -19,11 +19,12 @@ def get_typing(domain, codomain, typing_label):
 
 
 def set_intergraph_edge(domain, codomain, domain_node,
-                        codomain_node, typing_label):
+                        codomain_node, typing_label,
+                        attrs=None):
     query = (
         "MATCH (n:{} {{ id: '{}' }}), (m:{} {{ id: '{}' }})\n".format(
             domain, domain_node, codomain, codomain_node) +
-        "MERGE (n)-[:{}]->(m)".format(typing_label)
+        "MERGE (n)-[:{}  {{}}]->(m)".format(typing_label, generic.generate_attributes(attrs))
     )
     return query
 
@@ -495,6 +496,7 @@ def add_edge_propagation_query(graph_id, successor_id):
     )
     return query
 
+
 def remove_targeted_typing(rewritten_graph):
     query = (
         "MATCH (m:{})<-[r:_to_remove]-(n)-[path:typing*1..]->(m)\n".format(rewritten_graph) +
@@ -505,6 +507,7 @@ def remove_targeted_typing(rewritten_graph):
     )
     return query
 
+
 def remove_targetting(rewritten_graph):
     query = (
         "MATCH ()-[rel:_to_remove]->(:{})\n".format(rewritten_graph) +
@@ -512,6 +515,7 @@ def remove_targetting(rewritten_graph):
 
     )
     return query
+
 
 def remove_tmp_typing(rewritten_graph, direction="successors"):
     if direction == "predecessors":

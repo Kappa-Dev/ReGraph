@@ -767,7 +767,7 @@ def find_matching(pattern, node_label, edge_label,
             query += "WHERE "
             where_appeared = True
         else:
-            query += "AND"
+            query += "AND "
         query +=\
             " AND ".join(
                 "{}.id IN [{}]".format(
