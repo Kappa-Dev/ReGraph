@@ -274,7 +274,7 @@ class NetworkXHierarchy(nx.DiGraph):
             elif self.is_graph(node):
                 json_data["graphs"].append({
                     "id": node,
-                    "graph": networkx_to_json(self.node[node]["graph"]),
+                    "graph": graph_to_json(self.node[node]["graph"]),
                     "attrs": attrs_to_json(self.node[node]["attrs"])
                 })
             else:
@@ -537,6 +537,7 @@ class NetworkXHierarchy(nx.DiGraph):
         if graph_id not in self.typing.keys():
             self.typing[graph_id] = dict()
         return
+
 
     def add_empty_graph(self, graph_id, attrs):
         if self.directed is True:
