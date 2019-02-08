@@ -71,6 +71,7 @@ class Neo4jGraph(object):
 
         self._node_label = node_label
         self._edge_label = edge_label
+        self.unique_node_ids = unique_node_ids
         if unique_node_ids:
             self.set_constraint('id')
 
@@ -91,6 +92,28 @@ class Neo4jGraph(object):
         query = cypher.clear_graph(self._node_label)
         result = self.execute(query)
         return result
+
+    @classmethod
+    def copy(cls, graph, node_label, edge_label="edge"):
+        # copy all the nodes
+        copy_nodes_q = (
+            "MATCH (n:{}) CREATE (n1:{}) SET n1=n\n".format(
+                graph._node_label, node_label)
+        )
+        graph.execute(copy_nodes_q)
+        copy_edges_q = (
+            "MATCH (n:{})-[r:{}]->(m:{}), (n1:{}), (m1:{}) \n".format(
+                graph._node_label, graph._edge_label, graph._node_label,
+                node_label, node_label) +
+            "WHERE n1.id=n.id AND m1.id=m.id \n" +
+            "MERGE (n1)-[r1:{}]->(m1) SET r1=r\n".format(edge_label)
+        )
+        graph.execute(copy_edges_q)
+        return cls(
+            driver=graph._driver,
+            node_label=node_label,
+            edge_label=edge_label,
+            unique_node_ids=graph.unique_node_ids)
 
     def close(self):
         """Close connection to the database."""
