@@ -230,6 +230,83 @@ class Neo4jHierarchy(object):
         if edge_list is not None:
             g.add_edges_from(edge_list)
 
+    def duplicate_subgraph(self, graph_dict, attach_graphs=[]):
+        # copy graphs
+        for original, new in graph_dict.items():
+            self.copy_graph(original, new, attach_graphs)
+
+        # copy typing between them
+        graphs_to_copy = list(graph_dict.values())
+        visited = set()
+        for g in graphs_to_copy:
+            preds = [
+                p for p in self.predecessors(g)
+                if p in graphs_to_copy and (p, g) not in visited]
+            sucs = [
+                p for p in self.successors(g)
+                if p in graphs_to_copy and (g, p) not in visited]
+            for s in sucs:
+                # Remember that copy typing needs pairs of graphs to be equal
+                self.add_typing(
+                    graphs_to_copy[g], graphs_to_copy[s],
+                    self.get_typing(g, s))
+                # self.copy_typing(g, s, graphs_to_copy[g], graphs_to_copy[s])
+                visited.add((g, s))
+            for p in preds:
+                # Remember that copy typing needs pairs of graphs to be equal
+                self.add_typing(
+                    graphs_to_copy[p], graphs_to_copy[g],
+                    self.get_typing(p, g))
+                visited.add((p, g))
+
+    def copy_graph(self, graph_id, new_graph_id, attach_graphs=[]):
+        """Duplicate a graph in a hierarchy."""
+        self.add_graph(new_graph_id)
+        copy_nodes_q = (
+            "MATCH (n:{}) CREATE (n1:{}) SET n1=n\n".format(
+                graph_id, new_graph_id)
+        )
+        self.execute(copy_nodes_q)
+        copy_edges_q = (
+            "MATCH (n:{})-[r:{}]->(m:{}), (n1:{}), (m1:{}) \n".format(
+                graph_id, self._graph_edge_label, graph_id,
+                new_graph_id, new_graph_id) +
+            "WHERE n1.id=n.id AND m1.id=m.id \n" +
+            "MERGE (n1)-[r1:{}]->(m1) SET r1=r\n".format(
+                self._graph_edge_label)
+        )
+        self.execute(copy_edges_q)
+        # copy all typings
+        for g in attach_graphs:
+            self.add_typing(new_graph_id, g, self.get_typing(graph_id, g))
+            # copy_suc_typing_q = (
+            #     "MATCH (n:{})-[r:{}]->(m:{}), (n1:{}) \n".format(
+            #         graph_id, self._graph_typing_label, g, new_graph_id) +
+            #     "WHERE n1.id = n.id \n" +
+            #     "MERGE (n1)-[r1:{}]->(m) SET r1=r\n".format(
+            #         self._graph_typing_label)
+            # )
+            # self.execute(copy_suc_typing_q)
+            # copy_pred_typing_q = (
+            #     "MATCH (n:{})<-[r:{}]-(m:{}), (n1:{}) \n".format(
+            #         graph_id, self._graph_typing_label, g, new_graph_id) +
+            #     "WHERE n1.id = n.id \n" +
+            #     "MERGE (n1)<-[r1:{}]-(m) SET r1=r\n".format(
+            #         self._graph_typing_label)
+            # )
+            # self.execute(copy_pred_typing_q)
+
+    # def copy_typing(self, original_s, original_t, new_s, new_t):
+    #     query = (
+    #         "MATCH (s:{})-[r:{}]->(t:{}), (s1:{}), (t1:{})\n".format(
+    #             original_s, self._graph_typing_label, original_t,
+    #             new_s, new_t) +
+    #         "WHERE s1.id = s.id AND t1.id = t.id\n" +
+    #         "MERGE (s1)-[r1:{}]->(t1) SET r1 = r\n".format(
+    #             self._graph_typing_label)
+    #     )
+    #     self.execute(query)
+
     def add_empty_graph(self, graph_id, attrs=None):
         """Add empty graph to the hierarchy."""
         self.add_graph(graph_id, attrs=attrs)
@@ -280,16 +357,9 @@ class Neo4jHierarchy(object):
                 tx = session.begin_transaction()
                 for u, v in mapping.items():
                     query = (
-                        cypher.match_nodes(
-                            {
-                                "n_" + u + "_s": u,
-                                "n_" + v + "_t": v
-                            }) + "\n" +
-                        cypher.add_edge(
-                            edge_var="typ_" + u + "_" + v,
-                            source_var="n_" + u + "_s",
-                            target_var="n_" + v + "_t",
-                            edge_label="typing",
+                        cypher.set_intergraph_edge(
+                            source, target,
+                            u, v, "typing",
                             attrs=tmp_attrs))
                     tx.run(query)
                 tx.commit()
@@ -1180,8 +1250,9 @@ class Neo4jHierarchy(object):
         return copy.deepcopy(hierarchy)
 
     @classmethod
-    def from_json(cls, uri=None, user=None, password=None,
-                  driver=None, json_data=None, ignore=None, clear=False):
+    def from_json(cls, uri=None, user=None, Neo4jHierarchy=None,
+                  driver=None, json_data=None, ignore=None,
+                  clear=False):
         """Create hierarchy object from JSON representation.
 
         Parameters
