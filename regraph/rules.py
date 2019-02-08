@@ -67,7 +67,7 @@ class Rule(object):
         values -- nodes of `rhs`.
     """
 
-    def __init__(self, p, lhs, rhs, p_lhs=None, p_rhs=None):
+    def __init__(self, p, lhs, rhs=None, p_lhs=None, p_rhs=None):
         """Rule initialization.
 
         A rule is initialized with p, lhs, rhs graphs, and
@@ -99,6 +99,9 @@ class Rule(object):
         else:
             check_homomorphism(p, lhs, p_lhs)
             self.p_lhs = copy.deepcopy(p_lhs)
+
+        if not rhs:
+            rhs = p
 
         if not p_rhs:
             self.p_rhs = identity(p, rhs)

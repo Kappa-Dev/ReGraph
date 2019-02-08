@@ -53,7 +53,7 @@ def merge_attrs(original_dict, attrs):
     return
 
 
-def add_node(graph, node_id, attrs=None):
+def add_node(graph, node_id, attrs=dict()):
     """Add a node to a graph.
 
     Parameters
@@ -83,7 +83,7 @@ def add_node(graph, node_id, attrs=None):
         else:
             raise GraphError("Node '%s' already exists!" % node_id)
     elif isinstance(graph, Neo4jGraph):
-        graph.add_node(node_id, **attrs)
+        graph.add_node(node_id, attrs)
 
 
 def add_nodes_from(graph, node_list):
