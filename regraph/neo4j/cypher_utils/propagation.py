@@ -24,7 +24,7 @@ def set_intergraph_edge(domain, codomain, domain_node,
     query = (
         "MATCH (n:{} {{ id: '{}' }}), (m:{} {{ id: '{}' }})\n".format(
             domain, domain_node, codomain, codomain_node) +
-        "MERGE (n)-[:{}  {{}}]->(m)".format(typing_label, generic.generate_attributes(attrs))
+        "MERGE (n)-[:{}  {{ {} }}]->(m)".format(typing_label, generic.generate_attributes(attrs))
     )
     return query
 
@@ -120,6 +120,7 @@ def check_homomorphism(tx, domain, codomain, total=True):
         "RETURN n_id, m_id, invalid\n"
     )
 
+    # print(query3)
     result = tx.run(query3)
     invalid_typings = []
     for record in result:
@@ -154,7 +155,7 @@ def check_homomorphism(tx, domain, codomain, total=True):
         "WHERE invalid <> 0\n" +
         "RETURN n_id, m_id, x_id, y_id, invalid\n"
     )
-
+    # print(query3)
     result = tx.run(query4)
     invalid_edges = []
     for record in result:
@@ -283,6 +284,112 @@ def check_tmp_consistency(tx, source, target, typing_label):
         return False
 
 
+def propagate_clones(tx, graph_id, predecessor_id):
+    # query_n = (
+    #     "// Matching of the nodes to clone in '{}'\n".format(predecessor_id) +
+    #     "OPTIONAL MATCH (node_to_clone:{})-[t:typing]->(n:{})\n".format(
+    #         predecessor_id, graph_id) +
+    #     "WITH node_to_clone, collect(n) as sucs, collect(t) as typ_sucs, "
+    #     "count(n) as number_of_img\n" +
+    #     "WHERE number_of_img >= 2 AND node_to_clone IS NOT NULL\n" +
+    #     "RETURN node_to_clone, number_of_img - 1 as number_of_clones"
+    # )
+    # result = tx.run(query_n)
+    # clone_count = dict()
+    # for record in result:
+    #     clone_count[record['node_to_clone']['id']] =\
+    #         record['number_of_clones']
+
+    query_n = (
+        "// Matching of the nodes to clone in '{}'\n".format(predecessor_id) +
+        "OPTIONAL MATCH (node_to_clone:{})-[t:typing]->(n:{})\n".format(
+            predecessor_id, graph_id) +
+        "WITH collect(n) as clones, count(n) as n_img, node_to_clone\n" +
+        "WHERE n_img > 1 AND node_to_clone IS NOT NULL\n" +
+        "RETURN node_to_clone, clones\n"
+    )
+    # print(query_n)
+    result = tx.run(query_n)
+    clones = dict()
+    for record in result:
+        clones[record['node_to_clone']['id']] =\
+            [c["id"] for c in record['clones']]
+
+    # get interclone edges
+    query_interclone_edges = (
+        "OPTIONAL MATCH (tn:{})<-[:typing]-(n:{})-[r:edge]->(m:{})-[:typing]->(tm:{}), \n".format(
+            graph_id, predecessor_id, predecessor_id, graph_id) +
+        "(tn)-[tr:edge]->(tm)\n" +
+        "WHERE n.id IN [{}] AND m.id IN [{}] AND tr IS NOT NULL\n".format(
+            ", ".join(["'{}'".format(k) for k in clones.keys()]),
+            ", ".join(["'{}'".format(k) for k in clones.keys()])) +
+        "RETURN tn.id as u, tm.id as v, properties(r) as attrs\n"
+    )
+    # print(query_interclone_edges)
+    result = tx.run(query_interclone_edges)
+    interclone_edges = dict()
+
+    for record in result:
+        interclone_edges[record["u"], record["v"]] =\
+            generic.properties_to_attributes([record], "attrs")
+
+    fixed_nodes = dict()
+    clone_results = dict()
+    for original, graph_clones in clones.items():
+        clone_results[original] = dict()
+        for i, c in enumerate(graph_clones):
+            if i == 0:
+                fixed_nodes[original] = c
+                clone_results[original] = c
+            else:
+                query = (
+                    generic.match_node(
+                        'x', original,
+                        node_label=predecessor_id) +
+                    rewriting.cloning_query(
+                        original_var='x',
+                        clone_var='new_node',
+                        clone_id_var='uid',
+                        clone_id="clone_" + original,
+                        node_label=predecessor_id,
+                        edge_labels=["edge"],
+                        ignore_naming=True)[0] +
+                    "OPTIONAL MATCH (n:{})-[t:typing]-(m:{} {{id: '{}'}})\n".format(
+                        predecessor_id, graph_id, c) +
+                    "DELETE t\n" +
+                    "MERGE (new_node)-[:typing]->(m)\n" +
+                    generic.return_vars(['uid'])
+                )
+                # print(query)
+                result = tx.run(query)
+                uid_records = []
+                for record in result:
+                    uid_records.append(record['uid'])
+                if len(uid_records) > 0:
+                    clone_id = uid_records[0]
+                    clone_results[clone_id] = c
+
+    # add interclone edges
+    visited_edges = set()
+    for n, tn in clone_results.items():
+        for m, tm in clone_results.items():
+            if (tn, tm) in interclone_edges.keys() and\
+               (n, m) not in visited_edges:
+                visited_edges.add((n, m))
+                query = generic.match_nodes(
+                    {"n_" + n: n, "n_" + m: m},
+                    node_label=predecessor_id)
+                query += rewriting.add_edge(
+                    edge_var='new_edge',
+                    source_var="n_" + n,
+                    target_var="n_" + m,
+                    edge_label="edge",
+                    attrs=interclone_edges[(tn, tm)],
+                    merge=True)
+                # print(query)
+                tx.run(query)
+
+
 def clone_propagation_query(graph_id, predecessor_id):
     """Generate query for propagation of cloning to a predecessor graph."""
     # We clone the nodes that have more than 1 image and
@@ -330,6 +437,7 @@ def clone_propagation_query(graph_id, predecessor_id):
             edge_label='typing') + ")))\n"
     )
     query += "RETURN clone_ids"
+    # print(query)
     return query
 
 

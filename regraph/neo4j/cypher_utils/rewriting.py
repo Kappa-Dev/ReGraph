@@ -82,7 +82,7 @@ def add_node(var_name, node_id, node_id_var, node_label,
 
 
 def add_edge(edge_var, source_var, target_var,
-             edge_label, attrs=None):
+             edge_label, attrs=None, merge=False):
     """Generate query for edge creation.
 
     source_var
@@ -96,8 +96,13 @@ def add_edge(edge_var, source_var, target_var,
     attrs : dict, optional
         Attributes of the new edge
     """
-    query = "CREATE ({})-[{}:{} {{ {} }}]->({})\n".format(
-        source_var, edge_var, edge_label,
+    if merge:
+        keyword = "MERGE"
+    else:
+        keyword = "CREATE"
+
+    query = "{} ({})-[{}:{} {{ {} }}]->({})\n".format(
+        keyword, source_var, edge_var, edge_label,
         generic.generate_attributes(attrs), target_var)
     return query
 
@@ -208,7 +213,8 @@ def remove_attributes(var_name, attrs):
                     k, var_name) +
                 "\tSET {}.{} = filter(v in {}.{} WHERE NOT v IN [{}])\n".format(
                     var_name, k, var_name, k,
-                    ", ".join(["'{}'".format(val) for val in value])) +
+                    ", ".join(["{}".format(
+                        "'{}'".format(val) if type(val) != bool else "true" if val else "false") for val in value])) +
                 "\tFOREACH(dumy2 IN CASE WHEN size({}.{})=0 THEN [1] ELSE [] END |\n".format(
                     var_name, k) +
                 "\t\tREMOVE {}.{}))\n".format(
@@ -222,7 +228,8 @@ def remove_attributes(var_name, attrs):
 
 def cloning_query(original_var, clone_var, clone_id, clone_id_var,
                   node_label, edge_labels, sucs_to_ignore=None,
-                  preds_to_ignore=None,
+                  preds_to_ignore=None, suc_vars_to_ignore=None,
+                  pred_vars_to_ignore=None,
                   carry_vars=None, ignore_naming=False):
     """Generate query for cloning a node.
 
@@ -262,6 +269,10 @@ def cloning_query(original_var, clone_var, clone_id, clone_id_var,
         sucs_to_ignore = set()
     if preds_to_ignore is None:
         preds_to_ignore = set()
+    if suc_vars_to_ignore is None:
+        suc_vars_to_ignore = set()
+    if pred_vars_to_ignore is None:
+        pred_vars_to_ignore = set()
 
     carry_vars.add(original_var)
     query = ""
@@ -328,9 +339,13 @@ def cloning_query(original_var, clone_var, clone_id, clone_id_var,
 
     query += (
         "WITH [{}] as sucIgnore, ".format(
-            ", ".join("'{}'".format(n) for n in sucs_to_ignore)) +
+            ", ".join(
+                ["'{}'".format(n) for n in sucs_to_ignore] +
+                ["id({})".format(n) for n in suc_vars_to_ignore])) +
         "[{}] as predIgnore, ".format(
-            ", ".join("'{}'".format(n) for n in preds_to_ignore)) +
+            ", ".join(
+                ["'{}'".format(n) for n in preds_to_ignore] +
+                ["id({})".format(n) for n in pred_vars_to_ignore])) +
         ", ".join(carry_vars) + " \n"
     )
 
@@ -1165,8 +1180,7 @@ def multiple_cloning_query(original_var, clone_var, clone_id, clone_id_var,
                            number_of_clone_var,
                            node_label, edge_label, preserv_typing=False,
                            sucs_to_ignore=None, preds_to_ignore=None,
-                           carry_vars=None, ignore_naming=False,
-                           multiple_rows=False):
+                           carry_vars=None, multiple_rows=False):
     """Generate query for cloning a node X times.
 
     Parameters
@@ -1218,63 +1232,27 @@ def multiple_cloning_query(original_var, clone_var, clone_id, clone_id_var,
     query += "UNWIND range(1, {}) as clone_number\n".format(
         number_of_clone_var)
     carry_vars.add('clone_number')
-    if ignore_naming is True:
-        query += (
-            "// create a node corresponding to the clone\n" +
-            # "CREATE ({}:node) \n".format(clone_var, clone_var) +
-            "CREATE ({}:{}) \n".format(
-                clone_var, node_label) +
-            "WITH {}, toString(id({})) as {}, {}.id as original_old, ".format(
-                clone_var, clone_var, clone_id_var, original_var) +
-            ", ".join(carry_vars) + " \n" +
-            "// set the id property of the original node to NULL\n" +
-            "SET {}.id = NULL\n".format(original_var) +
-            "// copy all the properties of the original node to the clone\n" +
-            "SET {} = {}\n".format(clone_var, original_var) +
-            "// set id property of the clone to neo4j-generated id\n" +
-            "SET {}.id = toString(id({})), {}.count = NULL\n".format(
-                clone_var, clone_var, clone_var) +
-            "// set back the id property of the original node\n" +
-            "SET {}.id = original_old\n".format(original_var) +
-            "WITH {}, toString(id({})) as {}, ".format(
-                clone_var, clone_var, clone_id_var) +
-            ", ".join(carry_vars) + " \n"
-        )
-    else:
-        query += (
-            "// search for a node with the same id as the clone id\n" +
-            "OPTIONAL MATCH (same_id_node:{} {{ id : '{}'}}) \n".format(
-                node_label, clone_id) +
-            "WITH same_id_node,  " +
-            "CASE WHEN same_id_node IS NOT NULL "
-            "THEN (coalesce(same_id_node.count, 0) + 1) " +
-            "ELSE 0 END AS same_id_node_new_count, " +
-            ", ".join(carry_vars) + "\n" +
-            "// generate new id if the same id node was found\n" +
-            "// and filter edges which will be removed \n" +
-            "WITH same_id_node, same_id_node_new_count, " +
-            "'{}' + CASE WHEN same_id_node_new_count <> 0 ".format(clone_id) +
-            "THEN toString(same_id_node_new_count) ELSE '' END as {}, ".format(
-                clone_id_var) +
-            ", ".join(carry_vars) + "\n" +
-            "// create a node corresponding to the clone\n" +
-            "CREATE ({}:{}) \n".format(
-                clone_var, node_label) +
-            "WITH same_id_node, same_id_node_new_count, {}, {}, "
-            "{}.id as original_old, ".format(
-                clone_var, clone_id_var, original_var) +
-            ", ".join(carry_vars) + "\n" +
-            "// set the id property of the original node to NULL\n" +
-            "SET {}.id = NULL\n".format(original_var) +
-            "// copy all the properties of the original node to the clone\n" +
-            "SET {} = {}\n".format(clone_var, original_var) +
-            "// set id property of the clone to the generated id\n" +
-            "SET {}.id = {}, {}.count = NULL, ".format(
-                clone_var, clone_id_var, clone_var) +
-            "same_id_node.count = same_id_node_new_count + 1\n" +
-            "// set back the id property of the original node\n" +
-            "SET {}.id = original_old\n".format(original_var)
-        )
+    query += (
+        "// create a node corresponding to the clone\n" +
+        # "CREATE ({}:node) \n".format(clone_var, clone_var) +
+        "CREATE ({}:{}) \n".format(
+            clone_var, node_label) +
+        "WITH {}, toString(id({})) as {}, {}.id as original_old, ".format(
+            clone_var, clone_var, clone_id_var, original_var) +
+        ", ".join(carry_vars) + " \n" +
+        "// set the id property of the original node to NULL\n" +
+        "SET {}.id = NULL\n".format(original_var) +
+        "// copy all the properties of the original node to the clone\n" +
+        "SET {} = {}\n".format(clone_var, original_var) +
+        "// set id property of the clone to neo4j-generated id\n" +
+        "SET {}.id = toString(id({})), {}.count = NULL\n".format(
+            clone_var, clone_var, clone_var) +
+        "// set back the id property of the original node\n" +
+        "SET {}.id = original_old\n".format(original_var) +
+        "WITH {}, toString(id({})) as {}, ".format(
+            clone_var, clone_var, clone_id_var) +
+        ", ".join(carry_vars) + " \n"
+    )
 
     carry_vars.remove('clone_number')
     if multiple_rows:
