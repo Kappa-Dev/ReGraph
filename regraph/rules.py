@@ -24,6 +24,7 @@ from regraph import primitives
 from regraph.networkx.plotting import plot_rule
 from regraph.exceptions import (ReGraphWarning, ParsingError,
                                 RuleError)
+from regraph.neo4j.graphs import Neo4jGraph
 import regraph.neo4j.cypher_utils as cypher
 
 
@@ -974,12 +975,16 @@ class Rule(object):
             nodes of `g_prime`.
 
         """
-        g_m, p_g_m, g_m_g = pullback_complement(
-            self.p, self.lhs, graph, self.p_lhs, instance,
-            inplace
-        )
-        g_prime, g_m_g_prime, rhs_g_prime = pushout(
-            self.p, g_m, self.rhs, p_g_m, self.p_rhs, inplace)
+        if isinstance(graph, Neo4jGraph):
+            g_prime = graph
+            rhs_g_prime = graph.rewrite(self, instance)
+        else:
+            g_m, p_g_m, g_m_g = pullback_complement(
+                self.p, self.lhs, graph, self.p_lhs, instance,
+                inplace
+            )
+            g_prime, g_m_g_prime, rhs_g_prime = pushout(
+                self.p, g_m, self.rhs, p_g_m, self.p_rhs, inplace)
         return (g_prime, rhs_g_prime)
 
     def added_nodes(self):
@@ -1496,8 +1501,9 @@ class Rule(object):
         # this is to avoid problems with different
         # selection of the cloning origin
         preserved_nodes = self.p.nodes()
-        preserved_nodes_positions = {
-            n: i + 0 for i, n in enumerate(preserved_nodes)
+        # Index of preserved nodes helps us to count clones
+        preserved_nodes_index = {
+            n: i for i, n in enumerate(preserved_nodes)
         }
         if generate_var_ids:
             # Generate unique variable names corresponding to node names
@@ -1533,37 +1539,46 @@ class Rule(object):
         for u, v in self.lhs.edges():
             carry_variables.add(str(lhs_vars[u]) + "_" + str(lhs_vars[v]))
 
+        # Here we store nodes of lhs that we keep as one of the clones
+        fixed_nodes = dict()
+        all_p_clones = set()
+
         # Generate cloning subquery
         for lhs_node, p_nodes in self.cloned_nodes().items():
             query += "// Cloning node '{}' of the lhs \n".format(lhs_node)
             clones = set()
             preds_to_ignore = dict()
             sucs_to_ignore = dict()
-            for p_node in p_nodes:
-                if (lhs_node in p_nodes and p_node != lhs_node) or\
-                   (lhs_node not in p_nodes and preserved_nodes_positions[
-                        p_node] != 0):
-                    clones.add(p_node)
+
+            # Set a p_node that will correspond to the original
+            fixed_node = keys_by_value(
+                preserved_nodes_index,
+                min([preserved_nodes_index[p_node] for p_node in p_nodes]))[0]
+            fixed_nodes[lhs_node] = fixed_node
+            clones = [
+                p_node for p_node in p_nodes if p_node != fixed_node]
+            all_p_clones.update(clones)
 
             for n in clones:
                 preds_to_ignore = set()
                 sucs_to_ignore = set()
+                suc_vars_to_ignore = set()
+                pred_vars_to_ignore = set()
                 for u, v in self.removed_edges():
-                        if u == n and v not in p_nodes:
-                            try:
+                    if u == n:
+                        if v not in clones:
+                            if v not in all_p_clones:
                                 sucs_to_ignore.add(
                                     instance[self.p_lhs[v]])
-                            except(KeyError):
-                                pass
-                                # sucs_to_ignore.add(v)
-                        if v == n and u not in p_nodes:
-                            try:
+                            else:
+                                suc_vars_to_ignore.add(p_vars[v])
+                    if v == n:
+                        if u not in clones:
+                            if u not in all_p_clones:
                                 preds_to_ignore.add(
                                     instance[self.p_lhs[u]])
-                            except(KeyError):
-                                pass
-                                # preds_to_ignore[p_node].add(u)
-
+                            else:
+                                pred_vars_to_ignore.add(p_vars[u])
                 query +=\
                     "// Create clone corresponding to '{}' ".format(n) +\
                     "of the preserved part\n"
@@ -1581,6 +1596,8 @@ class Rule(object):
                     edge_labels=["edge", "typing", "related"],
                     sucs_to_ignore=sucs_to_ignore,
                     preds_to_ignore=preds_to_ignore,
+                    suc_vars_to_ignore=suc_vars_to_ignore,
+                    pred_vars_to_ignore=pred_vars_to_ignore,
                     carry_vars=carry_variables,
                     ignore_naming=True)
                 query += q
@@ -1615,9 +1632,14 @@ class Rule(object):
         vars_to_rename = {}
         for n in self.lhs.nodes():
             if n not in self.removed_nodes():
-                new_var_name = p_vars[keys_by_value(self.p_lhs, n)[0]]
-                vars_to_rename[lhs_vars[n]] = new_var_name
-                carry_variables.remove(lhs_vars[n])
+                if n not in self.cloned_nodes().keys():
+                    new_var_name = p_vars[keys_by_value(self.p_lhs, n)[0]]
+                    vars_to_rename[lhs_vars[n]] = new_var_name
+                    carry_variables.remove(lhs_vars[n])
+                elif n in fixed_nodes.keys():
+                    vars_to_rename[lhs_vars[n]] = p_vars[fixed_nodes[n]]
+                    carry_variables.remove(lhs_vars[n])
+
         if len(vars_to_rename) > 0:
             query += "\n// Renaming vars to correspond to the vars of P\n"
             if len(carry_variables) > 0:
@@ -1659,6 +1681,17 @@ class Rule(object):
                     "DELETE {}\n".format(var) +
                     cypher.with_vars(carry_variables)
                 )
+
+        # !!we forget to add interclone edges!!
+        for (p_u, p_v) in self.p.edges():
+            if p_u not in fixed_nodes.keys() and\
+               p_v not in fixed_nodes.keys() and\
+               (p_u, p_v) not in self.removed_edges():
+                # lhs_u = self.p_lhs[p_u]
+                # lhs_v = self.p_lhs[p_v]
+                query += "MERGE ({})-[{}:{}]->({})\n".format(
+                    p_vars[p_u], p_vars[p_u] + "_" + p_vars[p_v],
+                    edge_label, p_vars[p_v])
 
         # Generate node attrs removal subquery
         for node, attrs in self.removed_node_attrs().items():
@@ -1762,7 +1795,8 @@ class Rule(object):
                 edge_var=new_edge_var,
                 source_var=rhs_vars[u],
                 target_var=rhs_vars[v],
-                edge_label=edge_label)
+                edge_label=edge_label,
+                attrs=primitives.get_edge(self.rhs, u, v))
             if (u, v) in self.added_edge_attrs().keys():
                 carry_variables.add(new_edge_var)
             query += "\n\n"
