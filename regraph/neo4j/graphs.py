@@ -596,14 +596,24 @@ class Neo4jGraph(object):
             instances = []
         return instances
 
-    def rewrite(self, rule, instance):
+    def rewrite(self, rule, instance, holistic=True):
         """Perform SqPO rewiting of the graph with a rule."""
         # Generate corresponding Cypher query
-        query, rhs_vars_inverse = rule.to_cypher(
-            instance, self._node_label, self._edge_label)
+        if holistic:
+            query, rhs_vars_inverse = rule.to_cypher(
+                instance, self._node_label, self._edge_label)
+            result = self.execute(query)
+        else:
+            pass
+            # p_g = dict()
+            # for lhs, p_nodes in rule.cloned_nodes().items():
+            #     for i, p in enumerate(p_nodes):
+            #         if i == 0:
+            #             p_g[p] = instance[lhs]
+            #         else:
+            #             clone_id = self.clone_node(instance[lhs])
+            #             p_g[p] = clone_id
 
-        # Execute query
-        result = self.execute(query)
         # Retrieve a dictionary mapping the nodes of the rhs to the nodes
         # of the resulting graph
         rhs_g = dict()

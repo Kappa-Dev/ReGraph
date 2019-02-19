@@ -1,4 +1,5 @@
 """Neo4j driver for regraph."""
+import time
 import os
 import json
 import copy
@@ -139,6 +140,7 @@ class Neo4jHierarchy(object):
         """Execute a Cypher query."""
         with self._driver.session() as session:
             if len(query) > 0:
+                # print(query)
                 result = session.run(query)
                 return result
 
@@ -148,6 +150,10 @@ class Neo4jHierarchy(object):
         result = self.execute(query)
         # self.drop_all_constraints()
         return result
+
+    def _clear_all(self):
+        query = "MATCH (n) DETACH DELETE n"
+        self.execute(query)
 
     def _drop_all_constraints(self):
         """Drop all the constraints on the hierarchy."""
@@ -231,37 +237,46 @@ class Neo4jHierarchy(object):
             g.add_edges_from(edge_list)
 
     def duplicate_subgraph(self, graph_dict, attach_graphs=[]):
+        old_graphs = self.graphs()
+        for new_g in graph_dict.values():
+            if new_g in old_graphs:
+                raise HierarchyError(
+                    "Graph with id '{}' already exists in the hierarchy".format(
+                        new_g))
         # copy graphs
         for original, new in graph_dict.items():
             self.copy_graph(original, new, attach_graphs)
 
         # copy typing between them
-        graphs_to_copy = list(graph_dict.values())
         visited = set()
-        for g in graphs_to_copy:
+        for g in graph_dict.keys():
             preds = [
                 p for p in self.predecessors(g)
-                if p in graphs_to_copy and (p, g) not in visited]
+                if p in graph_dict.keys() and (p, g) not in visited]
             sucs = [
                 p for p in self.successors(g)
-                if p in graphs_to_copy and (g, p) not in visited]
+                if p in graph_dict.keys() and (g, p) not in visited]
             for s in sucs:
                 # Remember that copy typing needs pairs of graphs to be equal
                 self.add_typing(
-                    graphs_to_copy[g], graphs_to_copy[s],
+                    graph_dict[g], graph_dict[s],
                     self.get_typing(g, s))
                 # self.copy_typing(g, s, graphs_to_copy[g], graphs_to_copy[s])
                 visited.add((g, s))
             for p in preds:
                 # Remember that copy typing needs pairs of graphs to be equal
                 self.add_typing(
-                    graphs_to_copy[p], graphs_to_copy[g],
+                    graph_dict[p], graph_dict[g],
                     self.get_typing(p, g))
                 visited.add((p, g))
 
     def copy_graph(self, graph_id, new_graph_id, attach_graphs=[]):
         """Duplicate a graph in a hierarchy."""
-        self.add_graph(new_graph_id)
+        if new_graph_id in self.graphs():
+            raise HierarchyError(
+                "Graph with id '{}' already exists in the hierarchy".format(
+                    new_graph_id))
+        self.add_graph(new_graph_id, attrs=self.get_graph_attrs(graph_id))
         copy_nodes_q = (
             "MATCH (n:{}) CREATE (n1:{}) SET n1=n\n".format(
                 graph_id, new_graph_id)
@@ -278,34 +293,10 @@ class Neo4jHierarchy(object):
         self.execute(copy_edges_q)
         # copy all typings
         for g in attach_graphs:
-            self.add_typing(new_graph_id, g, self.get_typing(graph_id, g))
-            # copy_suc_typing_q = (
-            #     "MATCH (n:{})-[r:{}]->(m:{}), (n1:{}) \n".format(
-            #         graph_id, self._graph_typing_label, g, new_graph_id) +
-            #     "WHERE n1.id = n.id \n" +
-            #     "MERGE (n1)-[r1:{}]->(m) SET r1=r\n".format(
-            #         self._graph_typing_label)
-            # )
-            # self.execute(copy_suc_typing_q)
-            # copy_pred_typing_q = (
-            #     "MATCH (n:{})<-[r:{}]-(m:{}), (n1:{}) \n".format(
-            #         graph_id, self._graph_typing_label, g, new_graph_id) +
-            #     "WHERE n1.id = n.id \n" +
-            #     "MERGE (n1)<-[r1:{}]-(m) SET r1=r\n".format(
-            #         self._graph_typing_label)
-            # )
-            # self.execute(copy_pred_typing_q)
-
-    # def copy_typing(self, original_s, original_t, new_s, new_t):
-    #     query = (
-    #         "MATCH (s:{})-[r:{}]->(t:{}), (s1:{}), (t1:{})\n".format(
-    #             original_s, self._graph_typing_label, original_t,
-    #             new_s, new_t) +
-    #         "WHERE s1.id = s.id AND t1.id = t.id\n" +
-    #         "MERGE (s1)-[r1:{}]->(t1) SET r1 = r\n".format(
-    #             self._graph_typing_label)
-    #     )
-    #     self.execute(query)
+            if g in self.successors(graph_id):
+                self.add_typing(new_graph_id, g, self.get_typing(graph_id, g))
+            if g in self.predecessors(graph_id):
+                self.add_typing(g, new_graph_id, self.get_typing(g, graph_id))
 
     def add_empty_graph(self, graph_id, attrs=None):
         """Add empty graph to the hierarchy."""
@@ -752,13 +743,17 @@ class Neo4jHierarchy(object):
 
         # Rewriting of the base graph
         g = self._access_graph(graph_id)
+        start = time.time()
         rhs_g = g.rewrite(rule, instance)
+        print("Rewritten base graph: ", time.time() - start)
 
+        start = time.time()
         if rule.is_restrictive():
             if len(rule.cloned_nodes()) > 0 and p_typing:
                 self._add_tmp_p_typing(
                     graph_id, rule, rhs_g, p_typing)
             self._propagate_up(graph_id, rule)
+        print("Propagated up: ", time.time() - start)
 
         if strict is False and rule.is_relaxing():
             if len(rule.added_nodes()) > 0 and len(rhs_typing) > 0:
@@ -776,8 +771,12 @@ class Neo4jHierarchy(object):
 
             # Propagate node clones
             if len(rule.cloned_nodes()) > 0:
-                clone_query = cypher.clone_propagation_query(
-                    graph_id, predecessor)
+                with self._driver.session() as session:
+                    tx = session.begin_transaction()
+                    cypher.propagate_clones(tx, graph_id, predecessor)
+                    tx.commit()
+                # clone_query = cypher.clone_propagation_query(
+                #     graph_id, predecessor)
 
             # Propagate node deletes
             if len(rule.removed_nodes()) > 0 or\
@@ -794,8 +793,8 @@ class Neo4jHierarchy(object):
             # run multiple queries in one transaction
             with self._driver.session() as session:
                 tx = session.begin_transaction()
-                if clone_query:
-                    tx.run(clone_query)
+                # if clone_query:
+                #     tx.run(clone_query)
                 if remove_node_query:
                     tx.run(remove_node_query)
                 if remove_edge_query:
