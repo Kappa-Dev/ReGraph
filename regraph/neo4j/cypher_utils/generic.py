@@ -472,9 +472,9 @@ def merge_with_symbolic_sets(prop_var, new_props_var):
         "WITH apoc.map.fromValues(REDUCE(values=[], k in keys({}) |\n".format(
             prop_var) +
         "\tvalues + [k, CASE WHEN 'StringSet' in {}[k] \n".format(prop_var) +
-        "\t\tTHEN 'StringSet' \n" +
+        "\t\tTHEN ['StringSet'] \n" +
         "\t\tELSE CASE WHEN 'IntegerSet' IN {}[k]\n".format(prop_var) +
-        "\t\t\tTHEN 'IntegerSet'\n" +
+        "\t\t\tTHEN ['IntegerSet']\n" +
         "\t\t\tELSE {}[k] END END])) as {}".format(prop_var, new_props_var)
     )
     return query
@@ -893,19 +893,20 @@ def properties_to_attributes(result, var_name):
     for record in result:
         if var_name in record.keys():
             raw_dict = record[var_name]
-            if 'id' in raw_dict:
-                del raw_dict['id']
-            for k, v in raw_dict.items():
-                try:
-                    if len(v) == 1:
-                        if v[0] == "IntegerSet":
-                            attrs[k] = IntegerSet.universal()
-                        elif v[0] == "StringSet":
-                            attrs[k] = RegexSet.universal()
+            if raw_dict:
+                if 'id' in raw_dict:
+                    del raw_dict['id']
+                for k, v in raw_dict.items():
+                    try:
+                        if len(v) == 1:
+                            if v[0] == "IntegerSet":
+                                attrs[k] = IntegerSet.universal()
+                            elif v[0] == "StringSet":
+                                attrs[k] = RegexSet.universal()
+                            else:
+                                attrs[k] = FiniteSet(v)
                         else:
                             attrs[k] = FiniteSet(v)
-                    else:
-                        attrs[k] = FiniteSet(v)
-                except TypeError:
-                    attrs[k] = FiniteSet([v])
+                    except TypeError:
+                        attrs[k] = FiniteSet([v])
     return attrs
