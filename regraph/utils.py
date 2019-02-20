@@ -960,7 +960,7 @@ def normalize_typing_relation(typing_rel):
                     for v in values:
                         value_set.add(v)
                 except TypeError:
-                    value_set.add(v)
+                    value_set.add(values)
             new_typing_rel[g][key] = value_set
     return new_typing_rel
 
