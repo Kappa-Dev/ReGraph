@@ -352,7 +352,7 @@ def propagate_clones(tx, graph_id, predecessor_id):
                         clone_id_var='uid',
                         clone_id="clone_" + original,
                         node_label=predecessor_id,
-                        edge_labels=["edge"],
+                        edge_labels=["edge", "relation"],
                         ignore_naming=True)[0] +
                     "OPTIONAL MATCH (n:{})-[t:typing]-(m:{} {{id: '{}'}})\n".format(
                         predecessor_id, graph_id, c) +
