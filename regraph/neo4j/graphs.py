@@ -7,7 +7,7 @@ from neo4j.v1 import GraphDatabase
 from regraph.utils import (normalize_attrs,
                            load_nodes_from_json,
                            load_edges_from_json,
-                           attrs_from_json)
+                           attrs_from_json, keys_by_value)
 from regraph.exceptions import ReGraphWarning, ReGraphError
 from . import cypher_utils as cypher
 from . import hierarchy
@@ -95,6 +95,7 @@ class Neo4jGraph(object):
 
     @classmethod
     def copy(cls, graph, node_label, edge_label="edge"):
+        """Create a copy of the graph."""
         # copy all the nodes
         copy_nodes_q = (
             "MATCH (n:{}) CREATE (n1:{}) SET n1=n\n".format(
@@ -154,7 +155,8 @@ class Neo4jGraph(object):
         result = self.execute(query)
         return result
 
-    def add_node(self, node, attrs=None, ignore_naming=False, profiling=False):
+    def add_node(self, node, attrs=None, ignore_naming=False,
+                 profiling=False):
         """Add a node to the graph db."""
         if profiling:
             query = "PROFILE\n"
@@ -173,7 +175,8 @@ class Neo4jGraph(object):
             cypher.return_vars(['new_id'])
 
         result = self.execute(query)
-        return result
+        new_id = result.single()['new_id']
+        return new_id
 
     def add_edge(self, source, target, attrs=None, profiling=False):
         """Add an edge to the graph db."""
@@ -384,7 +387,7 @@ class Neo4jGraph(object):
             query = ""
         query +=\
             cypher.match_edge(
-                source, target, source, target, 'edge_var',
+                "s", "t", source, target, 'edge_var',
                 edge_label='edge') +\
             cypher.remove_edge('edge_var')
         result = self.execute(query)
@@ -504,7 +507,7 @@ class Neo4jGraph(object):
                 edge_labels=edge_labels,
                 ignore_naming=ignore_naming)[0] +\
             cypher.return_vars(['uid'])
-
+        print(query)
         result = self.execute(query)
         uid_records = []
         for record in result:
@@ -596,37 +599,101 @@ class Neo4jGraph(object):
             instances = []
         return instances
 
-    def rewrite(self, rule, instance, holistic=True):
+    def rewrite(self, rule, instance, holistic=True, edge_labels=None):
         """Perform SqPO rewiting of the graph with a rule."""
         # Generate corresponding Cypher query
         if holistic:
             query, rhs_vars_inverse = rule.to_cypher(
                 instance, self._node_label, self._edge_label)
             result = self.execute(query)
-        else:
-            pass
-            # p_g = dict()
-            # for lhs, p_nodes in rule.cloned_nodes().items():
-            #     for i, p in enumerate(p_nodes):
-            #         if i == 0:
-            #             p_g[p] = instance[lhs]
-            #         else:
-            #             clone_id = self.clone_node(instance[lhs])
-            #             p_g[p] = clone_id
 
-        # Retrieve a dictionary mapping the nodes of the rhs to the nodes
-        # of the resulting graph
-        rhs_g = dict()
-        for record in result:
-            for k, v in record.items():
-                try:
-                    if v["id"] is not None:
-                        rhs_g[k] = v["id"]
-                except:
-                    pass
-        rhs_g = {
-            rhs_vars_inverse[k]: v for k, v in rhs_g.items()
-        }
+            # Retrieve a dictionary mapping the nodes of the rhs to the nodes
+            # of the resulting graph
+            rhs_g = dict()
+            for record in result:
+                for k, v in record.items():
+                    try:
+                        if v["id"] is not None:
+                            rhs_g[k] = v["id"]
+                    except:
+                        pass
+            rhs_g = {
+                rhs_vars_inverse[k]: v for k, v in rhs_g.items()
+            }
+        else:
+            if edge_labels is None:
+                edge_labels = [self._edge_label]
+
+            # 1st phase
+            p_g = dict()
+            cloned_lhs_nodes = set()
+            # Clone nodes
+            for lhs, p_nodes in rule.cloned_nodes().items():
+                for i, p in enumerate(p_nodes):
+                    if i == 0:
+                        p_g[p] = instance[lhs]
+                        cloned_lhs_nodes.add(lhs)
+                    else:
+                        clone_id = self.clone_node(
+                            instance[lhs], edge_labels=edge_labels)
+                        p_g[p] = clone_id
+            # Delete nodes and add preserved nodes to p_g dictionary
+            removed_nodes = rule.removed_nodes()
+            for n in rule.lhs.nodes():
+                if n in removed_nodes:
+                    self.remove_node(instance[n])
+                elif n not in cloned_lhs_nodes:
+                    p_g[keys_by_value(rule.p_lhs, n)[0]] =\
+                        instance[n]
+
+            # Delete edges
+            for u, v in rule.removed_edges():
+                self.remove_edge(p_g[u], p_g[v])
+
+            # Remove node attributes
+            for p_node, attrs in rule.removed_node_attrs().items():
+                self.remove_node_attrs(
+                    p_g[p_node],
+                    attrs)
+
+            # Remove edge attributes
+            for (u, v), attrs in rule.removed_edge_attrs().items():
+                self.remove_edge_attrs(p_g[u], p_g[v], attrs)
+
+            # 2nd phase
+            rhs_g = dict()
+            merged_nodes = set()
+            # Merge nodes
+            for rhs, p_nodes in rule.merged_nodes().items():
+                merge_id = self.merge_nodes(
+                    [p_g[p] for p in p_nodes])
+                merged_nodes.update(rhs)
+                rhs_g[rhs] = merge_id
+
+            # Add nodes and add preserved nodes to rhs_g dictionary
+            added_nodes = rule.added_nodes()
+            for n in rule.rhs.nodes():
+                if n in added_nodes:
+                    new_id = self.add_node(n)
+                    rhs_g[n] = new_id
+                elif n not in merged_nodes:
+                    rhs_g[n] = p_g[keys_by_value(rule.p_rhs, n)[0]]
+
+            # Add edges
+            for u, v in rule.added_edges():
+                self.add_edge(rhs_g[u], rhs_g[v])
+
+            # Add node attributes
+            for rhs_node, attrs in rule.added_node_attrs().items():
+                self.add_node_attrs(
+                    rhs_g[rhs_node], attrs)
+
+            # Add edge attributes
+            for (u, v), attrs in rule.added_edge_attrs().items():
+                print("!!", u, v, attrs)
+                self.add_edge_attrs(
+                    rhs_g[u], rhs_g[v], attrs)
+
         return rhs_g
 
     def to_json(self):

@@ -297,6 +297,8 @@ class Neo4jHierarchy(object):
                 self.add_typing(new_graph_id, g, self.get_typing(graph_id, g))
             if g in self.predecessors(graph_id):
                 self.add_typing(g, new_graph_id, self.get_typing(g, graph_id))
+            if g in self.adjacent_relations(graph_id):
+                self.add_relation(g, new_graph_id, self.get_relation(g, graph_id))
 
     def add_empty_graph(self, graph_id, attrs=None):
         """Add empty graph to the hierarchy."""
@@ -744,7 +746,12 @@ class Neo4jHierarchy(object):
         # Rewriting of the base graph
         g = self._access_graph(graph_id)
         start = time.time()
-        rhs_g = g.rewrite(rule, instance)
+        rhs_g = g.rewrite(
+            rule, instance, holistic=False,
+            edge_labels=[
+                self._graph_typing_label,
+                self._graph_edge_label,
+                self._graph_relation_label])
         print("Rewritten base graph: ", time.time() - start)
 
         start = time.time()
