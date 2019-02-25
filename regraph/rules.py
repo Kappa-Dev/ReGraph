@@ -1076,6 +1076,8 @@ class Rule(object):
                                 self.p.adj[s_p_node][t_p_node]
                             )
                         )
+                    else:
+                        new_attrs = self.rhs.adj[s][t]
             if len(new_attrs) > 0:
                 attrs[(s, t)] = new_attrs
         return attrs
@@ -1136,7 +1138,7 @@ class Rule(object):
         Returns
         -------
         attrs : dict
-            Dictionary where keys are nodes from `lhs`
+            Dictionary where keys are nodes from `p`
             and values are attribute dictionaries to remove.
         """
         attrs = dict()
@@ -1156,7 +1158,7 @@ class Rule(object):
         Returns
         -------
         attrs : dict
-            Dictionary where keys are edges from `lhs`
+            Dictionary where keys are edges from `p`
             and values are attribute dictionaries to remove.
         """
         attrs = dict()
