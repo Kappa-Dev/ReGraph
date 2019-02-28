@@ -752,7 +752,7 @@ class Neo4jHierarchy(object):
                 self._graph_typing_label,
                 self._graph_edge_label,
                 self._graph_relation_label])
-        print("Rewritten base graph: ", time.time() - start)
+        # print("Rewritten base graph: ", time.time() - start)
 
         start = time.time()
         if rule.is_restrictive():
@@ -760,12 +760,14 @@ class Neo4jHierarchy(object):
                 self._add_tmp_p_typing(
                     graph_id, rule, rhs_g, p_typing)
             self._propagate_up(graph_id, rule)
-        print("Propagated up: ", time.time() - start)
+        # print("Propagated up: ", time.time() - start)
 
+        start = time.time()
         if strict is False and rule.is_relaxing():
             if len(rule.added_nodes()) > 0 and len(rhs_typing) > 0:
                 self._add_tmp_rhs_typing(graph_id, rhs_g, rhs_typing)
             self._propagate_down(graph_id, graph_id, rule)
+        # print("Propagated down: ", time.time() - start)
 
         return self, rhs_g
 
@@ -813,39 +815,41 @@ class Neo4jHierarchy(object):
     def _propagate_down(self, origin_graph, graph_id, rule):
         successors = self.successors(graph_id)
         for successor in successors:
-                # Propagate merges
-                merge_query = None
-                add_nodes_query = None
-                add_edges_query = None
+            # Propagate merges
+            merge_query = None
+            add_nodes_query = None
+            add_edges_query = None
 
-                # Propagate node merges
-                if len(rule.merged_nodes()) > 0:
-                    # match nodes of T with the same pre-image in G and merge them
-                    merge_query = cypher.merge_propagation_query(
-                        graph_id, successor)
+            # Propagate node merges
+            if len(rule.merged_nodes()) > 0:
+                # match nodes of T with the same pre-image in G and merge them
+                merge_query = cypher.merge_propagation_query(
+                    graph_id, successor)
 
-                # Propagate node adds
+            # Propagate node adds
+            # if len(rule.added_nodes()) > 0 or\
+            #    len(rule.added_node_attrs()) > 0:
+            #     add_nodes_query = cypher.add_node_propagation_query(
+            #         origin_graph, graph_id, successor)
+
+            # (Propagate edge adds
+            if len(rule.added_edges()) > 0 or\
+               len(rule.added_edge_attrs()) > 0:
+                add_edges_query = cypher.add_edge_propagation_query(
+                    graph_id, successor)
+
+            # Run multiple queries in one transaction
+            with self._driver.session() as session:
+                tx = session.begin_transaction()
+                if merge_query:
+                    tx.run(merge_query).single()
                 if len(rule.added_nodes()) > 0 or\
                    len(rule.added_node_attrs()) > 0:
-                    add_nodes_query = cypher.add_node_propagation_query(
-                        origin_graph, graph_id, successor)
-
-                # (Propagate edge adds
-                if len(rule.added_edges()) > 0 or\
-                   len(rule.added_edge_attrs()) > 0:
-                    add_edges_query = cypher.add_edge_propagation_query(
-                        graph_id, successor)
-
-                # Run multiple queries in one transaction
-                with self._driver.session() as session:
-                    tx = session.begin_transaction()
-                    if merge_query:
-                        tx.run(merge_query).single()
-                    if add_nodes_query:
-                        tx.run(add_nodes_query).single()
-                    if add_edges_query:
-                        tx.run(add_edges_query).single()
-                    tx.commit()
+                    cypher.propagate_add_node(
+                        tx, origin_graph, graph_id, successor)
+                if add_edges_query:
+                    tx.run(add_edges_query).single()
+                tx.commit()
 
         for successor in successors:
             self._propagate_down(origin_graph, successor, rule)
@@ -1256,7 +1260,7 @@ class Neo4jHierarchy(object):
         return copy.deepcopy(hierarchy)
 
     @classmethod
-    def from_json(cls, uri=None, user=None, Neo4jHierarchy=None,
+    def from_json(cls, uri=None, user=None, password=None,
                   driver=None, json_data=None, ignore=None,
                   clear=False):
         """Create hierarchy object from JSON representation.

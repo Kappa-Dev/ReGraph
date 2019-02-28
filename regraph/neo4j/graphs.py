@@ -507,7 +507,7 @@ class Neo4jGraph(object):
                 edge_labels=edge_labels,
                 ignore_naming=ignore_naming)[0] +\
             cypher.return_vars(['uid'])
-        print(query)
+        # print(query)
         result = self.execute(query)
         uid_records = []
         for record in result:
@@ -666,7 +666,7 @@ class Neo4jGraph(object):
             # Merge nodes
             for rhs, p_nodes in rule.merged_nodes().items():
                 merge_id = self.merge_nodes(
-                    [p_g[p] for p in p_nodes])
+                    ["n_" + p_g[p] for p in p_nodes])
                 merged_nodes.update(rhs)
                 rhs_g[rhs] = merge_id
 
@@ -690,7 +690,6 @@ class Neo4jGraph(object):
 
             # Add edge attributes
             for (u, v), attrs in rule.added_edge_attrs().items():
-                print("!!", u, v, attrs)
                 self.add_edge_attrs(
                     rhs_g[u], rhs_g[v], attrs)
 
@@ -883,6 +882,7 @@ class TypedNeo4jGraph(hierarchy.Neo4jHierarchy):
 
         self._graph_edge_label = "edge"
         self._graph_typing_label = "typing"
+        self._graph_relation_label = "relation"
 
         self._schema_node_label = "type"
         self._data_node_label = "node"

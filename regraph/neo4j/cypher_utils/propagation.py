@@ -120,7 +120,6 @@ def check_homomorphism(tx, domain, codomain, total=True):
         "RETURN n_id, m_id, invalid\n"
     )
 
-    # print(query3)
     result = tx.run(query3)
     invalid_typings = []
     for record in result:
@@ -155,7 +154,7 @@ def check_homomorphism(tx, domain, codomain, total=True):
         "WHERE invalid <> 0\n" +
         "RETURN n_id, m_id, x_id, y_id, invalid\n"
     )
-    # print(query3)
+    
     result = tx.run(query4)
     invalid_edges = []
     for record in result:
@@ -354,8 +353,8 @@ def propagate_clones(tx, graph_id, predecessor_id):
                         node_label=predecessor_id,
                         edge_labels=["edge", "relation"],
                         ignore_naming=True)[0] +
-                    "OPTIONAL MATCH (n:{})-[t:typing]-(m:{} {{id: '{}'}})\n".format(
-                        predecessor_id, graph_id, c) +
+                    "OPTIONAL MATCH (x)-[t:typing]-(m:{} {{id: '{}'}})\n".format(
+                        graph_id, c) +
                     "DELETE t\n" +
                     "MERGE (new_node)-[:typing]->(m)\n" +
                     generic.return_vars(['uid'])
@@ -368,6 +367,7 @@ def propagate_clones(tx, graph_id, predecessor_id):
                 if len(uid_records) > 0:
                     clone_id = uid_records[0]
                     clone_results[clone_id] = c
+        # print("!", clone_results)
 
     # add interclone edges
     visited_edges = set()
@@ -537,15 +537,16 @@ def merge_propagation_query(graph_id, successor_id):
     return query
 
 
-def add_node_propagation_query(origin_graph_id, graph_id, successor_id):
-    """Generate query for propagation of node adds to a successor graph.."""
+# def add_propa
+
+def propagate_add_node(tx, origin_graph_id, graph_id, successor_id):
     carry_vars = set()
-    # add nodes in T for each node without image in G + add new_props
     query = (
-        "// Addition of nodes and attributes in '{}'\n".format(
-            successor_id) +
-        "MATCH (n:{})\n".format(graph_id) +
-        "OPTIONAL MATCH (n)<-[:typing*0..]-()-[:typing*]->(existing_img:{})\n".format(
+        "// Add new nodes if needed to {}\n".format(successor_id) +
+        "MATCH (n:{}) WHERE NOT (n)-[:typing]->(:{}) \n".format(
+            graph_id, successor_id) +
+        "// Match existing image of some predecessor that commutes\n" +
+        "OPTIONAL MATCH (n)<-[:typing*1..]-(pred)-[:typing*1..]->(existing_img:{})\n".format(
             successor_id) +
         "FOREACH(dummy IN CASE WHEN existing_img IS NOT NULL THEN [1] ELSE [] END |\n" +
         "\tMERGE (n)-[:typing]->(existing_img))\n" +
@@ -555,12 +556,17 @@ def add_node_propagation_query(origin_graph_id, graph_id, successor_id):
             origin_graph_id, successor_id) +
         "\tFOREACH(dummy IN CASE WHEN trans_type IS NULL THEN [] ELSE [1] END |\n" +
         "\t\tMERGE (n)-[:typing]->(successor_node)\n" +
-        "\t\tDELETE trans_type)\n" +
-        generic.with_vars(['n']) +
+        "\t\tDELETE trans_type)\n"
+    )
+    tx.run(query)
+
+    query = (
+        "MATCH (n:{}) WHERE NOT (n)-[:typing]->(:{})".format(
+            graph_id, successor_id) +
         "MERGE (n)-[:typing]->(node_img:{})\n".format(successor_id) +
         "WITH n, node_img\n" +
         "FOREACH(dummy IN CASE WHEN node_img.id IS NULL THEN [1] ELSE [] END |\n" +
-        "\tSET node_img.id = toString(id(node_img)))\n" +
+        "\tSET node_img.id = toString(id(node_img)))\n"
         "WITH n, node_img WHERE " +
         generic.nb_of_attrs_mismatch('n', 'node_img') + " <> 0\n" +
         "WITH node_img, collect(n) + [node_img] as nodes_to_merge_props\n"
@@ -574,7 +580,53 @@ def add_node_propagation_query(origin_graph_id, graph_id, successor_id):
             method='union') +
         "SET node_img += new_props\n"
     )
+    tx.run(query)
     return query
+
+# def add_node_propagation_query(tx, origin_graph_id, graph_id, successor_id):
+#     """Generate query for propagation of node adds to a successor graph.."""
+#     carry_vars = set()
+#     # add nodes in T for each node without image in G + add new_props
+#     query = (
+#         "// Addition of nodes and attributes in '{}'\n".format(
+#             successor_id) +
+#         "MATCH (n:{})\n".format(graph_id) +
+#         "OPTIONAL MATCH (n)<-[:typing*0..]-(pred)-[:typing*0]->(existing_img:{})\n".format(
+#             successor_id) +
+#         "WHERE NOT pred = n AND NOT pred = existing_img\n" +
+#         "FOREACH(dummy IN CASE WHEN existing_img IS NOT NULL THEN [1] ELSE [] END |\n" +
+#         "\tMERGE (n)-[:typing]->(existing_img))\n" +
+#         generic.with_vars(['n']) +
+#         "OPTIONAL MATCH (n)<-[:typing*]-" +
+#         "(:{})-[trans_type:transitive_typing]->(existing_img:{})\n".format(
+#             origin_graph_id, successor_id) +
+#         "\tFOREACH(dummy IN CASE WHEN trans_type IS NULL THEN [] ELSE [1] END |\n" +
+#         "\t\tMERGE (n)-[:typing]->(existing_img)\n" +
+#         "\t\tDELETE trans_type)\n" +
+#         generic.with_vars(['n'])
+#     )
+#     tx.run(query)
+
+#     query = (
+#         "MERGE (n)-[:typing]->(node_img:{})\n".format(successor_id) +
+#         "WITH n, node_img\n" +
+#         "FOREACH(dummy IN CASE WHEN node_img.id IS NULL THEN [1] ELSE [] END |\n" +
+#         "\tSET node_img.id = toString(id(node_img)))\n" +
+#         "WITH n, node_img WHERE " +
+#         generic.nb_of_attrs_mismatch('n', 'node_img') + " <> 0\n" +
+#         "WITH node_img, collect(n) + [node_img] as nodes_to_merge_props\n"
+#     )
+#     carry_vars.add('node_img')
+#     query += (
+#         generic.merge_properties_from_list(
+#             list_var='nodes_to_merge_props',
+#             new_props_var='new_props',
+#             carry_vars=carry_vars,
+#             method='union') +
+#         "SET node_img += new_props\n"
+#     )
+#     tx.run(query)
+#     return query
 
 
 def add_edge_propagation_query(graph_id, successor_id):
