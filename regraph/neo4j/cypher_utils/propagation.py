@@ -561,28 +561,32 @@ def propagate_add_node(tx, origin_graph_id, graph_id, successor_id):
     tx.run(query)
 
     query = (
-        "MATCH (n:{}) WHERE NOT (n)-[:typing]->(:{})".format(
+        "MATCH (n:{}) WHERE NOT (n)-[:typing]->(:{})\n".format(
             graph_id, successor_id) +
         "MERGE (n)-[:typing]->(node_img:{})\n".format(successor_id) +
         "WITH n, node_img\n" +
         "FOREACH(dummy IN CASE WHEN node_img.id IS NULL THEN [1] ELSE [] END |\n" +
         "\tSET node_img.id = toString(id(node_img)))\n"
-        "WITH n, node_img WHERE " +
-        generic.nb_of_attrs_mismatch('n', 'node_img') + " <> 0\n" +
-        "WITH node_img, collect(n) + [node_img] as nodes_to_merge_props\n"
     )
-    carry_vars.add('node_img')
+    tx.run(query)
+
+    query = (
+        "MATCH (n:{})-[:typing]->(m:{})\n".format(graph_id, successor_id) +
+        "WITH n, m WHERE " + generic.nb_of_attrs_mismatch('n', 'm') + " <> 0\n" +
+        "WITH m, collect(n) + [m] as nodes_to_merge_props\n"
+    )
+    carry_vars.add('m')
     query += (
         generic.merge_properties_from_list(
             list_var='nodes_to_merge_props',
             new_props_var='new_props',
             carry_vars=carry_vars,
             method='union') +
-        "SET node_img += new_props\n"
+        "SET m += new_props\n"
     )
     tx.run(query)
+    # print(query)
     return query
-
 # def add_node_propagation_query(tx, origin_graph_id, graph_id, successor_id):
 #     """Generate query for propagation of node adds to a successor graph.."""
 #     carry_vars = set()

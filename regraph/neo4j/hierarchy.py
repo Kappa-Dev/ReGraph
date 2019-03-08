@@ -1148,7 +1148,15 @@ class Neo4jHierarchy(object):
             source_id, target_id, self._typing_label,
             "attributes")
         result = self.execute(query)
-        cypher.properties_to_attributes(result, "attributes")
+        return cypher.properties_to_attributes(result, "attributes")
+
+    def get_relation_attrs(self, left_id, right_id):
+        """Return attributes attached to the typing in the hierarchy."""
+        query = cypher.get_edge_attrs(
+            left_id, right_id, self._relation_label,
+            "attributes")
+        result = self.execute(query)
+        return cypher.properties_to_attributes(result, "attributes")
 
     def set_graph_attrs(self, graph_id, attrs):
         self.set_node_attrs(graph_id, attrs)
