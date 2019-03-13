@@ -79,6 +79,7 @@ class Neo4jGraph(object):
         """Execute a Cypher query."""
         with self._driver.session() as session:
             if len(query) > 0:
+                # print(query)
                 result = session.run(query)
                 return result
 
@@ -324,7 +325,9 @@ class Neo4jGraph(object):
         normalize_attrs(attrs)
         query = (
             cypher.match_edge(
-                "s", "t", source, target, "rel", self._edge_label) +
+                "s", "t", source, target, "rel",
+                self._node_label, self._node_label,
+                self._edge_label) +
             cypher.add_attributes("rel", attrs)
         )
         result = self.execute(query)
@@ -348,7 +351,9 @@ class Neo4jGraph(object):
         normalize_attrs(attrs)
         query = (
             cypher.match_edge(
-                "s", "t", source, target, "rel", self._edge_label) +
+                "s", "t", source, target, "rel",
+                self._node_label, self._edge_label,
+                self._edge_label) +
             cypher.set_attributes("rel", attrs, update)
         )
         result = self.execute(query)
@@ -359,7 +364,9 @@ class Neo4jGraph(object):
         normalize_attrs(attrs)
         query = (
             cypher.match_edge(
-                "s", "t", source, target, "rel", self._edge_label) +
+                "s", "t", source, target, "rel",
+                self._node_label, self._edge_label,
+                self._edge_label) +
             cypher.remove_attributes("rel", attrs)
         )
         result = self.execute(query)
@@ -388,6 +395,7 @@ class Neo4jGraph(object):
         query +=\
             cypher.match_edge(
                 "s", "t", source, target, 'edge_var',
+                self._node_label, self._node_label,
                 edge_label='edge') +\
             cypher.remove_edge('edge_var')
         result = self.execute(query)

@@ -93,9 +93,11 @@ def check_homomorphism(tx, domain, codomain, total=True):
         xy_ids.append((record['x_id'], record['y_id']))
     if len(xy_ids) != 0:
         raise InvalidHomomorphism(
-            "Connectivity is not preserved!\n" +
-            "\n".join([" Was expecting an edge between '{}' and '{}'.".format(
-                x, y) for x, y in xy_ids])
+            "Edges are not preserved in the homomorphism from '{}' to '{}': ".format(
+                domain, codomain) +
+            "Was expecting edges {}".format(
+                ", ".join(
+                    "'{}'->'{}'".format(x, y) for x, y in xy_ids))
         )
 
     # "CASE WHEN size(apoc.text.regexGroups(m_props, 'IntegerSet\\[(\\d+|minf)-(\\d+|inf)\\]') AS value"
@@ -106,7 +108,7 @@ def check_homomorphism(tx, domain, codomain, total=True):
             domain, codomain) +
         "WITH properties(n) as n_props, properties(m) as m_props, " +
         "n.id as n_id, m.id as m_id\n" +
-        "WITH REDUCE(invalid = 0, k in filter(k in keys(n_props) WHERE k <> 'id') |\n" +
+        "WITH REDUCE(invalid = 0, k in filter(k in keys(n_props) WHERE k <> 'id' AND k <> 'count') |\n" +
         "\tinvalid + CASE\n" +
         "\t\tWHEN NOT k IN keys(m_props) THEN 1\n" +
         "\t\tELSE REDUCE(invalid_values = 0, v in n_props[k] |\n" +
@@ -126,7 +128,8 @@ def check_homomorphism(tx, domain, codomain, total=True):
         invalid_typings.append((record['n_id'], record['m_id']))
     if len(invalid_typings) != 0:
         raise InvalidHomomorphism(
-            "Node attributes are not preserved!\n" +
+            "Node attributes are not preserved in the homomorphism from '{}' to '{}': ".format(
+                domain, codomain) +
             "\n".join(["Attributes of nodes source: '{}' ".format(n) +
                        "and target: '{}' do not match!".format(m)
                        for n, m in invalid_typings]))
@@ -154,7 +157,7 @@ def check_homomorphism(tx, domain, codomain, total=True):
         "WHERE invalid <> 0\n" +
         "RETURN n_id, m_id, x_id, y_id, invalid\n"
     )
-    
+
     result = tx.run(query4)
     invalid_edges = []
     for record in result:
@@ -307,7 +310,6 @@ def propagate_clones(tx, graph_id, predecessor_id):
         "WHERE n_img > 1 AND node_to_clone IS NOT NULL\n" +
         "RETURN node_to_clone, clones\n"
     )
-    # print(query_n)
     result = tx.run(query_n)
     clones = dict()
     for record in result:
@@ -324,7 +326,6 @@ def propagate_clones(tx, graph_id, predecessor_id):
             ", ".join(["'{}'".format(k) for k in clones.keys()])) +
         "RETURN tn.id as u, tm.id as v, properties(r) as attrs\n"
     )
-    # print(query_interclone_edges)
     result = tx.run(query_interclone_edges)
     interclone_edges = dict()
 
@@ -359,7 +360,6 @@ def propagate_clones(tx, graph_id, predecessor_id):
                     "MERGE (new_node)-[:typing]->(m)\n" +
                     generic.return_vars(['uid'])
                 )
-                # print(query)
                 result = tx.run(query)
                 uid_records = []
                 for record in result:
@@ -367,7 +367,6 @@ def propagate_clones(tx, graph_id, predecessor_id):
                 if len(uid_records) > 0:
                     clone_id = uid_records[0]
                     clone_results[clone_id] = c
-        # print("!", clone_results)
 
     # add interclone edges
     visited_edges = set()
@@ -386,7 +385,6 @@ def propagate_clones(tx, graph_id, predecessor_id):
                     edge_label="edge",
                     attrs=interclone_edges[(tn, tm)],
                     merge=True)
-                # print(query)
                 tx.run(query)
 
 
@@ -437,7 +435,6 @@ def clone_propagation_query(graph_id, predecessor_id):
             edge_label='typing') + ")))\n"
     )
     query += "RETURN clone_ids"
-    # print(query)
     return query
 
 
@@ -585,7 +582,6 @@ def propagate_add_node(tx, origin_graph_id, graph_id, successor_id):
         "SET m += new_props\n"
     )
     tx.run(query)
-    # print(query)
     return query
 # def add_node_propagation_query(tx, origin_graph_id, graph_id, successor_id):
 #     """Generate query for propagation of node adds to a successor graph.."""

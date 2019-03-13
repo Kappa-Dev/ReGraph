@@ -22,14 +22,13 @@ def load_graph_from_json(json_data, node_label, edge_label, literal_id=True):
         node_id = node_data["id"]
         if literal_id:
             node_id = "'{}'".format(node_id)
-
         attr_repr = generate_attributes(
             attrs_from_json(node_data["attrs"]))
 
         nodes.append(
-            "(n_{}:{} {{ id: {}, {}}})".format(
+            "(n_{}:{} {{ id: {} {} }})".format(
                 node_data["id"], node_label, node_id,
-                attr_repr))
+                ", " + attr_repr if len(attr_repr) > 0 else ""))
     query += ", ".join(nodes) + ","
 
     # Add edges
@@ -200,7 +199,8 @@ def match_nodes(var_id_dict, node_label=None):
     return query
 
 
-def match_edge(u_var, v_var, u_id, v_id, edge_var, edge_label='edge'):
+def match_edge(u_var, v_var, u_id, v_id, edge_var, u_label, v_label,
+               edge_label='edge'):
     """Query for matching an edge.
 
     Parameters
@@ -222,7 +222,8 @@ def match_edge(u_var, v_var, u_id, v_id, edge_var, edge_label='edge'):
     """
     query =\
         match_nodes({u_var: u_id, v_var: v_id}) + ", " +\
-        "({})-[{}:{}]->({})".format(u_var, edge_var, edge_label, v_var) + "\n"
+        "({}:{})-[{}:{}]->({}:{})".format(
+            u_var, u_label, edge_var, edge_label, v_var, v_label) + "\n"
     return query
 
 

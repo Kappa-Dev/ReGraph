@@ -278,8 +278,9 @@ class Neo4jHierarchy(object):
                     new_graph_id))
         self.add_graph(new_graph_id, attrs=self.get_graph_attrs(graph_id))
         copy_nodes_q = (
-            "MATCH (n:{}) CREATE (n1:{}) SET n1=n\n".format(
+            "MATCH (n:{}) CREATE (n1:{}) SET n1=n\n ".format(
                 graph_id, new_graph_id)
+            # "SET n1.oldId = n.id, n1.id = toString(id(n1))\n"
         )
         self.execute(copy_nodes_q)
         copy_edges_q = (
@@ -805,8 +806,10 @@ class Neo4jHierarchy(object):
                 # if clone_query:
                 #     tx.run(clone_query)
                 if remove_node_query:
+                    # print(remove_node_query)
                     tx.run(remove_node_query)
                 if remove_edge_query:
+                    # print(remove_edge_query)
                     tx.run(remove_edge_query)
                 tx.commit()
         for ancestor in predecessors:
