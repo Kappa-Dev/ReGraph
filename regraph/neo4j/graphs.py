@@ -191,6 +191,7 @@ class Neo4jGraph(object):
         query += cypher.match_nodes(
             {"n_" + source: source, "n_" + target: target},
             node_label=self._node_label)
+        print("Addning edge ", source, target, attrs)
         query += cypher.add_edge(
             edge_var='new_edge',
             source_var="n_" + source,

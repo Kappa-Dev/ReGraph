@@ -189,6 +189,15 @@ class Neo4jHierarchy(object):
         result = self.execute(query)
         return [(d["n.id"], d["m.id"]) for d in result]
 
+    def add_graph_from_json(self, graph_id, json_data, attrs=None):
+        node_list = []
+        edge_list = []
+        for n in json_data["nodes"]:
+            node_list.append((n["id"], attrs_from_json(n["attrs"])))
+        for e in json_data["edges"]:
+            edge_list.append((e["from"], e["to"], attrs_from_json(e["attrs"])))
+        self.add_graph(graph_id, node_list, edge_list, attrs)
+
     def add_graph(self, graph_id, node_list=None, edge_list=None,
                   attrs=None):
         """Add a graph to the hierarchy.
@@ -1328,13 +1337,14 @@ class Neo4jHierarchy(object):
                     attrs = dict()
                 else:
                     attrs = attrs_from_json(graph_data["attrs"])
-                hierarchy.add_empty_graph(graph_data["id"], attrs)
-                graph = hierarchy.get_graph(graph_data["id"])
-                graph.from_json(
-                    uri=uri, user=user,
-                    password=password, driver=driver,
-                    j_data=graph_data["graph"],
-                    node_label=graph_data["id"])
+                if graph_data["id"] not in hierarchy.graphs():
+                    hierarchy.add_empty_graph(graph_data["id"], attrs)
+                    graph = hierarchy.get_graph(graph_data["id"])
+                    graph.from_json(
+                        uri=uri, user=user,
+                        password=password, driver=driver,
+                        j_data=graph_data["graph"],
+                        node_label=graph_data["id"])
 
         # add typing
         for typing_data in json_data["typing"]:
@@ -1347,11 +1357,12 @@ class Neo4jHierarchy(object):
                     attrs = dict()
                 else:
                     attrs = attrs_from_json(typing_data["attrs"])
-                hierarchy.add_typing(
-                    typing_data["from"],
-                    typing_data["to"],
-                    typing_data["mapping"],
-                    attrs)
+                if (typing_data["from"], typing_data["to"]) not in hierarchy.typings():
+                    hierarchy.add_typing(
+                        typing_data["from"],
+                        typing_data["to"],
+                        typing_data["mapping"],
+                        attrs)
 
         # add relations
         for relation_data in json_data["relations"]:
@@ -1398,7 +1409,7 @@ class Neo4jHierarchy(object):
         else:
             raise ReGraphError("File '%s' does not exist!" % filename)
 
-    def to_json(self):
+    def to_json(self, rename_nodes=None):
         """Return json representation of the hierarchy."""
         json_data = {
             "rules": [],
@@ -1408,25 +1419,45 @@ class Neo4jHierarchy(object):
             "relations": []
         }
         for graph in self.graphs():
+            if rename_nodes and graph in rename_nodes.keys():
+                node_id = rename_nodes[graph]
+            else:
+                node_id = graph
             json_data["graphs"].append({
-                "id": graph,
+                "id": node_id,
                 "graph": self.get_graph(graph).to_json(),
                 "attrs": attrs_to_json(self.get_graph_attrs(graph))
             })
         for s, t in self.typings():
+            if rename_nodes and s in rename_nodes.keys():
+                s_id = rename_nodes[s]
+            else:
+                s_id = s
+            if rename_nodes and t in rename_nodes.keys():
+                t_id = rename_nodes[t]
+            else:
+                t_id = t
             json_data["typing"].append({
-                "from": s,
-                "to": t,
+                "from": s_id,
+                "to": t_id,
                 "mapping": self.get_typing(s, t),
                 "attrs": attrs_to_json(self.get_typing_attrs(s, t))
             })
         visited = set()
         for u, v in self.relations():
+            if rename_nodes and u in rename_nodes.keys():
+                u_id = rename_nodes[u]
+            else:
+                u_id = u
+            if rename_nodes and v in rename_nodes.keys():
+                v_id = rename_nodes[v]
+            else:
+                v_id = v
             if not (u, v) in visited and not (v, u) in visited:
                 visited.add((u, v))
                 json_data["relations"].append({
-                    "from": u,
-                    "to": v,
+                    "from": u_id,
+                    "to": v_id,
                     "rel": {a: list(b) for a, b in self.get_relation(u, v).items()},
                     "attrs": attrs_to_json(self.get_relation_attrs(u, v))
                 })

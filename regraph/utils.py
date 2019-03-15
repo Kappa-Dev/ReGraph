@@ -24,6 +24,14 @@ def attrs_from_json(json_data):
     return attrs
 
 
+def relation_to_json(rel):
+    """Convert relation to json-serializable."""
+    json_data = {}
+    for k, v in rel.items():
+        json_data[k] = list(v)
+    return json_data
+
+
 def load_nodes_from_json(j_data):
     """Load nodes from json-like dict."""
     loaded_nodes = []

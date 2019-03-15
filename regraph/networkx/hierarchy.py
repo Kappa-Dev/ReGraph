@@ -255,7 +255,7 @@ class NetworkXHierarchy(nx.DiGraph):
     def is_rule_typing(self, s, t):
         return "lhs_mapping" in self.adj[s][t]
 
-    def to_json(self):
+    def to_json(self, rename_nodes=None):
         """Return json representation of the hierarchy."""
         json_data = {
             "rules": [],
@@ -265,9 +265,13 @@ class NetworkXHierarchy(nx.DiGraph):
             "relations": []
         }
         for node in self.nodes():
+            if rename_nodes and node in rename_nodes.keys():
+                node_id = rename_nodes[node]
+            else:
+                node_id = node
             if self.is_rule(node):
                 json_data["rules"].append({
-                    "id": node,
+                    "id": node_id,
                     "rule": self.node[node]["rule"].to_json(),
                     "attrs": attrs_to_json(self.node[node]["attrs"])
                 })
@@ -281,17 +285,25 @@ class NetworkXHierarchy(nx.DiGraph):
                 raise HierarchyError(
                     "Unknown type of the node '{}'".format(node))
         for s, t in self.edges():
+            if rename_nodes and s in rename_nodes.keys():
+                s_id = rename_nodes[s]
+            else:
+                s_id = s
+            if rename_nodes and t in rename_nodes.keys():
+                t_id = rename_nodes[t]
+            else:
+                t_id = t
             if self.is_typing(s, t):
                 json_data["typing"].append({
-                    "from": s,
-                    "to": t,
+                    "from": s_id,
+                    "to": t_id,
                     "mapping": self.adj[s][t]["mapping"],
                     "attrs": attrs_to_json(self.adj[s][t]["attrs"])
                 })
             elif self.is_rule_typing(s, t):
                 json_data["rule_typing"].append({
-                    "from": s,
-                    "to": t,
+                    "from": s_id,
+                    "to": t_id,
                     "lhs_mapping": self.adj[s][t]["lhs_mapping"],
                     "rhs_mapping": self.adj[s][t]["rhs_mapping"],
                     "lhs_total": self.adj[s][t]["lhs_total"],
@@ -303,11 +315,19 @@ class NetworkXHierarchy(nx.DiGraph):
                     "Unknown type of the edge '{}->{}'!".format(s, t))
         visited = set()
         for u, v in self.relations():
+            if rename_nodes and u in rename_nodes.keys():
+                u_id = rename_nodes[u]
+            else:
+                u_id = u
+            if rename_nodes and v in rename_nodes.keys():
+                v_id = rename_nodes[v]
+            else:
+                v_id = v
             if not (u, v) in visited and not (v, u) in visited:
                 visited.add((u, v))
                 json_data["relations"].append({
-                    "from": u,
-                    "to": v,
+                    "from": u_id,
+                    "to": v_id,
                     "rel": {a: list(b) for a, b in self.relation_edges[u, v]["rel"].items()},
                     "attrs": attrs_to_json(self.relation_edges[u, v]["attrs"])
                 })
@@ -486,6 +506,15 @@ class NetworkXHierarchy(nx.DiGraph):
     def relations(self):
         """Return a list of relations."""
         return list(set(self.relation_edges.keys()))
+
+    def add_graph_from_json(self, graph_id, json_data, attrs=None):
+        node_list = []
+        edge_list = []
+        for n in json_data["nodes"]:
+            node_list.append((n["id"], attrs_from_json(n["attrs"])))
+        for e in json_data["edges"]:
+            edge_list.append((e["from"], e["to"], attrs_from_json(e["attrs"])))
+        self.add_graph(graph_id, node_list, edge_list, attrs)
 
     def add_graph(self, graph_id, graph, attrs=None, **kwargs):
         """Add graph to the hierarchy.
