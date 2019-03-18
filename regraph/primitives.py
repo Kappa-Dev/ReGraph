@@ -1232,6 +1232,7 @@ def graph_to_d3_json(graph,
                      node_attrs_to_attach=None,
                      edge_attrs_to_attach=None):
     """Create a JSON representation of a graph."""
+    # if isinstance(graph, nx.DiGraph):
     j_data = {"links": [], "nodes": []}
     # dump nodes
     for node in graph.nodes():
@@ -1271,6 +1272,8 @@ def graph_to_d3_json(graph,
                     if key in edge_attrs.keys():
                         edge_data[key] = list(edge_attrs[key])
         j_data["links"].append(edge_data)
+    # else:
+    #     j_data = graph.to_d3_json()
     return j_data
 
 

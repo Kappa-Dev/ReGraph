@@ -190,13 +190,27 @@ class Neo4jHierarchy(object):
         return [(d["n.id"], d["m.id"]) for d in result]
 
     def add_graph_from_json(self, graph_id, json_data, attrs=None):
-        node_list = []
-        edge_list = []
-        for n in json_data["nodes"]:
-            node_list.append((n["id"], attrs_from_json(n["attrs"])))
-        for e in json_data["edges"]:
-            edge_list.append((e["from"], e["to"], attrs_from_json(e["attrs"])))
-        self.add_graph(graph_id, node_list, edge_list, attrs)
+        """Load graph from Json using APOC."""
+        try:
+            # Create a node in the hierarchy
+            query = "CREATE ({}:{} {{ id : '{}' }}) \n".format(
+                'new_graph',
+                self._graph_label,
+                graph_id)
+            if attrs is not None:
+                normalize_attrs(attrs)
+                query += cypher.set_attributes(
+                    var_name='new_graph',
+                    attrs=attrs)
+            self.execute(query)
+            with self._driver.session() as session:
+                tx = session.begin_transaction()
+                cypher.load_graph_from_json_apoc(
+                    tx, json_data, graph_id, self._graph_edge_label)
+                tx.commit()
+        except(ConstraintError):
+            raise HierarchyError(
+                "The graph '{}' is already in the database.".format(graph_id))
 
     def add_graph(self, graph_id, node_list=None, edge_list=None,
                   attrs=None):

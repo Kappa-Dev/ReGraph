@@ -1,5 +1,8 @@
 """Collection of generic utils for Cypher queries generation."""
 import uuid
+import tempfile
+import json
+import os
 
 from regraph.attribute_sets import (FiniteSet,
                                     IntegerSet,
@@ -10,6 +13,50 @@ from regraph.utils import attrs_from_json
 
 
 RESERVED_SET_NAMES = ["IntegerSet", "StringSet", "BooleanSet"]
+
+
+def load_graph_from_json_apoc(tx, json_data, node_label, edge_label,
+                              tmp_dir=None):
+    # store json-file somewhere, generate attr repr.
+    if tmp_dir is None:
+        tmp_dir = "/var/lib/neo4j/import/"
+    path = tmp_dir + "kami_tmp.json"
+    # fd, path = tempfile.mkstemp(prefix=tmp_dir)
+    # try:
+    with open(path, 'w+') as tmp:
+        for n in json_data["nodes"]:
+            n["attrs"] = generate_attributes_json(
+                attrs_from_json(n["attrs"]))
+            n["attrs"]["id"] = n["id"]
+        for e in json_data["edges"]:
+            e["attrs"] = generate_attributes_json(
+                attrs_from_json(e["attrs"]))
+        json.dump(json_data, tmp)
+
+        # load nodes
+        node_query = (
+            "WITH 'file:///{}' AS url\n".format(path) +
+            "CALL apoc.load.json(url) YIELD value\n" +
+            "UNWIND value.nodes AS node\n" +
+            "MERGE (n:{} {{ id: node.id }}) ON CREATE\n".format(node_label) +
+            "\tSET n = node.attrs\n"
+        )
+        tx.run(node_query)
+
+        # load edges
+        edge_query = (
+            "WITH 'file:///{}' AS url\n".format(path) +
+            "CALL apoc.load.json(url) YIELD value\n" +
+            "UNWIND value.edges AS edge\n" +
+            "MATCH (u:{} {{ id: edge.from }}), (v:{} {{ id: edge.to }}) \n".format(
+                node_label, node_label) +
+            "MERGE (u)-[rel:{}]->(v)\n ON CREATE\n".format(edge_label) +
+            "\tSET rel = edge.attrs\n"
+        )
+        print(edge_query)
+        tx.run(edge_query)
+    # finally:
+    #     os.remove(path)
 
 
 def load_graph_from_json(json_data, node_label, edge_label, literal_id=True,
@@ -138,6 +185,33 @@ def set_attributes(var_name, attrs, update=False):
             )
     return query
 
+
+def generate_attributes_json(attrs):
+    json_attrs = {}
+    if attrs is not None:
+        for k, value in attrs.items():
+            if isinstance(value, IntegerSet):
+                if value.is_universal:
+                    json_attrs[k] = ["IntegerSet"]
+                else:
+                    raise ReGraphError(
+                        "Non universal IntegerSet is not allowed as "
+                        "an attribute value (not implemented)")
+            elif isinstance(value, RegexSet):
+                if value.is_universal:
+                    json_attrs[k] = ["StringSet"]
+                else:
+                    raise ReGraphError(
+                        "Non universal RegexSet is not allowed as "
+                        "an attribute value (not implemented)")
+            elif isinstance(value, FiniteSet):
+                json_attrs[k] = list(value.fset)
+            elif isinstance(value, UniversalSet):
+                json_attrs[k] = ["StringSet"]
+            else:
+                raise ValueError(
+                    "Unknown type of attribute '{}': '{}'".format(k, type(value)))
+    return json_attrs
 
 def generate_attributes(attrs):
     """Generate a string converting attrs to Cypher compatible format."""

@@ -79,7 +79,6 @@ class Neo4jGraph(object):
         """Execute a Cypher query."""
         with self._driver.session() as session:
             if len(query) > 0:
-                # print(query)
                 result = session.run(query)
                 return result
 
@@ -168,7 +167,7 @@ class Neo4jGraph(object):
         normalize_attrs(attrs)
         query +=\
             cypher.add_node(
-                node, node, 'new_id',
+                "n_" + node, node, 'new_id',
                 node_label=self._node_label,
                 attrs=attrs,
                 literal_id=True,
@@ -191,7 +190,6 @@ class Neo4jGraph(object):
         query += cypher.match_nodes(
             {"n_" + source: source, "n_" + target: target},
             node_label=self._node_label)
-        print("Addning edge ", source, target, attrs)
         query += cypher.add_edge(
             edge_var='new_edge',
             source_var="n_" + source,
@@ -201,83 +199,103 @@ class Neo4jGraph(object):
         result = self.execute(query)
         return result
 
-    def add_nodes_from(self, nodes, ignore_naming=False, profiling=False):
+    def add_nodes_from(self, nodes, ignore_naming=False, profiling=False,
+                       holistic=False):
         """Add nodes to the graph db."""
         if profiling:
             query = "PROFILE\n"
         else:
             query = ""
-        carry_variables = set()
-        for n in nodes:
-            if type(n) != str:
-                try:
-                    n_id, attrs = n
-                    normalize_attrs(
-                        attrs)
-                    q, carry_variables =\
-                        cypher.add_node(
-                            n_id, n_id, 'new_id_' + n_id,
-                            node_label=self._node_label,
-                            attrs=attrs,
-                            ignore_naming=ignore_naming)
-                except ValueError as e:
+        if holistic:
+            carry_variables = set()
+            for n in nodes:
+                if type(n) != str:
+                    try:
+                        n_id, attrs = n
+                        normalize_attrs(
+                            attrs)
+                        q, carry_variables =\
+                            cypher.add_node(
+                                n_id, n_id, 'new_id_' + n_id,
+                                node_label=self._node_label,
+                                attrs=attrs,
+                                ignore_naming=ignore_naming)
+                    except ValueError as e:
+                        q, carry_variables =\
+                            cypher.add_node(
+                                n, n, 'new_id_' + n,
+                                node_label=self._node_label,
+                                ignore_naming=ignore_naming)
+                else:
                     q, carry_variables =\
                         cypher.add_node(
                             n, n, 'new_id_' + n,
                             node_label=self._node_label,
                             ignore_naming=ignore_naming)
-            else:
-                q, carry_variables =\
-                    cypher.add_node(
-                        n, n, 'new_id_' + n,
-                        node_label=self._node_label,
-                        ignore_naming=ignore_naming)
-            query += q + cypher.with_vars(carry_variables)
-        if len(carry_variables) > 0:
-            query += cypher.return_vars(carry_variables)
+                query += q + cypher.with_vars(carry_variables)
+            if len(carry_variables) > 0:
+                query += cypher.return_vars(carry_variables)
+            result = self.execute(query)
+            return result
+        else:
+            print("Addind non-holistic nodes")
+            for n in nodes:
+                try:
+                    n_id, attrs = n
+                    self.add_node(n_id, attrs)
+                except ValueError:
+                    self.add_node(n)
 
-        result = self.execute(query)
-        return result
-
-    def add_edges_from(self, edges, profiling=False):
+    def add_edges_from(self, edges, profiling=False, holistic=False):
         """Add edges to the graph db."""
         if profiling:
             query = "PROFILE\n"
         else:
             query = ""
-        nodes_to_match = set()
-        edge_creation_queries = []
-        for e in edges:
-            try:
-                u, v, attrs = e
-                nodes_to_match.add(u)
-                nodes_to_match.add(v)
-                normalize_attrs(attrs)
-                edge_creation_queries.append(
-                    cypher.add_edge(
-                        edge_var=u + "_" + v,
-                        source_var=u,
-                        target_var=v,
-                        edge_label=self._edge_label,
-                        attrs=attrs))
-            except ValueError:
-                u, v = e
-                nodes_to_match.add(u)
-                nodes_to_match.add(v)
-                edge_creation_queries.append(
-                    cypher.add_edge(
-                        edge_var=u + "_" + v,
-                        source_var=u,
-                        target_var=v,
-                        edge_label=self._edge_label))
-        if len(edges) > 0:
-            query += cypher.match_nodes(
-                {n: n for n in nodes_to_match},
-                node_label=self._node_label)
-            for q in edge_creation_queries:
-                query += q
-            result = self.execute(query)
-            return result
+
+        if holistic:
+            nodes_to_match = set()
+            edge_creation_queries = []
+            for e in edges:
+                try:
+                    u, v, attrs = e
+                    nodes_to_match.add(u)
+                    nodes_to_match.add(v)
+                    normalize_attrs(attrs)
+                    edge_creation_queries.append(
+                        cypher.add_edge(
+                            edge_var=u + "_" + v,
+                            source_var=u,
+                            target_var=v,
+                            edge_label=self._edge_label,
+                            attrs=attrs))
+                except ValueError:
+                    u, v = e
+                    nodes_to_match.add(u)
+                    nodes_to_match.add(v)
+                    edge_creation_queries.append(
+                        cypher.add_edge(
+                            edge_var=u + "_" + v,
+                            source_var=u,
+                            target_var=v,
+                            edge_label=self._edge_label))
+            if len(edges) > 0:
+                query += cypher.match_nodes(
+                    {n: n for n in nodes_to_match},
+                    node_label=self._node_label)
+                for q in edge_creation_queries:
+                    query += q
+                result = self.execute(query)
+                return result
+        else:
+            print("Addind non-holistic edges")
+            for e in edges:
+                try:
+                    u, v, attrs = e
+                    self.add_edge(u, v, attrs)
+                except ValueError:
+                    u, v = e
+                    self.add_edge(u, v)
 
     def add_node_attrs(self, node, attrs):
         """Add attributes to the node."""
@@ -733,6 +751,18 @@ class Neo4jGraph(object):
             j_data["edges"].append(edge_data)
         return j_data
 
+    def to_d3_json(self):
+        query = (
+            "MATCH (n:{})".format(self._node_label) +
+            "OPTIONAL MATCH (n)-[r:{}]-()\n".format(self._edge_label) +
+            "WITH collect(n) as nodes, collect(r) as edges\n" +
+            "WITH reduce(acc=[], n in nodes | acc + {id: n.id, attrs: n}) as node_aggregate, \n" +
+            "reduce(acc=[], e in filter(e IN edges WHERE e IS NOT NULL) | acc + {source: e.start, target: e.end, attrs: e}) as edge_aggregate\n" +
+            "RETURN {nodes: node_aggregate, links: edge_aggregate} as graph\n"
+        )
+        result = self.execute(query)
+        return result.single()["graph"]
+
     def export(self, filename):
         """Export graph to JSON file.
 
@@ -755,14 +785,24 @@ class Neo4jGraph(object):
 
     @classmethod
     def from_json(cls, driver=None, uri=None, user=None, password=None,
-                  j_data=None, node_label="node", edge_label="edge"):
+                  j_data=None, node_label="node", edge_label="edge",
+                  holistic=False):
         """Create a Neo4jGraph from a json-like dictionary."""
         graph = cls(
             driver=driver, uri=uri, user=user, password=password,
             node_label=node_label, edge_label=edge_label)
-        query = cypher.load_graph_from_json(
-            j_data, graph._node_label, graph._edge_label)
-        graph.execute(query)
+        if holistic:
+            query = cypher.load_graph_from_json(
+                j_data, graph._node_label, graph._edge_label)
+            graph.execute(query)
+        else:
+            print("Adding not holistic")
+            graph.add_nodes_from([
+                (n["id"], attrs_from_json(n["attrs"]))
+                for n in j_data["nodes"]])
+            graph.add_edges_from([
+                (e["from"], e["to"], attrs_from_json(e["attrs"]))
+                for e in j_data["edges"]])
         return graph
 
     @classmethod
