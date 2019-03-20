@@ -308,7 +308,7 @@ class Neo4jGraph(object):
         return result
 
     def set_node_attrs(self, node, attrs, update=False):
-        """Overwrite all the node attributes.
+        """Set node attributes.
 
         node :
             Id of the node whose attrs should be set
@@ -327,6 +327,21 @@ class Neo4jGraph(object):
         )
         result = self.execute(query)
         return result
+
+    def set_node_attrs_from_json(self, node, attrs, update=False):
+        """Set node attributes from json repr of attrs.
+
+        node :
+            Id of the node whose attrs should be set
+        attrs : dict
+            Dictionary containing attrs
+        update : optional
+            If is set to False, updates only the attributes
+            whose keys are in 'attrs', all the attributes not
+            mentioned in 'attrs' stay the same. Otherwise,
+            overwrites all the attributes (default: False)
+        """
+        return self.set_node_attrs(node, attrs_from_json(attrs), update)
 
     def remove_node_attrs(self, node, attrs):
         """Remove attributes from the node."""
@@ -353,7 +368,7 @@ class Neo4jGraph(object):
         return result
 
     def set_edge_attrs(self, source, target, attrs, update=False):
-        """Overwrite all the edge attributes.
+        """Set edge attributes.
 
         source :
             Id of the source node of the edge
@@ -371,12 +386,29 @@ class Neo4jGraph(object):
         query = (
             cypher.match_edge(
                 "s", "t", source, target, "rel",
-                self._node_label, self._edge_label,
+                self._node_label, self._node_label,
                 self._edge_label) +
             cypher.set_attributes("rel", attrs, update)
         )
         result = self.execute(query)
         return result
+
+    def set_edge_attrs_from_json(self, source, target, attrs, update=False):
+        """Set edge attributes.
+
+        source :
+            Id of the source node of the edge
+        target :
+            Id of the target node of the edge
+        attrs : dict
+            Dictionary containing attrs
+        update : optional
+            If is set to False, updates only the attributes
+            whose keys are in 'attrs', all the attributes not
+            mentioned in 'attrs' stay the same. Otherwise,
+            overwrites all the attributes (default: False)
+        """
+        return self.set_edge_attrs(source, target, attrs_from_json(attrs))
 
     def remove_edge_attrs(self, source, target, attrs):
         """Remove attributes from the edge."""

@@ -313,9 +313,8 @@ def match_edge(u_var, v_var, u_id, v_id, edge_var, u_label, v_label,
         Label of the edge to match, default is 'edge'
     """
     query =\
-        match_nodes({u_var: u_id, v_var: v_id}) + ", " +\
-        "({}:{})-[{}:{}]->({}:{})".format(
-            u_var, u_label, edge_var, edge_label, v_var, v_label) + "\n"
+        "MATCH ({}:{} {{id: '{}'}})-[{}:{}]->({}:{} {{id: '{}'}})\n".format(
+            u_var, u_label, u_id, edge_var, edge_label, v_var, v_label, v_id)
     return query
 
 
