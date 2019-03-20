@@ -211,6 +211,24 @@ def normalize_attrs(attrs):
     return
 
 
+def normalize_relation(relation):
+    new_relation_dict = dict()
+    for key, values in relation.items():
+        if type(values) == set:
+            new_relation_dict[key] = values
+        elif type(values) == str:
+            new_relation_dict[key] = {values}
+        else:
+            try:
+                new_set = set()
+                for v in values:
+                    new_set.add(v)
+                new_relation_dict[key] = new_set
+            except TypeError:
+                new_relation_dict[key] = {values}
+    relation = new_relation_dict
+
+
 def merge_attributes(attr1, attr2, method="union"):
     """Merge two dictionaries of attributes."""
     if method == "union":

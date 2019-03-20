@@ -18,7 +18,8 @@ from regraph.utils import (normalize_attrs,
                            keys_by_value,
                            normalize_typing_relation,
                            attrs_from_json,
-                           attrs_to_json)
+                           attrs_to_json,
+                           normalize_relation)
 
 
 class Neo4jHierarchy(object):
@@ -189,7 +190,8 @@ class Neo4jHierarchy(object):
         result = self.execute(query)
         return [(d["n.id"], d["m.id"]) for d in result]
 
-    def add_graph_from_json(self, graph_id, json_data, attrs=None):
+    def add_graph_from_json(self, graph_id, json_data, attrs=None,
+                            holistic=True):
         """Load graph from Json using APOC."""
         try:
             # Create a node in the hierarchy
@@ -203,11 +205,26 @@ class Neo4jHierarchy(object):
                     var_name='new_graph',
                     attrs=attrs)
             self.execute(query)
-            with self._driver.session() as session:
-                tx = session.begin_transaction()
-                cypher.load_graph_from_json_apoc(
-                    tx, json_data, graph_id, self._graph_edge_label)
-                tx.commit()
+            if holistic:
+                start = time.time()
+                with self._driver.session() as session:
+                    tx = session.begin_transaction()
+                    cypher.load_graph_from_json_apoc(
+                        tx, json_data, graph_id, self._graph_edge_label)
+                    tx.commit()
+                # print("Holistic load: ", time.time() - start)
+            else:
+                start = time.time()
+                g = self.get_graph(graph_id)
+                for n in json_data["nodes"]:
+                    g.add_node(n["id"], attrs_from_json(n["attrs"]))
+
+                for e in json_data["edges"]:
+                    g.add_edge(
+                        e["from"], e["to"],
+                        attrs_from_json(e["attrs"]))
+                # print("Non-holistic load: ", time.time() - start)
+
         except(ConstraintError):
             raise HierarchyError(
                 "The graph '{}' is already in the database.".format(graph_id))
@@ -486,21 +503,7 @@ class Neo4jHierarchy(object):
         {1: {'a'}, 2: {'a'}, 3: {'b'}}
         """
         # normalize relation dict
-        new_relation_dict = dict()
-        for key, values in relation.items():
-            if type(values) == set:
-                new_relation_dict[key] = values
-            elif type(values) == str:
-                new_relation_dict[key] = {values}
-            else:
-                try:
-                    new_set = set()
-                    for v in values:
-                        new_set.add(v)
-                    new_relation_dict[key] = new_set
-                except TypeError:
-                    new_relation_dict[key] = {values}
-        relation = new_relation_dict
+        normalize_relation(relation)
 
         if attrs is not None:
             normalize_attrs(attrs)
@@ -508,33 +511,48 @@ class Neo4jHierarchy(object):
         g_left = self._access_graph(left)
         g_right = self._access_graph(right)
 
-        query = ""
-        rel_creation_queries = []
-        nodes_to_match_left = set()
-        nodes_to_match_right = set()
-        for key, values in new_relation_dict.items():
-            nodes_to_match_left.add(key)
-            for value in values:
-                nodes_to_match_right.add(value)
-                rel_creation_queries.append(
+        for key, values in relation.items():
+            for v in values:
+                query = (
+                    "MATCH (u:{} {{id: '{}'}}), (v:{} {{id: '{}'}})\n".format(
+                        left, key, right, v) +
                     cypher.add_edge(
-                        edge_var="rel_" + key + "_" + value,
-                        source_var="n" + key + "_left",
-                        target_var="n" + value + "_right",
-                        edge_label="relation"))
+                        edge_var="rel_" + key + "_" + v,
+                        source_var="u",
+                        target_var="v",
+                        edge_label="relation")
+                )
+                self.execute(query)
 
-        if len(nodes_to_match_left) > 0:
-            query += cypher.match_nodes(
-                {"n" + n + "_left": n for n in nodes_to_match_left},
-                node_label=g_left._node_label)
-            query += cypher.with_vars(
-                ["n" + s + "_left" for s in nodes_to_match_left])
-            query += cypher.match_nodes(
-                {"n" + n + "_right": n for n in nodes_to_match_right},
-                node_label=g_right._node_label)
-            for q in rel_creation_queries:
-                query += q
-        rel_addition_result = self.execute(query)
+        # query = ""
+        # rel_creation_queries = []
+        # nodes_to_match_left = set()
+        # nodes_to_match_right = set()
+        # for key, values in relation.items():
+        #     nodes_to_match_left.add(key)
+        #     for value in values:
+        #         nodes_to_match_right.add(value)
+        #         rel_creation_queries.append(
+        #             cypher.add_edge(
+        #                 edge_var="rel_" + key + "_" + value,
+        #                 source_var="n" + key + "_left",
+        #                 target_var="n" + value + "_right",
+        #                 edge_label="relation"))
+
+        # if len(nodes_to_match_left) > 0:
+        #     query += cypher.match_nodes(
+        #         {"n" + n + "_left": n for n in nodes_to_match_left},
+        #         node_label=g_left._node_label)
+        #     query += cypher.with_vars(
+        #         ["n" + s + "_left" for s in nodes_to_match_left])
+        #     query += cypher.match_nodes(
+        #         {"n" + n + "_right": n for n in nodes_to_match_right},
+        #         node_label=g_right._node_label)
+        #     for q in rel_creation_queries:
+        #         query += q
+        # print(query)
+        # rel_addition_result = self.execute(query)
+
         skeleton_query = (
             cypher.match_nodes(
                 var_id_dict={'g_left': left, 'g_right': right},
@@ -546,9 +564,8 @@ class Neo4jHierarchy(object):
                 edge_label=self._relation_label,
                 attrs=attrs)
         )
-
         skeleton_addition_result = self.execute(skeleton_query)
-        return (rel_addition_result, skeleton_addition_result)
+        return (None, skeleton_addition_result)
 
     def remove_graph(self, node_id, reconnect=False):
         """Remove node from the hierarchy.

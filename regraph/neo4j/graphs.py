@@ -238,7 +238,6 @@ class Neo4jGraph(object):
             result = self.execute(query)
             return result
         else:
-            print("Addind non-holistic nodes")
             for n in nodes:
                 try:
                     n_id, attrs = n
@@ -288,7 +287,6 @@ class Neo4jGraph(object):
                 result = self.execute(query)
                 return result
         else:
-            print("Addind non-holistic edges")
             for e in edges:
                 try:
                     u, v, attrs = e
@@ -566,7 +564,7 @@ class Neo4jGraph(object):
                 edge_labels=edge_labels,
                 ignore_naming=ignore_naming)[0] +\
             cypher.return_vars(['uid'])
-        # print(query)
+
         result = self.execute(query)
         uid_records = []
         for record in result:
@@ -828,7 +826,6 @@ class Neo4jGraph(object):
                 j_data, graph._node_label, graph._edge_label)
             graph.execute(query)
         else:
-            print("Adding not holistic")
             graph.add_nodes_from([
                 (n["id"], attrs_from_json(n["attrs"]))
                 for n in j_data["nodes"]])
