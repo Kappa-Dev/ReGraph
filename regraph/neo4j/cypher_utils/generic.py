@@ -53,7 +53,6 @@ def load_graph_from_json_apoc(tx, json_data, node_label, edge_label,
             "MERGE (u)-[rel:{}]->(v)\n ON CREATE\n".format(edge_label) +
             "\tSET rel = edge.attrs\n"
         )
-        print(edge_query)
         tx.run(edge_query)
     # finally:
     #     os.remove(path)
