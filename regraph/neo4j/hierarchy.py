@@ -1149,9 +1149,9 @@ class Neo4jHierarchy(object):
             "typing")
         result = self.execute(query)
 
-    def set_node_attrs(self, node_id, attrs):
+    def set_node_attrs(self, node_id, attrs, update=False):
         skeleton = self._access_graph(self._graph_label)
-        skeleton.set_node_attrs(node_id, attrs)
+        skeleton.set_node_attrs(node_id, attrs, update)
 
     def set_edge_attrs(self, source, target, attrs):
         skeleton = self._access_graph(self._graph_label)
@@ -1201,8 +1201,8 @@ class Neo4jHierarchy(object):
         result = self.execute(query)
         return cypher.properties_to_attributes(result, "attributes")
 
-    def set_graph_attrs(self, graph_id, attrs):
-        self.set_node_attrs(graph_id, attrs)
+    def set_graph_attrs(self, graph_id, attrs, update=False):
+        self.set_node_attrs(graph_id, attrs, update)
 
     def set_typing_attrs(self, source, target, attrs):
         self.set_edge_attrs(source, target, attrs)
@@ -1499,3 +1499,15 @@ class Neo4jHierarchy(object):
         with open(filename, 'w') as f:
             j_data = self.to_json()
             json.dump(j_data, f)
+
+    def get_graphs_having_typing(self, graph_id, node_id):
+        query = (
+            "MATCH (m)-[:{}]->(n:{} {{id: '{}'}})\n".format(
+                self._graph_typing_label, graph_id, node_id) +
+            "RETURN labels(m)[0] as label"
+        )
+        result = self.execute(query)
+        graphs = []
+        for record in result:
+            graphs.append(record["label"])
+        return graphs
