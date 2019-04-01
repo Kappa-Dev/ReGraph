@@ -510,6 +510,7 @@ def merging_query(original_vars, merged_var, merged_id, merged_id_var,
         " {properties: 'combine'})\n"
         "\tYIELD rel\n"
     )
+
     return query, carry_vars
 
 

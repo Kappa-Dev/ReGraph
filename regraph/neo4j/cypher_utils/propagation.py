@@ -148,16 +148,15 @@ def check_homomorphism(tx, domain, codomain, total=True):
         "\tinvalid + CASE\n" +
         "\t\tWHEN NOT k IN keys(rel_img_props) THEN 1\n" +
         "\t\tELSE REDUCE(invalid_values = 0, v in rel_orig_props[k] |\n" +
-        "\t\t\tinvalid_values + CASE rel_img_props[k][0]\n" +
-        "\t\t\t\tWHEN 'IntegerSet' THEN CASE WHEN toInt(v) IS NULL THEN 1 ELSE 0 END\n" +
-        "\t\t\t\tWHEN 'StringSet' THEN CASE WHEN toString(v) <> v THEN 1 ELSE 0 END\n" +
-        "\t\t\t\tWHEN 'BooleanSet' THEN CASE WHEN v=true OR v=false THEN 0 ELSE 1 END\n" +
+        "\t\t\tinvalid_values + CASE rel_img_props[k]\n" +
+        "\t\t\t\tWHEN ['IntegerSet'] THEN CASE WHEN toInt(v) IS NULL THEN 1 ELSE 0 END\n" +
+        "\t\t\t\tWHEN ['StringSet'] THEN CASE WHEN toString(v) <> v THEN 1 ELSE 0 END\n" +
+        "\t\t\t\tWHEN ['BooleanSet'] THEN CASE WHEN v=true OR v=false THEN 0 ELSE 1 END\n" +
         "\t\t\t\tELSE CASE WHEN NOT v IN rel_img_props[k] THEN 1 ELSE 0 END END)\n" +
         "\t\tEND) AS invalid, n_id, m_id, x_id, y_id\n" +
         "WHERE invalid <> 0\n" +
         "RETURN n_id, m_id, x_id, y_id, invalid\n"
     )
-
     result = tx.run(query4)
     invalid_edges = []
     for record in result:
@@ -506,10 +505,15 @@ def merge_propagation_query(graph_id, successor_id):
     query += (
         "\n// Matching of the nodes to merge in '{}'\n".format(successor_id) +
         "WITH [] as merged_nodes\n"
-        "OPTIONAL MATCH (n:{})-[:typing]->(node_to_merge:{})\n".format(
+        "OPTIONAL MATCH (n:{})-[r:typing]->(node_to_merge:{})\n".format(
             graph_id, successor_id) +
-        "WITH n, collect(node_to_merge) as nodes_to_merge, " +
+        "WITH n, collect(DISTINCT r) as rels, collect(DISTINCT node_to_merge) as nodes_to_merge, " +
         ", ".join(carry_vars) + "\n"
+        "FOREACH(dummy IN CASE WHEN size(rels) > 1 AND size(nodes_to_merge) = 1 THEN [null] ELSE [] END |\n" +
+        "\t FOREACH(rel IN rels | DELETE rel)\n" +
+        "\t FOREACH(m in nodes_to_merge |\n" +
+        "\t CREATE (n)-[:typing]->(m)))\n" +
+        "WITH n, nodes_to_merge, merged_nodes\n" +
         "WHERE n IS NOT NULL AND size(nodes_to_merge) >= 2\n"
     )
     carry_vars.add('n')

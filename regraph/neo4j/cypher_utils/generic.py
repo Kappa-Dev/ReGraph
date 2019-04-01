@@ -379,7 +379,7 @@ def get_edges(source_label, target_label,
 
 def successors_query(var_name, node_id, node_label,
                      edge_label, successor_label=None,
-                     undirected=True):
+                     undirected=False):
     """Generate query for getting the ids of all the successors of a node.
 
     Parameters
@@ -398,7 +398,7 @@ def successors_query(var_name, node_id, node_label,
     """
     if successor_label is None:
         successor_label = node_label
-    if undirected is True:
+    if undirected is False:
         arrow = ">"
     else:
         arrow = ""
@@ -433,10 +433,10 @@ def predecessors_query(var_name, node_id, node_label,
     if predecessor_label is None:
         predecessor_label = node_label
     query = (
-        "OPTIONAL MATCH (pred:{})-[:{}]-> (n{}:{} {{id : '{}'}})\n".format(
+        "OPTIONAL MATCH (pred:{})-[:{}]-> (n:{} {{id : '{}'}})\n".format(
             predecessor_label,
             edge_label,
-            var_name, node_label, node_id) +
+            node_label, node_id) +
         "RETURN pred.id as pred"
     )
     return query
