@@ -517,7 +517,7 @@ class Neo4jHierarchy(object):
                     "MATCH (u:{} {{id: '{}'}}), (v:{} {{id: '{}'}})\n".format(
                         left, key, right, v) +
                     cypher.add_edge(
-                        edge_var="rel_" + key + "_" + v,
+                        edge_var="rel",
                         source_var="u",
                         target_var="v",
                         edge_label="relation")
@@ -886,6 +886,10 @@ class Neo4jHierarchy(object):
                 tx = session.begin_transaction()
                 if merge_query:
                     tx.run(merge_query).single()
+                tx.commit()
+
+            with self._driver.session() as session:
+                tx = session.begin_transaction()
                 if len(rule.added_nodes()) > 0 or\
                    len(rule.added_node_attrs()) > 0:
                     cypher.propagate_add_node(
@@ -948,16 +952,18 @@ class Neo4jHierarchy(object):
             merge_subqueres = []
             if rhs_typing[graph]:
                 for node in rhs_typing[graph].keys():
-                    rhs_typed_var = "n{}_{}".format(rhs_g[node], graph_id)
+                    rhs_typed_var = "n{}_{}".format(rhs_g[node].replace(
+                        " ", "_").replace(",", "_"), graph_id)
                     rhs_typing_var = "n{}_{}".format(
-                        rhs_typing[graph][node], graph)
+                        rhs_typing[graph][node].replace(
+                            " ", "_").replace(",", "_"), graph)
                     nodes_to_match.append(
                         "({}:{} {{id:'{}'}}), ".format(
                             rhs_typed_var, graph_id, rhs_g[node]) +
                         "({}:{} {{id:'{}'}})".format(
                             rhs_typing_var, graph, rhs_typing[graph][node]))
                     merge_subqueres.append(
-                        "MERGE ({})-[:tmp_typing]->({})".format(
+                        "CREATE ({})-[:tmp_typing]->({})".format(
                             rhs_typed_var, rhs_typing_var)
                     )
 
@@ -973,6 +979,7 @@ class Neo4jHierarchy(object):
                         # cypher.with_vars(["NULL"]) + "\n"
                     )
                     rhs_tmp_typing += query + "\n"
+                    # print(query)
                     self.execute(query)
 
         # Checking if the introduces rhs typing is consistent

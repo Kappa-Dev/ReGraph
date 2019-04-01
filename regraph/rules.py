@@ -714,18 +714,18 @@ class Rule(object):
             If node `n` does not exist in the rhs of the rule
 
         """
-        if n not in list(self.lhs.nodes()) + list(self.p.nodes()) + list(self.rhs.nodes()):
+        if n not in list(self.rhs.nodes()):
             raise RuleError(
                 "Node '%s' exists in neither lhs, nor p, nor rhs of the rule" %
                 n)
         r_nodes = set()
-        if n in self.lhs.nodes():
-            p_keys = keys_by_value(self.p_lhs, n)
-            for p in p_keys:
-                r_nodes.add(self.p_rhs[p])
-        elif n in self.p.nodes():
-            r_nodes.add(self.p_rhs[n])
-        elif n in self.rhs.nodes():
+        # if n in self.lhs.nodes():
+        #     p_keys = keys_by_value(self.p_lhs, n)
+        #     for p in p_keys:
+        #         r_nodes.add(self.p_rhs[p])
+        # elif n in self.p.nodes():
+        #     r_nodes.add(self.p_rhs[n])
+        if n in self.rhs.nodes():
             r_nodes.add(n)
         for r in r_nodes:
             primitives.add_node_attrs(self.rhs, r, attrs)

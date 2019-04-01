@@ -328,6 +328,18 @@ def remove_node(graph, node_id):
     return
 
 
+def set_node_attrs(graph, node_id, attrs, normalize=True, update=True):
+    if normalize is True:
+        normalize_attrs(attrs)
+    if isinstance(graph, Neo4jGraph):
+        graph.set_node_attrs(node_id, attrs, update=update)
+    else:
+        if not update:
+            for k, v in attrs.items():
+                graph.node[node_id][k] = v
+        else:
+            update_node_attrs(graph, node_id, attrs, normalize)
+
 def update_node_attrs(graph, node_id, attrs, normalize=True):
     """Update attributes of a node.
 
@@ -393,9 +405,9 @@ def remove_node_attrs(graph, node_id, attrs):
             GraphAttrsWarning
         )
 
-    normalize_attrs(attrs)   
+    normalize_attrs(attrs)
     if isinstance(graph, nx.DiGraph) or\
-       isinstance(graph, nx.Graph):      
+       isinstance(graph, nx.Graph):
         old_attrs = get_node(graph, node_id)
         for key, value in attrs.items():
             if key in old_attrs:

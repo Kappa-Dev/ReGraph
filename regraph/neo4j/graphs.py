@@ -167,7 +167,7 @@ class Neo4jGraph(object):
         normalize_attrs(attrs)
         query +=\
             cypher.add_node(
-                "n_" + node, node, 'new_id',
+                "n", node, 'new_id',
                 node_label=self._node_label,
                 attrs=attrs,
                 literal_id=True,
@@ -188,12 +188,12 @@ class Neo4jGraph(object):
             attrs = dict()
         normalize_attrs(attrs)
         query += cypher.match_nodes(
-            {"n_" + source: source, "n_" + target: target},
+            {"s": source, "t": target},
             node_label=self._node_label)
         query += cypher.add_edge(
             edge_var='new_edge',
-            source_var="n_" + source,
-            target_var="n_" + target,
+            source_var="s",
+            target_var="t",
             edge_label=self._edge_label,
             attrs=attrs)
         result = self.execute(query)
@@ -585,10 +585,10 @@ class Neo4jGraph(object):
             name = "_".join(node_list)
         query +=\
             cypher.match_nodes(
-                {n: n for n in node_list},
+                {"n" + str(i + 1): n for i, n in enumerate(node_list)},
                 node_label=self._node_label) + "\n" +\
             cypher.merging_query(
-                original_vars=node_list,
+                original_vars=["n" + str(i + 1) for i, _ in enumerate(node_list)],
                 merged_var='merged_node',
                 merged_id=name,
                 merged_id_var='new_id',
