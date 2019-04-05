@@ -109,7 +109,7 @@ def add_edge(edge_var, source_var, target_var,
 
 def remove_node(node_var, breakline=True):
     """Query for removal of a node (with side-effects)."""
-    return generic.delete_var(node_var, True, breakline)
+    return "DETACH DELETE {}\n".format(node_var)
 
 
 def remove_edge(edge_var, breakline=True):
@@ -756,11 +756,11 @@ def find_matching(pattern, node_label, edge_label,
     query =\
         "MATCH {}".format(
             ", ".join(
-                "({}:{})".format(n, node_label)
+                "(`{}`:{})".format(n, node_label)
                 for n in pattern_nodes))
     if len(pattern.edges()) > 0:
         query += ", {}".format(
-            ", ".join("({})-[:{}]->({})".format(
+            ", ".join("(`{}`)-[:{}]->(`{}`)".format(
                 u, edge_label, v)
                 for u, v in pattern.edges())) + "\n"
     else:
@@ -772,7 +772,7 @@ def find_matching(pattern, node_label, edge_label,
         for i, n in enumerate(pattern_nodes):
             if i < len(pattern_nodes) - 1:
                 injectivity_clauses.append(
-                    "id({}) <> id({})".format(
+                    "id(`{}`) <> id(`{}`)".format(
                         pattern_nodes[i], pattern_nodes[i + 1]))
         query += "WHERE {}\n".format(
             " AND ".join(c for c in injectivity_clauses))
@@ -786,7 +786,7 @@ def find_matching(pattern, node_label, edge_label,
             query += "AND "
         query +=\
             " AND ".join(
-                "{}.id IN [{}]".format(
+                "`{}`.id IN [{}]".format(
                     pattern_n, ", ".join("'{}'".format(n) for n in nodes))
                 for pattern_n in pattern_nodes) + "\n"
 
@@ -802,7 +802,7 @@ def find_matching(pattern, node_label, edge_label,
                 query += " AND "
             query +=\
                 " AND ".join(
-                    "({})-[:typing]->(:{} {{id: '{}'}})".format(
+                    "(`{}`)-[:typing]->(:{} {{id: '{}'}})".format(
                         n, typing_graph, pattern_typing[typing_graph][n])
                     for n in pattern.nodes() if n in pattern_typing[typing_graph].keys()
                 ) + "\n "
@@ -823,11 +823,11 @@ def find_matching(pattern, node_label, edge_label,
             query += " WHERE "
             where_appeared = True
         query += (
-            " AND ".join(["{} IN {}.{}".format(
+            " AND ".join(["{} IN `{}`.{}".format(
                 v, n, k) for n, k, v in nodes_with_attrs]) + "\n"
         )
 
-    query += "RETURN {}".format(", ".join(pattern.nodes()))
+    query += "RETURN {}".format(", ".join(["`{}`".format(n) for n in pattern.nodes()]))
     return query
 
 

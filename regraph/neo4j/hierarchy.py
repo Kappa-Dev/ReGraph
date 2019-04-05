@@ -280,9 +280,10 @@ class Neo4jHierarchy(object):
         old_graphs = self.graphs()
         for new_g in graph_dict.values():
             if new_g in old_graphs:
-                raise HierarchyError(
-                    "Graph with id '{}' already exists in the hierarchy".format(
-                        new_g))
+                self.remove_graph(new_g)
+                # raise HierarchyError(
+                #     "Graph with id '{}' already exists in the hierarchy".format(
+                #         new_g))
         # copy graphs
         for original, new in graph_dict.items():
             self.copy_graph(original, new, attach_graphs)

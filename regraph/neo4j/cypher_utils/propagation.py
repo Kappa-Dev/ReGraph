@@ -112,10 +112,10 @@ def check_homomorphism(tx, domain, codomain, total=True):
         "\tinvalid + CASE\n" +
         "\t\tWHEN NOT k IN keys(m_props) THEN 1\n" +
         "\t\tELSE REDUCE(invalid_values = 0, v in n_props[k] |\n" +
-        "\t\t\tinvalid_values + CASE m_props[k][0]\n" +
-        "\t\t\t\tWHEN 'IntegerSet' THEN CASE WHEN toInt(v) IS NULL THEN 1 ELSE 0 END\n" +
-        "\t\t\t\tWHEN 'StringSet' THEN CASE WHEN toString(v) <> v THEN 1 ELSE 0 END\n" +
-        "\t\t\t\tWHEN 'BooleanSet' THEN CASE WHEN v=true OR v=false THEN 0 ELSE 1 END\n" +
+        "\t\t\tinvalid_values + CASE m_props[k]\n" +
+        "\t\t\t\tWHEN ['IntegerSet'] THEN CASE WHEN toInt(v) IS NULL THEN 1 ELSE 0 END\n" +
+        "\t\t\t\tWHEN ['StringSet'] THEN CASE WHEN toString(v) <> v THEN 1 ELSE 0 END\n" +
+        "\t\t\t\tWHEN ['BooleanSet'] THEN CASE WHEN v=true OR v=false THEN 0 ELSE 1 END\n" +
         "\t\t\t\tELSE CASE WHEN NOT v IN m_props[k] THEN 1 ELSE 0 END END)\n" +
         "\t\tEND) AS invalid, n_id, m_id\n" +
         "WHERE invalid <> 0\n" +

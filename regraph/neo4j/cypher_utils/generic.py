@@ -15,6 +15,9 @@ from regraph.utils import attrs_from_json
 RESERVED_SET_NAMES = ["IntegerSet", "StringSet", "BooleanSet"]
 
 
+# def escape(string):
+#     # 
+
 def load_graph_from_json_apoc(tx, json_data, node_label, edge_label,
                               tmp_dir=None):
     # store json-file somewhere, generate attr repr.

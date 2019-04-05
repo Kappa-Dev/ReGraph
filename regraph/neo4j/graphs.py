@@ -429,9 +429,9 @@ class Neo4jGraph(object):
             query = ""
         query +=\
             cypher.match_node(
-                node, node,
+                "n", node,
                 node_label=self._node_label) +\
-            cypher.remove_node(node)
+            cypher.remove_node("n")
         result = self.execute(query)
         return result
 
@@ -723,7 +723,7 @@ class Neo4jGraph(object):
             # Merge nodes
             for rhs, p_nodes in rule.merged_nodes().items():
                 merge_id = self.merge_nodes(
-                    ["n_" + p_g[p] for p in p_nodes])
+                    [p_g[p] for p in p_nodes])
                 merged_nodes.update(rhs)
                 rhs_g[rhs] = merge_id
 
