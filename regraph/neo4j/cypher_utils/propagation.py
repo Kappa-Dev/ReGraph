@@ -576,6 +576,7 @@ def propagate_add_node(tx, origin_graph_id, graph_id, successor_id):
         "WITH n, m WHERE " + generic.nb_of_attrs_mismatch('n', 'm') + " <> 0\n" +
         "WITH m, collect(n) + [m] as nodes_to_merge_props\n"
     )
+    # print(query)
     carry_vars.add('m')
     query += (
         generic.merge_properties_from_list(
@@ -585,6 +586,7 @@ def propagate_add_node(tx, origin_graph_id, graph_id, successor_id):
             method='union') +
         "SET m += new_props\n"
     )
+    # print(query)
     tx.run(query)
     return query
 # def add_node_propagation_query(tx, origin_graph_id, graph_id, successor_id):
@@ -631,6 +633,43 @@ def propagate_add_node(tx, origin_graph_id, graph_id, successor_id):
 #     )
 #     tx.run(query)
 #     return query
+
+
+def propagate_add_edge(tx, graph_id, successor_id):
+    carry_vars = set()
+
+    query = (
+        "// Match existing edges with attribute mismatch\n" +
+        "MATCH (tn:{})<-[:typing]-(n:{})-[r:edge]->(m:{})-[:typing]->(tm:{}),\n".format(
+            successor_id, graph_id, graph_id, successor_id) +
+        "\t(tn)-[tr:edge]->(tm)\n" +
+        "WITH tn, tm, r, tr WHERE " +
+        generic.nb_of_attrs_mismatch('r', 'tr') + " <> 0\n"
+        "WITH tn, tm, tr, collect(r) + [tr] as edges_to_merge_props\n"
+    )
+    query += (
+        generic.merge_properties_from_list(
+            list_var='edges_to_merge_props',
+            new_props_var='new_props',
+            carry_vars=carry_vars,
+            method='union') +
+        "SET tr += new_props\n"
+    )
+    print(query)
+    tx.run(query)
+    query = (
+        "// Add new edges to {}\n".format(successor_id) +
+        "MATCH (tn:{})<-[:typing]-(n:{})-[r:edge]->(m:{})-[:typing]->(tm:{})\n".format(
+            successor_id, graph_id, graph_id, successor_id) +
+        "WHERE NOT (tn)-[:edge]->(tm) \n".format(
+            graph_id, successor_id) +
+        "CREATE (tn)-[tr:edge]->(tm)\n" +
+        "SET tr = r\n"
+    )
+    print(query)
+    tx.run(query)
+
+    return query
 
 
 def add_edge_propagation_query(graph_id, successor_id):

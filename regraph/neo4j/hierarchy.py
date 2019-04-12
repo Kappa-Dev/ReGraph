@@ -861,25 +861,11 @@ class Neo4jHierarchy(object):
         for successor in successors:
             # Propagate merges
             merge_query = None
-            add_nodes_query = None
-            add_edges_query = None
 
             # Propagate node merges
             if len(rule.merged_nodes()) > 0:
                 # match nodes of T with the same pre-image in G and merge them
                 merge_query = cypher.merge_propagation_query(
-                    graph_id, successor)
-
-            # Propagate node adds
-            # if len(rule.added_nodes()) > 0 or\
-            #    len(rule.added_node_attrs()) > 0:
-            #     add_nodes_query = cypher.add_node_propagation_query(
-            #         origin_graph, graph_id, successor)
-
-            # (Propagate edge adds
-            if len(rule.added_edges()) > 0 or\
-               len(rule.added_edge_attrs()) > 0:
-                add_edges_query = cypher.add_edge_propagation_query(
                     graph_id, successor)
 
             # Run multiple queries in one transaction
@@ -895,9 +881,18 @@ class Neo4jHierarchy(object):
                    len(rule.added_node_attrs()) > 0:
                     cypher.propagate_add_node(
                         tx, origin_graph, graph_id, successor)
-                if add_edges_query:
-                    tx.run(add_edges_query).single()
+
                 tx.commit()
+
+            # Propagate edge adds
+            with self._driver.session() as session:
+                tx = session.begin_transaction()
+                if len(rule.added_edges()) > 0 or\
+                   len(rule.added_edge_attrs()) > 0:
+                    add_edges_query = cypher.add_edge_propagation_query(
+                        graph_id, successor)
+                    tx.run(add_edges_query)
+                    tx.commit()
 
         for successor in successors:
             self._propagate_down(origin_graph, successor, rule)

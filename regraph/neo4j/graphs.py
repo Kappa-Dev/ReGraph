@@ -872,6 +872,26 @@ class Neo4jGraph(object):
                 filename
             )
 
+    def find_connected_components(self):
+        query = (
+            "CALL algo.unionFind.stream('{}', '{}', {{}})\n".format(
+                self._node_label, self._edge_label) +
+            "YIELD nodeId, setId\n"
+            "MATCH (node) where id(node) = nodeId\n"
+            "RETURN node.id as node, setId as component\n"
+        )
+        result = self.execute(query)
+        cc = {}
+        for record in result:
+            if record["component"] in cc.keys():
+                cc[record["component"]].append(record["node"])
+            else:
+                cc[record["component"]] = [record["node"]]
+        return {
+            i + 1: cc[k]
+            for i, k in enumerate(cc.keys())
+        }
+
 
 class TypedNeo4jGraph(hierarchy.Neo4jHierarchy):
     """Class implementing two level hiearchy.
