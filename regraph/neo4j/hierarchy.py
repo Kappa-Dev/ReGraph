@@ -504,7 +504,7 @@ class Neo4jHierarchy(object):
         {1: {'a'}, 2: {'a'}, 3: {'b'}}
         """
         # normalize relation dict
-        normalize_relation(relation)
+        new_rel = normalize_relation(relation)
 
         if attrs is not None:
             normalize_attrs(attrs)
@@ -512,7 +512,7 @@ class Neo4jHierarchy(object):
         g_left = self._access_graph(left)
         g_right = self._access_graph(right)
 
-        for key, values in relation.items():
+        for key, values in new_rel.items():
             for v in values:
                 query = (
                     "MATCH (u:{} {{id: '{}'}}), (v:{} {{id: '{}'}})\n".format(

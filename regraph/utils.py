@@ -227,7 +227,7 @@ def normalize_relation(relation):
             except TypeError:
                 new_relation_dict[key] = {values}
     relation = new_relation_dict
-
+    return new_relation_dict
 
 def merge_attributes(attr1, attr2, method="union"):
     """Merge two dictionaries of attributes."""
