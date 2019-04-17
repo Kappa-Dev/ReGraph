@@ -937,9 +937,9 @@ class Rule(object):
     @classmethod
     def from_json(cls, json_data, directed=True):
         """Create a rule obj from JSON repr."""
-        lhs = primitives.graph_from_json(json_data["lhs"], directed)
-        p = primitives.graph_from_json(json_data["p"], directed)
-        rhs = primitives.graph_from_json(json_data["rhs"], directed)
+        lhs = primitives.networkx_from_json(json_data["lhs"], directed)
+        p = primitives.networkx_from_json(json_data["p"], directed)
+        rhs = primitives.networkx_from_json(json_data["rhs"], directed)
         p_lhs = json_data["p_lhs"]
         p_rhs = json_data["p_rhs"]
         rule = cls(p, lhs, rhs, p_lhs, p_rhs)
