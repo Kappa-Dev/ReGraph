@@ -1242,12 +1242,15 @@ def graph_to_json(graph):
 def graph_to_d3_json(graph,
                      attrs=True,
                      node_attrs_to_attach=None,
-                     edge_attrs_to_attach=None):
+                     edge_attrs_to_attach=None,
+                     nodes=None):
     """Create a JSON representation of a graph."""
     # if isinstance(graph, nx.DiGraph):
     j_data = {"links": [], "nodes": []}
+    if nodes is None:
+        nodes = graph.nodes()
     # dump nodes
-    for node in graph.nodes():
+    for node in nodes:
         node_data = {}
         node_data["id"] = node
         if attrs:
@@ -1267,23 +1270,24 @@ def graph_to_d3_json(graph,
 
     # dump edges
     for s, t in graph.edges():
-        edge_data = {}
-        edge_data["source"] = s
-        edge_data["target"] = t
-        if attrs:
-            edge_attrs = get_edge(graph, s, t)
-            normalize_attrs(edge_attrs)
-            attrs_json = dict()
-            for key, value in edge_attrs.items():
-                attrs_json[key] = value.to_json()
-            edge_data["attrs"] = attrs_json
-        else:
-            if edge_attrs_to_attach is not None:
-                for key in edge_attrs_to_attach:
-                    edge_attrs = get_edge(graph, s, t)
-                    if key in edge_attrs.keys():
-                        edge_data[key] = list(edge_attrs[key])
-        j_data["links"].append(edge_data)
+        if s in nodes and t in nodes:
+            edge_data = {}
+            edge_data["source"] = s
+            edge_data["target"] = t
+            if attrs:
+                edge_attrs = get_edge(graph, s, t)
+                normalize_attrs(edge_attrs)
+                attrs_json = dict()
+                for key, value in edge_attrs.items():
+                    attrs_json[key] = value.to_json()
+                edge_data["attrs"] = attrs_json
+            else:
+                if edge_attrs_to_attach is not None:
+                    for key in edge_attrs_to_attach:
+                        edge_attrs = get_edge(graph, s, t)
+                        if key in edge_attrs.keys():
+                            edge_data[key] = list(edge_attrs[key])
+            j_data["links"].append(edge_data)
     # else:
     #     j_data = graph.to_d3_json()
     return j_data
