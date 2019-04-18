@@ -73,7 +73,11 @@ class Neo4jGraph(object):
         self._edge_label = edge_label
         self.unique_node_ids = unique_node_ids
         if unique_node_ids:
-            self.set_constraint('id')
+            try:
+                self.set_constraint('id')
+            except:
+                warnings.warn(
+                    "Failed to create id uniqueness constraint")
 
     def execute(self, query):
         """Execute a Cypher query."""
@@ -151,9 +155,12 @@ class Neo4jGraph(object):
         -------
         result : BoltStatementResult
         """
-        query = "DROP " + cypher.constraint_query('n', self._node_label, prop)
-        result = self.execute(query)
-        return result
+        try:
+            query = "DROP " + cypher.constraint_query('n', self._node_label, prop)
+            result = self.execute(query)
+            return result
+        except:
+            warnings.warn("Failed to drop constraint")
 
     def add_node(self, node, attrs=None, ignore_naming=False,
                  profiling=False):

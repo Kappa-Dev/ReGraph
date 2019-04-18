@@ -191,7 +191,7 @@ class Neo4jHierarchy(object):
         return [(d["n.id"], d["m.id"]) for d in result]
 
     def add_graph_from_json(self, graph_id, json_data, attrs=None,
-                            holistic=True):
+                            holistic=False):
         """Load graph from Json using APOC."""
         try:
             # Create a node in the hierarchy
@@ -954,12 +954,12 @@ class Neo4jHierarchy(object):
                         rhs_typing[graph][node].replace(
                             " ", "_").replace(",", "_"), graph)
                     nodes_to_match.append(
-                        "({}:{} {{id:'{}'}}), ".format(
+                        "(`{}`:{} {{id:'{}'}}), ".format(
                             rhs_typed_var, graph_id, rhs_g[node]) +
-                        "({}:{} {{id:'{}'}})".format(
+                        "(`{}`:{} {{id:'{}'}})".format(
                             rhs_typing_var, graph, rhs_typing[graph][node]))
                     merge_subqueres.append(
-                        "CREATE ({})-[:tmp_typing]->({})".format(
+                        "CREATE (`{}`)-[:tmp_typing]->(`{}`)".format(
                             rhs_typed_var, rhs_typing_var)
                     )
 
