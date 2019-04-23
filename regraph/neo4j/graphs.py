@@ -609,6 +609,12 @@ class Neo4jGraph(object):
             uid_records.append(record['new_id'])
         if len(uid_records) > 0:
             return uid_records[0]
+        else:
+            # This is a bad solution of the following problem:
+            # if unwind in the merging query loops
+            # over an empty list of edges, query does not return
+            # any records
+            return name
 
     def merge_nodes1(self, node_list, name=None, merge_typing=False,
                      ignore_naming=False, profiling=False):
@@ -731,7 +737,7 @@ class Neo4jGraph(object):
             for rhs, p_nodes in rule.merged_nodes().items():
                 merge_id = self.merge_nodes(
                     [p_g[p] for p in p_nodes])
-                merged_nodes.update(rhs)
+                merged_nodes.add(rhs)
                 rhs_g[rhs] = merge_id
 
             # Add nodes and add preserved nodes to rhs_g dictionary
