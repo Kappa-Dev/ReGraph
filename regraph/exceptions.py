@@ -59,3 +59,11 @@ class TypingWarning(ReGraphWarning):
 
 class TypedNeo4jGraphError(ReGraphException):
     """Exceptions class for errors in typed neo4j graphs."""
+
+
+class RevisionError(ReGraphException):
+    """Exceptions class for erros in Hierarchy revisions."""
+
+
+class RevisionWarning(ReGraphWarning):
+    """Class for Revision warnings."""
