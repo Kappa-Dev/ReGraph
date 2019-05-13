@@ -221,7 +221,6 @@ class TestRule(object):
         merge = rule.inject_merge_nodes([1, 3])
         rule.inject_add_node_attrs(2, {"a": {True}})
         assert("a" in rule.rhs.node[2])
-        assert("a" in rule.rhs.node[clone_name_rhs])
         rule.inject_add_node_attrs(clone_name_p, {"b": {True}})
         assert("b" in rule.rhs.node[clone_name_rhs])
         assert("b" not in rule.rhs.node[2])
@@ -354,3 +353,107 @@ class TestRule(object):
         assert((5, 3) in rule2.rhs.edges())
         assert(5 in rule2.rhs.nodes() and 5 not in rule2.p.nodes())
         assert((2, 4) in rule2.rhs.edges())
+
+    def test_refinement(self):
+        graph = nx.DiGraph()
+
+        prim.add_nodes_from(
+            graph, [
+                ("a", {"name": "Bob"}),
+                ("b", {"name": "Jane"}),
+                ("c", {"name": "Alice"}),
+                ("d", {"name": "Joe"}),
+            ])
+        prim.add_edges_from(
+            graph, [
+                ("a", "a", {"type": "friends"}),
+                ("a", "b", {"type": "enemies"}),
+                ("c", "a", {"type": "colleages"}),
+                ("d", "a", {"type": "siblings"})
+            ])
+
+        pattern = nx.DiGraph()
+        pattern.add_nodes_from(["x", "y"])
+        pattern.add_edges_from([("y", "x")])
+        instance = {
+            "x": "a",
+            "y": "d"
+        }
+
+        # Remove node side-effects
+        rule = Rule.from_transform(pattern)
+        rule.inject_remove_node("x")
+
+        new_instance = rule.refine(graph, instance)
+        assert(new_instance == {
+            "x": "a", "y": "d", "b": "b", "c": "c"
+        })
+        assert(prim.get_node(rule.lhs, "x") == prim.get_node(graph, "a"))
+        assert(
+            prim.get_edge(rule.lhs, "x", "b") == prim.get_edge(graph, "a", "b"))
+        assert(
+            prim.get_edge(rule.lhs, "c", "x") == prim.get_edge(graph, "c", "a"))
+
+        # Remove edge side-effects
+        rule = Rule.from_transform(pattern)
+        rule.inject_remove_edge("y", "x")
+
+        new_instance = rule.refine(graph, instance)
+        assert(prim.get_edge(rule.lhs, "y", "x") ==
+               prim.get_edge(graph, "d", "a"))
+
+        # Merge side-effects
+        rule = Rule.from_transform(pattern)
+        rule.inject_merge_nodes(["x", "y"])
+        new_instance = rule.refine(graph, instance)
+
+        assert(new_instance == {
+            "x": "a", "y": "d", "b": "b", "c": "c"
+        })
+        assert(
+            prim.get_node(rule.lhs, "x") == prim.get_node(graph, "a"))
+        assert(
+            prim.get_node(rule.lhs, "y") == prim.get_node(graph, "d"))
+        assert(
+            prim.get_edge(rule.lhs, "y", "x") ==
+            prim.get_edge(graph, "d", "a"))
+
+        # Combined side-effects
+        # Ex1: Remove cloned edge + merge with some node
+        graph.remove_edge("a", "a")
+        pattern.add_node("z")
+        pattern.add_edge("x", "z")
+        instance["z"] = "b"
+        rule = Rule.from_transform(pattern)
+        p_node, _ = rule.inject_clone_node("x")
+        rule.inject_remove_node("z")
+        rule.inject_remove_edge("y", p_node)
+        rule.inject_merge_nodes([p_node, "y"])
+        new_instance = rule.refine(graph, instance)
+
+        assert(new_instance == {
+            "x": "a", "y": "d", "z": "b", "c": "c"
+        })
+        assert(
+            prim.get_node(rule.lhs, "x") == prim.get_node(graph, "a"))
+        assert(
+            prim.get_node(rule.lhs, "y") == prim.get_node(graph, "d"))
+        assert(
+            prim.get_edge(rule.lhs, "y", "x") ==
+            prim.get_edge(graph, "d", "a"))
+
+        # test with rule inversion
+        new_graph, rhs_g = rule.apply_to(graph, new_instance)
+
+        inverted = rule.get_inverted_rule()
+
+        new_new_graph, rhs_gg = inverted.apply_to(new_graph, rhs_g)
+
+        old_node_labels = {
+            v: new_instance[k]
+            for k, v in rhs_gg.items()
+        }
+
+        prim.relabel_nodes(new_new_graph, old_node_labels)
+
+        assert(prim.equal(graph, new_new_graph))

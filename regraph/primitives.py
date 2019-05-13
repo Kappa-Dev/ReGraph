@@ -1751,7 +1751,7 @@ def new_merge_nodes(graph, nodes, node_id=None, method="union", edge_method="uni
             other_nodes = [n for i, n in enumerate(nodes) if i != invariant_node_index]
             for n in other_nodes:
                 attrs_acc = merge_attributes(
-                    attrs_acc, 
+                    attrs_acc,
                     get_node(graph, n))
 
                 neighbors = graph.neighbors(n)

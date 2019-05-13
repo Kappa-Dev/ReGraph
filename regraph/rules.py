@@ -1834,6 +1834,117 @@ class Rule(object):
         """Plot the rule."""
         plot_rule(self, filename, title)
 
-    def get_refined_rule(self, graph, instance):
+    def refine(self, graph, instance):
         """Get refined (side-effect-free) version of the rule."""
-        pass
+        new_instance = {}
+        for k, v in instance.items():
+            new_instance[k] = v
+
+        removed_attrs = self.removed_node_attrs()
+        removed_edge_attrs = self.removed_edge_attrs()
+
+        def add_neighbors_to_rule(n, removed_edges):
+
+            def add_preserved_edges(lhs_source, lhs_target, edge_attrs, removed_edges):
+                # Add preserved edges
+                p_sources = keys_by_value(self.p_lhs, lhs_source)
+                p_targets = keys_by_value(self.p_lhs, lhs_target)
+                for sp in p_sources:
+                    for tp in p_targets:
+                        if (sp, tp) not in removed_edges:
+                            if not primitives.exists_edge(self.p, sp, tp):
+                                primitives.add_edge(self.p, sp, tp)
+                                if not primitives.exists_edge(self.rhs, self.p_rhs[sp], self.p_rhs[tp]):
+                                    primitives.add_edge(
+                                        self.rhs, self.p_rhs[sp], self.p_rhs[tp])
+                            # Compute preserved edge attributes
+                            for k, v in edge_attrs.items():
+                                if (sp, tp) not in removed_edge_attrs.keys() or\
+                                   k not in removed_edge_attrs[(sp, tp)]:
+                                    primitives.add_edge_attrs(
+                                        self.p, sp, tp, {k: v})
+                                    primitives.add_edge_attrs(
+                                        self.rhs, self.p_rhs[sp], self.p_rhs[tp],
+                                        {k: v})
+
+            visited = set()
+            # add successors
+            for s in graph.successors(instance[n]):
+                if s not in visited:
+                    visited.add(s)
+                    if s not in instance.values():
+                        new_lhs_node = primitives.unique_node_id(self.lhs, s)
+                        self._add_node_lhs(new_lhs_node)
+                        new_instance[new_lhs_node] = s
+                    else:
+                        new_lhs_node = keys_by_value(instance, s)[0]
+                    edge_attrs = primitives.get_edge(graph, instance[n], s)
+                    if not primitives.exists_edge(self.lhs, n, new_lhs_node):
+                        primitives.add_edge(self.lhs, n, new_lhs_node, edge_attrs)
+                    else:
+                        primitives.add_edge_attrs(self.lhs, n, new_lhs_node, edge_attrs)
+                    add_preserved_edges(n, new_lhs_node, edge_attrs, removed_edges)
+
+            # add predecessors
+            for p in graph.predecessors(instance[n]):
+                if p not in visited:
+                    if p not in instance.values():
+                        new_lhs_node = primitives.unique_node_id(self.lhs, p)
+                        self._add_node_lhs(new_lhs_node)
+                        new_instance[new_lhs_node] = p
+                    else:
+                        new_lhs_node = keys_by_value(instance, p)[0]
+                    visited.add(p)
+                    edge_attrs = primitives.get_edge(graph, p, instance[n])
+                    if not primitives.exists_edge(self.lhs, new_lhs_node, n):
+                        primitives.add_edge(self.lhs, new_lhs_node, n, edge_attrs)
+                    else:
+                        primitives.add_edge_attrs(self.lhs, new_lhs_node, n, edge_attrs)
+                    add_preserved_edges(new_lhs_node, n, edge_attrs, removed_edges)
+
+        # Remove side-effects of node removal
+        for n in self.removed_nodes():
+            # Add nodes adjacent to removed nodes
+            all_attrs = primitives.get_node(graph, instance[n])
+            primitives.set_node_attrs(
+                self.lhs, n, all_attrs, update=True)
+
+            # Add nodes adjacent to removed nodes
+            add_neighbors_to_rule(n, self.removed_edges())
+
+        # Remove side-effects of edge removal
+        visited_edges = set()
+        for sp, tp in self.removed_edges():
+            if (instance[self.p_lhs[sp]], instance[self.p_lhs[tp]]) not in visited_edges:
+                visited_edges.add((
+                    instance[self.p_lhs[sp]], instance[self.p_lhs[tp]]))
+                all_edge_attrs = primitives.get_edge(
+                    graph, instance[self.p_lhs[sp]], instance[self.p_lhs[tp]])
+                primitives.set_edge(
+                    self.lhs, self.p_lhs[sp], self.p_lhs[tp],
+                    all_edge_attrs)
+
+        # Remove side-effects of merges
+        for rhs_node, p_nodes in self.merged_nodes().items():
+            for p_node in p_nodes:
+                all_attrs = primitives.get_node(
+                    graph, instance[self.p_lhs[p_node]])
+                primitives.set_node_attrs(
+                    self.lhs, self.p_lhs[p_node], all_attrs, update=True)
+
+                for k, v in all_attrs.items():
+                    if p_node not in removed_attrs or\
+                       k not in removed_attrs[p_node]:
+                        primitives.add_node_attrs(
+                            self.p, p_node, {k: v})
+                        primitives.add_node_attrs(
+                            self.rhs, rhs_node, {k: v})
+
+                # Add nodes adjacent to removed nodes
+                add_neighbors_to_rule(self.p_lhs[p_node], self.removed_edges())
+
+        return new_instance
+
+    def get_inverted_rule(self):
+        """Get inverted rule with LHS and RHS swaped."""
+        return Rule(self.p, self.rhs, self.lhs, self.p_rhs, self.p_lhs)
