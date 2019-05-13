@@ -340,6 +340,7 @@ def set_node_attrs(graph, node_id, attrs, normalize=True, update=True):
         else:
             update_node_attrs(graph, node_id, attrs, normalize)
 
+
 def update_node_attrs(graph, node_id, attrs, normalize=True):
     """Update attributes of a node.
 

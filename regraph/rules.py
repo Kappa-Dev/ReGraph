@@ -843,8 +843,8 @@ class Rule(object):
                 "Node '%s' is being removed by the rule, "
                 "cannot update attributes" % n)
         for k in p_keys:
-            self.p.node[k] = None
-            primitives.update_node_attrs(self.rhs, self.p_rhs[k], attrs)
+            # self.p.node[k] = None
+            primitives.set_node_attrs(self.rhs, self.p_rhs[k], attrs, update=True)
         return
 
     def inject_update_edge_attrs(self, n1, n2, attrs):
@@ -1831,4 +1831,9 @@ class Rule(object):
         return query, rhs_vars_inverse
 
     def plot(self, filename=None, title=None):
+        """Plot the rule."""
         plot_rule(self, filename, title)
+
+    def get_refined_rule(self, graph, instance):
+        """Get refined (side-effect-free) version of the rule."""
+        pass
