@@ -576,7 +576,7 @@ def propagate_add_node(tx, origin_graph_id, graph_id, successor_id):
         "WITH n, m WHERE " + generic.nb_of_attrs_mismatch('n', 'm') + " <> 0\n" +
         "WITH m, collect(n) + [m] as nodes_to_merge_props\n"
     )
-    # print(query)
+
     carry_vars.add('m')
     query += (
         generic.merge_properties_from_list(
@@ -655,7 +655,6 @@ def propagate_add_edge(tx, graph_id, successor_id):
             method='union') +
         "SET tr += new_props\n"
     )
-    print(query)
     tx.run(query)
     query = (
         "// Add new edges to {}\n".format(successor_id) +
@@ -666,7 +665,7 @@ def propagate_add_edge(tx, graph_id, successor_id):
         "CREATE (tn)-[tr:edge]->(tm)\n" +
         "SET tr = r\n"
     )
-    print(query)
+    # print(query)
     tx.run(query)
 
     return query

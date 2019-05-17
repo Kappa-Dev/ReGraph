@@ -925,14 +925,27 @@ def nb_of_attrs_mismatch(source, target):
     """Generate a query which returns the number of attributes of a node which
     are not in its image."""
     query = (
-        "REDUCE(invalid = 0, k in filter(k in keys({}) WHERE k <> 'id') |\n".format(source) +
+        "REDUCE(invalid = 0, k in filter(k in keys({}) WHERE k <> 'id' AND k <> 'count') |\n".format(source) +
         "\tinvalid + CASE\n" +
         "\t\tWHEN NOT k IN keys({}) THEN 1\n".format(target) +
         "\t\tELSE REDUCE(invalid_values = 0, v in {}[k] |\n".format(source) +
-        "\t\t\tinvalid_values + CASE\n" +
-        "\t\t\t\tWHEN NOT v IN {}[k] THEN 1 ELSE 0 END)\n".format(target) +
+        "\t\t\tinvalid_values + CASE {}[k]\n".format(target) +
+        "\t\t\t\tWHEN ['IntegerSet'] THEN CASE WHEN toInt(v) IS NULL THEN 1 ELSE 0 END\n" +
+        "\t\t\t\tWHEN ['StringSet'] THEN CASE WHEN toString(v) <> v THEN 1 ELSE 0 END\n" +
+        "\t\t\t\tWHEN ['BooleanSet'] THEN CASE WHEN v=true OR v=false THEN 0 ELSE 1 END\n" +
+        "\t\t\t\tELSE CASE WHEN NOT v IN {}[k] THEN 1 ELSE 0 END END)\n".format(target) +
         "\t\tEND)"
     )
+
+    # query = (
+    #     "REDUCE(invalid = 0, k in filter(k in keys({}) WHERE k <> 'id') |\n".format(source) +
+    #     "\tinvalid + CASE\n" +
+    #     "\t\tWHEN NOT k IN keys({}) THEN 1\n".format(target) +
+    #     "\t\tELSE REDUCE(invalid_values = 0, v in {}[k] |\n".format(source) +
+    #     "\t\t\tinvalid_values + CASE\n" +
+    #     "\t\t\t\tWHEN NOT v IN {}[k] THEN 1 ELSE 0 END)\n".format(target) +
+    #     "\t\tEND)"
+    # )
     return query
 
 

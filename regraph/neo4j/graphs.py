@@ -1062,7 +1062,8 @@ class TypedNeo4jGraph(hierarchy.Neo4jHierarchy):
                      rhs_typing=None, strict=False):
         if rhs_typing is None:
             rhs_typing = dict()
-        return self.rewrite(
+
+        res = self.rewrite(
             self._data_node_label,
             rule=rule,
             instance=instance,
@@ -1070,6 +1071,7 @@ class TypedNeo4jGraph(hierarchy.Neo4jHierarchy):
                 self._schema_node_label: rhs_typing
             },
             strict=strict)
+        return res
 
     def rewrite_schema(self, rule, instance,
                        p_typing=None, strict=False):

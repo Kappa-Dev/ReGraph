@@ -19,7 +19,9 @@ from regraph.utils import (keys_by_value,
 from regraph.networkx.category_utils import (identity,
                                              check_homomorphism,
                                              pullback_complement,
-                                             pushout)
+                                             pushout,
+                                             pullback,
+                                             compose)
 from regraph import primitives
 from regraph.networkx.plotting import plot_rule
 from regraph.exceptions import (ReGraphWarning, ParsingError,
@@ -844,6 +846,7 @@ class Rule(object):
                 "cannot update attributes" % n)
         for k in p_keys:
             # self.p.node[k] = None
+            primitives.set_node_attrs(self.p, k, {}, update=True)
             primitives.set_node_attrs(self.rhs, self.p_rhs[k], attrs, update=True)
         return
 
@@ -1950,6 +1953,59 @@ class Rule(object):
         return Rule(self.p, self.rhs, self.lhs, self.p_rhs, self.p_lhs)
 
 
-def compose_rules(rule1, rule2, lhs1, rhs1, lhs2, rhs2):
+def compose_rules(rule1, rule2,
+                  lhs1_instance, rhs1_instance,
+                  lhs2_instance, rhs2_instance):
     """Compose two rules respecting instances."""
-    pass
+
+    d_nodes = [
+        v
+        for v in rhs1_instance.values()
+        if v in lhs2_instance.values()
+    ]
+    d_rhs1 = {
+        v: k
+        for k, v in rhs1_instance.items()
+        if v in lhs2_instance.values()
+    }
+    d_lhs2 = {
+        v: keys_by_value(lhs2_instance, v)[0]
+        for v in rhs1_instance.values()
+        if v in lhs2_instance.values()
+    }
+
+    d = nx.DiGraph()
+    d.add_nodes_from(d_nodes)
+
+    h, rhs1_h, lhs2_h = pushout(
+        d, rule1.rhs, rule2.lhs, d_rhs1, d_lhs2)
+
+    p1_p, p1_p1_p, p1_p_h = pullback_complement(
+        rule1.p, rule1.rhs, h, rule1.p_rhs, rhs1_h)
+    p2_p, p2_p2_p, p2_p_h = pullback_complement(
+        rule2.p, rule2.lhs, h, rule2.p_lhs, lhs2_h)
+
+    lambd, lhs1_lambda, p1_p_lambda = pushout(
+        rule1.p, rule1.lhs, p1_p, rule1.p_lhs, p1_p1_p)
+
+    rho, rhs2_rho, p2_p_rho = pushout(
+        rule2.p, rule2.rhs, p2_p, rule2.p_rhs, p2_p2_p)
+
+    pi, pi_p1_p, pi_p2_p = pullback(
+        p1_p, p2_p, h, p1_p_h, p2_p_h)
+
+    pi_lambda = compose(pi_p1_p, p1_p_lambda)
+    pi_rho = compose(pi_p2_p, p2_p_rho)
+
+    rule = Rule(pi, lambd, rho, pi_lambda, pi_rho)
+
+    lhs_instance = {}
+    rhs_instance = {}
+
+    # primitives.print_graph(rule.lhs)
+    # primitives.print_graph(rule.p)
+    # primitives.print_graph(rule.rhs)
+
+    h.nodes()
+
+    return rule, lhs_instance, rhs_instance

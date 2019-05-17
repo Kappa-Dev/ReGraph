@@ -1,6 +1,7 @@
 import networkx as nx
 
 from regraph import Rule
+from regraph.rules import compose_rules
 from regraph import keys_by_value
 from regraph import RuleError
 from regraph.networkx.category_utils import check_homomorphism
@@ -457,3 +458,44 @@ class TestRule(object):
         prim.relabel_nodes(new_new_graph, old_node_labels)
 
         assert(prim.equal(graph, new_new_graph))
+
+    def test_compose_rules(self):
+        lhs1 = nx.DiGraph()
+        p1 = nx.DiGraph()
+        rhs1 = nx.DiGraph()
+        lhs1.add_nodes_from(
+            ["circle", "square", "heart"])
+        p1.add_nodes_from(
+            ["circle", "square"])
+        rhs1.add_nodes_from(
+            ["circle_square", "triangle"])
+
+        rule1 = Rule(
+            p1, lhs1, rhs1,
+            {"circle": "circle", "square": "square"},
+            {"circle": "circle_square", "square": "circle_square"})
+
+        lhs2 = nx.DiGraph()
+        p2 = nx.DiGraph()
+        rhs2 = nx.DiGraph()
+        lhs2.add_nodes_from(
+            ["circle_square", "diamond"])
+        p2.add_nodes_from(
+            ["circle_square1", "circle_square2"])
+        rhs2.add_nodes_from(
+            ["circle_square1", "circle_square2", "star"])
+
+        rule2 = Rule(
+            p2, lhs2, rhs2,
+            {"circle_square1": "circle_square", "circle_square2": "circle_square"},
+            {"circle_square1": "circle_square1", "circle_square2": "circle_square2"})
+        compose_rules(
+            rule1, rule2,
+            {"circle": "circle", "square": "square", "heart": "heart"},
+            {"circle_square": "circle_square", "triangle": "triangle"},
+            {"circle_square": "circle_square", "diamond": "diamond"},
+            {
+                "circle_square1": "circle_square1",
+                "circle_square2": "circle_square2",
+                "star": "star"
+            })
