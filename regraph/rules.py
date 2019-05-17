@@ -1948,3 +1948,8 @@ class Rule(object):
     def get_inverted_rule(self):
         """Get inverted rule with LHS and RHS swaped."""
         return Rule(self.p, self.rhs, self.lhs, self.p_rhs, self.p_lhs)
+
+
+def compose_rules(rule1, rule2, lhs1, rhs1, lhs2, rhs2):
+    """Compose two rules respecting instances."""
+    pass

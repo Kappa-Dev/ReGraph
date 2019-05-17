@@ -174,7 +174,7 @@ def add_attributes(var_name, attrs):
                 "\tFOREACH(val in [{}] |\n".format(", ".join(el for el in elements)) +
                 "\t\tFOREACH(dummy1 IN CASE WHEN NOT val IN {}.{} THEN [1] ELSE [] END |\n".format(
                     var_name, k) +
-                "\t\t\tSET {}.{} = {}.{} + [val])))\n".format(var_name, k, var_name, k)
+                "\t\t\tSET {}.{} = extract(el in {}.{} | toString(el)) + [val])))\n".format(var_name, k, var_name, k)
             )
         else:
             raise ValueError(
