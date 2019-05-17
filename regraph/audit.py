@@ -3,7 +3,7 @@ import warnings
 from regraph.exceptions import RevisionError, RevisionWarning
 
 
-class RevisionTree(object):
+class RevisionGraph(object):
     """Class for version control.
 
     Attributes
