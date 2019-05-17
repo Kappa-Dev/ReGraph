@@ -9,7 +9,8 @@ from regraph.utils import assert_nx_graph_eq
 from regraph.networkx.category_utils import (pullback,
                                              pushout,
                                              pullback_complement,
-                                             nary_pullback)
+                                             nary_pullback,
+                                             get_unique_map_to_pullback_complement)
 
 
 def assert_edges_undir(edges1, edges2):
@@ -264,3 +265,40 @@ class TestCategoryUtils:
         )
         # print(a_b)
         # print(a_cs)
+
+    def test_get_unique_map_to_pullback_complement(self):
+        a_b = {
+            "circle1": "circle",
+            "circle2": "circle"
+        }
+
+        b_c = {
+            "circle": "circle",
+            "triangle": "triangle",
+        }
+
+        a_p = {
+            "circle1": "c1",
+            "circle2": "c2"
+        }
+
+        p_c = {
+            "c1": "circle",
+            "c2": "circle",
+            "square": "square"
+        }
+
+        a_z = {
+            "circle1": "circle1",
+            "circle2": "circle2"
+        }
+
+        z_c = {
+            "circle1": "circle",
+            "circle2": "circle",
+            "square": "square"
+        }
+
+        z_p = get_unique_map_to_pullback_complement(
+            a_b, b_c, a_p, p_c, a_z, z_c)
+        assert(z_p == {'circle1': 'c1', 'circle2': 'c2', 'square': 'square'})

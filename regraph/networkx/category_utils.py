@@ -174,8 +174,26 @@ def get_unique_map_from_pushout(p, a_p, b_p, a_z, b_z):
     return p_z
 
 
+def get_unique_map_to_pullback_complement(a_b, b_c, a_p, p_c, a_z, z_c):
+    """Find a unique map to pullback complement."""
+    z_p = {
+        a_z[k]: v
+        for k, v in a_p.items()
+    }
+
+    for k, v in z_c.items():
+        if v not in compose(a_p, p_c).values():
+            # if len(keys_by_value(p_c, v)) > 0:
+            z_p[k] = keys_by_value(p_c, v)[0]
+            # else:
+            #     # THIS is a temporary solution
+            #     z_p[k] = k
+
+    return z_p
+
+
 def get_unique_map(a, b, c, d, a_b, b_d, c_d):
-    """Get a map a->c that makes a square commute."""
+    """Get a map a->c that makes a PBC square commute."""
     a_c = dict()
     for node in b.nodes():
         a_keys = keys_by_value(a_b, node)

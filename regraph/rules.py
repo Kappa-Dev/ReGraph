@@ -19,6 +19,8 @@ from regraph.utils import (keys_by_value,
 from regraph.networkx.category_utils import (identity,
                                              check_homomorphism,
                                              pullback_complement,
+                                             get_unique_map_from_pushout,
+                                             get_unique_map_to_pullback_complement,
                                              pushout,
                                              pullback,
                                              compose)
@@ -1953,25 +1955,23 @@ class Rule(object):
         return Rule(self.p, self.rhs, self.lhs, self.p_rhs, self.p_lhs)
 
 
-def compose_rules(rule1, rule2,
-                  lhs1_instance, rhs1_instance,
-                  lhs2_instance, rhs2_instance):
+def compose_rules(rule1, rule2, instances1, instances2):
     """Compose two rules respecting instances."""
 
     d_nodes = [
         v
-        for v in rhs1_instance.values()
-        if v in lhs2_instance.values()
+        for v in instances1["rhs"].values()
+        if v in instances2["lhs"].values()
     ]
     d_rhs1 = {
         v: k
-        for k, v in rhs1_instance.items()
-        if v in lhs2_instance.values()
+        for k, v in instances1["rhs"].items()
+        if v in instances2["lhs"].values()
     }
     d_lhs2 = {
-        v: keys_by_value(lhs2_instance, v)[0]
-        for v in rhs1_instance.values()
-        if v in lhs2_instance.values()
+        v: keys_by_value(instances2["lhs"], v)[0]
+        for v in instances1["rhs"].values()
+        if v in instances2["lhs"].values()
     }
 
     d = nx.DiGraph()
@@ -1999,13 +1999,65 @@ def compose_rules(rule1, rule2,
 
     rule = Rule(pi, lambd, rho, pi_lambda, pi_rho)
 
-    lhs_instance = {}
-    rhs_instance = {}
+    # find h instance
+    h_instance = get_unique_map_from_pushout(
+        h.nodes(), rhs1_h, lhs2_h, instances1["rhs"], instances2["lhs"])
 
-    # primitives.print_graph(rule.lhs)
-    # primitives.print_graph(rule.p)
-    # primitives.print_graph(rule.rhs)
+    # find p1_p instance
+    g1_m_g2 = {
+        instances1["p"][k]: compose(rule1.p_rhs, instances1["rhs"])[k]
+        for k in rule1.p_rhs.keys()
+    }
+    for k, v in instances2["lhs"].items():
+        if v not in g1_m_g2.values():
+            g1_m_g2[v] = v
 
-    h.nodes()
+    p1_p_instance = get_unique_map_to_pullback_complement(
+        rule1.p_rhs, instances1["rhs"], instances1["p"],
+        g1_m_g2, p1_p1_p, compose(p1_p_h, h_instance))
 
-    return rule, lhs_instance, rhs_instance
+    # find p2_p instance
+    g2_m_g2 = {
+        instances2["p"][k]: compose(rule2.p_lhs, instances2["lhs"])[k]
+        for k in rule2.p_lhs.keys()
+    }
+    for k, v in instances1["rhs"].items():
+        if v not in g2_m_g2.values():
+            g2_m_g2[v] = v
+
+    p2_p_instance = get_unique_map_to_pullback_complement(
+        rule2.p_lhs, instances2["lhs"], instances2["p"],
+        g2_m_g2, p2_p2_p, compose(p2_p_h, h_instance))
+
+    g1_m_g1 = {
+        instances1["p"][k]: compose(rule1.p_lhs, instances1["lhs"])[k]
+        for k, v in rule1.p_lhs.items()
+    }
+    for k in g1_m_g2.keys():
+        if k not in g1_m_g1.keys():
+            g1_m_g1[k] = k
+
+    lhs_instance = get_unique_map_from_pushout(
+        lambd.nodes(), lhs1_lambda, p1_p_lambda,
+        instances1["lhs"], compose(p1_p_instance, g1_m_g1))
+
+    g2_m_g3 = {
+        instances2["p"][k]: compose(rule2.p_rhs, instances2["rhs"])[k]
+        for k in rule2.p_rhs.keys()
+    }
+    for k in g2_m_g2.keys():
+        if k not in g2_m_g3.keys():
+            g2_m_g3[k] = k
+
+    rhs_instance = get_unique_map_from_pushout(
+        rho.nodes(), p2_p_rho, rhs2_rho,
+        compose(p2_p_instance, g2_m_g3), instances2["rhs"])
+
+    assert(lhs_instance == {
+        'circle': 'circle', 'square': 'square',
+        'heart': 'heart', 'diamond': 'diamond'})
+
+    assert(rhs_instance == {
+        'circle_square1': 'circle_square1',
+        'circle_square2': 'circle_square2',
+        'star': 'star', 'triangle': 'triangle'})

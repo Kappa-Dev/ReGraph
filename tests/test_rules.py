@@ -489,13 +489,26 @@ class TestRule(object):
             p2, lhs2, rhs2,
             {"circle_square1": "circle_square", "circle_square2": "circle_square"},
             {"circle_square1": "circle_square1", "circle_square2": "circle_square2"})
-        compose_rules(
+        rule, lhs_instance, rhs_instance = compose_rules(
             rule1, rule2,
-            {"circle": "circle", "square": "square", "heart": "heart"},
-            {"circle_square": "circle_square", "triangle": "triangle"},
-            {"circle_square": "circle_square", "diamond": "diamond"},
             {
-                "circle_square1": "circle_square1",
-                "circle_square2": "circle_square2",
-                "star": "star"
+                "lhs": {"circle": "circle", "square": "square", "heart": "heart"},
+                "p": {"circle": "circle", "square": "square"},
+                "rhs": {"circle_square": "circle_square", "triangle": "triangle"}
+            },
+            {
+                "lhs": {"circle_square": "circle_square", "diamond": "diamond"},
+                "p": {
+                    "circle_square1": "circle_square1",
+                    "circle_square2": "circle_square2"
+                },
+                "rhs": {
+                    "circle_square1": "circle_square1",
+                    "circle_square2": "circle_square2",
+                    "star": "star"
+                }
             })
+
+        print(rule)
+        print(lhs_instance)
+        print(rhs_instance)
