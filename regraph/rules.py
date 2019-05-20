@@ -1954,24 +1954,57 @@ class Rule(object):
         """Get inverted rule with LHS and RHS swaped."""
         return Rule(self.p, self.rhs, self.lhs, self.p_rhs, self.p_lhs)
 
+    @classmethod
+    def identity_rule(cls):
+        """Create an identity rule."""
+        p, lhs, rhs = nx.DiGraph()
+        return cls(p, lhs, rhs)
 
-def compose_rules(rule1, rule2, instances1, instances2):
+
+def _generate_p_instance(rule, lhs_instance, rhs_instance):
+    # Compute representation of p1/p2 instances.
+    p_instance = {}
+    for n in rule.p.nodes():
+        lhs_node = rule.p_lhs[n]
+        rhs_node = rule.p_rhs[n]
+        if rhs_node in rule.merge_nodes().keys():
+            if lhs_node in rule.cloned_nodes().keys():
+                # generate names
+                clone_name = str(lhs_instance[lhs_node])
+                i = 0
+                while clone_name in p_instance.values():
+                    i += 1
+                    clone_name = str(lhs_instance[lhs_node]) + str(i)
+                p_instance[n] = clone_name
+            else:
+                p_instance[n] = lhs_instance[lhs_node]
+        else:
+            p_instance[n] = rhs_instance[rhs_node]
+    return p_instance
+
+
+def compose_rules(rule1, lhs_instance1, rhs_instance1,
+                  rule2, lhs_instance2, rhs_instance2):
     """Compose two rules respecting instances."""
+    p1_instance = _generate_p_instance(
+        rule1, lhs_instance1, rhs_instance1)
+    p2_instance = _generate_p_instance(
+        rule2, lhs_instance2, rhs_instance2)
 
     d_nodes = [
         v
-        for v in instances1["rhs"].values()
-        if v in instances2["lhs"].values()
+        for v in rhs_instance1.values()
+        if v in lhs_instance2.values()
     ]
     d_rhs1 = {
         v: k
-        for k, v in instances1["rhs"].items()
-        if v in instances2["lhs"].values()
+        for k, v in rhs_instance1.items()
+        if v in lhs_instance2.values()
     }
     d_lhs2 = {
-        v: keys_by_value(instances2["lhs"], v)[0]
-        for v in instances1["rhs"].values()
-        if v in instances2["lhs"].values()
+        v: keys_by_value(lhs_instance2, v)[0]
+        for v in rhs_instance1.values()
+        if v in lhs_instance2.values()
     }
 
     d = nx.DiGraph()
@@ -2001,36 +2034,36 @@ def compose_rules(rule1, rule2, instances1, instances2):
 
     # find h instance
     h_instance = get_unique_map_from_pushout(
-        h.nodes(), rhs1_h, lhs2_h, instances1["rhs"], instances2["lhs"])
+        h.nodes(), rhs1_h, lhs2_h, rhs_instance1, lhs_instance2)
 
     # find p1_p instance
     g1_m_g2 = {
-        instances1["p"][k]: compose(rule1.p_rhs, instances1["rhs"])[k]
+        p1_instance[k]: compose(rule1.p_rhs, rhs_instance1)[k]
         for k in rule1.p_rhs.keys()
     }
-    for k, v in instances2["lhs"].items():
+    for k, v in lhs_instance2.items():
         if v not in g1_m_g2.values():
             g1_m_g2[v] = v
 
     p1_p_instance = get_unique_map_to_pullback_complement(
-        rule1.p_rhs, instances1["rhs"], instances1["p"],
+        rule1.p_rhs, rhs_instance1, p1_instance,
         g1_m_g2, p1_p1_p, compose(p1_p_h, h_instance))
 
     # find p2_p instance
     g2_m_g2 = {
-        instances2["p"][k]: compose(rule2.p_lhs, instances2["lhs"])[k]
+        p2_instance[k]: compose(rule2.p_lhs, lhs_instance2)[k]
         for k in rule2.p_lhs.keys()
     }
-    for k, v in instances1["rhs"].items():
+    for k, v in rhs_instance1.items():
         if v not in g2_m_g2.values():
             g2_m_g2[v] = v
 
     p2_p_instance = get_unique_map_to_pullback_complement(
-        rule2.p_lhs, instances2["lhs"], instances2["p"],
+        rule2.p_lhs, lhs_instance2, p2_instance,
         g2_m_g2, p2_p2_p, compose(p2_p_h, h_instance))
 
     g1_m_g1 = {
-        instances1["p"][k]: compose(rule1.p_lhs, instances1["lhs"])[k]
+        p1_instance[k]: compose(rule1.p_lhs, lhs_instance1)[k]
         for k, v in rule1.p_lhs.items()
     }
     for k in g1_m_g2.keys():
@@ -2039,10 +2072,10 @@ def compose_rules(rule1, rule2, instances1, instances2):
 
     lhs_instance = get_unique_map_from_pushout(
         lambd.nodes(), lhs1_lambda, p1_p_lambda,
-        instances1["lhs"], compose(p1_p_instance, g1_m_g1))
+        lhs_instance1, compose(p1_p_instance, g1_m_g1))
 
     g2_m_g3 = {
-        instances2["p"][k]: compose(rule2.p_rhs, instances2["rhs"])[k]
+        p2_instance[k]: compose(rule2.p_rhs, rhs_instance2)[k]
         for k in rule2.p_rhs.keys()
     }
     for k in g2_m_g2.keys():
@@ -2051,13 +2084,6 @@ def compose_rules(rule1, rule2, instances1, instances2):
 
     rhs_instance = get_unique_map_from_pushout(
         rho.nodes(), p2_p_rho, rhs2_rho,
-        compose(p2_p_instance, g2_m_g3), instances2["rhs"])
+        compose(p2_p_instance, g2_m_g3), rhs_instance2)
 
-    assert(lhs_instance == {
-        'circle': 'circle', 'square': 'square',
-        'heart': 'heart', 'diamond': 'diamond'})
-
-    assert(rhs_instance == {
-        'circle_square1': 'circle_square1',
-        'circle_square2': 'circle_square2',
-        'star': 'star', 'triangle': 'triangle'})
+    return rule, lhs_instance, rhs_instance

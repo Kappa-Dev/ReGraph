@@ -490,25 +490,22 @@ class TestRule(object):
             {"circle_square1": "circle_square", "circle_square2": "circle_square"},
             {"circle_square1": "circle_square1", "circle_square2": "circle_square2"})
         rule, lhs_instance, rhs_instance = compose_rules(
-            rule1, rule2,
+            rule1,
+            {"circle": "circle", "square": "square", "heart": "heart"},
+            {"circle_square": "circle_square", "triangle": "triangle"},
+            rule2,
+            {"circle_square": "circle_square", "diamond": "diamond"},
             {
-                "lhs": {"circle": "circle", "square": "square", "heart": "heart"},
-                "p": {"circle": "circle", "square": "square"},
-                "rhs": {"circle_square": "circle_square", "triangle": "triangle"}
-            },
-            {
-                "lhs": {"circle_square": "circle_square", "diamond": "diamond"},
-                "p": {
-                    "circle_square1": "circle_square1",
-                    "circle_square2": "circle_square2"
-                },
-                "rhs": {
-                    "circle_square1": "circle_square1",
-                    "circle_square2": "circle_square2",
-                    "star": "star"
-                }
+                "circle_square1": "circle_square1",
+                "circle_square2": "circle_square2",
+                "star": "star"
             })
 
-        print(rule)
-        print(lhs_instance)
-        print(rhs_instance)
+        assert(lhs_instance == {
+            'circle': 'circle', 'square': 'square',
+            'heart': 'heart', 'diamond': 'diamond'})
+
+        assert(rhs_instance == {
+            'circle_square1': 'circle_square1',
+            'circle_square2': 'circle_square2',
+            'star': 'star', 'triangle': 'triangle'})
