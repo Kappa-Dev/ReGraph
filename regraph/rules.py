@@ -2087,3 +2087,39 @@ def compose_rules(rule1, lhs_instance1, rhs_instance1,
         compose(p2_p_instance, g2_m_g3), rhs_instance2)
 
     return rule, lhs_instance, rhs_instance
+
+ def _create_merging_rule(self, rule, lhs_instance, rhs_instance):
+    lhs = lhs_instance
+    # Create a merging rule for G and G'
+
+    # Create a non-injective map from P to G
+    # following P -> L >-> G
+    p_instance = {
+        k: lhs[v]
+        for k, v in rule.p_lhs.items()
+    }
+
+    # Start from intial P and R from delta
+    p = copy.deepcopy(rule.p)
+    rhs = copy.deepcopy(rule.rhs)
+    p_rhs = {}
+    instance = {}
+    # Merge all the clones in P and R
+    # recostructing all the dictionaries
+    # consistently
+    for v in p_instance.values():
+        p_nodes = keys_by_value(p_instance, v)
+        if len(p_nodes) > 1:
+            p_name = merge_nodes(p, p_nodes)
+            rhs_nodes = [
+                rule.p_rhs[n]
+                for n in p_nodes
+            ]
+            rhs_name = merge_nodes(rhs, rhs_nodes)
+            instance[p_name] = v
+            p_rhs[p_name] = rhs_name
+        else:
+            instance[p_nodes[0]] = v
+            p_rhs[p_nodes[0]] = rule.p_rhs[p_nodes[0]]
+
+    return Rule(p, p, rhs, p_rhs=p_rhs), instance

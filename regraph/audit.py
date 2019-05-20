@@ -1,7 +1,6 @@
 """Collection of utils for audit trails."""
 from abc import ABC, abstractmethod
 
-import copy
 import datetime
 import uuid
 import warnings
@@ -10,9 +9,8 @@ import networkx as nx
 
 
 from regraph.exceptions import RevisionError, RevisionWarning
-from regraph.rules import compose_rules, Rule
-from regraph.primitives import relabel_nodes, merge_nodes
-from regraph.untils import keys_by_value
+from regraph.rules import compose_rules, Rule, _create_merging_rule
+from regraph.primitives import relabel_nodes
 
 
 def _generate_new_commit_meta_data():
@@ -74,6 +72,21 @@ class Versioning(ABC):
         """Abstract method for creating an identity-delta."""
         pass
 
+    def _compose_delta_path(self, path):
+        if length(path) > 1:
+            result_delta = self._revision_graph.edge[
+                path[0]][path[1]]["delta"]
+            previous_commit = path[1]
+            for current_commit in path[2:]:
+                result_delta = self._compose_deltas(
+                    result_delta,
+                    self._revision_graph.edge[
+                        current_commit][previous_commit]["delta"])
+                previous_commit = current_commit
+            return result_delta
+        else:
+            return self._create_identity_delta()
+
     def branches(self):
         """Return list of branches."""
         return [self._current_branch] + list(self._heads.keys())
@@ -82,22 +95,28 @@ class Versioning(ABC):
         """Return the name of the current branch."""
         return self._current_branch
 
-    def commit(self, commit, previous_commit=None):
+    def commit(self, delta, message=None, previous_commit=None):
         """Add a commit."""
         time, commit_id = _generate_new_commit_meta_data()
+
         if previous_commit is None:
             previous_commit = self._heads[self._current_branch]
 
         # Update heads and revision graph
         self._heads[self._current_branch] = commit_id
         self._revision_graph.add_node(
-            commit_id, {"time": time, "commit": commit})
+            commit_id, {
+                "time": time,
+                "message": message if message is not None else ""
+            })
         self._revision_graph.add_edge(
-            previous_commit, commit_id)
+            previous_commit, commit_id, {
+                "delta": delta
+            })
 
-        for branch, delta in self._delatas.items():
+        for branch, branch_delta in self._delatas.items():
             self._deltas[branch] = self._compose_deltas(
-                delta, commit)
+                branch_delta, delta)
 
         return commit_id
 
@@ -126,11 +145,14 @@ class Versioning(ABC):
                     another_delta
                 )
 
-    def branch(self, new_branch):
+    def branch(self, new_branch, message=None):
         """Create a new branch with identity commit."""
         if new_branch in self.branches():
             raise RevisionError(
                 "Branch '{}' already exists".format(new_branch))
+
+        if message is None:
+            message = "Created branch '{}'".format(new_branch)
 
         # Set this as a current branch
         previous_branch = self._current_branch
@@ -143,26 +165,37 @@ class Versioning(ABC):
         self._deltas[previous_branch] = identity_delta
 
         # Create a new identity commit
-        commit_id = self.commit(identity_delta, previous_commit)
+        commit_id = self.commit(
+            identity_delta,
+            message=message,
+            previous_commit=previous_commit)
         self._heads[self._current_branch] = commit_id
 
-    def merge_with(self, branch):
+    def merge_with(self, branch, message=None):
         """Merge the current branch with the specified one."""
         if branch in self.branches():
             raise RevisionError(
                 "Branch '{}' does not exist".format(branch))
 
-        delta = self._deltas[branch]
-        commit = self._merge_into_current_branch(delta)
+        if message is None:
+            message = "Merged branch '{}' into '{}'".format(
+                branch, self._current_branch)
 
-        commit_id = self.commit(commit)
+        delta = self._deltas[branch]
+        delta_to_current, delta_to_branch = self._merge_into_current_branch(
+            delta)
+
+        commit_id = self.commit(delta_to_current, message=message)
 
         self._revision_graph.add_edge(
-            self._heads[branch], commit_id)
+            self._heads[branch], commit_id,
+            {
+                "delta": delta_to_branch
+            })
         del self._heads[branch]
         return commit_id
 
-    def rollback(self, commit_id):
+    def rollback(self, commit_id, message=None):
         """Rollback the current branch to a specific commit."""
         if commit_id not in self._revision_graph.nodes():
             raise RevisionError(
@@ -179,17 +212,11 @@ class Versioning(ABC):
                 "Branch '{}' does not contain a path to the commit '{}'".format(
                     self._current_branch, commit_id))
 
+        if message is None:
+            message = "Rollback to commit '{}'".format(commit_id)
+
         # Generate a big rollback commit
-        last_commit = self._heads[self._current_branch]
-        rollback_commit = self._invert_delta(
-            self._revision_graph.node[last_commit]["commit"])
-        for current_commit in shortest_path[::-1]:
-            if current_commit != commit_id:
-                rollback_commit = self._compose_deltas(
-                    rollback_commit,
-                    self._invert_delta(self._revision_graph.node[
-                        current_commit]["commit"])
-                )
+        rollback_commit = self._compose_deltas(shortest_path)
 
         # Update the revision graph structure and deltas
         head_paths = {}
@@ -238,8 +265,17 @@ class Versioning(ABC):
                 self._deltas[h])
 
         # Compute deltas of the new heads
-        for h, commit in new_heads.items():
-            print(h)
+        for head, merge_commit in new_heads.items():
+            pred_commits = self._revision_graph.predecessors(
+                merge_commit)
+            for p in pred_commits:
+                branch = self._revision_graph.node[p]["branch"]
+                self._head[branch] = p
+                self._deltas[branch] = self._compose_deltas(
+                    h,
+                    self._invert_delta(
+                        self._revision_graph.edge[p][merge_commit]["delta"]))
+
 
         # Apply the rollback commit generated before
         pass
@@ -305,49 +341,23 @@ class VersionedGraph(Versioning):
         return rhs_instance
 
     def _merge_into_current_branch(self, delta):
-        """Merge delta into the current branch."""
-        lhs = delta["lhs_instance"]
-        # Create a merging rule for two branches
+        """Merge branch with delta into the current branch."""
+        current_to_merged_rule, ctm_instance = _create_merging_rule(
+            delta["rule"], delta["lhs_instance"], delta["rhs_instance"])
 
-        # Create a non-injective map from P to G
-        # following P -> L >-> G
-        p_instance = {
-            k: lhs[v]
-            for k, v in delta["rule"].p_lhs.items()
-        }
+        _, rhs_instance = current_to_merged_rule.apply_to(
+            self.graph, ctm_instance)
 
-        # Start from intial P and R from delta
-        p = copy.deepcopy(delta["rule"].p)
-        rhs = copy.deepcopy(delta["rule"].rhs)
-        p_rhs = {}
-        instance = {}
-        # Merge all the clones in P and R
-        # recostructing all the dictionaries
-        # consistently
-        for v in p_instance.values():
-            p_nodes = keys_by_value(p_instance, v)
-            if len(p_nodes) > 1:
-                p_name = merge_nodes(p, p_nodes)
-                rhs_nodes = [
-                    delta["rule"].p_rhs[n]
-                    for n in p_nodes
-                ]
-                rhs_name = merge_nodes(rhs, rhs_nodes)
-                instance[p_name] = v
-                p_rhs[p_name] = rhs_name
-            else:
-                instance[p_nodes[0]] = v
-                p_rhs[p_nodes[0]] = delta["rule"].p_rhs[p_nodes[0]]
-
-        # Apply the merging rule
-        merging_rule = Rule(
-            p, p, rhs, p_rhs=p_rhs)
-        _, rhs_instance = merging_rule.apply_to(self.graph, instance)
-        return {
-            "rule": merging_rule,
-            "lhs_instance": instance,
+        current_to_merged_delta = {
+            "rule": current_to_merged_rule,
+            "lhs_instance": ctm_instance,
             "rhs_instance": rhs_instance
         }
+
+        other_to_merged_delta = self._compose_deltas(
+            self._invert_delta(delta, current_to_merged_delta))
+
+        return current_to_merged_delta, other_to_merged_delta
 
     def rewrite(self, rule, instance, message=None):
         """Rewrite the versioned graph and commit."""
