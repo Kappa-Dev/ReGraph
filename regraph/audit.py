@@ -8,6 +8,7 @@ import warnings
 
 import networkx as nx
 
+
 from regraph.exceptions import RevisionError, RevisionWarning
 from regraph.rules import compose_rules, Rule
 from regraph.primitives import relabel_nodes, merge_nodes
@@ -75,7 +76,7 @@ class Versioning(ABC):
 
     def branches(self):
         """Return list of branches."""
-        return [self._current_branch] + list(self._delatas.keys())
+        return [self._current_branch] + list(self._heads.keys())
 
     def current_branch(self):
         """Return the name of the current branch."""
@@ -170,10 +171,10 @@ class Versioning(ABC):
 
         # Find paths from the last commit of the current branch
         # to the commit with id 'commit_id'
-        paths_to_commit = list(nx.all_simple_paths(
-            self._revision_graph, self._heads[self._current_branch], commit_id))
-
-        if len(paths_to_commit) == 0:
+        try:
+            shortest_path = list(nx.shortest_path(
+                self._revision_graph, commit_id, self._heads[self._current_branch]))
+        except nx.NetworkXNoPath:
             raise RevisionError(
                 "Branch '{}' does not contain a path to the commit '{}'".format(
                     self._current_branch, commit_id))
@@ -182,11 +183,8 @@ class Versioning(ABC):
         last_commit = self._heads[self._current_branch]
         rollback_commit = self._invert_delta(
             self._revision_graph.node[last_commit]["commit"])
-        for current_commit in nx.shortest_path(self._revision_graph,
-                                               self._heads[self._current_branch],
-                                               commit_id):
+        for current_commit in shortest_path[::-1]:
             if current_commit != commit_id:
-                print(current_commit, self.node[current_commit]["commit"])
                 rollback_commit = self._compose_deltas(
                     rollback_commit,
                     self._invert_delta(self._revision_graph.node[
@@ -194,6 +192,57 @@ class Versioning(ABC):
                 )
 
         # Update the revision graph structure and deltas
+        head_paths = {}
+        for h in self._heads.values():
+            head_paths[h] = list(nx.all_simple_paths(
+                self._revision_graph, commit_id, h))
+
+        # All paths to the heads originating from the commit to
+        # which we rollaback are removed
+        for paths in head_paths.values():
+            for p in paths:
+                s = p[0]
+                for i in range(1, len(p)):
+                    t = p[i]
+                    if (s, t) in self._revision_graph.edges():
+                        self._revision_graph.remove_edge(s, t)
+                    s = t
+
+        # Cleanup disconnected commits and update heads
+        new_heads = {}
+        for node in self._revision_graph.nodes():
+            preds = self._revision_graph.predecessors(node)
+            sucs = self._revision_graph.successors(node)
+            if len(sucs) == 0:
+                if len(preds) == 0:
+                    branch_name = self._revision_graph.node[node]["branch"]
+                    self._revision_graph.remove_node(node)
+                    if branch_name in self._heads:
+                        print("Removed the head of ", branch_name)
+                        del self._heads[branch_name]
+                elif node not in self._heads.values():
+                    # add a new head
+                    branch_name = self._revision_graph.node[node]["branch"]
+                    new_heads[branch_name] = node
+                    print("Added the head of ", branch_name)
+
+        # Recompute deltas
+        new_current_branch = self._revision_graph.node[commit_id]["branch"]
+        self._current_branch = new_current_branch
+        self._heads[self._current_branch] = commit_id
+
+        # Update deltas of the preserved heads
+        for h in self._heads:
+            self._deltas[h] = self._compose_deltas(
+                self._invert_delta(rollback_commit),
+                self._deltas[h])
+
+        # Compute deltas of the new heads
+        for h, commit in new_heads.items():
+            print(h)
+
+        # Apply the rollback commit generated before
+        pass
 
 
 class VersionedGraph(Versioning):
