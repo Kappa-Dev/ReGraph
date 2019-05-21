@@ -1,7 +1,7 @@
 import networkx as nx
 
 from regraph import Rule
-from regraph.rules import compose_rules
+from regraph.rules import compose_rules, _create_merging_rule
 from regraph import keys_by_value
 from regraph import RuleError
 from regraph.networkx.category_utils import check_homomorphism
@@ -509,3 +509,24 @@ class TestRule(object):
             'circle_square1': 'circle_square1',
             'circle_square2': 'circle_square2',
             'star': 'star', 'triangle': 'triangle'})
+
+    def test_create_merging_rule(test):
+        # Create a rule
+        pattern = nx.DiGraph()
+        pattern.add_nodes_from(["circle", "square"])
+        rule = Rule.from_transform(pattern)
+        p_name, rhs_name = rule.inject_clone_node("circle")
+        rhs_name = rule.inject_merge_nodes([p_name, "square"])
+
+        lhs_instance = {
+            "circle": "Bob",
+            "square": "Alice"
+        }
+
+        rhs_instance = {
+            "circle": "Bob",
+            rhs_name: "Josh"
+        }
+
+        res = _create_merging_rule(rule, lhs_instance, rhs_instance)
+        print(res)

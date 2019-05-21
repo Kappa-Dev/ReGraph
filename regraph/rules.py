@@ -950,7 +950,7 @@ class Rule(object):
         rule = cls(p, lhs, rhs, p_lhs, p_rhs)
         return rule
 
-    def apply_to(self, graph, instance, inplace=False):
+    def apply_to(self, graph, instance=None, inplace=False):
         """Perform graph rewriting with the rule.
 
         Parameters
@@ -980,6 +980,10 @@ class Rule(object):
             nodes of `g_prime`.
 
         """
+        if instance is None:
+            instance = {
+                n: n for n in self.lhs.nodes()
+            }
         if isinstance(graph, Neo4jGraph):
             g_prime = graph
             rhs_g_prime = graph.rewrite(self, instance)
@@ -1957,8 +1961,7 @@ class Rule(object):
     @classmethod
     def identity_rule(cls):
         """Create an identity rule."""
-        p, lhs, rhs = nx.DiGraph()
-        return cls(p, lhs, rhs)
+        return cls(nx.DiGraph(), nx.DiGraph(), nx.DiGraph())
 
 
 def _generate_p_instance(rule, lhs_instance, rhs_instance):
@@ -1967,7 +1970,7 @@ def _generate_p_instance(rule, lhs_instance, rhs_instance):
     for n in rule.p.nodes():
         lhs_node = rule.p_lhs[n]
         rhs_node = rule.p_rhs[n]
-        if rhs_node in rule.merge_nodes().keys():
+        if rhs_node in rule.merged_nodes().keys():
             if lhs_node in rule.cloned_nodes().keys():
                 # generate names
                 clone_name = str(lhs_instance[lhs_node])
@@ -2088,38 +2091,72 @@ def compose_rules(rule1, lhs_instance1, rhs_instance1,
 
     return rule, lhs_instance, rhs_instance
 
- def _create_merging_rule(self, rule, lhs_instance, rhs_instance):
-    lhs = lhs_instance
-    # Create a merging rule for G and G'
 
+def _fold_lhs(rule, lhs_instance, rhs_instance):
     # Create a non-injective map from P to G
     # following P -> L >-> G
     p_instance = {
-        k: lhs[v]
+        k: lhs_instance[v]
         for k, v in rule.p_lhs.items()
     }
 
     # Start from intial P and R from delta
     p = copy.deepcopy(rule.p)
+
     rhs = copy.deepcopy(rule.rhs)
     p_rhs = {}
     instance = {}
+    dummy_rhs_instance = {}
+
     # Merge all the clones in P and R
     # recostructing all the dictionaries
     # consistently
-    for v in p_instance.values():
+    for v in set(p_instance.values()):
         p_nodes = keys_by_value(p_instance, v)
         if len(p_nodes) > 1:
-            p_name = merge_nodes(p, p_nodes)
+            p_name = primitives.merge_nodes(p, p_nodes)
             rhs_nodes = [
                 rule.p_rhs[n]
                 for n in p_nodes
             ]
-            rhs_name = merge_nodes(rhs, rhs_nodes)
+            if len(rhs_nodes) > 1:
+                rhs_name = primitives.merge_nodes(rhs, rhs_nodes)
+                p_rhs[p_name] = rhs_name
+            else:
+                p_rhs[p_name][rhs_nodes[0]]
+
             instance[p_name] = v
-            p_rhs[p_name] = rhs_name
         else:
             instance[p_nodes[0]] = v
             p_rhs[p_nodes[0]] = rule.p_rhs[p_nodes[0]]
 
-    return Rule(p, p, rhs, p_rhs=p_rhs), instance
+    new_rule = Rule(p, p, rhs, p_rhs=p_rhs)
+
+    for n in new_rule.added_nodes():
+        dummy_rhs_instance[n] = n
+    for n, p_nodes in new_rule.merged_nodes().items():
+        lhs_nodes = [
+            instance[p_node] for p_node in p_nodes
+        ]
+        dummy_rhs_instance[n] = "_".join(lhs_nodes)
+    for n in new_rule.rhs.nodes():
+        if n not in dummy_rhs_instance.keys():
+            preserved_node = instance[
+                new_rule.p_lhs[keys_by_value(new_rule.p_rhs, n)[0]]]
+            dummy_rhs_instance[n] = preserved_node
+
+    return new_rule, instance, dummy_rhs_instance
+
+
+def _create_merging_rule(rule, lhs_instance, rhs_instance):
+
+    # Create rules producing G+G'
+    # 1. the left rule : G -> G+G'
+    rule1, lhs_instance1, rhs_intance1 = _fold_lhs(
+        rule, lhs_instance, rhs_instance)
+    # 2. the right rule : G' -> G+G'
+    rule2, lhs_instance2, rhs_intance2 = _fold_lhs(
+        rule.get_inverted_rule(), rhs_instance, lhs_instance)
+    # 3. Combine two independent RHS
+    print(rhs_intance1, rhs_intance2)
+    return (rule1, lhs_instance1, rhs_intance1), (rule2, lhs_instance2, rhs_intance2)

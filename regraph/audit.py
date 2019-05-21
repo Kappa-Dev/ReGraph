@@ -10,12 +10,12 @@ import networkx as nx
 
 from regraph.exceptions import RevisionError, RevisionWarning
 from regraph.rules import compose_rules, Rule, _create_merging_rule
-from regraph.primitives import relabel_nodes
+from regraph.primitives import relabel_node
 
 
 def _generate_new_commit_meta_data():
     time = datetime.datetime.now()
-    commit_id = str(uuid.uuid1())
+    commit_id = str(uuid.uuid4())
     return time, commit_id
 
 
@@ -28,6 +28,8 @@ class Versioning(ABC):
         Name of the current branch
     _deltas : dict
         Dictionary with delta's to all other branches
+    _heads : dict
+    _revision_graph : networkx.DiGraph
 
     Methods
     -------
@@ -37,31 +39,44 @@ class Versioning(ABC):
     branch(new_branch)
     switch_branch(branch)
     merge(branch1, branch2)
+
+    _compose_deltas
+    _invert_delta
+    _merge_into_current_branch
+    _create_identity_delta
+    _compose_delta_path
     """
 
     def __init__(self, init_branch="master"):
         """Initialize revision object."""
         self._current_branch = init_branch
-        self._delatas = {}
+        self._deltas = {}
+
+        # Create initial commit
+        time, commit_id = _generate_new_commit_meta_data()
         self._heads = {}
-        self._commits = []
+        self._heads[init_branch] = commit_id
         self._revision_graph = nx.DiGraph()
+        self._revision_graph.add_node(
+            commit_id,
+            branch=self._current_branch,
+            message="Initial commit",
+            time=time
+        )
 
-    @abstractmethod
-    def _updated_delta(self, delta, commit):
-        """Abstract method for computing delta updated with the commit."""
-        pass
-
+    @staticmethod
     @abstractmethod
     def _compose_deltas(self, delta1, delta2):
         """Abstract method for composing deltas."""
         pass
 
+    @staticmethod
     @abstractmethod
     def _invert_delta(self, delta1):
         """Abstract method for inverting deltas."""
         pass
 
+    @staticmethod
     @abstractmethod
     def _merge_into_current_branch(self, delta):
         """Abstract method for merging a branch into the current one."""
@@ -73,15 +88,15 @@ class Versioning(ABC):
         pass
 
     def _compose_delta_path(self, path):
-        if length(path) > 1:
-            result_delta = self._revision_graph.edge[
+        if len(path) > 1:
+            result_delta = self._revision_graph.adj[
                 path[0]][path[1]]["delta"]
             previous_commit = path[1]
             for current_commit in path[2:]:
                 result_delta = self._compose_deltas(
                     result_delta,
-                    self._revision_graph.edge[
-                        current_commit][previous_commit]["delta"])
+                    self._revision_graph.adj[
+                        previous_commit][current_commit]["delta"])
                 previous_commit = current_commit
             return result_delta
         else:
@@ -89,7 +104,7 @@ class Versioning(ABC):
 
     def branches(self):
         """Return list of branches."""
-        return [self._current_branch] + list(self._heads.keys())
+        return list(self._heads.keys())
 
     def current_branch(self):
         """Return the name of the current branch."""
@@ -105,18 +120,17 @@ class Versioning(ABC):
         # Update heads and revision graph
         self._heads[self._current_branch] = commit_id
         self._revision_graph.add_node(
-            commit_id, {
-                "time": time,
-                "message": message if message is not None else ""
-            })
+            commit_id,
+            branch=self._current_branch,
+            time=time,
+            message=message if message is not None else "")
         self._revision_graph.add_edge(
-            previous_commit, commit_id, {
-                "delta": delta
-            })
+            previous_commit, commit_id, delta=delta)
 
-        for branch, branch_delta in self._delatas.items():
+        # Update deltas
+        for branch, branch_delta in self._deltas.items():
             self._deltas[branch] = self._compose_deltas(
-                branch_delta, delta)
+                self._invert_delta(delta), branch_delta)
 
         return commit_id
 
@@ -133,17 +147,18 @@ class Versioning(ABC):
         self._current_branch = branch
 
         # Apply delta to the versioned object
-        delta = self._delatas[branch]
+        delta = self._deltas[branch]
         self._apply_delta(delta)
         self._deltas[previous_branch] = self._invert_delta(delta)
 
         # Recompute deltas
-        for name, another_delta in self._delatas.items():
+        for name, another_delta in self._deltas.items():
             if name != previous_branch:
                 self._deltas[name] = self._compose_deltas(
                     self._deltas[previous_branch],
                     another_delta
                 )
+        del self._deltas[self._current_branch]
 
     def branch(self, new_branch, message=None):
         """Create a new branch with identity commit."""
@@ -173,7 +188,7 @@ class Versioning(ABC):
 
     def merge_with(self, branch, message=None):
         """Merge the current branch with the specified one."""
-        if branch in self.branches():
+        if branch not in self.branches():
             raise RevisionError(
                 "Branch '{}' does not exist".format(branch))
 
@@ -189,10 +204,10 @@ class Versioning(ABC):
 
         self._revision_graph.add_edge(
             self._heads[branch], commit_id,
-            {
-                "delta": delta_to_branch
-            })
+            delta=delta_to_branch)
+
         del self._heads[branch]
+        del self._deltas[branch]
         return commit_id
 
     def rollback(self, commit_id, message=None):
@@ -216,7 +231,10 @@ class Versioning(ABC):
             message = "Rollback to commit '{}'".format(commit_id)
 
         # Generate a big rollback commit
-        rollback_commit = self._compose_deltas(shortest_path)
+        rollback_commit = self._invert_delta(
+            self._compose_delta_path(shortest_path))
+        print(rollback_commit["rule"])
+        print(rollback_commit["lhs_instance"])
 
         # Update the revision graph structure and deltas
         head_paths = {}
@@ -224,34 +242,14 @@ class Versioning(ABC):
             head_paths[h] = list(nx.all_simple_paths(
                 self._revision_graph, commit_id, h))
 
-        # All paths to the heads originating from the commit to
-        # which we rollaback are removed
-        for paths in head_paths.values():
-            for p in paths:
-                s = p[0]
-                for i in range(1, len(p)):
-                    t = p[i]
-                    if (s, t) in self._revision_graph.edges():
-                        self._revision_graph.remove_edge(s, t)
-                    s = t
-
-        # Cleanup disconnected commits and update heads
+        # Compute new head commits (commits whose successors
+        # are merge commits to be removed)
         new_heads = {}
-        for node in self._revision_graph.nodes():
-            preds = self._revision_graph.predecessors(node)
-            sucs = self._revision_graph.successors(node)
-            if len(sucs) == 0:
-                if len(preds) == 0:
-                    branch_name = self._revision_graph.node[node]["branch"]
-                    self._revision_graph.remove_node(node)
-                    if branch_name in self._heads:
-                        print("Removed the head of ", branch_name)
-                        del self._heads[branch_name]
-                elif node not in self._heads.values():
-                    # add a new head
-                    branch_name = self._revision_graph.node[node]["branch"]
-                    new_heads[branch_name] = node
-                    print("Added the head of ", branch_name)
+        removed_commits = set([n for pp in head_paths.values() for p in pp for n in p])
+        for n in self._revision_graph.nodes():
+            for s in self._revision_graph.successors(n):
+                if s in removed_commits:
+                    new_heads[self._revision_graph.node[n]["branch"]] = (n, s)
 
         # Recompute deltas
         new_current_branch = self._revision_graph.node[commit_id]["branch"]
@@ -259,26 +257,31 @@ class Versioning(ABC):
         self._heads[self._current_branch] = commit_id
 
         # Update deltas of the preserved heads
-        for h in self._heads:
-            self._deltas[h] = self._compose_deltas(
-                self._invert_delta(rollback_commit),
-                self._deltas[h])
+        for h in self._heads.keys():
+            if h != self._current_branch:
+                self._deltas[h] = self._compose_deltas(
+                    self._invert_delta(rollback_commit),
+                    self._deltas[h])
 
         # Compute deltas of the new heads
-        for head, merge_commit in new_heads.items():
-            pred_commits = self._revision_graph.predecessors(
-                merge_commit)
-            for p in pred_commits:
-                branch = self._revision_graph.node[p]["branch"]
-                self._head[branch] = p
-                self._deltas[branch] = self._compose_deltas(
-                    h,
-                    self._invert_delta(
-                        self._revision_graph.edge[p][merge_commit]["delta"]))
+        for branch, (head_commit, merge_commit)in new_heads.items():
+            path_to_merge = nx.shortest_path(
+                self._revision_graph, commit_id, merge_commit)
+            delta_to_merge = self._compose_delta_path(path_to_merge)
+            head_to_merge = self._revision_graph.adj[head_commit][merge_commit]["delta"]
+            self._deltas[branch] = self._compose_deltas(
+                delta_to_merge,
+                self._invert_delta(head_to_merge))
+            self._heads[branch] = head_commit
 
+        # All paths to the heads originating from the commit to
+        # which we rollaback are removed
+        for c in removed_commits:
+            if c != commit_id:
+                self._revision_graph.remove_node(c)
 
-        # Apply the rollback commit generated before
-        pass
+        # Apply the rollback commit
+        self._apply_delta(rollback_commit)
 
 
 class VersionedGraph(Versioning):
@@ -289,7 +292,8 @@ class VersionedGraph(Versioning):
         self.graph = graph
         super().__init__(init_branch)
 
-    def _compose_deltas(self, delta1, delta2):
+    @staticmethod
+    def _compose_deltas(delta1, delta2):
         """Computing composition of two deltas."""
         rule, lhs, rhs = compose_rules(
             delta1["rule"],
@@ -304,7 +308,8 @@ class VersionedGraph(Versioning):
             "rhs_instance": rhs
         }
 
-    def _invert_delta(self, delta):
+    @staticmethod
+    def _invert_delta(delta):
         """Reverse the direction of delta."""
         return {
             "rule": delta["rule"].get_inverted_rule(),
@@ -312,7 +317,8 @@ class VersionedGraph(Versioning):
             "rhs_instance": delta["lhs_instance"]
         }
 
-    def _create_identity_delta(self):
+    @staticmethod
+    def _create_identity_delta():
         """Create an identity-delta."""
         rule = Rule.identity_rule()
         identity_delta = {
@@ -322,10 +328,10 @@ class VersionedGraph(Versioning):
         }
         return identity_delta
 
-    def _apply_delta(self, delta, commit, relabel=True):
+    def _apply_delta(self, delta, relabel=True):
         """Apply delta to the current graph version."""
         _, rhs_instance = delta["rule"].apply_to(
-            self.graph, delta["lhs_instance"], instance=True)
+            self.graph, delta["lhs_instance"], inplace=True)
 
         if relabel:
             # Relabel nodes to correspond to the stored rhs
@@ -333,7 +339,9 @@ class VersionedGraph(Versioning):
                 v: delta["rhs_instance"][k]
                 for k, v in rhs_instance.items()
             }
-            relabel_nodes(self.graph, new_labels)
+            for k, v in new_labels.items():
+                if k != v:
+                    relabel_node(self.graph, k, v)
             rhs_instance = {
                 k: new_labels[v]
                 for k, v in rhs_instance.items()
@@ -346,7 +354,7 @@ class VersionedGraph(Versioning):
             delta["rule"], delta["lhs_instance"], delta["rhs_instance"])
 
         _, rhs_instance = current_to_merged_rule.apply_to(
-            self.graph, ctm_instance)
+            self.graph, ctm_instance, inplace=True)
 
         current_to_merged_delta = {
             "rule": current_to_merged_rule,
@@ -354,21 +362,35 @@ class VersionedGraph(Versioning):
             "rhs_instance": rhs_instance
         }
 
-        other_to_merged_delta = self._compose_deltas(
-            self._invert_delta(delta, current_to_merged_delta))
+        other_to_current_delta = self._invert_delta(delta)
+        other_to_merged_rule, otm_instance = _create_merging_rule(
+            other_to_current_delta["rule"], other_to_current_delta["lhs_instance"],
+            other_to_current_delta["rhs_instance"])
+
+        other_to_merged_delta = {
+            "rule": other_to_merged_rule,
+            "lhs_instance": otm_instance,
+            "rhs_instance": {}
+        }
+
+        print(">>>")
+        print(other_to_merged_delta["rule"])
 
         return current_to_merged_delta, other_to_merged_delta
 
-    def rewrite(self, rule, instance, message=None):
+    def rewrite(self, rule, instance=None, message=None):
         """Rewrite the versioned graph and commit."""
+        # Refine a rule to be side-effect free
+        refined_instance = rule.refine(self.graph, instance)
         _, rhs_instance = rule.apply_to(
-            self.graph, instance, inplace=True)
-        return self.commit({
+            self.graph, refined_instance, inplace=True)
+
+        commit_id = self.commit({
             "rule": rule,
-            "lhs_instance": instance,
-            "rhs_instance": rhs_instance,
-            "message": message if message else ""
-        })
+            "lhs_instance": refined_instance,
+            "rhs_instance": rhs_instance
+        }, message=message)
+        return rhs_instance, commit_id
 
 
 # class VersionedHierarchy(Versioning);
