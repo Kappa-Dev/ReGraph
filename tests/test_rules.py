@@ -513,20 +513,29 @@ class TestRule(object):
     def test_create_merging_rule(test):
         # Create a rule
         pattern = nx.DiGraph()
-        pattern.add_nodes_from(["circle", "square"])
+        pattern.add_nodes_from(["circle", "square", "triangle"])
         rule = Rule.from_transform(pattern)
+        rule.inject_remove_node("triangle")
+        rule.inject_add_node("diamond")
         p_name, rhs_name = rule.inject_clone_node("circle")
         rhs_name = rule.inject_merge_nodes([p_name, "square"])
 
         lhs_instance = {
             "circle": "Bob",
-            "square": "Alice"
+            "square": "Alice",
+            "triangle": "Cat"
         }
 
         rhs_instance = {
             "circle": "Bob",
-            rhs_name: "Josh"
+            rhs_name: "Josh",
+            "diamond": "Harry"
         }
 
-        res = _create_merging_rule(rule, lhs_instance, rhs_instance)
-        print(res)
+        rule1, lhs_instance1, rule2, lhs_instance2, rhs1_rhs2 = _create_merging_rule(
+            rule, lhs_instance, rhs_instance)
+        print(rule1)
+        print(lhs_instance1)
+        print(rule2)
+        print(lhs_instance2)
+        print(rhs1_rhs2)

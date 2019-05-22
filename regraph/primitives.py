@@ -31,6 +31,15 @@ from regraph.attribute_sets import (FiniteSet)
 from regraph.neo4j import Neo4jGraph
 
 
+def generate_new_node_id(graph, basename):
+    node_id = basename
+    i = 1
+    while node_id in graph.nodes():
+        node_id = "{}_{}".format(basename, i)
+        i += 1
+    return node_id
+
+
 def assign_attrs(element, attrs):
     for k, v in attrs.items():
         element[k] = v

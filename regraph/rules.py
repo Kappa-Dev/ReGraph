@@ -246,10 +246,10 @@ class Rule(object):
 
     def __str__(self):
         """String representation of a rule."""
-        return "Preserved part\n%s\n%s\n" % (self.p.node, self.p.edges()) +\
-            "Left hand side\n%s\n%s\n" % (self.lhs.node, self.lhs.edges()) +\
-            "P->L Homomorphism : %s\n" % self.p_lhs +\
+        return "Left hand side\n%s\n%s\n" % (self.lhs.node, self.lhs.edges()) +\
+            "Preserved part\n%s\n%s\n" % (self.p.node, self.p.edges()) +\
             "Right hand side\n%s\n%s\n" % (self.rhs.node, self.rhs.edges()) +\
+            "P->L Homomorphism : %s\n" % self.p_lhs +\
             "P->R Homomorphism : %s\n" % self.p_rhs
 
     def inject_clone_node(self, n, new_node_id=None):
@@ -1852,6 +1852,8 @@ class Rule(object):
         removed_attrs = self.removed_node_attrs()
         removed_edge_attrs = self.removed_edge_attrs()
 
+        added_nodes = {}
+
         def add_neighbors_to_rule(n, removed_edges):
 
             def add_preserved_edges(lhs_source, lhs_target, edge_attrs, removed_edges):
@@ -1883,7 +1885,11 @@ class Rule(object):
                     visited.add(s)
                     if s not in instance.values():
                         new_lhs_node = primitives.unique_node_id(self.lhs, s)
-                        self._add_node_lhs(new_lhs_node)
+                        if s not in added_nodes:
+                            self._add_node_lhs(new_lhs_node)
+                            added_nodes[s] = new_lhs_node
+                        else:
+                            new_lhs_node = keys_by_value(added_nodes, s)[0]
                         new_instance[new_lhs_node] = s
                     else:
                         new_lhs_node = keys_by_value(instance, s)[0]
@@ -1897,13 +1903,17 @@ class Rule(object):
             # add predecessors
             for p in graph.predecessors(instance[n]):
                 if p not in visited:
+                    visited.add(p)
                     if p not in instance.values():
                         new_lhs_node = primitives.unique_node_id(self.lhs, p)
-                        self._add_node_lhs(new_lhs_node)
+                        if p not in added_nodes:
+                            self._add_node_lhs(new_lhs_node)
+                            added_nodes[p] = new_lhs_node
+                        else:
+                            new_lhs_node = keys_by_value(added_nodes, p)[0]
                         new_instance[new_lhs_node] = p
                     else:
                         new_lhs_node = keys_by_value(instance, p)[0]
-                    visited.add(p)
                     edge_attrs = primitives.get_edge(graph, p, instance[n])
                     if not primitives.exists_edge(self.lhs, new_lhs_node, n):
                         primitives.add_edge(self.lhs, new_lhs_node, n, edge_attrs)
@@ -2089,6 +2099,18 @@ def compose_rules(rule1, lhs_instance1, rhs_instance1,
         rho.nodes(), p2_p_rho, rhs2_rho,
         compose(p2_p_instance, g2_m_g3), rhs_instance2)
 
+    # Remove clone followed by merge
+    for lhs_node, p_nodes in rule.cloned_nodes().items():
+        rhs_nodes = set([rule.p_rhs[p] for p in p_nodes])
+        if len(rhs_nodes) == 1:
+            print("!!!Found clone and merge", lhs_node, p_nodes, rhs_nodes)
+            new_p_node = primitives.merge_nodes(rule.p, p_nodes)
+            for n in p_nodes:
+                del rule.p_lhs[n]
+                del rule.p_rhs[n]
+            rule.p_lhs[new_p_node] = lhs_node
+            rule.p_rhs[new_p_node] = list(rhs_nodes)[0]
+
     return rule, lhs_instance, rhs_instance
 
 
@@ -2106,57 +2128,120 @@ def _fold_lhs(rule, lhs_instance, rhs_instance):
     rhs = copy.deepcopy(rule.rhs)
     p_rhs = {}
     instance = {}
-    dummy_rhs_instance = {}
 
-    # Merge all the clones in P and R
-    # recostructing all the dictionaries
-    # consistently
+    # Merge all the clones in P and respective nodes of R
+    updated_p_nodes = {}
+    merged_rhs_nodes = {}
     for v in set(p_instance.values()):
         p_nodes = keys_by_value(p_instance, v)
         if len(p_nodes) > 1:
             p_name = primitives.merge_nodes(p, p_nodes)
-            rhs_nodes = [
-                rule.p_rhs[n]
+            rhs_nodes = set([
+                merged_rhs_nodes[rule.p_rhs[n]]
+                if rule.p_lhs[n] in merged_rhs_nodes else rule.p_rhs[n]
                 for n in p_nodes
-            ]
-            if len(rhs_nodes) > 1:
-                rhs_name = primitives.merge_nodes(rhs, rhs_nodes)
-                p_rhs[p_name] = rhs_name
-            else:
-                p_rhs[p_name][rhs_nodes[0]]
+            ])
+            for n in p_nodes:
+                updated_p_nodes[n] = p_name
 
-            instance[p_name] = v
+            if len(rhs_nodes) > 1:
+                print(rhs.nodes(), rhs_nodes)
+                rhs_name = primitives.merge_nodes(rhs, rhs_nodes)
+                for n in rhs_nodes:
+                    merged_rhs_nodes[n] = rhs_name
+
+    # Make the rule preserve removed nodes
+    for n in rule.removed_nodes():
+        p_node = primitives.generate_new_node_id(p, n)
+        primitives.add_node(p, p_node)
+        updated_p_nodes[n] = p_node
+        rhs_node = primitives.generate_new_node_id(rhs, n)
+        primitives.add_node(rhs, rhs_node)
+        p_rhs[p_node] = rhs_node
+        instance[p_node] = lhs_instance[n]
+
+    # Recostructing the dictionaries P->R and P >-> G
+    # consistently
+    for p_node in rule.p.nodes():
+        if p_node not in updated_p_nodes.keys():
+            new_p_node = p_node
         else:
-            instance[p_nodes[0]] = v
-            p_rhs[p_nodes[0]] = rule.p_rhs[p_nodes[0]]
+            new_p_node = updated_p_nodes[p_node]
+
+        rhs_node = rule.p_rhs[p_node]
+        if rhs_node not in merged_rhs_nodes.keys():
+            new_rhs_node = rhs_node
+        else:
+            new_rhs_node = merged_rhs_nodes[rhs_node]
+
+        instance[new_p_node] = p_instance[p_node]
+        p_rhs[new_p_node] = new_rhs_node
 
     new_rule = Rule(p, p, rhs, p_rhs=p_rhs)
 
-    for n in new_rule.added_nodes():
-        dummy_rhs_instance[n] = n
-    for n, p_nodes in new_rule.merged_nodes().items():
-        lhs_nodes = [
-            instance[p_node] for p_node in p_nodes
-        ]
-        dummy_rhs_instance[n] = "_".join(lhs_nodes)
-    for n in new_rule.rhs.nodes():
-        if n not in dummy_rhs_instance.keys():
-            preserved_node = instance[
-                new_rule.p_lhs[keys_by_value(new_rule.p_rhs, n)[0]]]
-            dummy_rhs_instance[n] = preserved_node
+    return new_rule, instance, updated_p_nodes
 
-    return new_rule, instance, dummy_rhs_instance
 
+# def _create_merging_rule(rule, lhs_instance, rhs_instance):
+
+#     # Create rules producing G+G'
+#     # 1. the left rule : G -> G+G'
+#     rule1, lhs_instance1, updated_p_nodes1 = _fold_lhs(
+#         rule, lhs_instance, rhs_instance)
+#     # 2. the right rule : G' -> G+G'
+#     rule2, lhs_instance2, updated_p_nodes2 = _fold_lhs(
+#         rule.get_inverted_rule(), rhs_instance, lhs_instance)
+#     # 3. Combine two independent RHS
+#     rhs1_rhs2 = {}
+#     for n in rule.p.nodes():
+#         if n in updated_p_nodes1.keys():
+#             rhs_node1 = rule1.p_rhs[updated_p_nodes1[n]]
+#         else:
+#             rhs_node1 = rule1.p_rhs[n]
+#         if n in updated_p_nodes2.keys():
+#             rhs_node2 = rule2.p_rhs[updated_p_nodes2[n]]
+#         else:
+#             rhs_node2 = rule2.p_rhs[n]
+#         rhs1_rhs2[rhs_node1] = rhs_node2
+
+#     for n in rule.removed_nodes():
+#         print("Removed node ", n)
+#         p1_node = updated_p_nodes1[n]
+#         print("In new P ", p1_node)
+#         rhs1_node = rule1.p_rhs[p1_node]
+#         print("Its R ", rhs1_node)
+#         if n in updated_p_nodes2.keys():
+#             p2_node = updated_p_nodes2[n]
+#         else:
+#             p2_node = n
+#         print("In the other rule P", p2_node)
+#         print(rule2.p.nodes())
+#         print(rule2.p_rhs)
+#         rhs2_node = rule2.p_rhs[p2_node]
+#         rhs1_rhs2[rhs1_node] = rhs2_node
+
+#     for n in rule.added_nodes():
+#         p2_node = updated_p_nodes2[n]
+#         rhs2_node = rule2.p_rhs[p2_node]
+#         if n in updated_p_nodes1.keys():
+#             p1_node = updated_p_nodes1[n]
+#         else:
+#             p1_node = n
+#         rhs1_node = rule1.p_rhs[p1_node]
+#         rhs1_rhs2[rhs1_node] = rhs2_node
+
+#     print(rule1.rhs.nodes(), rhs1_rhs2)
+#     assert(len(rhs1_rhs2.keys()) == len(rule1.rhs.nodes()))
+
+#     return rule1, lhs_instance1, rule2, lhs_instance2, rhs1_rhs2
 
 def _create_merging_rule(rule, lhs_instance, rhs_instance):
+    # We use pusout from L <- P -> R as a new R'
+    # That performs the merge from both sides
+    # Then the left rule is L -> R', and the right one is R -> R'
+    new_rhs, lhs_new_rhs, rhs_new_rhs = pushout(
+        rule.p, rule.lhs, rule.rhs, rule.p_lhs, rule.p_rhs)
 
-    # Create rules producing G+G'
-    # 1. the left rule : G -> G+G'
-    rule1, lhs_instance1, rhs_intance1 = _fold_lhs(
-        rule, lhs_instance, rhs_instance)
-    # 2. the right rule : G' -> G+G'
-    rule2, lhs_instance2, rhs_intance2 = _fold_lhs(
-        rule.get_inverted_rule(), rhs_instance, lhs_instance)
-    # 3. Combine two independent RHS
-    print(rhs_intance1, rhs_intance2)
-    return (rule1, lhs_instance1, rhs_intance1), (rule2, lhs_instance2, rhs_intance2)
+    left_rule = Rule(rule.lhs, rule.lhs, new_rhs, p_rhs=lhs_new_rhs)
+    right_rule = Rule(rule.rhs, rule.rhs, new_rhs, p_rhs=rhs_new_rhs)
+    return left_rule, right_rule
