@@ -186,15 +186,14 @@ class TestPropagation(object):
         }
         try:
             self.hierarchy.rewrite(
-                "n1", rule, instance, lhs_typing=None,
+                "n1", rule, instance,
                 rhs_typing=rhs_typing, strict=True)
             raise ValueError("Error was not caught!")
         except RewritingError:
             pass
 
         new_hierarchy, _ = self.hierarchy.rewrite(
-            "n1", rule, instance,
-            lhs_typing=None, rhs_typing=rhs_typing,
+            "n1", rule, instance, rhs_typing=rhs_typing,
             inplace=False)
 
         # test propagation of node adds
@@ -250,7 +249,7 @@ class TestPropagation(object):
 
         try:
             self.hierarchy.rewrite(
-                "n1", rule, instance, lhs_typing=None,
+                "n1", rule, instance,
                 rhs_typing=rhs_typing, strict=True)
             raise ValueError("Error was not caught!")
         except RewritingError:
@@ -258,7 +257,7 @@ class TestPropagation(object):
 
         new_hierarchy, _ = self.hierarchy.rewrite(
             "n1", rule, instance,
-            lhs_typing=None, rhs_typing=rhs_typing,
+            rhs_typing=rhs_typing,
             inplace=False)
 
         # test propagation of the node attribute adds

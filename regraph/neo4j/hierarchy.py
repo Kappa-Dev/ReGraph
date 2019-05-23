@@ -734,7 +734,7 @@ class Neo4jHierarchy(object):
         return instances
 
     def rewrite(self, graph_id, rule, instance,
-                rhs_typing=None, strict=False, p_typing=None):
+                p_typing=None, rhs_typing=None, strict=False):
         """Rewrite and propagate the changes up & down.
 
         Rewriting in the hierarchy cosists of an application of the
