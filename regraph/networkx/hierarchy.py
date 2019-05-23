@@ -1609,43 +1609,16 @@ class NetworkXHierarchy(nx.DiGraph):
                             suc1.intersection(suc2)
         return common_sucs
 
-    def get_rule_propagations(self, graph_id, rule, instance=None,
-                              lhs_typing=None, rhs_typing=None):
-        """Return projection of a rule to all nodes of the hierarchy."""
-        if self.is_rule(graph_id):
-            raise ReGraphError("Rewriting of a rule is not implemented!")
-
-        if instance is None:
-            instance = {
-                n: n for n in rule.lhs.nodes()
-            }
-
-        if lhs_typing is None:
-            lhs_typing = {}
-        if rhs_typing is None:
-            rhs_typing = {}
-
-        rule_liftings = rewriting_utils._get_rule_liftings(
-            self, graph_id, rule, instance, lhs_typing)
-        rule_projections = rewriting_utils._get_rule_projections(
-            self, graph_id, rule, instance, rhs_typing)
-        return rule_liftings, rule_projections
-
-    def rewrite(self, graph_id, rule, instance=None,
-                lhs_typing=None, rhs_typing=None, strict=False, inplace=True):
-        """Rewrite and propagate the changes up & down."""
-        # start = time.time()
-        if self.is_rule(graph_id):
-            raise ReGraphError("Rewriting of a rule is not implemented!")
-
-        if instance is None:
-            instance = {
-                n: n for n in rule.lhs.nodes()
-            }
-
+    def _normalize_and_check_typing(self, graph_id, rule, instance,
+                                    p_typing, rhs_typing, strict):
         # 1. Check consistency of the input
+        lhs_typing = {}
+        if p_typing is None:
+            p_typing = {}
+        new_p_typing = copy.deepcopy(p_typing)
+
         # 1a. Autocomplete typing
-        new_lhs_typing, new_rhs_typing =\
+        lhs_typing, new_rhs_typing =\
             type_checking._autocomplete_typing(
                 self, graph_id,
                 instance=instance,
@@ -1656,13 +1629,13 @@ class NetworkXHierarchy(nx.DiGraph):
 
         # 1b. Check that instance is consistent with lhs & rhs typing
         type_checking._check_instance(
-            self, graph_id, rule.lhs, instance, new_lhs_typing)
+            self, graph_id, rule.lhs, instance, lhs_typing)
 
         # 1c. Check consistency of the (autocompleted) rhs & lhs typings
-        if new_lhs_typing is not None and new_rhs_typing is not None:
+        if lhs_typing is not None and new_rhs_typing is not None:
             try:
                 type_checking._check_self_consistency(
-                    self, new_lhs_typing)
+                    self, lhs_typing)
             except ReGraphError as e:
                 raise RewritingError(
                     "Typing of the lhs is self inconsistent: %s" % str(e)
@@ -1677,13 +1650,55 @@ class NetworkXHierarchy(nx.DiGraph):
 
             type_checking._check_lhs_rhs_consistency(
                 self, graph_id, rule, instance,
-                new_lhs_typing, new_rhs_typing,
+                lhs_typing, new_rhs_typing,
                 strict)
 
             if strict is True:
                 type_checking._check_totality(
                     self, graph_id, rule, instance,
-                    new_lhs_typing, new_rhs_typing)
+                    lhs_typing, new_rhs_typing)
+        return new_p_typing, new_rhs_typing
+
+    def get_rule_propagations(self, graph_id, rule, instance=None,
+                              p_typing=None, rhs_typing=None):
+        """Return projection of a rule to all nodes of the hierarchy."""
+        if self.is_rule(graph_id):
+            raise ReGraphError("Rewriting of a rule is not implemented!")
+
+        if instance is None:
+            instance = {
+                n: n for n in rule.lhs.nodes()
+            }
+        p_typing, rhs_typing = self._normalize_and_check_typing(
+            graph_id, rule, instance, p_typing, rhs_typing, False)
+
+        rule_liftings = rewriting_utils._get_rule_liftings(
+            self, graph_id, rule, instance, p_typing)
+        rule_projections = rewriting_utils._get_rule_projections(
+            self, graph_id, rule, instance, rhs_typing)
+
+        return rule_liftings, rule_projections
+
+    def apply_propagations(self, graph_id, rule, instance,
+                           rule_liftings, rule_projections):
+        """Rewrite and propagate from precomputed rule propagations."""
+        rhs_instances = {}
+
+    def rewrite(self, graph_id, rule, instance=None,
+                p_typing=None, rhs_typing=None,
+                strict=False, inplace=True):
+        """Rewrite and propagate the changes up & down."""
+        # start = time.time()
+        if self.is_rule(graph_id):
+            raise ReGraphError("Rewriting of a rule is not implemented!")
+
+        if instance is None:
+            instance = {
+                n: n for n in rule.lhs.nodes()
+            }
+
+        p_typing, rhs_typing = self._normalize_and_check_typing(
+            graph_id, rule, instance, p_typing, rhs_typing, strict)
 
         # end = time.time() - start
         # print("\t\t\t\tTime to type check: ", end)
@@ -1692,7 +1707,7 @@ class NetworkXHierarchy(nx.DiGraph):
         # start = time.time()
         base_changes = rewriting_utils._rewrite_base(
             self, graph_id, rule, instance,
-            new_lhs_typing, new_rhs_typing, inplace)
+            rhs_typing, inplace)
 
         (g_m, p_g_m, g_m_g, g_prime, g_m_g_prime, r_g_prime) =\
             base_changes["graph"]
@@ -1712,7 +1727,8 @@ class NetworkXHierarchy(nx.DiGraph):
         # 4. Propagate rewriting up the hierarchy
         new_upstream_changes =\
             rewriting_utils._propagate_up(
-                self, graph_id, rule, instance, p_g_m, g_m_g_prime, inplace)
+                self, graph_id, rule, instance,
+                p_g_m, g_m_g_prime, inplace)
 
         upstream_changes["graphs"].update(new_upstream_changes["graphs"])
         upstream_changes["homomorphisms"].update(
@@ -1731,7 +1747,7 @@ class NetworkXHierarchy(nx.DiGraph):
         downstream_changes =\
             rewriting_utils._propagate_down(
                 self, graph_id, graph_construct,
-                rule, instance, new_rhs_typing, inplace)
+                rule, instance, rhs_typing, inplace)
         # end = time.time() - start
         # print("\t\t\t\tTime to propagate down: ", end)
 
@@ -1753,7 +1769,7 @@ class NetworkXHierarchy(nx.DiGraph):
             return (new_graph, r_g_prime)
 
     def apply_rule(self, graph_id, rule_id, instance,
-                   strong_typing=True, inplace=True):
+                   inplace=True):
         """Apply rule from the hierarchy."""
         if self.is_rule(graph_id):
             raise ReGraphError("Rewriting of a rule is not implemented!")
@@ -1778,8 +1794,7 @@ class NetworkXHierarchy(nx.DiGraph):
             graph_id,
             rule,
             instance,
-            lhs_typing,
-            rhs_typing,
+            rhs_typing=rhs_typing,
             inplace=inplace)
 
     def get_ancestors(self, graph_id, maybe=None):

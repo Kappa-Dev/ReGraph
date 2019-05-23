@@ -23,7 +23,7 @@ from regraph.utils import keys_by_value
 
 
 def _rewrite_base(hierarchy, graph_id, rule, instance,
-                  lhs_typing, rhs_typing, inplace=False):
+                  rhs_typing, inplace=False):
     g_m, p_g_m, g_m_g =\
         pullback_complement(rule.p, rule.lhs, hierarchy.graph[graph_id],
                             rule.p_lhs, instance, inplace)
@@ -598,7 +598,7 @@ def _apply_changes(hierarchy, upstream_changes, downstream_changes):
     return
 
 
-def _get_rule_liftings(hierarchy, origin_id, rule, instance, lhs_typing):
+def _get_rule_liftings(hierarchy, origin_id, rule, instance, p_typing):
     liftings = {}
     if rule.is_restrictive():
         for graph in nx.bfs_tree(hierarchy, origin_id, reverse=True):
@@ -617,10 +617,10 @@ def _get_rule_liftings(hierarchy, origin_id, rule, instance, lhs_typing):
                         l_g, rule.p, rule.lhs, l_g_l, rule.p_lhs)
 
                     # Remove controlled things from P_G
-                    if graph in lhs_typing.keys():
+                    if graph in p_typing.keys():
                         l_g_factorization = {
                             keys_by_value(l_g_g, k)[0]: v
-                            for k, v in lhs_typing[graph].items()
+                            for k, v in p_typing[graph].items()
                         }
                         p_g_nodes_to_remove = set()
                         for n in canonical_p_g.nodes():
@@ -679,17 +679,19 @@ def _get_rule_projections(hierarchy, origin_id, rule, instance, rhs_typing):
                                 # If corresponding R_T node is specified in
                                 # the controlling relation add nodes of T
                                 # that type it to P
-                                t_node = r_t_factorization[n]
-                                if t_node not in p_t_t.values() and\
-                                   t_node not in added_t_nodes:
-                                    new_p_node = primitives.generate_new_node_id(
-                                        p_t, t_node)
-                                    primitives.add_node(p_t, new_p_node)
-                                    added_t_nodes.add(t_node)
-                                    p_t_r_t[new_p_node] = n
-                                    p_t_t[new_p_node] = t_node
-                                else:
-                                    p_t_r_t[keys_by_value(p_t_t, t_node)[0]] = n
+                                t_nodes = r_t_factorization[n]
+                                for t_node in t_nodes:
+                                    if t_node not in p_t_t.values() and\
+                                       t_node not in added_t_nodes:
+                                        print(">>>", t_node)
+                                        new_p_node = primitives.generate_new_node_id(
+                                            p_t, t_node)
+                                        primitives.add_node(p_t, new_p_node)
+                                        added_t_nodes.add(t_node)
+                                        p_t_r_t[new_p_node] = n
+                                        p_t_t[new_p_node] = t_node
+                                    else:
+                                        p_t_r_t[keys_by_value(p_t_t, t_node)[0]] = n
 
                     projections[graph] = {
                         "rule": Rule(p_t, p_t, r_t, p_rhs=p_t_r_t),
