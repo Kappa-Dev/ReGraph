@@ -1609,6 +1609,28 @@ class NetworkXHierarchy(nx.DiGraph):
                             suc1.intersection(suc2)
         return common_sucs
 
+    def get_rule_propagations(self, graph_id, rule, instance=None,
+                              lhs_typing=None, rhs_typing=None):
+        """Return projection of a rule to all nodes of the hierarchy."""
+        if self.is_rule(graph_id):
+            raise ReGraphError("Rewriting of a rule is not implemented!")
+
+        if instance is None:
+            instance = {
+                n: n for n in rule.lhs.nodes()
+            }
+
+        if lhs_typing is None:
+            lhs_typing = {}
+        if rhs_typing is None:
+            rhs_typing = {}
+
+        rule_liftings = rewriting_utils._get_rule_liftings(
+            self, graph_id, rule, instance, lhs_typing)
+        rule_projections = rewriting_utils._get_rule_projections(
+            self, graph_id, rule, instance, rhs_typing)
+        return rule_liftings, rule_projections
+
     def rewrite(self, graph_id, rule, instance=None,
                 lhs_typing=None, rhs_typing=None, strict=False, inplace=True):
         """Rewrite and propagate the changes up & down."""

@@ -13,7 +13,9 @@ from regraph.networkx.category_utils import (compose,
                                              is_total_homomorphism,
                                              pullback_complement,
                                              pushout,
-                                             pushout_from_relation)
+                                             pullback,
+                                             pushout_from_relation,
+                                             image_factorization)
 from regraph import primitives
 from regraph.exceptions import TotalityWarning
 from regraph.rules import Rule
@@ -190,7 +192,8 @@ def _propagate_up(hierarchy, graph_id, rule, instance,
                             origin_typing, rule, instance,
                             p_origin_m, inplace)
                     updated_graphs[graph] =\
-                        (graph_prime, graph_prime_graph, None, graph_prime_origin)
+                        (graph_prime, graph_prime_graph,
+                         None, graph_prime_origin)
 
                     graph_successors = list(hierarchy.successors(graph))
                     if graph_id in graph_successors:
@@ -210,12 +213,15 @@ def _propagate_up(hierarchy, graph_id, rule, instance,
                                             updated_graphs[suc][3],
                                             compose(
                                                 graph_prime_graph,
-                                                hierarchy.adj[graph][suc]["mapping"]),
+                                                hierarchy.adj[graph][suc][
+                                                    "mapping"]),
                                             graph_prime_origin)
                                 else:
                                     graph_prime_suc_prime = compose(
-                                        graph_prime_graph, hierarchy.adj[graph][suc]["mapping"])
-                                updated_homomorphisms[(graph, suc)] = graph_prime_suc_prime
+                                        graph_prime_graph, hierarchy.adj[
+                                            graph][suc]["mapping"])
+                                updated_homomorphisms[(graph, suc)] =\
+                                    graph_prime_suc_prime
 
                         for pred in hierarchy.predecessors(graph):
                             if pred in updated_graphs.keys():
@@ -402,7 +408,8 @@ def _propagate_down(hierarchy, origin_id, origin_construct,
                                         updated_graphs[pred][1],
                                         updated_graphs[pred][2],
                                         compose(
-                                            hierarchy.adj[pred][graph]["mapping"],
+                                            hierarchy.adj[
+                                                pred][graph]["mapping"],
                                             g_g_prime),
                                         rhs_g_prime)
                     for suc in hierarchy.successors(graph):
@@ -589,3 +596,106 @@ def _apply_changes(hierarchy, upstream_changes, downstream_changes):
         hierarchy.rule_lhs_typing[s][t] = hierarchy.adj[s][t]["lhs_mapping"]
         hierarchy.rule_rhs_typing[s][t] = hierarchy.adj[s][t]["rhs_mapping"]
     return
+
+
+def _get_rule_liftings(hierarchy, origin_id, rule, instance, lhs_typing):
+    liftings = {}
+    if rule.is_restrictive():
+        for graph in nx.bfs_tree(hierarchy, origin_id, reverse=True):
+            if graph != origin_id:
+                if hierarchy.is_graph(graph):
+                    origin_typing = hierarchy.get_typing(graph, origin_id)
+
+                    # Compute L_G
+                    l_g, l_g_g, l_g_l = pullback(
+                        hierarchy.graph[graph], rule.lhs,
+                        hierarchy.graph[origin_id],
+                        origin_typing, instance)
+
+                    # Compute canonical P_G
+                    canonical_p_g, p_g_l_g, p_g_p = pullback(
+                        l_g, rule.p, rule.lhs, l_g_l, rule.p_lhs)
+
+                    # Remove controlled things from P_G
+                    if graph in lhs_typing.keys():
+                        l_g_factorization = {
+                            keys_by_value(l_g_g, k)[0]: v
+                            for k, v in lhs_typing[graph].items()
+                        }
+                        p_g_nodes_to_remove = set()
+                        for n in canonical_p_g.nodes():
+                            l_g_node = p_g_l_g[n]
+                            # If corresponding L_G node is specified in
+                            # the controlling relation, remove all
+                            # the instances of P nodes not mentioned
+                            # in this relations
+                            if l_g_node in l_g_factorization.keys():
+                                p_nodes = l_g_factorization[l_g_node]
+                                if p_g_p[n] not in p_nodes:
+                                    del p_g_p[n]
+                                    del p_g_l_g[n]
+                                    p_g_nodes_to_remove.add(n)
+
+                        for n in p_g_nodes_to_remove:
+                            primitives.remove_node(canonical_p_g, n)
+                    liftings[graph] = {
+                        "rule": Rule(canonical_p_g, l_g, p_lhs=p_g_l_g),
+                        "instance": l_g_g,
+                        "p_g_p": p_g_p
+                    }
+    return liftings
+
+
+def _get_rule_projections(hierarchy, origin_id, rule, instance, rhs_typing):
+    projections = {}
+    if rule.is_relaxing():
+        for graph in nx.bfs_tree(hierarchy, origin_id):
+            if graph != origin_id:
+                if hierarchy.is_graph(graph):
+                    origin_typing = hierarchy.get_typing(origin_id, graph)
+
+                    # Compute canonical P_T
+                    p_t, p_p_t, p_t_t = image_factorization(
+                        rule.p, hierarchy.graph[graph],
+                        compose(
+                            compose(rule.p_lhs, instance),
+                            origin_typing))
+
+                    # Compute canonical R_T
+                    r_t, p_t_r_t, r_r_t = pushout(
+                        rule.p, p_t, rule.rhs,
+                        p_p_t, rule.p_rhs)
+
+                    # Modify P_T and R_T according to the controlling
+                    # relation rhs_typing
+                    if graph in rhs_typing.keys():
+                        r_t_factorization = {
+                            r_r_t[k]: v
+                            for k, v in rhs_typing[graph].items()
+                        }
+                        added_t_nodes = set()
+                        for n in r_t.nodes():
+                            if n in r_t_factorization.keys():
+                                # If corresponding R_T node is specified in
+                                # the controlling relation add nodes of T
+                                # that type it to P
+                                t_node = r_t_factorization[n]
+                                if t_node not in p_t_t.values() and\
+                                   t_node not in added_t_nodes:
+                                    new_p_node = primitives.generate_new_node_id(
+                                        p_t, t_node)
+                                    primitives.add_node(p_t, new_p_node)
+                                    added_t_nodes.add(t_node)
+                                    p_t_r_t[new_p_node] = n
+                                    p_t_t[new_p_node] = t_node
+                                else:
+                                    p_t_r_t[keys_by_value(p_t_t, t_node)[0]] = n
+
+                    projections[graph] = {
+                        "rule": Rule(p_t, p_t, r_t, p_rhs=p_t_r_t),
+                        "instance": p_t_t,
+                        "p_p_t": p_p_t,
+                        "r_r_t": r_r_t
+                    }
+
+    return projections

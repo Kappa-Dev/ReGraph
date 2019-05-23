@@ -808,3 +808,23 @@ def compose_relation_dicts(left_dict, right_dict):
                 else:
                     result_dict[left_el] = set([right_el])
     return result_dict
+
+
+def image_factorization(a, b, a_b):
+    """Compute the image factorization given A, B and A->B."""
+    c = deepcopy(a)
+    a_c = {}
+    c_b = {}
+
+    for n in b.nodes():
+        if n in a_b.values():
+            a_nodes = keys_by_value(a_b, n)
+            if len(a_nodes) > 1:
+                new_id = merge_nodes(c, a_nodes)
+            else:
+                new_id = a_nodes[0]
+            for a_node in a_nodes:
+                a_c[a_node] = new_id
+            c_b[new_id] = n
+
+    return c, a_c, c_b
