@@ -1750,26 +1750,39 @@ class NetworkXHierarchy(nx.DiGraph):
             rhs_typing=rhs_typing,
             inplace=inplace)
 
-    def get_descendants(self, graph_id, maybe=None):
-        """Return ancestors of a graph as well as the typing morphisms."""
+    def get_ancestors(self, graph_id):
+        """Return ancestors of a graph with the typing morphisms."""
         ancestors = dict()
-        for _, typing in self.out_edges(graph_id):
-            if maybe is not None and typing not in maybe:
-                continue
-            mapping = self.adj[graph_id][typing]["mapping"]
-            typing_ancestors = self.get_descendants(typing, maybe)
-            if typing in ancestors.keys():
-                ancestors[typing].update(mapping)
+        for pred, _ in self.in_edges(graph_id):
+            mapping = self.adj[pred][graph_id]["mapping"]
+            pred_ancestors = self.get_ancestors(pred)
+            if pred in ancestors.keys():
+                ancestors.update(mapping)
             else:
-                ancestors[typing] = mapping
-            for anc, typ in typing_ancestors.items():
+                ancestors[pred] = mapping
+            for anc, anc_typing in pred_ancestors.items():
                 if anc in ancestors.keys():
-                    ancestors[anc].update(compose(mapping, typ))
+                    ancestors[anc].update(compose(anc_typing, mapping))
                 else:
-                    ancestors[anc] = compose(mapping, typ)
+                    ancestors[anc] = compose(anc_typing, mapping)
         return ancestors
 
-    # def get_de
+    def get_descendants(self, graph_id, maybe=None):
+        """Return descendants of a graph with the typing morphisms."""
+        descendants = dict()
+        for _, typing in self.out_edges(graph_id):
+            mapping = self.adj[graph_id][typing]["mapping"]
+            typing_descendants = self.get_descendants(typing, maybe)
+            if typing in descendants.keys():
+                descendants[typing].update(mapping)
+            else:
+                descendants[typing] = mapping
+            for anc, typ in typing_descendants.items():
+                if anc in descendants.keys():
+                    descendants[anc].update(compose(mapping, typ))
+                else:
+                    descendants[anc] = compose(mapping, typ)
+        return descendants
 
     def to_nx_graph(self):
         """Create a simple networkx graph representing the hierarchy."""

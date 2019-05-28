@@ -556,6 +556,10 @@ class TestHierarchy(object):
         assert("g0" in anc.keys())
         assert("g00" in anc.keys())
 
+    def test_get_ancestors(self):
+        anc = self.hierarchy.get_ancestors("g0")
+        print(anc)
+
     @raises(HierarchyError)
     def test_add_typing_advanced(self):
         hierarchy = NetworkXHierarchy()

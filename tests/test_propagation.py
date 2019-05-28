@@ -281,6 +281,10 @@ class TestPropagation(object):
         rule.inject_add_node("D")
 
         p_typing = {
+            "nn1": {
+                "A_bye": {},
+                "A_hello": {p_clone}
+            },
             "n1": {
                 "A": p_clone
             }

@@ -399,7 +399,7 @@ def _check_rule_instance_typing(hierarchy, graph_id, rule, instance,
             )
         try:
             _check_p_consistency(
-                hierarchy, p_typing)
+                hierarchy, rule.p_lhs, rule.cloned_nodes(), p_typing)
         except ReGraphError as e:
             raise RewritingError(
                 "Typing of the preserved part is "
@@ -428,6 +428,62 @@ def _check_rule_instance_typing(hierarchy, graph_id, rule, instance,
                 lhs_typing, rhs_typing)
     return p_typing, rhs_typing
 
-def _check_p_consistency(hierarchy, p_typing):
+
+def _check_p_consistency(hierarchy, p_lhs, cloned_nodes, p_typing):
+    def get_canonical_clones(l_node):
+        if l_node in cloned_nodes.keys():
+            return cloned_nodes[l_node]
+        return None
+
+    def test_canonicity(typing, graph_node):
+        # check that what is mentioned in the cotrolled
+        # relation for the graph node is canonical
+        p_nodes = typing[graph_node]
+        if len(p_nodes) > 0:
+            l_node = p_lhs[list(p_nodes)[0]]
+            canonical_clones = get_canonical_clones(l_node)
+            if canonical_clones != p_nodes:
+                raise RewritingError(
+                    "Constrolled relation of the preserved part "
+                    "is not consistent: propagation to the node "
+                    "'{}' of '{}' ".format(ancestor_node, ancestor) +
+                    "typed by '{}' in '{}' ".format(
+                        graph_node, graph) +
+                    "will produce instances for {} ".format(
+                        canonical_clones) +
+                    "while propagation to '{}' only {}".format(
+                        graph_node, p_nodes)
+                )
+
+    # for every graph specified in the controlling relation
     for graph, typing in p_typing.items():
-        pass
+        ancestors = hierarchy.get_ancestors(graph)
+        # for every its ancestor
+        for ancestor, ancestor_typing in ancestors.items():
+            for ancestor_node, graph_node in ancestor_typing.items():
+                if graph_node in typing.keys():
+                    # we need to check that what mentioned in the
+                    # controlling relation is consistent
+                    # (i.e. we will be able to reconstruct all the types)
+                    if ancestor in p_typing.keys():
+                        if ancestor_node in p_typing[ancestor].keys():
+                            if not p_typing[ancestor][ancestor_node].issubset(
+                                    typing[graph_node]):
+                                raise RewritingError(
+                                    "Constrolled relation of the preserved part "
+                                    "is not consistent: propagation to the node "
+                                    "'{}' of '{}' ".format(ancestor_node, ancestor) +
+                                    "typed by '{}' in '{}' ".format(
+                                        graph_node, graph) +
+                                    "will produce instances for {} ".format(
+                                        p_typing[ancestor][ancestor_node]) +
+                                    "while propagation to '{}' only {}".format(
+                                        graph_node, typing[graph_node])
+                                )
+                        else:
+                            test_canonicity(typing, graph_node)
+                    else:
+                        test_canonicity(typing, graph_node)
+                else:
+                    # it is ok as graph_node will be propagated canonically
+                    pass
