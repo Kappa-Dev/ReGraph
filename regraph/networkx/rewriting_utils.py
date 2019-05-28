@@ -101,13 +101,16 @@ def _rewrite_base(hierarchy, graph_id, rule, instance,
     }
 
 
-def _propagate_rule_to(graph, origin_typing, rule, instance, p_origin,
-                       inplace=False):
+def _propagate_rule_up(graph, origin_typing, rule, instance, p_origin,
+                       p_typing, inplace=False):
 
     if inplace is True:
         graph_prime = graph
     else:
         graph_prime = copy.deepcopy(graph)
+
+    if p_typing is None:
+        p_typing = {}
 
     lhs_removed_nodes = rule.removed_nodes()
     lhs_removed_node_attrs = rule.removed_node_attrs()
@@ -134,6 +137,8 @@ def _propagate_rule_to(graph, origin_typing, rule, instance, p_origin,
     for lhs_node, p_nodes in lhs_cloned_nodes.items():
         nodes_to_clone = keys_by_value(origin_typing, instance[lhs_node])
         for node in nodes_to_clone:
+            if node in p_typing.keys():
+                p_nodes = p_typing[node]
             for i, p_node in enumerate(p_nodes):
                 if i == 0:
                     graph_prime_origin[node] = p_origin[p_node]
@@ -144,6 +149,8 @@ def _propagate_rule_to(graph, origin_typing, rule, instance, p_origin,
                         node)
                     graph_prime_origin[new_name] = p_origin[p_node]
                     graph_prime_graph[new_name] = node
+            if len(p_nodes) == 0:
+                primitives.remove_node(graph_prime, node)
 
     for lhs_node, attrs in lhs_removed_node_attrs.items():
         nodes_to_remove_attrs = keys_by_value(
@@ -174,7 +181,7 @@ def _propagate_rule_to(graph, origin_typing, rule, instance, p_origin,
 
 
 def _propagate_up(hierarchy, graph_id, rule, instance,
-                  p_origin_m, origin_m_origin_prime, 
+                  p_origin_m, origin_m_origin_prime,
                   p_typing, inplace=False):
     updated_graphs = dict()
     updated_homomorphisms = dict()
@@ -187,11 +194,14 @@ def _propagate_up(hierarchy, graph_id, rule, instance,
             if graph != graph_id:
                 if hierarchy.is_graph(graph):
                     origin_typing = hierarchy.get_typing(graph, graph_id)
+                    graph_p_typing = None
+                    if graph in p_typing.keys():
+                        graph_p_typing = p_typing[graph]
                     (graph_prime, graph_prime_graph, graph_prime_origin) =\
-                        _propagate_rule_to(
+                        _propagate_rule_up(
                             hierarchy.graph[graph],
                             origin_typing, rule, instance,
-                            p_origin_m, inplace)
+                            p_origin_m, graph_p_typing, inplace)
                     updated_graphs[graph] =\
                         (graph_prime, graph_prime_graph,
                          None, graph_prime_origin)
@@ -248,19 +258,19 @@ def _propagate_up(hierarchy, graph_id, rule, instance,
                         hierarchy.get_rule_typing(graph, graph_id)
 
                     (lhs_prime, lhs_prime_lhs, lhs_prime_origin) =\
-                        _propagate_rule_to(
+                        _propagate_rule_up(
                             rule_to_rewrite.lhs,
                             lhs_origin_typing, rule, instance,
                             p_origin_m, inplace=False)
 
                     (pr_prime, pr_prime_pr, pr_prime_origin) =\
-                        _propagate_rule_to(
+                        _propagate_rule_up(
                             rule_to_rewrite.p,
                             p_origin_typing, rule, instance,
                             p_origin_m, inplace=False)
 
                     (rhs_prime, rhs_prime_rhs, rhs_prime_origin) =\
-                        _propagate_rule_to(
+                        _propagate_rule_up(
                             rule_to_rewrite.rhs,
                             rhs_origin_typing, rule, instance,
                             p_origin_m, inplace=False)

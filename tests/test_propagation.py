@@ -305,4 +305,23 @@ class TestPropagation(object):
             p_typing, rhs_typing, False)
 
     def test_controlled_up_propagation(self):
-        pass
+        pattern = nx.DiGraph()
+        pattern.add_nodes_from(["A"])
+        rule = Rule.from_transform(pattern)
+        p_clone, _ = rule.inject_clone_node("A")
+        rule.inject_add_node("D")
+
+        p_typing = {
+            "n1": {
+                "A": p_clone
+            }
+        }
+
+        instance = {
+            "A": "A"
+        }
+        new_hierarchy, _ = self.hierarchy.rewrite(
+            "ag", rule, instance,
+            p_typing=p_typing,
+            inplace=False)
+        # primitives.print_graph(new_hierarchy.get_graph("n1"))

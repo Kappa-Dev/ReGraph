@@ -138,13 +138,17 @@ def _check_consistency(hierarchy, source, target, mapping=None):
 
 
 def _autocomplete_typing(hierarchy, graph_id, instance,
-                         lhs_typing, rhs_typing_rel, p_lhs, p_rhs):
+                         lhs_typing, p_typing, rhs_typing_rel, p_lhs, p_rhs):
     successors = list(hierarchy.successors(graph_id))
     if len(successors) > 0:
         if lhs_typing is None:
             new_lhs_typing = dict()
         else:
             new_lhs_typing = format_typing(lhs_typing)
+        if p_typing is None:
+            new_p_typing = dict()
+        else:
+            new_p_typing = normalize_typing_relation(p_typing)
         if rhs_typing_rel is None:
             new_rhs_typing_rel = dict()
         else:
@@ -192,9 +196,9 @@ def _autocomplete_typing(hierarchy, graph_id, instance,
                         type_set.add(ancestor_typing[el])
                     new_rhs_typing_rel[ancestor][node] = type_set
 
-        return (new_lhs_typing, new_rhs_typing_rel)
+        return (new_lhs_typing, new_p_typing, new_rhs_typing_rel)
     else:
-        return (None, None)
+        return (None, None, None)
 
 
 def _check_self_consistency(hierarchy, typing, strict=True):
@@ -240,15 +244,16 @@ def _check_lhs_p_consistency(hierarchy, graph_id, rule, instance,
     for typed_graph, typing in p_typing.items():
         origin_typing = hierarchy.get_typing(typed_graph, graph_id)
         for k, v in typing.items():
-            if instance[rule.p_lhs[v]] != origin_typing[k]:
-                raise RewritingError(
-                    "Inconsistent typing of the rule: the node "
-                    "'{}' of '{}' typed by ".format(
-                        k, typed_graph) +
-                    "'{}' in '{}' ".format(
-                        origin_typing[k], graph_id) +
-                    "is re-typed by the node '{}' through the preserved part".format(
-                        instance[rule.p_lhs[v]]))
+            for vv in v:
+                if instance[rule.p_lhs[vv]] != origin_typing[k]:
+                    raise RewritingError(
+                        "Inconsistent typing of the rule: the node "
+                        "'{}' of '{}' typed by ".format(
+                            k, typed_graph) +
+                        "'{}' in '{}' ".format(
+                            origin_typing[k], graph_id) +
+                        "is re-typed by the node '{}' through the preserved part".format(
+                            instance[rule.p_lhs[vv]]))
 
 def _check_lhs_rhs_consistency(hierarchy, graph_id, rule, instance,
                                lhs_typing, rhs_typing, strict=True):

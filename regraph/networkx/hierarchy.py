@@ -1613,16 +1613,14 @@ class NetworkXHierarchy(nx.DiGraph):
                                     p_typing, rhs_typing, strict):
         """Check consistency of the input."""
         lhs_typing = {}
-        if p_typing is None:
-            p_typing = {}
-        new_p_typing = copy.deepcopy(p_typing)
 
         # Autocomplete typings
-        lhs_typing, new_rhs_typing =\
+        lhs_typing, p_typing, rhs_typing =\
             type_checking._autocomplete_typing(
                 self, graph_id,
                 instance=instance,
                 lhs_typing=lhs_typing,
+                p_typing=p_typing,
                 rhs_typing_rel=rhs_typing,
                 p_lhs=rule.p_lhs,
                 p_rhs=rule.p_rhs)
@@ -1632,7 +1630,7 @@ class NetworkXHierarchy(nx.DiGraph):
             self, graph_id, rule.lhs, instance, lhs_typing)
 
         # Check consistency of the (autocompleted) rhs/p/lhs typings
-        if lhs_typing is not None and new_rhs_typing is not None:
+        if lhs_typing is not None and rhs_typing is not None:
             try:
                 type_checking._check_self_consistency(
                     self, lhs_typing)
@@ -1650,7 +1648,7 @@ class NetworkXHierarchy(nx.DiGraph):
                 )
             try:
                 type_checking._check_self_consistency(
-                    self, new_rhs_typing, strict)
+                    self, rhs_typing, strict)
             except ReGraphError as e:
                 raise RewritingError(
                     "Typing of the rhs is self inconsistent: %s" % str(e)
@@ -1662,14 +1660,14 @@ class NetworkXHierarchy(nx.DiGraph):
 
             type_checking._check_lhs_rhs_consistency(
                 self, graph_id, rule, instance,
-                lhs_typing, new_rhs_typing,
+                lhs_typing, rhs_typing,
                 strict)
 
             if strict is True:
                 type_checking._check_totality(
                     self, graph_id, rule, instance,
-                    lhs_typing, new_rhs_typing)
-        return new_p_typing, new_rhs_typing
+                    lhs_typing, rhs_typing)
+        return p_typing, rhs_typing
 
     def get_rule_propagations(self, graph_id, rule, instance=None,
                               p_typing=None, rhs_typing=None):
