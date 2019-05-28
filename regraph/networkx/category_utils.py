@@ -174,23 +174,15 @@ def get_unique_map_from_pushout(p, a_p, b_p, a_z, b_z):
     return p_z
 
 
-def get_unique_map_to_pullback_complement_full(a_b, b_c, a_p, p_c,
-                                               a_prime_a, a_prime_b,
-                                               a_prime_z, z_c):
+def get_unique_map_to_pullback_complement_full(a_p, p_c,
+                                               a_prime_a, a_prime_z,
+                                               z_c):
     """Find morphism z->p using the UP of PBC."""
     # Preliminary checks
     if not is_monic(a_p):
         raise ReGraphError(
             "Morphism 'a_p' is required to be a mono "
             "to use the UP of the pullback complement")
-    if not is_monic(b_c):
-        raise ReGraphError(
-            "Morphism 'b_d' is required to be a mono "
-            "to use the UP of the pullback complement")
-    # if a_prime_b != compose(a_prime_a, a_b):
-    #     raise ReGraphError(
-    #         "Homomorphism 'a_prime_a' composed with 'a_b' "
-    #         "should commute with 'a_prime_b'")
     z_p = {}
     for z_element, c_element in z_c.items():
         a_prime_elements = keys_by_value(a_prime_z, z_element)

@@ -1690,26 +1690,37 @@ class NetworkXHierarchy(nx.DiGraph):
         # Restore typing
         for graph, result in lifting_results.items():
             for successor in self.successors(graph):
+                old_typing = self.get_typing(graph, successor)
                 if successor == graph_id:
-                    old_typing = self.get_typing(graph, successor)
                     new_typing = get_unique_map_to_pullback_complement_full(
-                        rule.p_lhs, {}, p_g_m, g_m_g,
-                        rule_liftings[graph]["p_g_p"], {},
-                        result["p_g_g_m"], compose(result["g_m_g"], old_typing))
+                        p_g_m, g_m_g,
+                        rule_liftings[graph]["p_g_p"],
+                        result["p_g_g_m"],
+                        compose(result["g_m_g"], old_typing))
                 else:
                     # already lifted to the successor
                     if successor in lifting_results:
-                        # TOO finish, put some PBC
-                        new_typing = {}
+                        # TOO finish
+                        # Find the morphism of P's
+                        p_graph_successor = compose(
+                            compose(
+                                rule_liftings[graph]["rule"].p_lhs,
+                                rule_liftings[graph]["instance"]),
+                            old_typing)
+                        p_successor_successor = compose(
+                            rule_liftings[successor]["rule"].p_lhs,
+                            rule_liftings[successor]["instance"])
+                        # combile these guys with the rest of info
+                        # Apply the UP of PBC
+                        new_typing = get_unique_map_to_pullback_complement_full(
+                        )
                     # already projected to the successor
                     elif successor in projection_results:
-                        old_typing = self.get_typing(graph, successor)
                         new_typing = compose(
                             compose(result["g_m_g"], old_typing),
                             projection_results[successor]["g_g_prime"])
                     # didn't touch the successor
                     else:
-                        old_typing = self.get_typing(graph, successor)
                         new_typing = compose(result["g_m_g"], old_typing)
                 self._update_mapping(graph, successor, new_typing)
 
