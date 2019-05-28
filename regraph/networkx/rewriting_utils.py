@@ -174,7 +174,8 @@ def _propagate_rule_to(graph, origin_typing, rule, instance, p_origin,
 
 
 def _propagate_up(hierarchy, graph_id, rule, instance,
-                  p_origin_m, origin_m_origin_prime, inplace=False):
+                  p_origin_m, origin_m_origin_prime, 
+                  p_typing, inplace=False):
     updated_graphs = dict()
     updated_homomorphisms = dict()
     updated_relations = set()

@@ -1611,13 +1611,13 @@ class NetworkXHierarchy(nx.DiGraph):
 
     def _normalize_and_check_typing(self, graph_id, rule, instance,
                                     p_typing, rhs_typing, strict):
-        # 1. Check consistency of the input
+        """Check consistency of the input."""
         lhs_typing = {}
         if p_typing is None:
             p_typing = {}
         new_p_typing = copy.deepcopy(p_typing)
 
-        # 1a. Autocomplete typing
+        # Autocomplete typings
         lhs_typing, new_rhs_typing =\
             type_checking._autocomplete_typing(
                 self, graph_id,
@@ -1627,11 +1627,11 @@ class NetworkXHierarchy(nx.DiGraph):
                 p_lhs=rule.p_lhs,
                 p_rhs=rule.p_rhs)
 
-        # 1b. Check that instance is consistent with lhs & rhs typing
+        # Check the instance
         type_checking._check_instance(
             self, graph_id, rule.lhs, instance, lhs_typing)
 
-        # 1c. Check consistency of the (autocompleted) rhs & lhs typings
+        # Check consistency of the (autocompleted) rhs/p/lhs typings
         if lhs_typing is not None and new_rhs_typing is not None:
             try:
                 type_checking._check_self_consistency(
@@ -1642,11 +1642,23 @@ class NetworkXHierarchy(nx.DiGraph):
                 )
             try:
                 type_checking._check_self_consistency(
+                    self, p_typing)
+            except ReGraphError as e:
+                raise RewritingError(
+                    "Typing of the preserved part is "
+                    "self inconsistent: {}".format(e)
+                )
+            try:
+                type_checking._check_self_consistency(
                     self, new_rhs_typing, strict)
             except ReGraphError as e:
                 raise RewritingError(
                     "Typing of the rhs is self inconsistent: %s" % str(e)
                 )
+
+            type_checking._check_lhs_p_consistency(
+                self, graph_id, rule, instance,
+                lhs_typing, p_typing)
 
             type_checking._check_lhs_rhs_consistency(
                 self, graph_id, rule, instance,
@@ -1728,7 +1740,7 @@ class NetworkXHierarchy(nx.DiGraph):
         new_upstream_changes =\
             rewriting_utils._propagate_up(
                 self, graph_id, rule, instance,
-                p_g_m, g_m_g_prime, inplace)
+                p_g_m, g_m_g_prime, p_typing, inplace)
 
         upstream_changes["graphs"].update(new_upstream_changes["graphs"])
         upstream_changes["homomorphisms"].update(
@@ -1916,10 +1928,16 @@ class NetworkXHierarchy(nx.DiGraph):
         if (source, target) in self.edges():
             return self.adj[source][target]["mapping"]
         else:
-            path = nx.shortest_path(self, source, target)
+            try:
+                path = nx.shortest_path(self, source, target)
+            except:
+                raise HierarchyError(
+                    "No path from '{}' to '{}' in the hierarchy".format(
+                        source, target))
             return self.compose_path_typing(path)
 
     def get_relation(self, left, right):
+        """Get relation dictionary."""
         return self.relation[left][right]
 
     def set_node_typing(self, source_graph, target_graph, node_id, type_id):

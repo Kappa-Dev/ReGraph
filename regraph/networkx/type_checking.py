@@ -2,11 +2,15 @@
 import networkx as nx
 from networkx.exception import NetworkXNoPath
 
-from regraph.exceptions import RewritingError, HierarchyError
+from regraph.exceptions import (RewritingError,
+                                HierarchyError,
+                                InvalidHomomorphism)
 from regraph.utils import (keys_by_value,
                            format_typing,
                            normalize_typing_relation)
-from regraph.networkx.category_utils import check_homomorphism, compose
+from regraph.networkx.category_utils import (check_homomorphism,
+                                             compose,
+                                             is_monic)
 
 
 def _check_rule_typing(hierarchy, rule_id, graph_id, lhs_mapping, rhs_mapping):
@@ -230,14 +234,28 @@ def _check_self_consistency(hierarchy, typing, strict=True):
                                          anc))
 
 
+def _check_lhs_p_consistency(hierarchy, graph_id, rule, instance,
+                             lhs_typing, p_typing):
+    """ Check consistency of typing of the lhs and the p of the rule."""
+    for typed_graph, typing in p_typing.items():
+        origin_typing = hierarchy.get_typing(typed_graph, graph_id)
+        for k, v in typing.items():
+            if instance[rule.p_lhs[v]] != origin_typing[k]:
+                raise RewritingError(
+                    "Inconsistent typing of the rule: the node "
+                    "'{}' of '{}' typed by ".format(
+                        k, typed_graph) +
+                    "'{}' in '{}' ".format(
+                        origin_typing[k], graph_id) +
+                    "is re-typed by the node '{}' through the preserved part".format(
+                        instance[rule.p_lhs[v]]))
+
 def _check_lhs_rhs_consistency(hierarchy, graph_id, rule, instance,
                                lhs_typing, rhs_typing, strict=True):
     """Check consistency of typing of the lhs and the rhs of the rule."""
     for typing_graph, typing in lhs_typing.items():
         for p_node in rule.p.nodes():
-
             if typing_graph in rhs_typing.keys():
-
                 if strict is True and\
                    rule.p_rhs[p_node] in rhs_typing[typing_graph].keys() and\
                    len(rhs_typing[typing_graph][rule.p_rhs[p_node]]) > 1:
@@ -309,13 +327,26 @@ def _check_totality(hierarchy, graph_id, rule, instance,
 
 
 def _check_instance(hierarchy, graph_id, pattern, instance, pattern_typing):
-    check_homomorphism(
-        pattern,
-        hierarchy.graph[graph_id],
-        instance,
-        total=True
-    )
-    # check that instance typing and lhs typing coincide
+    # Check that the homomorphism is valid
+    try:
+        check_homomorphism(
+            pattern,
+            hierarchy.graph[graph_id],
+            instance,
+            total=True
+        )
+    except InvalidHomomorphism as e:
+        raise RewritingError(
+            "Homomorphism from the pattern to the instance subgraph "
+            "is not valid, got: '{}'".format(e))
+
+    # Check that it is a mono
+    if not is_monic(instance):
+        raise RewritingError(
+            "Homomorphism from the pattern to the instance subgraph "
+            "is not injective")
+
+    # Check that instance typing and lhs typing coincide
     for node in pattern.nodes():
         if pattern_typing:
             for typing_graph, typing in pattern_typing.items():
