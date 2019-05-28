@@ -268,9 +268,9 @@ class TestPrimitives(object):
     #     pass
 
     def test_load_export(self):
-        g1 = load_graph("tests/graph_example.json")
+        g1 = load_networkx_graph("tests/graph_example.json")
         export_graph(g1, "tests/graph_output.json")
-        g2 = load_graph("tests/graph_output.json")
+        g2 = load_networkx_graph("tests/graph_output.json")
         assert(set(g1.nodes()) == set(g2.nodes()))
         assert(set(g1.edges()) == set(g2.edges()))
 

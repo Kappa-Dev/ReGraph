@@ -411,7 +411,7 @@ def pushout(a, b, c, a_b, a_c, inplace=False):
             c_d[c_n] = new_name
         # Keep nodes
         elif len(a_keys) == 1:
-            c_d[a_c[a_keys[0]]] = a_b[a_keys[0]]
+            c_d[a_c[a_keys[0]]] = b_d[a_b[a_keys[0]]]
         # Merge nodes
         else:
             nodes_to_merge = set()
@@ -452,9 +452,15 @@ def pushout(a, b, c, a_b, a_c, inplace=False):
             elif not merge_done:
                 new_name = merge_nodes(d, nodes_to_merge)
                 merged_nodes[new_name] = nodes_to_merge
+            c_d[c_n] = new_name
+
             for node in nodes_to_merge:
-                c_d[c_n] = new_name
                 b_d[node] = new_name
+
+            for k in c_d.keys():
+                for vv in keys_by_value(a_c, k):
+                    if b_d[a_b[vv]] == new_name:
+                        c_d[k] = new_name
 
     # Add edges
     for (n1, n2) in c.edges():

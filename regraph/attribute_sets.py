@@ -48,7 +48,7 @@ def _hashify(d):
 def _regex_to_string(a):
     if isinstance(a, str):
         return a
-    elif isinstance(a, re._pattern_type):
+    elif isinstance(a, re.Pattern):
         return a.pattern
     elif isinstance(a, RegexSet):
         if a.pattern is not None:
@@ -424,7 +424,7 @@ class RegexSet(AttributeSet):
 
         Parameters
         ----------
-        other : set, str, re._pattern_type, RegexSet
+        other : set, str, re.Pattern, RegexSet
             Another regex to test inclusion.
 
         Returns
@@ -444,7 +444,7 @@ class RegexSet(AttributeSet):
             def included(a):
                 if isinstance(a, str):
                     other_exp = parse(a)
-                elif isinstance(a, re._pattern_type):
+                elif isinstance(a, re.Pattern):
                     other_exp = parse(a.pattern)
                 elif isinstance(a, RegexSet):
                     if a.pattern:
@@ -453,7 +453,7 @@ class RegexSet(AttributeSet):
                         return False
                 else:
                     raise AttributeSetError(
-                        "Regexp object should be of type `str` or `re._pattern_type`!"
+                        "Regexp object should be of type `str` or `re.Pattern`!"
                     )
                 return (self_exp & other_exp.everythingbut()).empty()
 
@@ -486,7 +486,7 @@ class RegexSet(AttributeSet):
 
         Parameters
         ----------
-        other : set, str, re._pattern_type, RegexSet
+        other : set, str, re.Pattern, RegexSet
 
         Returns
         -------
@@ -547,7 +547,7 @@ class RegexSet(AttributeSet):
 
         Parameters
         ----------
-        other : set, str, re._pattern_type, RegexSet
+        other : set, str, re.Pattern, RegexSet
 
         Returns
         -------
@@ -626,7 +626,7 @@ class RegexSet(AttributeSet):
 
         Parameters
         ----------
-        other : set, str, re._pattern_type, RegexSet
+        other : set, str, re.Pattern, RegexSet
 
         Returns
         -------

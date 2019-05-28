@@ -288,8 +288,7 @@ class TestHierarchy(object):
             "g1",
             rule,
             instances[0],
-            lhs_typing,
-            rhs_typing
+            rhs_typing=rhs_typing
         )
         # add nice assertions here
 
@@ -434,7 +433,7 @@ class TestHierarchy(object):
             "g1", pattern, lhs_typing)
 
         self.hierarchy.rewrite(
-            "g1", rule, instances[0], lhs_typing, rhs_typing)
+            "g1", rule, instances[0], rhs_typing=rhs_typing)
 
     def test_add_rule_multiple_typing(self):
 
@@ -548,12 +547,11 @@ class TestHierarchy(object):
             "g1",
             rule,
             instances[0],
-            lhs_typing,
-            rhs_typing
+            rhs_typing=rhs_typing
         )
 
-    def test_get_ancestors(self):
-        anc = self.hierarchy.get_ancestors("g2")
+    def test_get_descendants(self):
+        anc = self.hierarchy.get_descendants("g2")
         assert("g1" in anc.keys())
         assert("g0" in anc.keys())
         assert("g00" in anc.keys())

@@ -2,7 +2,8 @@
 import networkx as nx
 from networkx.exception import NetworkXNoPath
 
-from regraph.exceptions import (RewritingError,
+from regraph.exceptions import (ReGraphError,
+                                RewritingError,
                                 HierarchyError,
                                 InvalidHomomorphism)
 from regraph.utils import (keys_by_value,
@@ -139,22 +140,21 @@ def _check_consistency(hierarchy, source, target, mapping=None):
 
 def _autocomplete_typing(hierarchy, graph_id, instance,
                          lhs_typing, p_typing, rhs_typing_rel, p_lhs, p_rhs):
+    if lhs_typing is None:
+        new_lhs_typing = dict()
+    else:
+        new_lhs_typing = format_typing(lhs_typing)
+    if p_typing is None:
+        new_p_typing = dict()
+    else:
+        new_p_typing = normalize_typing_relation(p_typing)
+    if rhs_typing_rel is None:
+        new_rhs_typing_rel = dict()
+    else:
+        new_rhs_typing_rel = normalize_typing_relation(rhs_typing_rel)
     successors = list(hierarchy.successors(graph_id))
     if len(successors) > 0:
-        if lhs_typing is None:
-            new_lhs_typing = dict()
-        else:
-            new_lhs_typing = format_typing(lhs_typing)
-        if p_typing is None:
-            new_p_typing = dict()
-        else:
-            new_p_typing = normalize_typing_relation(p_typing)
-        if rhs_typing_rel is None:
-            new_rhs_typing_rel = dict()
-        else:
-            new_rhs_typing_rel = normalize_typing_relation(rhs_typing_rel)
-
-        ancestors = hierarchy.get_ancestors(graph_id)
+        ancestors = hierarchy.get_descendants(graph_id)
         for anc, anc_typing in ancestors.items():
             if anc not in new_rhs_typing_rel.keys():
                 new_rhs_typing_rel[anc] = dict()
@@ -186,7 +186,7 @@ def _autocomplete_typing(hierarchy, graph_id, instance,
 
         # Second step of autocompletion of rhs typing
         for graph, typing in new_rhs_typing_rel.items():
-            ancestors = hierarchy.get_ancestors(graph)
+            ancestors = hierarchy.get_descendants(graph)
             for ancestor, ancestor_typing in ancestors.items():
                 dif = set(typing.keys()) -\
                     set(new_rhs_typing_rel[ancestor].keys())
@@ -195,15 +195,12 @@ def _autocomplete_typing(hierarchy, graph_id, instance,
                     for el in new_rhs_typing_rel[graph][node]:
                         type_set.add(ancestor_typing[el])
                     new_rhs_typing_rel[ancestor][node] = type_set
-
-        return (new_lhs_typing, new_p_typing, new_rhs_typing_rel)
-    else:
-        return (None, None, None)
+    return (new_lhs_typing, new_p_typing, new_rhs_typing_rel)
 
 
 def _check_self_consistency(hierarchy, typing, strict=True):
     for typing_graph, mapping in typing.items():
-        ancestors = hierarchy.get_ancestors(typing_graph)
+        ancestors = hierarchy.get_descendants(typing_graph)
         for anc, anc_typing in ancestors.items():
             if anc in typing.keys():
                 for key, value in mapping.items():
@@ -273,7 +270,7 @@ def _check_lhs_rhs_consistency(hierarchy, graph_id, rule, instance,
                          typing[rule.p_lhs[p_node]],
                          ", ".join(
                              rhs_typing[typing_graph][rule.p_rhs[p_node]])))
-            typing_graph_ancestors = hierarchy.get_ancestors(typing_graph)
+            typing_graph_ancestors = hierarchy.get_descendants(typing_graph)
             for anc, anc_typing in typing_graph_ancestors.items():
                 if anc in rhs_typing.keys():
                     if rule.p_rhs[p_node] in rhs_typing[anc]:
@@ -369,3 +366,68 @@ def _check_instance(hierarchy, graph_id, pattern, instance, pattern_typing):
                         "Graph '%s' is not typed by '%s' specified "
                         "as a typing graph of the lhs of the rule." %
                         (graph_id, typing_graph))
+
+
+def _check_rule_instance_typing(hierarchy, graph_id, rule, instance,
+                                p_typing, rhs_typing, strict):
+    """Check consistency of the input."""
+    lhs_typing = {}
+
+    # Autocomplete typings
+    lhs_typing, p_typing, rhs_typing =\
+        _autocomplete_typing(
+            hierarchy, graph_id,
+            instance=instance,
+            lhs_typing=lhs_typing,
+            p_typing=p_typing,
+            rhs_typing_rel=rhs_typing,
+            p_lhs=rule.p_lhs,
+            p_rhs=rule.p_rhs)
+
+    # Check the instance
+    _check_instance(
+        hierarchy, graph_id, rule.lhs, instance, lhs_typing)
+
+    # Check consistency of the (autocompleted) rhs/p/lhs typings
+    if lhs_typing is not None and rhs_typing is not None:
+        try:
+            _check_self_consistency(
+                hierarchy, lhs_typing)
+        except ReGraphError as e:
+            raise RewritingError(
+                "Typing of the lhs is self inconsistent: %s" % str(e)
+            )
+        try:
+            _check_p_consistency(
+                hierarchy, p_typing)
+        except ReGraphError as e:
+            raise RewritingError(
+                "Typing of the preserved part is "
+                "self inconsistent: {}".format(e)
+            )
+        try:
+            _check_self_consistency(
+                hierarchy, rhs_typing, strict)
+        except ReGraphError as e:
+            raise RewritingError(
+                "Typing of the rhs is self inconsistent: %s" % str(e)
+            )
+
+        _check_lhs_p_consistency(
+            hierarchy, graph_id, rule, instance,
+            lhs_typing, p_typing)
+
+        _check_lhs_rhs_consistency(
+            hierarchy, graph_id, rule, instance,
+            lhs_typing, rhs_typing,
+            strict)
+
+        if strict is True:
+            _check_totality(
+                hierarchy, graph_id, rule, instance,
+                lhs_typing, rhs_typing)
+    return p_typing, rhs_typing
+
+def _check_p_consistency(hierarchy, p_typing):
+    for graph, typing in p_typing.items():
+        pass

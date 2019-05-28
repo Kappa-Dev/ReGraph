@@ -273,37 +273,6 @@ class TestPropagation(object):
         # assert("a" in new_hierarchy.graph["mmm"].node["component"])
         # assert("a" in new_hierarchy.graph["colors"].node["red"])
 
-    def test_consistency_checks(self):
-        pattern = nx.DiGraph()
-        pattern.add_nodes_from(["A", "B"])
-        rule = Rule.from_transform(pattern)
-        p_clone, _ = rule.inject_clone_node("A")
-        rule.inject_add_node("D")
-
-        p_typing = {
-            "n1": {
-                "A": p_clone
-            }
-        }
-
-        rhs_typing = {
-            "mmm": {
-                "D": "component"
-            },
-            "colors": {
-                "D": "red"
-            }
-        }
-
-        instance = {
-            "A": "A",
-            "B": "B"
-        }
-
-        self.hierarchy._normalize_and_check_typing(
-            "ag", rule, instance,
-            p_typing, rhs_typing, False)
-
     def test_controlled_up_propagation(self):
         pattern = nx.DiGraph()
         pattern.add_nodes_from(["A"])
@@ -320,8 +289,36 @@ class TestPropagation(object):
         instance = {
             "A": "A"
         }
+
+        nugget_1 = nx.DiGraph()
+        primitives.add_nodes_from(
+            nugget_1,
+            ["A_bye", "A_hello", "A_res_1", "p", "B", "mod"]
+        )
+        primitives.add_edges_from(
+            nugget_1,
+            [("A_res_1", "A_hello"),
+             ("A_res_1", "A_bye"),
+             ("p", "A_res_1"),
+             ("mod", "p"),
+             ("B", "mod")]
+        )
+        self.hierarchy.add_graph("nn1", nugget_1)
+        self.hierarchy.add_typing(
+            "nn1", "n1",
+            {
+                "A_bye": "A",
+                "A_hello": "A",
+                "A_res_1": "A_res_1",
+                "p": "p",
+                "B": "B",
+                "mod": "mod"
+            })
+
         new_hierarchy, _ = self.hierarchy.rewrite(
             "ag", rule, instance,
             p_typing=p_typing,
             inplace=False)
-        # primitives.print_graph(new_hierarchy.get_graph("n1"))
+
+        primitives.print_graph(new_hierarchy.get_graph("nn1"))
+        print(new_hierarchy.typing["nn1"]["n1"])

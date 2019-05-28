@@ -1305,10 +1305,10 @@ class NetworkXHierarchy(nx.DiGraph):
         s = path[0]
         return self.is_rule(s)
 
-    def _get_ancestors_paths(self, graph_id):
+    def _get_descendants_paths(self, graph_id):
         ancestors = dict()
         for typing in self.successors(graph_id):
-            typing_ancestors = self._get_ancestors_paths(typing)
+            typing_ancestors = self._get_descendants_paths(typing)
             if typing in ancestors.keys():
                 ancestors[typing].append([graph_id, typing])
             else:
@@ -1343,7 +1343,7 @@ class NetworkXHierarchy(nx.DiGraph):
         # 1. find pairs of successors that have common ancestors
         ancestors = dict()
         for n in self.successors(graph_id):
-            ancestors[n] = self._get_ancestors_paths(n)
+            ancestors[n] = self._get_descendants_paths(n)
         common_ancestors = dict()
         for s1 in self.successors(graph_id):
             for s2 in self.successors(graph_id):
@@ -1411,7 +1411,7 @@ class NetworkXHierarchy(nx.DiGraph):
         # Check that 'typing_graph' and 'pattern_typing' are correctly
         # specified
 
-        ancestors = self.get_ancestors(graph_id)
+        ancestors = self.get_descendants(graph_id)
         if pattern_typing is not None:
             for typing_graph, _ in pattern_typing.items():
                 if typing_graph not in ancestors.keys():
@@ -1609,66 +1609,6 @@ class NetworkXHierarchy(nx.DiGraph):
                             suc1.intersection(suc2)
         return common_sucs
 
-    def _normalize_and_check_typing(self, graph_id, rule, instance,
-                                    p_typing, rhs_typing, strict):
-        """Check consistency of the input."""
-        lhs_typing = {}
-
-        # Autocomplete typings
-        lhs_typing, p_typing, rhs_typing =\
-            type_checking._autocomplete_typing(
-                self, graph_id,
-                instance=instance,
-                lhs_typing=lhs_typing,
-                p_typing=p_typing,
-                rhs_typing_rel=rhs_typing,
-                p_lhs=rule.p_lhs,
-                p_rhs=rule.p_rhs)
-
-        # Check the instance
-        type_checking._check_instance(
-            self, graph_id, rule.lhs, instance, lhs_typing)
-
-        # Check consistency of the (autocompleted) rhs/p/lhs typings
-        if lhs_typing is not None and rhs_typing is not None:
-            try:
-                type_checking._check_self_consistency(
-                    self, lhs_typing)
-            except ReGraphError as e:
-                raise RewritingError(
-                    "Typing of the lhs is self inconsistent: %s" % str(e)
-                )
-            try:
-                type_checking._check_self_consistency(
-                    self, p_typing)
-            except ReGraphError as e:
-                raise RewritingError(
-                    "Typing of the preserved part is "
-                    "self inconsistent: {}".format(e)
-                )
-            try:
-                type_checking._check_self_consistency(
-                    self, rhs_typing, strict)
-            except ReGraphError as e:
-                raise RewritingError(
-                    "Typing of the rhs is self inconsistent: %s" % str(e)
-                )
-
-            type_checking._check_lhs_p_consistency(
-                self, graph_id, rule, instance,
-                lhs_typing, p_typing)
-
-            type_checking._check_lhs_rhs_consistency(
-                self, graph_id, rule, instance,
-                lhs_typing, rhs_typing,
-                strict)
-
-            if strict is True:
-                type_checking._check_totality(
-                    self, graph_id, rule, instance,
-                    lhs_typing, rhs_typing)
-        return p_typing, rhs_typing
-
     def get_rule_propagations(self, graph_id, rule, instance=None,
                               p_typing=None, rhs_typing=None):
         """Return projection of a rule to all nodes of the hierarchy."""
@@ -1679,8 +1619,8 @@ class NetworkXHierarchy(nx.DiGraph):
             instance = {
                 n: n for n in rule.lhs.nodes()
             }
-        p_typing, rhs_typing = self._normalize_and_check_typing(
-            graph_id, rule, instance, p_typing, rhs_typing, False)
+        p_typing, rhs_typing = type_checking._check_rule_instance_typing(
+            self, graph_id, rule, instance, p_typing, rhs_typing, False)
 
         rule_liftings = rewriting_utils._get_rule_liftings(
             self, graph_id, rule, instance, p_typing)
@@ -1690,9 +1630,16 @@ class NetworkXHierarchy(nx.DiGraph):
         return rule_liftings, rule_projections
 
     def apply_propagations(self, graph_id, rule, instance,
-                           rule_liftings, rule_projections):
+                           rule_liftings, rule_projections,
+                           inplace=False):
         """Rewrite and propagate from precomputed rule propagations."""
         rhs_instances = {}
+        # Apply rule liftings
+        for graph, propagation in rule_liftings.items():
+            print("Rewriting: ", graph)
+            graph_prime, rhs_instance = propagation["rule"].apply_to(
+                self.get_graph(graph), propagation["instance"], inplace)
+            rhs_instances[graph] = rhs_instance
 
     def rewrite(self, graph_id, rule, instance=None,
                 p_typing=None, rhs_typing=None,
@@ -1707,12 +1654,8 @@ class NetworkXHierarchy(nx.DiGraph):
                 n: n for n in rule.lhs.nodes()
             }
 
-        p_typing, rhs_typing = self._normalize_and_check_typing(
-            graph_id, rule, instance, p_typing, rhs_typing, strict)
-
-        # end = time.time() - start
-        # print("\t\t\t\tTime to type check: ", end)
-        # 2. Rewrite a graph `graph_id`
+        p_typing, rhs_typing = type_checking._check_rule_instance_typing(
+            self, graph_id, rule, instance, p_typing, rhs_typing, strict)
 
         # start = time.time()
         base_changes = rewriting_utils._rewrite_base(
@@ -1807,14 +1750,14 @@ class NetworkXHierarchy(nx.DiGraph):
             rhs_typing=rhs_typing,
             inplace=inplace)
 
-    def get_ancestors(self, graph_id, maybe=None):
+    def get_descendants(self, graph_id, maybe=None):
         """Return ancestors of a graph as well as the typing morphisms."""
         ancestors = dict()
         for _, typing in self.out_edges(graph_id):
             if maybe is not None and typing not in maybe:
                 continue
             mapping = self.adj[graph_id][typing]["mapping"]
-            typing_ancestors = self.get_ancestors(typing, maybe)
+            typing_ancestors = self.get_descendants(typing, maybe)
             if typing in ancestors.keys():
                 ancestors[typing].update(mapping)
             else:
@@ -1825,6 +1768,8 @@ class NetworkXHierarchy(nx.DiGraph):
                 else:
                     ancestors[anc] = compose(mapping, typ)
         return ancestors
+
+    # def get_de
 
     def to_nx_graph(self):
         """Create a simple networkx graph representing the hierarchy."""

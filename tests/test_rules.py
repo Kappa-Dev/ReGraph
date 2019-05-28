@@ -532,10 +532,7 @@ class TestRule(object):
             "diamond": "Harry"
         }
 
-        rule1, lhs_instance1, rule2, lhs_instance2, rhs1_rhs2 = _create_merging_rule(
+        rule1, rule2 = _create_merging_rule(
             rule, lhs_instance, rhs_instance)
         print(rule1)
-        print(lhs_instance1)
         print(rule2)
-        print(lhs_instance2)
-        print(rhs1_rhs2)
