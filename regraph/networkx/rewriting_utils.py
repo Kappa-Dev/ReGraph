@@ -694,7 +694,6 @@ def _get_rule_projections(hierarchy, origin_id, rule, instance, rhs_typing):
                                 for t_node in t_nodes:
                                     if t_node not in p_t_t.values() and\
                                        t_node not in added_t_nodes:
-                                        print(">>>", t_node)
                                         new_p_node = primitives.generate_new_node_id(
                                             p_t, t_node)
                                         primitives.add_node(p_t, new_p_node)

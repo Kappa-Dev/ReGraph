@@ -174,6 +174,44 @@ def get_unique_map_from_pushout(p, a_p, b_p, a_z, b_z):
     return p_z
 
 
+def get_unique_map_to_pullback_complement_full(a_b, b_c, a_p, p_c,
+                                               a_prime_a, a_prime_b,
+                                               a_prime_z, z_c):
+    """Find morphism z->p using the UP of PBC."""
+    # Preliminary checks
+    if not is_monic(a_p):
+        raise ReGraphError(
+            "Morphism 'a_p' is required to be a mono "
+            "to use the UP of the pullback complement")
+    if not is_monic(b_c):
+        raise ReGraphError(
+            "Morphism 'b_d' is required to be a mono "
+            "to use the UP of the pullback complement")
+    # if a_prime_b != compose(a_prime_a, a_b):
+    #     raise ReGraphError(
+    #         "Homomorphism 'a_prime_a' composed with 'a_b' "
+    #         "should commute with 'a_prime_b'")
+    z_p = {}
+    for z_element, c_element in z_c.items():
+        a_prime_elements = keys_by_value(a_prime_z, z_element)
+        p_elements1 = set()  # candidate p elements
+        for a_prime_element in a_prime_elements:
+            p_elements1.add(a_p[a_prime_a[a_prime_element]])
+        # resolve ambiguity going the other way
+        p_elements2 = keys_by_value(p_c, c_element)
+        if len(p_elements1) == 0:
+            if len(p_elements2) == 1:
+                z_p[z_element] = list(p_elements2)[0]
+            else:
+                raise ValueError("Something is wrong")
+        else:
+            intersection = p_elements1.intersection(p_elements2)
+            if len(intersection) == 1:
+                z_p[z_element] = list(intersection)[0]
+            else:
+                raise ValueError("Something is wrong")
+    return z_p
+
 def get_unique_map_to_pullback_complement(a_b, b_c, a_p, p_c, a_z, z_c):
     """Find a unique map to pullback complement."""
     z_p = {
@@ -211,6 +249,24 @@ def get_unique_map(a, b, c, d, a_b, b_d, c_d):
                     for i, a_key in enumerate(a_keys):
                         a_c[a_key] = c_keys[i]
     return a_c
+
+
+# def complete_pbc_square(a, b, c, d, a_b, a_c, b_d):
+#     """Get a map c->d that makes a PBC square commute."""
+#     if not is_monic(a_c):
+#         raise ReGraphError(
+#             "Morphism 'a_c' is required to be a mono "
+#             "to form a pullback complement")
+#     if not is_monic(b_d):
+#         raise ReGraphError(
+#             "Morphism 'b_d' is required to be a mono "
+#             "to form a pullback complement")
+#     c_d = dict()
+#     for c_element in c:
+#         if c_element in a_c.values():
+#             # Always only one element as we ask for a_c to be mono
+#             a_element = keys_by_value(a_c, c_element)[0]
+#             c_d[c_element] = b_d[a_b[a_element]]
 
 
 def identity(a, b):

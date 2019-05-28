@@ -27,10 +27,13 @@ from regraph.networkx import rewriting_utils
 from regraph.networkx import type_checking
 
 from regraph.networkx.category_utils import (compose,
+                                             get_unique_map_to_pullback_complement_full,
                                              check_homomorphism,
                                              is_total_homomorphism,
                                              relation_to_span,
-                                             right_relation_dict)
+                                             right_relation_dict,
+                                             pullback_complement,
+                                             pushout)
 from regraph.primitives import (attrs_to_json,
                                 attrs_from_json,
                                 update_node_attrs,
@@ -43,7 +46,8 @@ from regraph.primitives import (attrs_to_json,
                                 networkx_from_json,
                                 equal,
                                 update_node_attrs,
-                                update_edge_attrs)
+                                update_edge_attrs,
+                                assign_attrs)
 from regraph.utils import (is_subdict,
                            keys_by_value,
                            normalize_attrs,
@@ -1301,6 +1305,18 @@ class NetworkXHierarchy(nx.DiGraph):
                     rhs_homomorphism, self.adj[s][t]["mapping"])
             return lhs_homomorphism, rhs_homomorphism
 
+    def _update_mapping(self, source, target, mapping):
+        """Update the mapping dictionary from source to target."""
+        assign_attrs(
+            self.adj[source][target],
+            {
+                "mapping": mapping,
+                "attrs": self.adj[source][target]["attrs"]
+            }
+        )
+        self.typing[source][target] = self.adj[
+            source][target]["mapping"]
+
     def _path_from_rule(self, path):
         s = path[0]
         return self.is_rule(s)
@@ -1633,13 +1649,88 @@ class NetworkXHierarchy(nx.DiGraph):
                            rule_liftings, rule_projections,
                            inplace=False):
         """Rewrite and propagate from precomputed rule propagations."""
-        rhs_instances = {}
+        # Rewrite the origin
+        g_m, p_g_m, g_m_g =\
+            pullback_complement(rule.p, rule.lhs, self.graph[graph_id],
+                                rule.p_lhs, instance, inplace)
+
+        g_prime, g_m_g_prime, r_g_prime = pushout(rule.p, g_m, rule.rhs,
+                                                  p_g_m, rule.p_rhs, inplace)
+
         # Apply rule liftings
+        lifting_results = {}
         for graph, propagation in rule_liftings.items():
-            print("Rewriting: ", graph)
-            graph_prime, rhs_instance = propagation["rule"].apply_to(
-                self.get_graph(graph), propagation["instance"], inplace)
-            rhs_instances[graph] = rhs_instance
+            propagation_rule = propagation["rule"]
+            propagation_instance = propagation["instance"]
+            graph_m, p_g_graph_m, graph_m_graph = pullback_complement(
+                propagation_rule.p, propagation_rule.lhs,
+                self.get_graph(graph), propagation_rule.p_lhs,
+                propagation_instance, inplace
+            )
+            lifting_results[graph] = {
+                "p_g_g_m": p_g_graph_m,
+                "g_m_g": graph_m_graph
+            }
+
+        # Apply rule projections
+        projection_results = {}
+        for graph, propagation in rule_projections.items():
+            propagation_rule = propagation["rule"]
+            propagation_instance = propagation["instance"]
+
+            g_prime, g_g_prime, rhs_g_prime = pushout(
+                propagation_rule.p, self.get_graph(graph),
+                propagation_rule.rhs, propagation_instance,
+                propagation_rule.p_rhs, inplace)
+            projection_results[graph] = {
+                "g_g_prime": g_g_prime,
+                "rhs_g_prime": rhs_g_prime
+            }
+
+        # Restore typing
+        for graph, result in lifting_results.items():
+            for successor in self.successors(graph):
+                if successor == graph_id:
+                    old_typing = self.get_typing(graph, successor)
+                    new_typing = get_unique_map_to_pullback_complement_full(
+                        rule.p_lhs, {}, p_g_m, g_m_g,
+                        rule_liftings[graph]["p_g_p"], {},
+                        result["p_g_g_m"], compose(result["g_m_g"], old_typing))
+                else:
+                    # already lifted to the successor
+                    if successor in lifting_results:
+                        # TOO finish, put some PBC
+                        new_typing = {}
+                    # already projected to the successor
+                    elif successor in projection_results:
+                        old_typing = self.get_typing(graph, successor)
+                        new_typing = compose(
+                            compose(result["g_m_g"], old_typing),
+                            projection_results[successor]["g_g_prime"])
+                    # didn't touch the successor
+                    else:
+                        old_typing = self.get_typing(graph, successor)
+                        new_typing = compose(result["g_m_g"], old_typing)
+                self._update_mapping(graph, successor, new_typing)
+
+        for graph, result in projection_results.items():
+            for predecessor in self.predecessors(graph):
+                if predecessor == graph_id:
+                    pass
+                else:
+                    # already projected to the predecessor
+                    if predecessor in projection_results:
+                        pass
+                    elif predecessor in lifting_results:
+                        # the edge was visited from the predecessor
+                        pass
+                    # didn't touch the predecessor
+                    else:
+                        old_typing = self.get_typing(predecessor, graph)
+                        new_typing = compose(old_typing, result["g_g_prime"])
+                        self._update_mapping(predecessor, graph, new_typing)
+
+
 
     def rewrite(self, graph_id, rule, instance=None,
                 p_typing=None, rhs_typing=None,

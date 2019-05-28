@@ -49,7 +49,12 @@ class TestRuleProjections(object):
             "school": "blue",
             "institute": "blue"
         }
+        self.hierarchy.add_graph("bb", b)
+        self.hierarchy.add_typing(
+            "b", "bb",
+            {n: n for n in b.nodes()})
         self.hierarchy.add_typing("b", "a", b_a)
+        self.hierarchy.add_typing("bb", "a", b_a)
 
         c = nx.DiGraph()
         primitives.add_nodes_from(c, [
@@ -105,23 +110,29 @@ class TestRuleProjections(object):
             "b", rule)
 
         assert(projections == {})
-        print(lifting["c"]["rule"])
-        print(lifting["c"]["instance"])
-        print(lifting["c"]["p_g_p"])
+        # print(lifting["c"]["rule"])
+        # print(lifting["c"]["instance"])
+        # print(lifting["c"]["p_g_p"])
 
         # Test canonical rule lifting
         lifting, projections = self.hierarchy.get_rule_propagations(
             "b", rule, p_typing={"c": {"Alice": "girl"}})
 
-        print(lifting["c"]["rule"])
-        print(lifting["c"]["p_g_p"])
+        # print(lifting["c"]["rule"])
+        # print(lifting["c"]["p_g_p"])
 
         # Test canonical rule lifting
         lifting, projections = self.hierarchy.get_rule_propagations(
             "b", rule, p_typing={"c": {"Alice": {"girl", "generic"}, "Bob": "boy"}})
 
-        print(lifting["c"]["rule"])
-        print(lifting["c"]["p_g_p"])
+        instance = {
+            n: n for n in rule.lhs.nodes()
+        }
+
+        self.hierarchy.apply_propagations(
+            "b", rule, instance, lifting, projections)
+        # print(lifting["c"]["rule"])
+        # print(lifting["c"]["p_g_p"])
 
     def test_projection(self):
         pattern = nx.DiGraph()
@@ -137,14 +148,14 @@ class TestRuleProjections(object):
             "b", rule)
 
         assert(lifting == {})
-        print(projections["a"]["rule"])
-        print(projections["a"]["instance"])
-        print(projections["a"]["p_p_t"])
-        print(projections["a"]["r_r_t"])
+        # print(projections["a"]["rule"])
+        # print(projections["a"]["instance"])
+        # print(projections["a"]["p_p_t"])
+        # print(projections["a"]["r_r_t"])
 
         lifting, projections = self.hierarchy.get_rule_propagations(
             "b", rule, rhs_typing={"a": {"phd": "red"}})
 
-        print(projections["a"]["rule"])
-        print(projections["a"]["p_p_t"])
-        print(projections["a"]["r_r_t"])
+        # print(projections["a"]["rule"])
+        # print(projections["a"]["p_p_t"])
+        # print(projections["a"]["r_r_t"])
