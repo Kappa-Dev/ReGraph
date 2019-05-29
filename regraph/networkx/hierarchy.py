@@ -28,6 +28,7 @@ from regraph.networkx import type_checking
 
 from regraph.networkx.category_utils import (compose,
                                              get_unique_map_to_pullback_complement_full,
+                                             get_unique_map_from_pushout,
                                              check_homomorphism,
                                              is_total_homomorphism,
                                              relation_to_span,
@@ -1684,7 +1685,7 @@ class NetworkXHierarchy(nx.DiGraph):
                 propagation_rule.p_rhs, inplace)
             projection_results[graph] = {
                 "g_g_prime": g_g_prime,
-                "rhs_g_prime": rhs_g_prime
+                "r_g_prime": rhs_g_prime
             }
 
         # Restore typing
@@ -1710,9 +1711,21 @@ class NetworkXHierarchy(nx.DiGraph):
                         p_successor_successor = compose(
                             rule_liftings[successor]["rule"].p_lhs,
                             rule_liftings[successor]["instance"])
-                        # combile these guys with the rest of info
+                        p_graph_p_successor = {}
+                        for k, v in p_graph_successor.items():
+                            p_node_g = rule_liftings["graph"]["p_g_p"][k]
+                            for vv in keys_by_value(p_successor_successor, v):
+                                p_node_s = rule_liftings["successor"]["p_g_p"][vv]
+                                if (p_node_s == p_node_g):
+                                    p_graph_p_successor[p_node_g] = p_node_s
+                                    break
                         # Apply the UP of PBC
                         new_typing = get_unique_map_to_pullback_complement_full(
+                            lifting_results["successor"]["p_g_m"],
+                            lifting_results["successor"]["g_m_g"],
+                            p_graph_p_successor,
+                            result["p_g_m"],
+                            compose(result["g_m_g"], old_typing)
                         )
                     # already projected to the successor
                     elif successor in projection_results:
@@ -1726,22 +1739,66 @@ class NetworkXHierarchy(nx.DiGraph):
 
         for graph, result in projection_results.items():
             for predecessor in self.predecessors(graph):
+                old_typing = self.get_typing(predecessor, graph)
                 if predecessor == graph_id:
-                    pass
+                    new_typing = get_unique_map_from_pushout(
+                        self.graph[predecessor],
+                        g_m_g_prime,
+                        r_g_prime,
+                        compose(
+                            compose(g_m_g, old_typing),
+                            result["g_g_prime"]),
+                        compose(
+                            rule_projections[graph]["r_r_t"],
+                            result["r_g_prime"])
+                    )
                 else:
                     # already projected to the predecessor
                     if predecessor in projection_results:
                         pass
                     elif predecessor in lifting_results:
                         # the edge was visited from the predecessor
-                        pass
+                        # Find P pred -> P graph
+                        p_pred_graph = compose(
+                            rule_projections[predecessor]["instance"],
+                            old_typing)
+                        p_pred_p_graph = {}
+                        for k, v in rule_projections[
+                                predecessor]["instance"].items():
+                            p_pred_p_graph[k] = list(
+                                keys_by_value(
+                                    rule_projections[graph]["instance"],
+                                    p_pred_graph[k]))[0]
+                        # Find R pred -> R graph
+                        r_pred_r_graph = {}
+                        for k, r_node in rule_projections[
+                                predecessor]["r_r_t"].items():
+                            p_pred_values = keys_by_value(
+                                rule_projections[predecessor]["rule"].p_rhs, k)
+                            for v in p_pred_values:
+                                r_graph = rule_projections[
+                                    graph]["rule"].p_rhs[p_pred_p_graph[v]]
+                                r_node_from_graph = rule_projections[
+                                    graph]["r_r_t"][r_graph]
+                                if (r_node_from_graph == r_node):
+                                    r_pred_r_graph[k] = r_graph
+                                    break
+                        # Apply the UP of PO
+                        new_typing = get_unique_map_from_pushout(
+                            self.graph[predecessor],
+                            projection_results[predecessor]["g_g_prime"],
+                            projection_results[predecessor]["r_g_prime"],
+                            compose(
+                                old_typing,
+                                result["g_g_prime"]),
+                            compose(r_pred_r_graph, result["r_g_prime"])
+                        )
                     # didn't touch the predecessor
                     else:
                         old_typing = self.get_typing(predecessor, graph)
                         new_typing = compose(old_typing, result["g_g_prime"])
                         self._update_mapping(predecessor, graph, new_typing)
-
-
+                self._update_mapping(predecessor, graph, new_typing)
 
     def rewrite(self, graph_id, rule, instance=None,
                 p_typing=None, rhs_typing=None,
