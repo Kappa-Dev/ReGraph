@@ -1719,11 +1719,12 @@ class NetworkXHierarchy(nx.DiGraph):
 
         return rule_hierarchy
 
-    def apply_rule_hierarchy(self, origin_id, rule_hierarchy, inplace=False):
+    def apply_rule_hierarchy(self, origin_id, rule_hierarchy, instances, inplace=False):
         """Rewrite and propagate from precomputed rule propagations."""
         updated_graphs = {}
         # Apply rules to the hierarchy
-        for graph_id, (rule, instance) in rule_hierarchy["rules"].items():
+        for graph_id, rule in rule_hierarchy["rules"].items():
+            instance = instances[graph_id]
             g_m, p_g_m, g_m_g =\
                 pullback_complement(rule.p, rule.lhs, self.graph[graph_id],
                                     rule.p_lhs, instance, inplace)
@@ -1745,7 +1746,7 @@ class NetworkXHierarchy(nx.DiGraph):
 
         for graph, result in updated_graphs.items():
             if graph != origin_id:
-                rule = rule_hierarchy["rules"][graph][0]
+                rule = rule_hierarchy["rules"][graph]
                 if rule.is_restrictive():
                     # update typing by successors
                     for successor in self.successors(graph):
@@ -1848,14 +1849,14 @@ class NetworkXHierarchy(nx.DiGraph):
                 graphs={k: v["g_result"] for k, v in updated_graphs.items()},
                 homomorphisms=homomorphisms,
                 relations=relations)
-            return (self, r_g_prime)
+            return (self, {k: v["r_g_prime"] for k, v in updated_graphs.items()})
         else:
             new_graph = copy.deepcopy(self)
             new_graph._update(
                 graphs={k: v["g_result"] for k, v in updated_graphs.items()},
                 homomorphisms=homomorphisms,
                 relations=relations)
-            return (new_graph, r_g_prime)
+            return (new_graph, {k: v["r_g_prime"] for k, v in updated_graphs.items()})
 
     def rewrite(self, graph_id, rule, instance=None,
                 p_typing=None, rhs_typing=None,

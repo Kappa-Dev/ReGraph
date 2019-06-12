@@ -106,18 +106,18 @@ class TestRuleProjections(object):
         rule = Rule(p, pattern, p_lhs=p_lhs)
 
         # Test canonical rule lifting
-        rule_hierarchy = self.hierarchy.get_rule_propagations(
+        rule_hierarchy, instances = self.hierarchy.get_rule_propagations(
             "b", rule)
 
         # Test non-canonical rule lifting
-        rule_hierarchy = self.hierarchy.get_rule_propagations(
+        rule_hierarchy, instances = self.hierarchy.get_rule_propagations(
             "b", rule, p_typing={"c": {"Alice": "girl"}})
 
         # print(lifting["c"]["rule"])
         # print(lifting["c"]["p_g_p"])
 
         # Test non-canonical rule lifting
-        rule_hierarchy = self.hierarchy.get_rule_propagations(
+        rule_hierarchy, instances = self.hierarchy.get_rule_propagations(
             "b", rule, p_typing={"c": {"Alice": {"girl", "generic"}, "Bob": "boy"}})
 
         instance = {
@@ -125,10 +125,11 @@ class TestRuleProjections(object):
         }
 
         new_hierarchy, rhs_g = self.hierarchy.apply_rule_hierarchy(
-            "b", rule_hierarchy, inplace=False)
+            "b", rule_hierarchy, instances, inplace=False)
         print(new_hierarchy.graph["b"].nodes())
         print(new_hierarchy.graph["c"].nodes())
         print(new_hierarchy.typing["c"]["b"])
+        print(rhs_g)
         # print(lifting["c"]["rule"])
         # print(lifting["c"]["p_g_p"])
 
@@ -142,7 +143,7 @@ class TestRuleProjections(object):
         rule.inject_add_node("phd")
         rule.inject_add_edge("phd", "institute", {"type": "internship"})
 
-        rule_hierarchy = self.hierarchy.get_rule_propagations(
+        rule_hierarchy, instances = self.hierarchy.get_rule_propagations(
             "b", rule)
 
         # print(projections["a"]["rule"])
@@ -150,7 +151,7 @@ class TestRuleProjections(object):
         # print(projections["a"]["p_p_t"])
         # print(projections["a"]["r_r_t"])
 
-        rule_hierarchy = self.hierarchy.get_rule_propagations(
+        rule_hierarchy, instances = self.hierarchy.get_rule_propagations(
             "b", rule, rhs_typing={"a": {"phd": "red"}})
 
         instance = {
@@ -159,7 +160,9 @@ class TestRuleProjections(object):
         print(rule_hierarchy)
 
         new_hierarchy, rhs_g = self.hierarchy.apply_rule_hierarchy(
-            "b", rule_hierarchy, inplace=False)
+            "b", rule_hierarchy, instances, inplace=False)
         print(new_hierarchy.typing["b"]["a"])
         print(new_hierarchy.typing["bb"]["a"])
         print(new_hierarchy.typing["b"]["bb"])
+        print(rhs_g)
+        print(instances)

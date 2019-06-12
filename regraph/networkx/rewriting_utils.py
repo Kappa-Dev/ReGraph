@@ -691,10 +691,12 @@ def get_rule_hierarchy(hierarchy, origin_id, rule, instance,
         "rule_homomorphisms": {}
     }
 
-    rule_hierarchy["rules"][origin_id] = (rule, instance)
+    rule_hierarchy["rules"][origin_id] = rule
+    instances = {origin_id: instance}
 
     for graph, data in liftings.items():
-        rule_hierarchy["rules"][graph] = (data["rule"], data["instance"])
+        rule_hierarchy["rules"][graph] = data["rule"]
+        instances[graph] = data["instance"]
         for successor in hierarchy.successors(graph):
             old_typing = hierarchy.get_typing(graph, successor)
             if successor == origin_id:
@@ -746,7 +748,8 @@ def get_rule_hierarchy(hierarchy, origin_id, rule, instance,
                     pass
 
     for graph, data in projections.items():
-        rule_hierarchy["rules"][graph] = (data["rule"], data["instance"])
+        rule_hierarchy["rules"][graph] = data["rule"]
+        instances[graph] = data["instance"]
         for predecessor in hierarchy.predecessors(graph):
             old_typing = hierarchy.get_typing(predecessor, graph)
             if predecessor == origin_id:
@@ -794,4 +797,10 @@ def get_rule_hierarchy(hierarchy, origin_id, rule, instance,
                 else:
                     pass
 
-    return rule_hierarchy
+    return rule_hierarchy, instances
+
+
+def _compose_rule_hierarchies(rule_hierarchy1, lhs_instances1, rhs_instances1,
+                              rule_hierarchy2, lhs_instances2, rhs_instances2):
+    """Compose two rule hierarchies."""
+    pass
