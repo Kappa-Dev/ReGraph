@@ -33,6 +33,11 @@ from greenery.lego import parse
 
 from regraph.exceptions import AttributeSetError
 
+try:
+    re._pattern_type = re.Pattern
+except:
+    pass
+
 
 def _hashify(d):
     """Hashify a dictionary to a list of tuples."""
@@ -48,7 +53,7 @@ def _hashify(d):
 def _regex_to_string(a):
     if isinstance(a, str):
         return a
-    elif isinstance(a, re.Pattern):
+    elif isinstance(a, re._pattern_type):
         return a.pattern
     elif isinstance(a, RegexSet):
         if a.pattern is not None:
@@ -424,7 +429,7 @@ class RegexSet(AttributeSet):
 
         Parameters
         ----------
-        other : set, str, re.Pattern, RegexSet
+        other : set, str, re._pattern_type, RegexSet
             Another regex to test inclusion.
 
         Returns
@@ -444,7 +449,7 @@ class RegexSet(AttributeSet):
             def included(a):
                 if isinstance(a, str):
                     other_exp = parse(a)
-                elif isinstance(a, re.Pattern):
+                elif isinstance(a, re._pattern_type):
                     other_exp = parse(a.pattern)
                 elif isinstance(a, RegexSet):
                     if a.pattern:
@@ -453,7 +458,7 @@ class RegexSet(AttributeSet):
                         return False
                 else:
                     raise AttributeSetError(
-                        "Regexp object should be of type `str` or `re.Pattern`!"
+                        "Regexp object should be of type `str` or `re._pattern_type`!"
                     )
                 return (self_exp & other_exp.everythingbut()).empty()
 
@@ -486,7 +491,7 @@ class RegexSet(AttributeSet):
 
         Parameters
         ----------
-        other : set, str, re.Pattern, RegexSet
+        other : set, str, re._pattern_type, RegexSet
 
         Returns
         -------
@@ -547,7 +552,7 @@ class RegexSet(AttributeSet):
 
         Parameters
         ----------
-        other : set, str, re.Pattern, RegexSet
+        other : set, str, re._pattern_type, RegexSet
 
         Returns
         -------
@@ -626,7 +631,7 @@ class RegexSet(AttributeSet):
 
         Parameters
         ----------
-        other : set, str, re.Pattern, RegexSet
+        other : set, str, re._pattern_type, RegexSet
 
         Returns
         -------
