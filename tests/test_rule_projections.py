@@ -3,6 +3,7 @@ import networkx as nx
 from regraph import Rule
 from regraph import NetworkXHierarchy
 from regraph import primitives
+from regraph.networkx.rewriting_utils import get_rule_hierarchy
 
 
 class TestRuleProjections(object):
@@ -105,31 +106,26 @@ class TestRuleProjections(object):
         rule = Rule(p, pattern, p_lhs=p_lhs)
 
         # Test canonical rule lifting
-        lifting, projections = self.hierarchy.get_rule_propagations(
+        rule_hierarchy = self.hierarchy.get_rule_propagations(
             "b", rule)
 
-        assert(projections == {})
-        # print(lifting["c"]["rule"])
-        # print(lifting["c"]["instance"])
-        # print(lifting["c"]["p_g_p"])
-
-        # Test canonical rule lifting
-        lifting, projections = self.hierarchy.get_rule_propagations(
+        # Test non-canonical rule lifting
+        rule_hierarchy = self.hierarchy.get_rule_propagations(
             "b", rule, p_typing={"c": {"Alice": "girl"}})
 
         # print(lifting["c"]["rule"])
         # print(lifting["c"]["p_g_p"])
 
-        # Test canonical rule lifting
-        lifting, projections = self.hierarchy.get_rule_propagations(
+        # Test non-canonical rule lifting
+        rule_hierarchy = self.hierarchy.get_rule_propagations(
             "b", rule, p_typing={"c": {"Alice": {"girl", "generic"}, "Bob": "boy"}})
 
         instance = {
             n: n for n in rule.lhs.nodes()
         }
 
-        new_hierarchy, rhs_g = self.hierarchy.apply_propagations(
-            "b", rule, instance, lifting, projections, inplace=False)
+        new_hierarchy, rhs_g = self.hierarchy.apply_rule_hierarchy(
+            "b", rule_hierarchy, inplace=False)
         print(new_hierarchy.graph["b"].nodes())
         print(new_hierarchy.graph["c"].nodes())
         print(new_hierarchy.typing["c"]["b"])
@@ -146,24 +142,24 @@ class TestRuleProjections(object):
         rule.inject_add_node("phd")
         rule.inject_add_edge("phd", "institute", {"type": "internship"})
 
-        lifting, projections = self.hierarchy.get_rule_propagations(
+        rule_hierarchy = self.hierarchy.get_rule_propagations(
             "b", rule)
 
-        assert(lifting == {})
         # print(projections["a"]["rule"])
         # print(projections["a"]["instance"])
         # print(projections["a"]["p_p_t"])
         # print(projections["a"]["r_r_t"])
 
-        lifting, projections = self.hierarchy.get_rule_propagations(
+        rule_hierarchy = self.hierarchy.get_rule_propagations(
             "b", rule, rhs_typing={"a": {"phd": "red"}})
 
         instance = {
             n: n for n in rule.lhs.nodes()
         }
+        print(rule_hierarchy)
 
-        new_hierarchy, rhs_g = self.hierarchy.apply_propagations(
-            "b", rule, instance, lifting, projections, inplace=False)
+        new_hierarchy, rhs_g = self.hierarchy.apply_rule_hierarchy(
+            "b", rule_hierarchy, inplace=False)
         print(new_hierarchy.typing["b"]["a"])
         print(new_hierarchy.typing["bb"]["a"])
         print(new_hierarchy.typing["b"]["bb"])

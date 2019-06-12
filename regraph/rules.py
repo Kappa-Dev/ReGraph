@@ -72,7 +72,7 @@ class Rule(object):
         values -- nodes of `rhs`.
     """
 
-    def __init__(self, p, lhs, rhs=None, p_lhs=None, p_rhs=None):
+    def __init__(self, p=None, lhs=None, rhs=None, p_lhs=None, p_rhs=None):
         """Rule initialization.
 
         A rule is initialized with p, lhs, rhs graphs, and
@@ -99,6 +99,17 @@ class Rule(object):
             a dictionary with keys -- nodes of `p`,
             values -- nodes of `rhs`
         """
+        if lhs is None:
+            if p is not None:
+                lhs = p
+            else:
+                lhs = p = nx.DiGraph()
+        if rhs is None:
+            if p is not None:
+                rhs = p
+            else:
+                p = rhs = nx.DiGraph()
+
         if not p_lhs:
             self.p_lhs = identity(p, lhs)
         else:

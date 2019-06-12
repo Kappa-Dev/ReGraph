@@ -619,8 +619,9 @@ def _get_rule_liftings(hierarchy, origin_id, rule, instance, p_typing):
                         for n in p_g_nodes_to_remove:
                             primitives.remove_node(canonical_p_g, n)
                     liftings[graph] = {
-                        "rule": Rule(canonical_p_g, l_g, p_lhs=p_g_l_g),
+                        "rule": Rule(p=canonical_p_g, lhs=l_g, p_lhs=p_g_l_g),
                         "instance": l_g_g,
+                        "l_g_l": l_g_l,
                         "p_g_p": p_g_p
                     }
 
@@ -673,10 +674,124 @@ def _get_rule_projections(hierarchy, origin_id, rule, instance, rhs_typing):
                                     else:
                                         p_t_r_t[keys_by_value(p_t_t, t_node)[0]] = n
                     projections[graph] = {
-                        "rule": Rule(p_t, p_t, r_t, p_rhs=p_t_r_t),
+                        "rule": Rule(p=p_t, rhs=r_t, p_rhs=p_t_r_t),
                         "instance": p_t_t,
                         "p_p_t": p_p_t,
                         "r_r_t": r_r_t
                     }
 
     return projections
+
+
+def get_rule_hierarchy(hierarchy, origin_id, rule, instance,
+                       liftings, projections):
+    """Get a hierarchy of rules."""
+    rule_hierarchy = {
+        "rules": {},
+        "rule_homomorphisms": {}
+    }
+
+    rule_hierarchy["rules"][origin_id] = (rule, instance)
+
+    for graph, data in liftings.items():
+        rule_hierarchy["rules"][graph] = (data["rule"], data["instance"])
+        for successor in hierarchy.successors(graph):
+            old_typing = hierarchy.get_typing(graph, successor)
+            if successor == origin_id:
+                graph_lhs_successor_lhs = data["l_g_l"]
+                graph_p_successor_p = data["p_g_p"]
+                rule_hierarchy["rule_homomorphisms"][(graph, successor)] = (
+                    graph_lhs_successor_lhs,
+                    graph_p_successor_p,
+                    None
+                )
+            else:
+                l_graph_successor = compose(
+                    liftings[graph]["instance"],
+                    old_typing)
+                # already lifted to the successor
+                if successor in liftings:
+                    p_graph_successor = compose(
+                        liftings[graph]["rule"].p_lhs,
+                        l_graph_successor)
+                    p_successor_successor = compose(
+                        liftings[successor]["rule"].p_lhs,
+                        liftings[successor]["instance"])
+
+                    graph_lhs_successor_lhs = {}
+                    for k, v in l_graph_successor.items():
+                        l_node_g = liftings[graph]["l_g_l"][k]
+                        for vv in keys_by_value(liftings[successor]["instance"], v):
+                            l_node_s = liftings[successor]["l_g_l"][vv]
+                            if (l_node_s == l_node_g):
+                                graph_lhs_successor_lhs[l_node_g] = l_node_s
+                                break
+
+                    graph_p_successor_p = {}
+                    for k, v in p_graph_successor.items():
+                        p_node_g = liftings[graph]["p_g_p"][k]
+                        for vv in keys_by_value(p_successor_successor, v):
+                            p_node_s = liftings[successor]["p_g_p"][vv]
+                            if (p_node_s == p_node_g):
+                                graph_p_successor_p[p_node_g] = p_node_s
+                                break
+
+                    rule_hierarchy["rule_homomorphisms"][(graph, successor)] = (
+                        graph_lhs_successor_lhs,
+                        graph_p_successor_p,
+                        None
+                    )
+                # didn't touch the successor or projected to it
+                else:
+                    pass
+
+    for graph, data in projections.items():
+        rule_hierarchy["rules"][graph] = (data["rule"], data["instance"])
+        for predecessor in hierarchy.predecessors(graph):
+            old_typing = hierarchy.get_typing(predecessor, graph)
+            if predecessor == origin_id:
+                predecessor_p_graph_p = data["p_p_t"]
+                predecessor_rhs_graph_rhs = data["r_r_t"]
+                rule_hierarchy["rule_homomorphisms"][(predecessor, graph)] = (
+                    None,
+                    predecessor_p_graph_p,
+                    predecessor_rhs_graph_rhs
+                )
+            else:
+                # already projected to the predecessor
+                if predecessor in projections:
+                    p_pred_graph = compose(
+                        projections[predecessor]["instance"],
+                        old_typing)
+                    predecessor_p_graph_p = {}
+                    for k, v in projections[
+                            predecessor]["instance"].items():
+                        predecessor_p_graph_p[k] = keys_by_value(
+                            projections[graph]["instance"],
+                            p_pred_graph[k])[0]
+                    predecessor_rhs_graph_rhs = {}
+                    for r_node, r_pred_node in projections[
+                            predecessor]["r_r_t"].items():
+                        p_pred_nodes = keys_by_value(
+                            projections[predecessor][
+                                "rule"].p_rhs, r_pred_node)
+                        for v in p_pred_nodes:
+                            print(v, predecessor_p_graph_p)
+                            p_graph_node = predecessor_p_graph_p[v]
+                            print(p_graph_node)
+                            r_graph_node = projections[graph][
+                                "rule"].p_rhs[p_graph_node]
+                        if len(p_pred_nodes) == 0:
+                            r_graph_node = projections[graph]["r_r_t"][
+                                r_node]
+                        predecessor_rhs_graph_rhs[r_pred_node] = r_graph_node
+                    rule_hierarchy["rule_homomorphisms"][(predecessor, graph)] = (
+                        None,
+                        predecessor_p_graph_p,
+                        predecessor_rhs_graph_rhs
+                    )
+                # didn't touch the predecessor or lifter to it
+                else:
+                    pass
+
+    return rule_hierarchy
