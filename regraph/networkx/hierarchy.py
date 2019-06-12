@@ -1306,6 +1306,16 @@ class NetworkXHierarchy(nx.DiGraph):
                     rhs_homomorphism, self.adj[s][t]["mapping"])
             return lhs_homomorphism, rhs_homomorphism
 
+    def _update_graph(self, graph_id, graph_obj):
+        """Update the graph object stored at the node of with id 'graph_id'."""
+        assign_attrs(
+            self.node[graph_id], {
+                "graph": graph_obj,
+                "attrs": self.node[graph_id]["attrs"]
+            }
+        )
+        self.graph[graph_id] = self.node[graph_id]["graph"]
+
     def _update_mapping(self, source, target, mapping):
         """Update the mapping dictionary from source to target."""
         assign_attrs(
@@ -1317,6 +1327,66 @@ class NetworkXHierarchy(nx.DiGraph):
         )
         self.typing[source][target] = self.adj[
             source][target]["mapping"]
+
+    def _update_relation(self, left, right, relation):
+        """Update the relation dictionaries (left and right)."""
+        old_attrs = copy.deepcopy(self.relation_edges[left, right]["attrs"])
+        self.remove_relation(left, right)
+        self.add_relation(left, right, relation, old_attrs)
+
+    def _update_rule(self, rule_id, rule_obj):
+        """Update the rule object stored at the node of with id 'rule_id'."""
+        assign_attrs(
+            self.node[rule_id],
+            {
+                "rule": rule_obj,
+                "attrs": self.node[rule_id]["attrs"]
+            }
+        )
+        self.rule[rule_id] = self.node[rule_id]["rule"]
+
+    def _update_rule_homomorphism(self, source, target, lhs_h, rhs_h):
+        assign_attrs(
+            self.adj[source][target],
+            {
+                "lhs_mapping": lhs_h,
+                "rhs_mapping": rhs_h,
+                "attrs": self.adj[source][target]["attrs"]
+            }
+        )
+        self.rule_lhs_typing[source][target] = self.adj[source][target][
+            "lhs_mapping"]
+        self.rule_rhs_typing[source][target] = self.adj[source][target][
+            "rhs_mapping"]
+
+    def _update(self, graphs=None, homomorphisms=None, relations=None,
+                rules=None, rule_homomorphisms=None):
+        """Update parts of hierarchy with new objects."""
+        if graphs is None:
+            graphs = dict()
+        if homomorphisms is None:
+            homomorphisms = dict()
+        if relations is None:
+            relations = dict()
+        if rules is None:
+            rules = dict()
+        if rule_homomorphisms is None:
+            rule_homomorphisms = dict()
+
+        for graph, graph_obj in graphs.items():
+            self._update_graph(graph, graph_obj)
+
+        for (s, t), mapping in homomorphisms.items():
+            self._update_mapping(s, t, mapping)
+
+        for (l, r), relation in relations.items():
+            self._update_relation(l, r, relation)
+
+        for rule, rule_obj in rules.items():
+            self._update_rule(rule, rule_obj)
+
+        for (s, t), (lhs_h, rhs_h) in rule_homomorphisms.items():
+            self._update_rule_homomorphism(s, t, lhs_h, rhs_h)
 
     def _path_from_rule(self, path):
         s = path[0]
@@ -1658,6 +1728,12 @@ class NetworkXHierarchy(nx.DiGraph):
         g_prime, g_m_g_prime, r_g_prime = pushout(rule.p, g_m, rule.rhs,
                                                   p_g_m, rule.p_rhs, inplace)
 
+        updated_graphs = {
+            graph_id: g_prime
+        }
+        homomorphisms = dict()
+        relations = dict()
+
         # Apply rule liftings
         lifting_results = {}
         for graph, propagation in rule_liftings.items():
@@ -1666,12 +1742,13 @@ class NetworkXHierarchy(nx.DiGraph):
             graph_m, p_g_graph_m, graph_m_graph = pullback_complement(
                 propagation_rule.p, propagation_rule.lhs,
                 self.get_graph(graph), propagation_rule.p_lhs,
-                propagation_instance, inplace
+                propagation_instance, False
             )
             lifting_results[graph] = {
                 "p_g_g_m": p_g_graph_m,
                 "g_m_g": graph_m_graph
             }
+            updated_graphs[graph] = graph_m
 
         # Apply rule projections
         projection_results = {}
@@ -1687,8 +1764,9 @@ class NetworkXHierarchy(nx.DiGraph):
                 "g_g_prime": g_g_prime,
                 "r_g_prime": rhs_g_prime
             }
+            updated_graphs[graph] = g_prime
 
-        # Restore typing
+        # Find updated typing and relations
         for graph, result in lifting_results.items():
             for successor in self.successors(graph):
                 old_typing = self.get_typing(graph, successor)
@@ -1735,14 +1813,23 @@ class NetworkXHierarchy(nx.DiGraph):
                     # didn't touch the successor
                     else:
                         new_typing = compose(result["g_m_g"], old_typing)
-                self._update_mapping(graph, successor, new_typing)
+                homomorphisms[(graph, successor)] = new_typing
+
+            # update relations
+            for related_g in self.adjacent_relations(graph):
+                left_dict = self.relation[graph][related_g]
+                new_left_dict = dict()
+                for new_node, old_node in result["g_m_g"].items():
+                    if old_node in left_dict.keys():
+                        new_left_dict[new_node] = left_dict[old_node]
+                relations[(graph, related_g)] = new_left_dict
 
         for graph, result in projection_results.items():
             for predecessor in self.predecessors(graph):
                 old_typing = self.get_typing(predecessor, graph)
                 if predecessor == graph_id:
                     new_typing = get_unique_map_from_pushout(
-                        self.graph[predecessor],
+                        updated_graphs[predecessor].nodes(),
                         g_m_g_prime,
                         r_g_prime,
                         compose(
@@ -1753,10 +1840,10 @@ class NetworkXHierarchy(nx.DiGraph):
                             result["r_g_prime"])
                     )
                 else:
-                    # already projected to the predecessor
-                    if predecessor in projection_results:
+                    if predecessor in lifting_results:
+                        # already projected to the predecessor
                         pass
-                    elif predecessor in lifting_results:
+                    elif predecessor in projection_results:
                         # the edge was visited from the predecessor
                         # Find P pred -> P graph
                         p_pred_graph = compose(
@@ -1771,34 +1858,55 @@ class NetworkXHierarchy(nx.DiGraph):
                                     p_pred_graph[k]))[0]
                         # Find R pred -> R graph
                         r_pred_r_graph = {}
-                        for k, r_node in rule_projections[
+                        for r_node, r_pred_node in rule_projections[
                                 predecessor]["r_r_t"].items():
-                            p_pred_values = keys_by_value(
-                                rule_projections[predecessor]["rule"].p_rhs, k)
-                            for v in p_pred_values:
-                                r_graph = rule_projections[
-                                    graph]["rule"].p_rhs[p_pred_p_graph[v]]
-                                r_node_from_graph = rule_projections[
-                                    graph]["r_r_t"][r_graph]
-                                if (r_node_from_graph == r_node):
-                                    r_pred_r_graph[k] = r_graph
-                                    break
+                            p_pred_nodes = keys_by_value(
+                                rule_projections[predecessor][
+                                    "rule"].p_rhs, r_pred_node)
+                            for v in p_pred_nodes:
+                                p_graph_node = p_pred_p_graph[v]
+                                r_graph_node = rule_projections[graph][
+                                    "rule"].p_rhs[p_graph_node]
+                            if len(p_pred_nodes) == 0:
+                                r_graph_node = rule_projections[graph]["r_r_t"][
+                                    r_node]
+                            r_pred_r_graph[r_pred_node] = r_graph_node
                         # Apply the UP of PO
                         new_typing = get_unique_map_from_pushout(
-                            self.graph[predecessor],
+                            updated_graphs[predecessor].nodes(),
                             projection_results[predecessor]["g_g_prime"],
                             projection_results[predecessor]["r_g_prime"],
-                            compose(
-                                old_typing,
-                                result["g_g_prime"]),
+                            compose(old_typing, result["g_g_prime"]),
                             compose(r_pred_r_graph, result["r_g_prime"])
                         )
                     # didn't touch the predecessor
                     else:
                         old_typing = self.get_typing(predecessor, graph)
                         new_typing = compose(old_typing, result["g_g_prime"])
-                        self._update_mapping(predecessor, graph, new_typing)
-                self._update_mapping(predecessor, graph, new_typing)
+                homomorphisms[(predecessor, graph)] = new_typing
+
+            # update relations
+            for related_g in self.adjacent_relations(graph):
+                left_dict = self.relation[graph][related_g]
+                new_left_dict = dict()
+                for old_node, new_node in result["g_g_prime"].values():
+                    if old_node in left_dict.keys():
+                        new_left_dict[new_node] = left_dict[old_node]
+                relations[(graph, related_g)] = new_left_dict
+
+        if inplace:
+            self._update(
+                graphs=updated_graphs,
+                homomorphisms=homomorphisms,
+                relations=relations)
+            return (self, r_g_prime)
+        else:
+            new_graph = copy.deepcopy(self)
+            new_graph._update(
+                graphs=updated_graphs,
+                homomorphisms=homomorphisms,
+                relations=relations)
+            return (new_graph, r_g_prime)
 
     def rewrite(self, graph_id, rule, instance=None,
                 p_typing=None, rhs_typing=None,

@@ -50,9 +50,8 @@ class TestRuleProjections(object):
             "institute": "blue"
         }
         self.hierarchy.add_graph("bb", b)
-        self.hierarchy.add_typing(
-            "b", "bb",
-            {n: n for n in b.nodes()})
+        self.hierarchy.add_typing("b", "bb",
+                                  {n: n for n in b.nodes()})
         self.hierarchy.add_typing("b", "a", b_a)
         self.hierarchy.add_typing("bb", "a", b_a)
 
@@ -129,8 +128,11 @@ class TestRuleProjections(object):
             n: n for n in rule.lhs.nodes()
         }
 
-        self.hierarchy.apply_propagations(
-            "b", rule, instance, lifting, projections)
+        new_hierarchy, rhs_g = self.hierarchy.apply_propagations(
+            "b", rule, instance, lifting, projections, inplace=False)
+        print(new_hierarchy.graph["b"].nodes())
+        print(new_hierarchy.graph["c"].nodes())
+        print(new_hierarchy.typing["c"]["b"])
         # print(lifting["c"]["rule"])
         # print(lifting["c"]["p_g_p"])
 
@@ -156,6 +158,12 @@ class TestRuleProjections(object):
         lifting, projections = self.hierarchy.get_rule_propagations(
             "b", rule, rhs_typing={"a": {"phd": "red"}})
 
-        # print(projections["a"]["rule"])
-        # print(projections["a"]["p_p_t"])
-        # print(projections["a"]["r_r_t"])
+        instance = {
+            n: n for n in rule.lhs.nodes()
+        }
+
+        new_hierarchy, rhs_g = self.hierarchy.apply_propagations(
+            "b", rule, instance, lifting, projections, inplace=False)
+        print(new_hierarchy.typing["b"]["a"])
+        print(new_hierarchy.typing["bb"]["a"])
+        print(new_hierarchy.typing["b"]["bb"])

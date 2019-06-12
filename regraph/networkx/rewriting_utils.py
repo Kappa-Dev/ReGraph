@@ -458,7 +458,6 @@ def _apply_changes(hierarchy, upstream_changes, downstream_changes):
     # update relations
     visited = set()
     rels = dict()
-    start = time.time()
     for g1, g2 in upstream_changes["relations"]:
         if (g1, g2) not in visited and (g2, g1) not in visited:
             new_relation = dict()
@@ -550,24 +549,17 @@ def _apply_changes(hierarchy, upstream_changes, downstream_changes):
                 rels[(g1, g2)] = new_relation
                 visited.add((g1, g2))
 
-    # update graphs
+    # updated graphs
+    updated_graphs = dict()
     for graph, (graph_m, _, graph_prime, _) in upstream_changes["graphs"].items():
         if graph_prime is not None:
-            hierarchy.node[graph]["graph"] = graph_prime
+            updated_graphs[graph] = graph_prime
         else:
-            hierarchy.node[graph]["graph"] = graph_m
-        hierarchy.graph[graph] = hierarchy.node[graph]["graph"]
+            updated_graphs[graph] = graph_m
 
     if "graphs" in downstream_changes.keys():
         for graph, (graph_prime, _, _) in downstream_changes["graphs"].items():
-            hierarchy.node[graph]["graph"] = graph_prime
-            hierarchy.graph[graph] = hierarchy.node[graph]["graph"]
-
-    # update relation
-    for (g1, g2), rel in rels.items():
-        old_attrs = copy.deepcopy(hierarchy.relation_edges[g1, g2]["attrs"])
-        hierarchy.remove_relation(g1, g2)
-        hierarchy.add_relation(g1, g2, rel, old_attrs)
+            updated_graphs[graph] = graph_prime
 
     # update homomorphisms
     updated_homomorphisms = dict()
@@ -575,37 +567,13 @@ def _apply_changes(hierarchy, upstream_changes, downstream_changes):
     if "homomorphisms" in downstream_changes.keys():
         updated_homomorphisms.update(downstream_changes["homomorphisms"])
 
-    for (s, t), mapping in updated_homomorphisms.items():
-        primitives.assign_attrs(
-            hierarchy.adj[s][t],
-            {
-                "mapping": mapping,
-                "attrs": hierarchy.adj[s][t]["attrs"]
-            }
-        )
-        hierarchy.typing[s][t] = hierarchy.adj[s][t]["mapping"]
+    hierarchy._update(
+        updated_graphs,
+        updated_homomorphisms,
+        rels,
+        upstream_changes["rules"],
+        upstream_changes["rule_homomorphisms"])
 
-    # update rules & rule homomorphisms
-    for rule, new_rule in upstream_changes["rules"].items():
-        primitives.assign_attrs(
-            hierarchy.node[rule],
-            {
-                "rule": new_rule,
-                "attrs": hierarchy.node[rule]["attrs"]
-            }
-        )
-        hierarchy.rule[rule] = hierarchy.node[rule]["rule"]
-    for (s, t), (lhs_h, rhs_h) in upstream_changes["rule_homomorphisms"].items():
-        primitives.assign_attrs(
-            hierarchy.adj[s][t],
-            {
-                "lhs_mapping": lhs_h,
-                "rhs_mapping": rhs_h,
-                "attrs": hierarchy.adj[s][t]["attrs"]
-            }
-        )
-        hierarchy.rule_lhs_typing[s][t] = hierarchy.adj[s][t]["lhs_mapping"]
-        hierarchy.rule_rhs_typing[s][t] = hierarchy.adj[s][t]["rhs_mapping"]
     return
 
 
@@ -614,6 +582,7 @@ def _get_rule_liftings(hierarchy, origin_id, rule, instance, p_typing):
     if rule.is_restrictive():
         for graph in nx.bfs_tree(hierarchy, origin_id, reverse=True):
             if graph != origin_id:
+                # find the lifting to a graph
                 if hierarchy.is_graph(graph):
                     origin_typing = hierarchy.get_typing(graph, origin_id)
 
@@ -654,6 +623,7 @@ def _get_rule_liftings(hierarchy, origin_id, rule, instance, p_typing):
                         "instance": l_g_g,
                         "p_g_p": p_g_p
                     }
+
     return liftings
 
 
@@ -702,7 +672,6 @@ def _get_rule_projections(hierarchy, origin_id, rule, instance, rhs_typing):
                                         p_t_t[new_p_node] = t_node
                                     else:
                                         p_t_r_t[keys_by_value(p_t_t, t_node)[0]] = n
-
                     projections[graph] = {
                         "rule": Rule(p_t, p_t, r_t, p_rhs=p_t_r_t),
                         "instance": p_t_t,
