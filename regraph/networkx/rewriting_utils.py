@@ -9,6 +9,7 @@ from regraph.networkx.category_utils import (compose,
                                              compose_relation_dicts,
                                              get_unique_map_from_pushout,
                                              get_unique_map_to_pullback,
+                                             get_unique_map_to_pullback_complement_full,
                                              id_of,
                                              is_total_homomorphism,
                                              pullback_complement,
@@ -18,7 +19,7 @@ from regraph.networkx.category_utils import (compose,
                                              image_factorization)
 from regraph import primitives
 from regraph.exceptions import TotalityWarning
-from regraph.rules import Rule
+from regraph.rules import Rule, compose_rules
 from regraph.utils import keys_by_value
 
 
@@ -705,7 +706,7 @@ def get_rule_hierarchy(hierarchy, origin_id, rule, instance,
                 rule_hierarchy["rule_homomorphisms"][(graph, successor)] = (
                     graph_lhs_successor_lhs,
                     graph_p_successor_p,
-                    None
+                    graph_p_successor_p
                 )
             else:
                 l_graph_successor = compose(
@@ -741,7 +742,7 @@ def get_rule_hierarchy(hierarchy, origin_id, rule, instance,
                     rule_hierarchy["rule_homomorphisms"][(graph, successor)] = (
                         graph_lhs_successor_lhs,
                         graph_p_successor_p,
-                        None
+                        graph_p_successor_p
                     )
                 # didn't touch the successor or projected to it
                 else:
@@ -756,7 +757,7 @@ def get_rule_hierarchy(hierarchy, origin_id, rule, instance,
                 predecessor_p_graph_p = data["p_p_t"]
                 predecessor_rhs_graph_rhs = data["r_r_t"]
                 rule_hierarchy["rule_homomorphisms"][(predecessor, graph)] = (
-                    None,
+                    predecessor_p_graph_p,
                     predecessor_p_graph_p,
                     predecessor_rhs_graph_rhs
                 )
@@ -779,9 +780,7 @@ def get_rule_hierarchy(hierarchy, origin_id, rule, instance,
                             projections[predecessor][
                                 "rule"].p_rhs, r_pred_node)
                         for v in p_pred_nodes:
-                            print(v, predecessor_p_graph_p)
                             p_graph_node = predecessor_p_graph_p[v]
-                            print(p_graph_node)
                             r_graph_node = projections[graph][
                                 "rule"].p_rhs[p_graph_node]
                         if len(p_pred_nodes) == 0:
@@ -789,7 +788,7 @@ def get_rule_hierarchy(hierarchy, origin_id, rule, instance,
                                 r_node]
                         predecessor_rhs_graph_rhs[r_pred_node] = r_graph_node
                     rule_hierarchy["rule_homomorphisms"][(predecessor, graph)] = (
-                        None,
+                        predecessor_p_graph_p,
                         predecessor_p_graph_p,
                         predecessor_rhs_graph_rhs
                     )
@@ -798,9 +797,3 @@ def get_rule_hierarchy(hierarchy, origin_id, rule, instance,
                     pass
 
     return rule_hierarchy, instances
-
-
-def _compose_rule_hierarchies(rule_hierarchy1, lhs_instances1, rhs_instances1,
-                              rule_hierarchy2, lhs_instances2, rhs_instances2):
-    """Compose two rule hierarchies."""
-    pass
