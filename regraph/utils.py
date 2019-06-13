@@ -133,9 +133,9 @@ def attrs_intersection(attrs1, attrs2):
     if attrs1 is None or attrs2 is None:
         return {}
     res = dict()
-    for key in attrs1:
-        if key in attrs2:
-            new_set = attrs1[key].intersect(attrs2[key])
+    for key in attrs1.keys():
+        if key in attrs2.keys():
+            new_set = attrs1[key].intersection(attrs2[key])
             if new_set:
                 res[key] = new_set
     return res
@@ -228,6 +228,7 @@ def normalize_relation(relation):
                 new_relation_dict[key] = {values}
     relation = new_relation_dict
     return new_relation_dict
+
 
 def merge_attributes(attr1, attr2, method="union"):
     """Merge two dictionaries of attributes."""

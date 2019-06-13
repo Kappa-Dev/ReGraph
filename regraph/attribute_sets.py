@@ -282,6 +282,8 @@ class FiniteSet(AttributeSet):
         if type(other) == set:
             return FiniteSet(self.fset.intersection(other))
         elif isinstance(other, FiniteSet):
+            # print("here")
+            # print(other.fset, self.fset)
             return FiniteSet(self.fset.intersection(other.fset))
         elif isinstance(other, RegexSet):
             intersection = []
