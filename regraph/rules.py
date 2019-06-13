@@ -20,6 +20,8 @@ from regraph.networkx.category_utils import (identity,
                                              check_homomorphism,
                                              pullback_complement,
                                              get_unique_map_from_pushout,
+                                             get_unique_map_to_pullback_complement_full,
+                                             get_unique_map_to_pullback,
                                              get_unique_map_to_pullback_complement,
                                              pushout,
                                              pullback,
@@ -1985,6 +1987,11 @@ class Rule(object):
         """Create an identity rule."""
         return cls(nx.DiGraph(), nx.DiGraph(), nx.DiGraph())
 
+    def is_identity(self):
+        """Test if the rule is identity."""
+        return len(self.lhs.nodes()) == 0 and len(self.p.nodes()) == 0 and\
+            len(self.rhs.nodes()) == 0
+
 
 def _generate_p_instance(rule, lhs_instance, rhs_instance):
     # Compute representation of p1/p2 instances.
@@ -2009,8 +2016,14 @@ def _generate_p_instance(rule, lhs_instance, rhs_instance):
 
 
 def compose_rules(rule1, lhs_instance1, rhs_instance1,
-                  rule2, lhs_instance2, rhs_instance2):
+                  rule2, lhs_instance2, rhs_instance2,
+                  return_all=False):
     """Compose two rules respecting instances."""
+    if rule1.is_identity() and not return_all:
+        return rule2, lhs_instance2, rhs_instance2
+    if rule2.is_identity() and not return_all:
+        return rule1, lhs_instance1, lhs_instance1
+
     p1_instance = _generate_p_instance(
         rule1, lhs_instance1, rhs_instance1)
     p2_instance = _generate_p_instance(
@@ -2122,7 +2135,25 @@ def compose_rules(rule1, lhs_instance1, rhs_instance1,
             rule.p_lhs[new_p_node] = lhs_node
             rule.p_rhs[new_p_node] = list(rhs_nodes)[0]
 
-    return rule, lhs_instance, rhs_instance
+    if return_all:
+        return rule, lhs_instance, rhs_instance, {
+            "h": h,
+            "rhs1_h": rhs1_h,
+            "lhs2_h": lhs2_h,
+            "p1_p1_p": p1_p1_p,
+            "p1_p_h": p1_p_h,
+            "p2_p2_p": p2_p2_p,
+            "p2_p_h": p2_p_h,
+            "p1_p_lambda": p1_p_lambda,
+            "lhs1_lambda": lhs1_lambda,
+            "p2_p_rho": p2_p_rho,
+            "rhs2_rho": rhs2_rho,
+            "pi_p1_p": pi_p1_p,
+            "pi_p2_p": pi_p2_p
+        }
+
+    else:
+        return rule, lhs_instance, rhs_instance
 
 
 def _fold_lhs(rule, lhs_instance, rhs_instance):
@@ -2202,3 +2233,126 @@ def _create_merging_rule(rule, lhs_instance, rhs_instance):
     left_rule = Rule(rule.lhs, rule.lhs, new_rhs, p_rhs=lhs_new_rhs)
     right_rule = Rule(rule.rhs, rule.rhs, new_rhs, p_rhs=rhs_new_rhs)
     return left_rule, right_rule
+
+
+def compose_rule_hierarchies(rule_hierarchy1, lhs_instances1, rhs_instances1,
+                             rule_hierarchy2, lhs_instances2, rhs_instances2):
+    """Compose two rule hierarchies."""
+    graphs = set(rule_hierarchy1["rules"].keys()).union(
+        rule_hierarchy2["rules"].keys())
+    homomorphisms = set(rule_hierarchy1["rule_homomorphisms"].keys()).union(
+        rule_hierarchy2["rule_homomorphisms"].keys())
+
+    new_rule_hierarchy = {
+        "rules": {},
+        "rule_homomorphisms": {}
+    }
+    new_lhs_instances = {}
+    new_rhs_instances = {}
+
+    composition_data = {}
+
+    # Compose rules
+    for graph in graphs:
+        if graph in rule_hierarchy1["rules"]:
+            rule1 = rule_hierarchy1["rules"][graph]
+            lhs_instance1 = lhs_instances1[graph]
+            rhs_instance1 = rhs_instances1[graph]
+        else:
+            rule1 = Rule.identity_rule()
+            lhs_instance1 = {}
+            rhs_instance1 = {}
+        if graph in rule_hierarchy2["rules"]:
+            rule2 = rule_hierarchy2["rules"][graph]
+            lhs_instance2 = lhs_instances2[graph]
+            rhs_instance2 = rhs_instances2[graph]
+        else:
+            rule2 = Rule.identity_rule()
+            lhs_instance2 = {}
+            rhs_instance2 = {}
+
+        new_rule, new_lhs_instance, new_rhs_instance, data = compose_rules(
+            rule1, lhs_instance1, rhs_instance1,
+            rule2, lhs_instance2, rhs_instance2, return_all=True)
+        new_rule_hierarchy["rules"][graph] = new_rule
+        new_lhs_instances[graph] = new_lhs_instance
+        new_rhs_instances[graph] = new_rhs_instance
+        composition_data[graph] = data
+
+    # Compute rule homomorphisms
+    for source, target in homomorphisms:
+        if (source, target) in rule_hierarchy1["rule_homomorphisms"]:
+            lhs_hom1, p_hom1, rhs_hom1 = rule_hierarchy1["rule_homomorphisms"][
+                (source, target)]
+        else:
+            lhs_hom1, p_hom1, rhs_hom1 = ({}, {}, {})
+        if (source, target) in rule_hierarchy2["rule_homomorphisms"]:
+            lhs_hom2, p_hom2, rhs_hom2 = rule_hierarchy2["rule_homomorphisms"][
+                (source, target)]
+        else:
+            lhs_hom2, p_hom2, rhs_hom2 = ({}, {}, {})
+        source_data = composition_data[source]
+        target_data = composition_data[target]
+
+        # H_G -> H_T
+        h_hom = get_unique_map_from_pushout(
+            source_data["h"].nodes(),
+            source_data["rhs1_h"],
+            source_data["lhs2_h"],
+            compose(rhs_hom1, target_data["rhs1_h"]),
+            compose(lhs_hom2, target_data["lhs2_h"])
+        )
+        # P*G_1 -> P*T_1
+        p1_p_hom = get_unique_map_to_pullback_complement_full(
+            target_data["p1_p1_p"], target_data["p1_p_h"],
+            p_hom1, source_data["p1_p1_p"],
+            compose(source_data["p1_p_h"], h_hom))
+
+        # P*G_2 -> P*T_2
+        p2_p_hom = get_unique_map_to_pullback_complement_full(
+            target_data["p2_p2_p"], target_data["p2_p_h"],
+            p_hom2, source_data["p2_p2_p"],
+            compose(source_data["p2_p_h"], h_hom))
+
+        # Pi_G -> Pi_T
+        pi_hom = get_unique_map_to_pullback(
+            new_rule_hierarchy["rules"][target].p.nodes(),
+            target_data["pi_p1_p"], target_data["pi_p2_p"],
+            compose(source_data["pi_p1_p"], p1_p_hom),
+            compose(source_data["pi_p2_p"], p2_p_hom))
+
+        # L_G -> L_T
+        lambda_hom = get_unique_map_from_pushout(
+            new_rule_hierarchy["rules"][source].lhs.nodes(),
+            source_data["lhs1_lambda"], source_data["p1_p_lambda"],
+            compose(lhs_hom1, target_data["lhs1_lambda"]),
+            compose(p1_p_hom, target_data["p1_p_lambda"]))
+
+        # R_G -> R_T
+        rho_hom = get_unique_map_from_pushout(
+            new_rule_hierarchy["rules"][source].rhs.nodes(),
+            source_data["p2_p_rho"], source_data["rhs2_rho"],
+            compose(p2_p_hom, target_data["p2_p_rho"]),
+            compose(rhs_hom2, target_data["rhs2_rho"]))
+
+        new_rule_hierarchy["rule_homomorphisms"][(source, target)] = (
+            lambda_hom, pi_hom, rho_hom
+        )
+    return new_rule_hierarchy, new_lhs_instances, new_rhs_instances
+
+
+def invert_rule_hierarchy(rule_hierarchy):
+    """Get inverted rule hierarchy (swapped lhs and rhs)."""
+    new_rule_hierarchy = {
+        "rules": {},
+        "rule_homomorphisms": {}
+    }
+    for graph, rule in rule_hierarchy["rules"].items():
+        new_rule_hierarchy["rules"][graph] = rule.get_inverted_rule()
+
+    for (source, target), (lhs_h, p_h, rhs_h) in rule_hierarchy[
+            "rule_homomorphism"].items():
+        new_rule_hierarchy["rule_homomorphism"][(source, target)] = (
+            rhs_h, p_h, lhs_h
+        )
+    return new_rule_hierarchy
