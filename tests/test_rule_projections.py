@@ -1,9 +1,8 @@
 import networkx as nx
 
-from regraph import Rule
+from regraph import Rule, compose_rule_hierarchies
 from regraph import NetworkXHierarchy
 from regraph import primitives
-from regraph.networkx.rewriting_utils import get_rule_hierarchy
 
 
 class TestRuleProjections(object):
@@ -105,35 +104,13 @@ class TestRuleProjections(object):
         }
         rule = Rule(p, pattern, p_lhs=p_lhs)
 
-        # Test canonical rule lifting
-        rule_hierarchy, instances = self.hierarchy.get_rule_propagations(
-            "b", rule)
-
         # Test non-canonical rule lifting
-        rule_hierarchy, instances = self.hierarchy.get_rule_propagations(
-            "b", rule, p_typing={"c": {"Alice": "girl"}})
-
-        # print(lifting["c"]["rule"])
-        # print(lifting["c"]["p_g_p"])
-
-        # Test non-canonical rule lifting
-        rule_hierarchy, instances = self.hierarchy.get_rule_propagations(
+        rule_hierarchy1, lhs_instances1 = self.hierarchy.get_rule_propagations(
             "b", rule, p_typing={"c": {"Alice": {"girl", "generic"}, "Bob": "boy"}})
 
-        instance = {
-            n: n for n in rule.lhs.nodes()
-        }
+        new_hierarchy, rhs_instances1 = self.hierarchy.apply_rule_hierarchy(
+            rule_hierarchy1, lhs_instances1, inplace=False)
 
-        new_hierarchy, rhs_g = self.hierarchy.apply_rule_hierarchy(
-            "b", rule_hierarchy, instances, inplace=False)
-        print(new_hierarchy.graph["b"].nodes())
-        print(new_hierarchy.graph["c"].nodes())
-        print(new_hierarchy.typing["c"]["b"])
-        print(rhs_g)
-        # print(lifting["c"]["rule"])
-        # print(lifting["c"]["p_g_p"])
-
-    def test_projection(self):
         pattern = nx.DiGraph()
         primitives.add_nodes_from(pattern, [
             "school",
@@ -143,26 +120,17 @@ class TestRuleProjections(object):
         rule.inject_add_node("phd")
         rule.inject_add_edge("phd", "institute", {"type": "internship"})
 
-        rule_hierarchy, instances = self.hierarchy.get_rule_propagations(
-            "b", rule)
-
-        # print(projections["a"]["rule"])
-        # print(projections["a"]["instance"])
-        # print(projections["a"]["p_p_t"])
-        # print(projections["a"]["r_r_t"])
-
-        rule_hierarchy, instances = self.hierarchy.get_rule_propagations(
+        rule_hierarchy2, lhs_instances2 = self.hierarchy.get_rule_propagations(
             "b", rule, rhs_typing={"a": {"phd": "red"}})
 
-        instance = {
-            n: n for n in rule.lhs.nodes()
-        }
-        print(rule_hierarchy)
+        new_hierarchy, rhs_instances2 = self.hierarchy.apply_rule_hierarchy(
+            rule_hierarchy2, lhs_instances2, inplace=False)
 
-        new_hierarchy, rhs_g = self.hierarchy.apply_rule_hierarchy(
-            "b", rule_hierarchy, instances, inplace=False)
-        print(new_hierarchy.typing["b"]["a"])
-        print(new_hierarchy.typing["bb"]["a"])
-        print(new_hierarchy.typing["b"]["bb"])
-        print(rhs_g)
-        print(instances)
+        h, l, r = compose_rule_hierarchies(
+            rule_hierarchy1, lhs_instances1, rhs_instances1,
+            rule_hierarchy2, lhs_instances2, rhs_instances2)
+
+        # print(h, l, r)
+        for k, v in h["rules"].items():
+            print("Rule for ", k)
+            print(v)
