@@ -8,7 +8,10 @@ import warnings
 import networkx as nx
 
 from regraph.exceptions import RevisionError, RevisionWarning
-from regraph.rules import compose_rules, Rule, _create_merging_rule
+from regraph.rules import (compose_rules, Rule,
+                           _create_merging_rule,
+                           compose_rule_hierarchies,
+                           invert_rule_hierarchy)
 from regraph.primitives import relabel_node
 from regraph.utils import keys_by_value
 
@@ -367,7 +370,7 @@ class Versioning(ABC):
 
 
 class VersionedGraph(Versioning):
-    """Class for versioned ."""
+    """Class for versioned hierarchies."""
 
     def __init__(self, graph, init_branch="master"):
         """Initialize versioned graph object."""
@@ -429,19 +432,21 @@ class VersionedGraph(Versioning):
                 v: delta["rhs_instance"][k]
                 for k, v in rhs_instance.items()
             }
-            second_round = []
-            for k, v in new_labels.items():
-                if k != v:
-                    try:
-                        relabel_node(self.graph, k, v)
-                    except:
-                        second_round.append(k)
-            for k in second_round:
-                if k != new_labels[k]:
-                    try:
-                        relabel_node(self.graph, k, new_labels[k])
-                    except:
-                        pass
+
+            relabel_nodes(self.graph, new_labels)
+            # second_round = []
+            # for k, v in new_labels.items():
+            #     if k != v:
+            #         try:
+            #             relabel_node(self.graph, k, v)
+            #         except:
+            #             second_round.append(k)
+            # for k in second_round:
+            #     if k != new_labels[k]:
+            #         try:
+            #             relabel_node(self.graph, k, new_labels[k])
+            #         except:
+            #             pass
 
             rhs_instance = {
                 k: new_labels[v]
@@ -488,5 +493,105 @@ class VersionedGraph(Versioning):
         return rhs_instance, commit_id
 
 
-# class VersionedHierarchy(Versioning);
-#     pass
+class VersionedHierarchy(Versioning);
+    def __init__(self, hierarchy, init_branch="master"):
+        """Initialize versioned graph object."""
+        self.hierarchy = hierarchy
+        super().__init__(init_branch)
+
+    def _refine_delta(self, delta):
+        lhs_instances = self.hierarchy.refine_rule_hierarchy(
+            delta["rule_hierarchy"],
+            delta["lhs_instances"])
+        delta["lhs_instances"] = lhs_instances
+        for graph, rule in delta["rule_hierarchy"]["rules"].items():
+            rule = delta["rule_hierarchy"]["rules"][graph]
+            rhs_instance = delta["rhs_instances"][graph]
+            for n in rule.rhs.nodes():
+                if n not in rhs_instance.keys():
+                    rhs_instance[n] = delta["lhs_instances"][graph][
+                        rule.p_lhs[keys_by_value(rule.p_rhs, n)[0]]]
+            delta["rhs_instances"][graph] = rhs_instance
+
+    def _compose_deltas(self, delta1, delta2):
+        """Computing composition of two deltas."""
+        rule, lhs, rhs = compose_rule_hierarchies(
+            delta1["rule_hierarchy"],
+            delta1["lhs_instances"],
+            delta1["rhs_instances"],
+            delta2["rule_hierarchy"],
+            delta2["lhs_instances"],
+            delta2["rhs_instances"])
+
+        return {
+            "rule": rule,
+            "lhs_instance": lhs,
+            "rhs_instance": rhs
+        }
+
+    @staticmethod
+    def _invert_delta(delta):
+        """Reverse the direction of delta."""
+        return {
+            "rule_hierarchy": invert_rule_hierarchy(
+                delta["rule_hierarchy"]),
+            "lhs_instances": delta["rhs_instances"],
+            "rhs_instances": delta["lhs_instances"]
+        }
+
+    @staticmethod
+    def _create_identity_delta():
+        """Create an identity-delta."""
+        identity_delta = {
+            "rule_hierarchy": {
+                "rules": {},
+                "rule_homomorphisms": {}
+            },
+            "lhs_instances": {},
+            "rhs_instances": {}
+        }
+        return identity_delta
+
+    def _apply_delta(self, delta, relabel=True):
+        """Apply delta to the current hierarchy version."""
+        _, rhs_instances = self.hierarchy.apply_rule_hierarchy(
+            delta["rule_hierarchy"], delta["lhs_instances"] inplace=True)
+
+        if relabel:
+            # Relabel nodes to correspond to the stored rhs
+            for graph, rhs_instance in delta["rhs_instances"].items():
+                new_labels = {
+                    v: delta["rhs_instances"][graph][k]
+                    for k, v in rhs_instance.items()
+                }
+                self.hierarchy.relabel_nodes(graph, new_labels)
+                rhs_instance = {
+                    k: new_labels[v]
+                    for k, v in rhs_instance.items()
+                }
+        return rhs_instances
+
+    def _merge_into_current_branch(self, delta):
+        """Merge branch with delta into the current branch."""
+        pass
+        
+
+    def rewrite(self, graph_id, rule, instance=None,
+                p_typing=None, rhs_typing=None,
+                strict=False, inplace=True, message=""):
+        """Rewrite the versioned hierarchy and commit."""
+        rule_hierarchy, lhs_instances = self.hierarchy.get_rule_propagations(
+            graph_id, rule, instance, p_typing, rhs_typing)
+
+        lhs_instances = self.hierarchy.refine_rule_hierarchy(
+            rule_hierarchy, lhs_instances)
+
+        new_hierarchy, rhs_instances = self.hierarchy.apply_rule_hierarchy(
+            rule_hierarchy, lhs_instances, inplace=True)
+
+        commit_id = self.commit({
+            "rule_hierarchy": rule_hierarchy,
+            "lhs_instances": lhs_instances,
+            "rhs_instance": rhs_instances
+        }, message=message)
+        return rhs_instances, commit_id
