@@ -578,108 +578,120 @@ def _apply_changes(hierarchy, upstream_changes, downstream_changes):
     return
 
 
-def _get_rule_liftings(hierarchy, origin_id, rule, instance, p_typing):
+def _get_rule_liftings(hierarchy, origin_id, rule, instance,
+                       p_typing=None, ignore=None):
+    if ignore is None:
+        ignore = []
+    if p_typing is None:
+        p_typing = {}
     liftings = {}
     if rule.is_restrictive():
         for graph in nx.bfs_tree(hierarchy, origin_id, reverse=True):
-            if graph != origin_id:
-                # find the lifting to a graph
-                if hierarchy.is_graph(graph):
-                    origin_typing = hierarchy.get_typing(graph, origin_id)
+            if graph not in ignore:
+                if graph != origin_id:
+                    # find the lifting to a graph
+                    if hierarchy.is_graph(graph):
+                        origin_typing = hierarchy.get_typing(graph, origin_id)
 
-                    # Compute L_G
-                    l_g, l_g_g, l_g_l = pullback(
-                        hierarchy.graph[graph], rule.lhs,
-                        hierarchy.graph[origin_id],
-                        origin_typing, instance)
+                        # Compute L_G
+                        l_g, l_g_g, l_g_l = pullback(
+                            hierarchy.graph[graph], rule.lhs,
+                            hierarchy.graph[origin_id],
+                            origin_typing, instance)
 
-                    # Compute canonical P_G
-                    canonical_p_g, p_g_l_g, p_g_p = pullback(
-                        l_g, rule.p, rule.lhs, l_g_l, rule.p_lhs)
+                        # Compute canonical P_G
+                        canonical_p_g, p_g_l_g, p_g_p = pullback(
+                            l_g, rule.p, rule.lhs, l_g_l, rule.p_lhs)
 
-                    # Remove controlled things from P_G
-                    if graph in p_typing.keys():
-                        l_g_factorization = {
-                            keys_by_value(l_g_g, k)[0]: v
-                            for k, v in p_typing[graph].items()
+                        # Remove controlled things from P_G
+                        if graph in p_typing.keys():
+                            l_g_factorization = {
+                                keys_by_value(l_g_g, k)[0]: v
+                                for k, v in p_typing[graph].items()
+                            }
+                            p_g_nodes_to_remove = set()
+                            for n in canonical_p_g.nodes():
+                                l_g_node = p_g_l_g[n]
+                                # If corresponding L_G node is specified in
+                                # the controlling relation, remove all
+                                # the instances of P nodes not mentioned
+                                # in this relations
+                                if l_g_node in l_g_factorization.keys():
+                                    p_nodes = l_g_factorization[l_g_node]
+                                    if p_g_p[n] not in p_nodes:
+                                        del p_g_p[n]
+                                        del p_g_l_g[n]
+                                        p_g_nodes_to_remove.add(n)
+
+                            for n in p_g_nodes_to_remove:
+                                primitives.remove_node(canonical_p_g, n)
+                        liftings[graph] = {
+                            "rule": Rule(p=canonical_p_g, lhs=l_g, p_lhs=p_g_l_g),
+                            "instance": l_g_g,
+                            "l_g_l": l_g_l,
+                            "p_g_p": p_g_p
                         }
-                        p_g_nodes_to_remove = set()
-                        for n in canonical_p_g.nodes():
-                            l_g_node = p_g_l_g[n]
-                            # If corresponding L_G node is specified in
-                            # the controlling relation, remove all
-                            # the instances of P nodes not mentioned
-                            # in this relations
-                            if l_g_node in l_g_factorization.keys():
-                                p_nodes = l_g_factorization[l_g_node]
-                                if p_g_p[n] not in p_nodes:
-                                    del p_g_p[n]
-                                    del p_g_l_g[n]
-                                    p_g_nodes_to_remove.add(n)
-
-                        for n in p_g_nodes_to_remove:
-                            primitives.remove_node(canonical_p_g, n)
-                    liftings[graph] = {
-                        "rule": Rule(p=canonical_p_g, lhs=l_g, p_lhs=p_g_l_g),
-                        "instance": l_g_g,
-                        "l_g_l": l_g_l,
-                        "p_g_p": p_g_p
-                    }
 
     return liftings
 
 
-def _get_rule_projections(hierarchy, origin_id, rule, instance, rhs_typing):
+def _get_rule_projections(hierarchy, origin_id, rule, instance,
+                          rhs_typing=None, ignore=None):
+    if ignore is None:
+        ignore = []
+    if rhs_typing is None:
+        rhs_typing = {}
     projections = {}
     if rule.is_relaxing():
         for graph in nx.bfs_tree(hierarchy, origin_id):
-            if graph != origin_id:
-                if hierarchy.is_graph(graph):
-                    origin_typing = hierarchy.get_typing(origin_id, graph)
+            if graph not in ignore:
+                if graph != origin_id:
+                    if hierarchy.is_graph(graph):
+                        origin_typing = hierarchy.get_typing(origin_id, graph)
+                        # Compute canonical P_T
+                        p_t, p_p_t, p_t_t = image_factorization(
+                            rule.p, hierarchy.graph[graph],
+                            compose(
+                                compose(rule.p_lhs, instance),
+                                origin_typing))
 
-                    # Compute canonical P_T
-                    p_t, p_p_t, p_t_t = image_factorization(
-                        rule.p, hierarchy.graph[graph],
-                        compose(
-                            compose(rule.p_lhs, instance),
-                            origin_typing))
+                        # Compute canonical R_T
+                        r_t, p_t_r_t, r_r_t = pushout(
+                            rule.p, p_t, rule.rhs,
+                            p_p_t, rule.p_rhs)
 
-                    # Compute canonical R_T
-                    r_t, p_t_r_t, r_r_t = pushout(
-                        rule.p, p_t, rule.rhs,
-                        p_p_t, rule.p_rhs)
+                        # Modify P_T and R_T according to the controlling
+                        # relation rhs_typing
+                        if graph in rhs_typing.keys():
+                            r_t_factorization = {
+                                r_r_t[k]: v
+                                for k, v in rhs_typing[graph].items()
+                            }
+                            added_t_nodes = set()
+                            for n in r_t.nodes():
+                                if n in r_t_factorization.keys():
+                                    # If corresponding R_T node is specified in
+                                    # the controlling relation add nodes of T
+                                    # that type it to P
+                                    t_nodes = r_t_factorization[n]
+                                    for t_node in t_nodes:
+                                        if t_node not in p_t_t.values() and\
+                                           t_node not in added_t_nodes:
+                                            new_p_node = primitives.generate_new_node_id(
+                                                p_t, t_node)
+                                            primitives.add_node(p_t, new_p_node)
+                                            added_t_nodes.add(t_node)
+                                            p_t_r_t[new_p_node] = n
+                                            p_t_t[new_p_node] = t_node
+                                        else:
+                                            p_t_r_t[keys_by_value(p_t_t, t_node)[0]] = n
 
-                    # Modify P_T and R_T according to the controlling
-                    # relation rhs_typing
-                    if graph in rhs_typing.keys():
-                        r_t_factorization = {
-                            r_r_t[k]: v
-                            for k, v in rhs_typing[graph].items()
+                        projections[graph] = {
+                            "rule": Rule(p=p_t, rhs=r_t, p_rhs=p_t_r_t),
+                            "instance": p_t_t,
+                            "p_p_t": p_p_t,
+                            "r_r_t": r_r_t
                         }
-                        added_t_nodes = set()
-                        for n in r_t.nodes():
-                            if n in r_t_factorization.keys():
-                                # If corresponding R_T node is specified in
-                                # the controlling relation add nodes of T
-                                # that type it to P
-                                t_nodes = r_t_factorization[n]
-                                for t_node in t_nodes:
-                                    if t_node not in p_t_t.values() and\
-                                       t_node not in added_t_nodes:
-                                        new_p_node = primitives.generate_new_node_id(
-                                            p_t, t_node)
-                                        primitives.add_node(p_t, new_p_node)
-                                        added_t_nodes.add(t_node)
-                                        p_t_r_t[new_p_node] = n
-                                        p_t_t[new_p_node] = t_node
-                                    else:
-                                        p_t_r_t[keys_by_value(p_t_t, t_node)[0]] = n
-                    projections[graph] = {
-                        "rule": Rule(p=p_t, rhs=r_t, p_rhs=p_t_r_t),
-                        "instance": p_t_t,
-                        "p_p_t": p_p_t,
-                        "r_r_t": r_r_t
-                    }
 
     return projections
 

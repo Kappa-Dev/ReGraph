@@ -10,9 +10,10 @@ import networkx as nx
 from regraph.exceptions import RevisionError, RevisionWarning
 from regraph.rules import (compose_rules, Rule,
                            _create_merging_rule,
+                           _create_merging_rule_hierarchy,
                            compose_rule_hierarchies,
                            invert_rule_hierarchy)
-from regraph.primitives import relabel_node
+from regraph.primitives import relabel_nodes
 from regraph.utils import keys_by_value
 
 
@@ -493,9 +494,11 @@ class VersionedGraph(Versioning):
         return rhs_instance, commit_id
 
 
-class VersionedHierarchy(Versioning);
+class VersionedHierarchy(Versioning):
+    """."""
+
     def __init__(self, hierarchy, init_branch="master"):
-        """Initialize versioned graph object."""
+        """Initialize versioned hierarchy object."""
         self.hierarchy = hierarchy
         super().__init__(init_branch)
 
@@ -524,9 +527,9 @@ class VersionedHierarchy(Versioning);
             delta2["rhs_instances"])
 
         return {
-            "rule": rule,
-            "lhs_instance": lhs,
-            "rhs_instance": rhs
+            "rule_hierarchy": rule,
+            "lhs_instances": lhs,
+            "rhs_instances": rhs
         }
 
     @staticmethod
@@ -555,7 +558,7 @@ class VersionedHierarchy(Versioning);
     def _apply_delta(self, delta, relabel=True):
         """Apply delta to the current hierarchy version."""
         _, rhs_instances = self.hierarchy.apply_rule_hierarchy(
-            delta["rule_hierarchy"], delta["lhs_instances"] inplace=True)
+            delta["rule_hierarchy"], delta["lhs_instances"], inplace=True)
 
         if relabel:
             # Relabel nodes to correspond to the stored rhs
@@ -564,6 +567,13 @@ class VersionedHierarchy(Versioning);
                     v: delta["rhs_instances"][graph][k]
                     for k, v in rhs_instance.items()
                 }
+                # same_labels = True
+                # for k, v in new_labels.items():
+                #     if k != v:
+                #         same_labels = False
+                #         break
+
+                # if not same_labels:
                 self.hierarchy.relabel_nodes(graph, new_labels)
                 rhs_instance = {
                     k: new_labels[v]
@@ -573,8 +583,29 @@ class VersionedHierarchy(Versioning);
 
     def _merge_into_current_branch(self, delta):
         """Merge branch with delta into the current branch."""
-        pass
-        
+        current_to_merged, other_to_merged =\
+            _create_merging_rule_hierarchy(
+                delta["rule_hierarchy"],
+                delta["lhs_instances"],
+                delta["rhs_instances"])
+
+        _, rhs_instances = self.hierarchy.apply_rule_hierarchy(
+            current_to_merged,
+            delta["lhs_instances"], inplace=True)
+
+        current_to_merged_delta = {
+            "rule_hierarchy": current_to_merged,
+            "lhs_instances": delta["lhs_instances"],
+            "rhs_instances": rhs_instances
+        }
+
+        other_to_merged_delta = {
+            "rule_hierarchy": other_to_merged,
+            "lhs_instances": delta["rhs_instances"],
+            "rhs_instances": rhs_instances
+        }
+
+        return current_to_merged_delta, other_to_merged_delta
 
     def rewrite(self, graph_id, rule, instance=None,
                 p_typing=None, rhs_typing=None,
@@ -582,6 +613,8 @@ class VersionedHierarchy(Versioning);
         """Rewrite the versioned hierarchy and commit."""
         rule_hierarchy, lhs_instances = self.hierarchy.get_rule_propagations(
             graph_id, rule, instance, p_typing, rhs_typing)
+
+        print(rule_hierarchy)
 
         lhs_instances = self.hierarchy.refine_rule_hierarchy(
             rule_hierarchy, lhs_instances)
@@ -592,6 +625,6 @@ class VersionedHierarchy(Versioning);
         commit_id = self.commit({
             "rule_hierarchy": rule_hierarchy,
             "lhs_instances": lhs_instances,
-            "rhs_instance": rhs_instances
+            "rhs_instances": rhs_instances
         }, message=message)
         return rhs_instances, commit_id

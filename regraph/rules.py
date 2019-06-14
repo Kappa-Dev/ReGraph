@@ -2235,6 +2235,48 @@ def _create_merging_rule(rule, lhs_instance, rhs_instance):
     return left_rule, right_rule
 
 
+def _create_merging_rule_hierarchy(rule_hierarchy, lhs_instances, rhs_instances):
+
+    left_hierarchy = {
+        "rules": {},
+        "rule_homomorphisms": {}
+    }
+    right_hierarchy = {
+        "rules": {},
+        "rule_homomorphisms": {}
+    }
+    for graph, rule in rule_hierarchy["rules"].items():
+        left_rule, right_rule = _create_merging_rule(
+            rule, lhs_instances[graph], rhs_instances[graph])
+        left_hierarchy["rules"][graph] = left_rule
+        right_hierarchy["rules"][graph] = right_rule
+
+    for (source, target), (lhs_h, p_h, rhs_h) in rule_hierarchy[
+            "rule_homomorphisms"].items():
+        new_rhs_h = get_unique_map_from_pushout(
+            left_hierarchy["rules"][source].rhs.nodes(),
+            left_hierarchy["rules"][source].p_rhs,
+            right_hierarchy["rules"][source].p_rhs,
+            compose(
+                lhs_h,
+                left_hierarchy["rules"][target].p_rhs),
+            compose(
+                rhs_h,
+                right_hierarchy["rules"][target].p_rhs)
+        )
+        left_hierarchy["rule_homomorphisms"][(source, target)] = (
+            rule_hierarchy["rule_homomorphisms"][(source, target)][0],
+            rule_hierarchy["rule_homomorphisms"][(source, target)][0],
+            new_rhs_h
+        )
+        right_hierarchy["rule_homomorphisms"][(source, target)] = (
+            rule_hierarchy["rule_homomorphisms"][(source, target)][2],
+            rule_hierarchy["rule_homomorphisms"][(source, target)][2],
+            new_rhs_h
+        )
+    return left_hierarchy, right_hierarchy
+
+
 def compose_rule_hierarchies(rule_hierarchy1, lhs_instances1, rhs_instances1,
                              rule_hierarchy2, lhs_instances2, rhs_instances2):
     """Compose two rule hierarchies."""
@@ -2351,8 +2393,8 @@ def invert_rule_hierarchy(rule_hierarchy):
         new_rule_hierarchy["rules"][graph] = rule.get_inverted_rule()
 
     for (source, target), (lhs_h, p_h, rhs_h) in rule_hierarchy[
-            "rule_homomorphism"].items():
-        new_rule_hierarchy["rule_homomorphism"][(source, target)] = (
+            "rule_homomorphisms"].items():
+        new_rule_hierarchy["rule_homomorphisms"][(source, target)] = (
             rhs_h, p_h, lhs_h
         )
     return new_rule_hierarchy

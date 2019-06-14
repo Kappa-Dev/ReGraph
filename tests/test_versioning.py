@@ -1,8 +1,9 @@
 import networkx as nx
 
-from regraph.audit import VersionedGraph
+from regraph import NetworkXHierarchy
+from regraph.audit import VersionedGraph, VersionedHierarchy
 from regraph.rules import Rule
-from regraph.primitives import print_graph
+from regraph import primitives
 
 
 class TestVersioning(object):
@@ -14,7 +15,7 @@ class TestVersioning(object):
         graph.add_edge("circle", "square")
         self.initial_graph = graph
 
-    def test_rollback(self):
+    def test_graph_rollback(self):
         g = VersionedGraph(self.initial_graph)
 
         # Branch 'test'
@@ -55,9 +56,6 @@ class TestVersioning(object):
             rule, {"circle": "circle"},
             "Clone circle")
 
-        print("\n")
-        print(g._deltas["test"]["rule"])
-
         # Remove original circle
         pattern = nx.DiGraph()
         pattern.add_node("circle")
@@ -87,9 +85,112 @@ class TestVersioning(object):
         # print(g._deltas["test"]["rule"])
 
         g.rollback(rollback_commit)
-        print("\n")
-        print(g._deltas["test"]["rule"])
 
         g.merge_with("test")
 
-        print_graph(g.graph)
+        # primitives.print_graph(g.graph)
+
+    def test_networkx_hierarchy_versioning(self):
+        """Test hierarchy versioning functionality."""
+        hierarchy = NetworkXHierarchy()
+        shapes = nx.DiGraph()
+        primitives.add_nodes_from(
+            shapes, ["c", "s"])
+        hierarchy.add_graph("shapes", shapes)
+
+        colors = nx.DiGraph()
+        primitives.add_nodes_from(
+            colors, ["w", "b"])
+        hierarchy.add_graph("colors", colors)
+
+        ag = nx.DiGraph()
+        primitives.add_nodes_from(
+            ag, ["wc", "bc", "ws", "bs"])
+        hierarchy.add_graph("ag", ag)
+
+        nugget = nx.DiGraph()
+        primitives.add_nodes_from(
+            nugget, ["wc1", "wc2", "bc1", "ws1", "bs2"])
+        hierarchy.add_graph("nugget", nugget)
+
+        hierarchy.add_typing(
+            "ag", "shapes", {
+                "wc": "c",
+                "bc": "c",
+                "ws": "s",
+                "bs": "s"
+            })
+        hierarchy.add_typing(
+            "ag", "colors", {
+                "wc": "w",
+                "bc": "b",
+                "ws": "w",
+                "bs": "b"
+            })
+        hierarchy.add_typing(
+            "nugget", "ag", {
+                "wc1": "wc",
+                "wc2": "wc",
+                "bc1": "bc",
+                "ws1": "ws",
+                "bs2": "bs"
+            })
+        hierarchy.add_typing(
+            "nugget", "colors", {
+                "wc1": "w",
+                "wc2": "w",
+                "bc1": "b",
+                "ws1": "w",
+                "bs2": "b"
+            })
+
+        base = nx.DiGraph()
+        base.add_nodes_from(["node"])
+        hierarchy.add_graph("base", base)
+        hierarchy.add_typing(
+            "colors",
+            "base", {
+                "w": "node",
+                "b": "node"
+            })
+
+        h = VersionedHierarchy(hierarchy)
+
+        pattern = nx.DiGraph()
+        pattern.add_nodes_from(["wc"])
+
+        rule1 = Rule.from_transform(pattern)
+        rule1.inject_clone_node("wc")
+
+        # h.rewrite(
+        #     "ag",
+        #     rule1, {"wc": "wc"},
+        #     message="Clone 'wc'")
+
+        h.branch("test1")
+
+        pattern = nx.DiGraph()
+        pattern.add_nodes_from(["s"])
+        rule2 = Rule.from_transform(pattern)
+        rule2.inject_remove_node("s")
+
+        h.rewrite(
+            "shapes",
+            rule2, {"s": "s"},
+            message="Remove square") 
+
+        # h.switch_branch("master")
+
+        # primitives.print_graph(h.hierarchy.graph["ag"])
+        # print(h.hierarchy.graph["ag"].nodes(),
+        #       h.hierarchy.typing["ag"]["colors"].keys())
+        # print(h.hierarchy.typing["ag"]["colors"])
+
+        # pattern = nx.DiGraph()
+        # pattern.add_nodes_from(["wc1"])
+
+        # rule3 = Rule.from_transform(pattern)
+        # rule3.inject_add_node("new_node")
+        # rule3.inject_add_edge("new_node", "wc1")
+
+        # h.rewrite("nugget", rule3, {"wc1": "wc1"})
