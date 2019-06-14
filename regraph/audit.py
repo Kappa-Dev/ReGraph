@@ -507,6 +507,10 @@ class VersionedHierarchy(Versioning):
             delta["rule_hierarchy"],
             delta["lhs_instances"])
         delta["lhs_instances"] = lhs_instances
+        for graph in delta["rule_hierarchy"]["rules"]:
+            if graph not in delta["rhs_instances"]:
+                delta["rhs_instances"][graph] = delta[
+                    "lhs_instances"][graph]
         for graph, rule in delta["rule_hierarchy"]["rules"].items():
             rule = delta["rule_hierarchy"]["rules"][graph]
             rhs_instance = delta["rhs_instances"][graph]
