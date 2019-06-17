@@ -435,20 +435,6 @@ class VersionedGraph(Versioning):
             }
 
             relabel_nodes(self.graph, new_labels)
-            # second_round = []
-            # for k, v in new_labels.items():
-            #     if k != v:
-            #         try:
-            #             relabel_node(self.graph, k, v)
-            #         except:
-            #             second_round.append(k)
-            # for k in second_round:
-            #     if k != new_labels[k]:
-            #         try:
-            #             relabel_node(self.graph, k, new_labels[k])
-            #         except:
-            #             pass
-
             rhs_instance = {
                 k: new_labels[v]
                 for k, v in rhs_instance.items()
@@ -563,7 +549,6 @@ class VersionedHierarchy(Versioning):
         """Apply delta to the current hierarchy version."""
         _, rhs_instances = self.hierarchy.apply_rule_hierarchy(
             delta["rule_hierarchy"], delta["lhs_instances"], inplace=True)
-
         if relabel:
             # Relabel nodes to correspond to the stored rhs
             for graph, rhs_instance in delta["rhs_instances"].items():
@@ -571,13 +556,6 @@ class VersionedHierarchy(Versioning):
                     v: delta["rhs_instances"][graph][k]
                     for k, v in rhs_instance.items()
                 }
-                # same_labels = True
-                # for k, v in new_labels.items():
-                #     if k != v:
-                #         same_labels = False
-                #         break
-
-                # if not same_labels:
                 self.hierarchy.relabel_nodes(graph, new_labels)
                 rhs_instance = {
                     k: new_labels[v]
@@ -592,6 +570,10 @@ class VersionedHierarchy(Versioning):
                 delta["rule_hierarchy"],
                 delta["lhs_instances"],
                 delta["rhs_instances"])
+
+        for g, r in current_to_merged["rules"].items():
+            print(g)
+            print(r)
 
         _, rhs_instances = self.hierarchy.apply_rule_hierarchy(
             current_to_merged,
@@ -618,11 +600,9 @@ class VersionedHierarchy(Versioning):
         rule_hierarchy, lhs_instances = self.hierarchy.get_rule_propagations(
             graph_id, rule, instance, p_typing, rhs_typing)
 
-        print(rule_hierarchy)
-
+        print(rule_hierarchy["rule_homomorphisms"])
         lhs_instances = self.hierarchy.refine_rule_hierarchy(
             rule_hierarchy, lhs_instances)
-
         new_hierarchy, rhs_instances = self.hierarchy.apply_rule_hierarchy(
             rule_hierarchy, lhs_instances, inplace=True)
 

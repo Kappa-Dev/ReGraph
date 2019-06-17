@@ -2250,6 +2250,8 @@ def _create_merging_rule_hierarchy(rule_hierarchy, lhs_instances, rhs_instances)
             rule, lhs_instances[graph], rhs_instances[graph])
         left_hierarchy["rules"][graph] = left_rule
         right_hierarchy["rules"][graph] = right_rule
+        print("!!!", graph)
+        print(rule)
 
     for (source, target), (lhs_h, p_h, rhs_h) in rule_hierarchy[
             "rule_homomorphisms"].items():
@@ -2345,6 +2347,13 @@ def compose_rule_hierarchies(rule_hierarchy1, lhs_instances1, rhs_instances1,
             compose(lhs_hom2, target_data["lhs2_h"])
         )
         # P*G_1 -> P*T_1
+        print("^^^^^^^^^^")
+        print(target_data["p1_p1_p"])
+        print(target_data["p1_p_h"])
+        print(p_hom1)
+        print(source_data["p1_p1_p"])
+        print(compose(source_data["p1_p_h"], h_hom))
+        print("^^^^^^^^^^")
         p1_p_hom = get_unique_map_to_pullback_complement_full(
             target_data["p1_p1_p"], target_data["p1_p_h"],
             p_hom1, source_data["p1_p1_p"],

@@ -157,17 +157,6 @@ class TestVersioning(object):
 
         h = VersionedHierarchy(hierarchy)
 
-        pattern = nx.DiGraph()
-        pattern.add_nodes_from(["wc"])
-
-        rule1 = Rule.from_transform(pattern)
-        rule1.inject_clone_node("wc")
-
-        # h.rewrite(
-        #     "ag",
-        #     rule1, {"wc": "wc"},
-        #     message="Clone 'wc'")
-
         h.branch("test1")
 
         pattern = nx.DiGraph()
@@ -178,20 +167,51 @@ class TestVersioning(object):
         h.rewrite(
             "shapes",
             rule2, {"s": "s"},
-            message="Remove square") 
+            message="Remove square")
 
-        # h.switch_branch("master")
+        h.switch_branch("master")
 
-        # primitives.print_graph(h.hierarchy.graph["ag"])
-        # print(h.hierarchy.graph["ag"].nodes(),
-        #       h.hierarchy.typing["ag"]["colors"].keys())
-        # print(h.hierarchy.typing["ag"]["colors"])
+        pattern = nx.DiGraph()
+        pattern.add_nodes_from(["wc"])
 
-        # pattern = nx.DiGraph()
-        # pattern.add_nodes_from(["wc1"])
+        rule1 = Rule.from_transform(pattern)
+        rule1.inject_clone_node("wc")
 
-        # rule3 = Rule.from_transform(pattern)
-        # rule3.inject_add_node("new_node")
-        # rule3.inject_add_edge("new_node", "wc1")
+        h.rewrite(
+            "ag",
+            rule1, {"wc": "wc"},
+            message="Clone 'wc'")
 
-        # h.rewrite("nugget", rule3, {"wc1": "wc1"})
+        pattern = nx.DiGraph()
+        pattern.add_nodes_from(["wc1"])
+
+        rule3 = Rule.from_transform(pattern)
+        rule3.inject_add_node("new_node")
+        rule3.inject_add_edge("new_node", "wc1")
+
+        h.rewrite("nugget", rule3, {"wc1": "wc1"})
+
+        h.switch_branch("test1")
+        h.switch_branch("master")
+
+        print(h._deltas["test1"])
+        for g, r in h._deltas["test1"]["rule_hierarchy"]["rules"].items():
+            print(g)
+            print(r)
+        h.merge_with("test1")
+
+        print("-------> Nugget")
+        primitives.print_graph(h.hierarchy.graph["nugget"])
+        print("\n")
+        print("-------> AG")
+        primitives.print_graph(h.hierarchy.graph["ag"])
+        print("\n")
+        print("-------> Colors")
+        primitives.print_graph(h.hierarchy.graph["colors"])
+        print("\n")
+        print("-------> shapes")
+        primitives.print_graph(h.hierarchy.graph["shapes"])
+        print("\n")
+        print("-------> base")
+        primitives.print_graph(h.hierarchy.graph["base"])
+        print("\n")

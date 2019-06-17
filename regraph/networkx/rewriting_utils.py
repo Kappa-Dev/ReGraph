@@ -732,14 +732,13 @@ def get_rule_hierarchy(hierarchy, origin_id, rule, instance,
                     p_successor_successor = compose(
                         liftings[successor]["rule"].p_lhs,
                         liftings[successor]["instance"])
-
                     graph_lhs_successor_lhs = {}
                     for k, v in l_graph_successor.items():
                         l_node_g = liftings[graph]["l_g_l"][k]
                         for vv in keys_by_value(liftings[successor]["instance"], v):
                             l_node_s = liftings[successor]["l_g_l"][vv]
                             if (l_node_s == l_node_g):
-                                graph_lhs_successor_lhs[l_node_g] = l_node_s
+                                graph_lhs_successor_lhs[k] = vv
                                 break
 
                     graph_p_successor_p = {}
@@ -809,3 +808,152 @@ def get_rule_hierarchy(hierarchy, origin_id, rule, instance,
                     pass
 
     return rule_hierarchy, instances
+
+
+def _refine_rule_hierarchy(hierarchy, rule_hierarchy, lhs_instances):
+    new_lhs_instances = {}
+
+    new_rules = {}
+    new_rule_homomorphisms = {}
+
+    for graph, rule in rule_hierarchy["rules"].items():
+        # refine rule
+        new_lhs_instance = rule.refine(
+            hierarchy.get_graph(graph), lhs_instances[graph])
+        new_lhs_instances[graph] = new_lhs_instance
+
+    new_rules = {}
+    new_rule_homomorphisms = {}
+
+    for graph, rule in rule_hierarchy["rules"].items():
+        # add identity rules where needed
+        # to preserve the info on p/rhs_typing
+        # add ancestors that are not included in rule hierarchy
+        for predecessor in hierarchy.predecessors(graph):
+            if predecessor not in rule_hierarchy["rules"].keys() and\
+               predecessor not in new_rules.keys():
+                typing = hierarchy.typing[predecessor][graph]
+                l_pred, l_pred_pred, l_pred_l_graph = pullback(
+                    hierarchy.graph[graph], typing, new_lhs_instances[graph])
+                new_rules[predecessor] = Rule(p=l_pred, lhs=l_pred)
+                new_lhs_instances[predecessor] = l_pred_pred
+                r_pred_r_graph = {
+                    v: rule.p_rhs[k]
+                    for k, v in l_pred_l_graph.items()
+                }
+                new_rule_homomorphisms[(predecessor, graph)] = (
+                    l_pred_l_graph, l_pred_l_graph, r_pred_r_graph
+                )
+
+                for ps in hierarchy.successors(predecessor):
+                    # successor of a newly added graph
+                    # was already updated, which means that
+                    # it was in descendant of graph
+                    if ps in rule_hierarchy["rules"].keys() and\
+                       ps != graph:
+                        path = nx.shortest_path(hierarchy, graph, ps)
+                        lhs_h, p_h, rhs_h = rule_hierarchy["rule_homomorphisms"][
+                            (path[0], path[1])]
+                        for i in range(2, len(path)):
+                            new_lhs_h, new_p_h, new_rhs_h = rule_hierarchy[
+                                "rule_homomorphisms"][(path[i - 1], path[i])]
+                            lhs_h = compose(lhs_h, new_lhs_h)
+                            p_h = compose(p_h, new_p_h)
+                            rhs_h = compose(rhs_h, new_rhs_h)
+
+                        new_rule_homomorphisms[(predecessor, ps)] = (
+                            compose(l_pred_l_graph, lhs_h),
+                            compose(l_pred_l_graph, p_h),
+                            compose(r_pred_r_graph, rhs_h)
+                        )
+                    if ps in new_rules.keys():
+                        lhs_h = {
+                            keys_by_value(
+                                new_lhs_instances[ps],
+                                hierarchy.typing[predecessor][ps][v])[0]
+                            for k, v in new_lhs_instances[predecessor].items()
+                        }
+
+        # add descendants that are not included in rule hierarchy
+        for successor in hierarchy.successors(graph):
+            if successor not in rule_hierarchy["rules"].keys() and\
+               successor not in new_rules.keys():
+                typing = hierarchy.typing[graph][successor]
+                l_suc, l_graph_l_suc, l_suc_suc = image_factorization(
+                    rule.lhs, hierarchy.graph[successor],
+                    compose(
+                        new_lhs_instances[graph],
+                        typing))
+                new_rules[successor] = Rule(p=l_suc, lhs=l_suc)
+                new_lhs_instances[successor] = l_suc_suc
+                p_graph_p_suc = {
+                    k: l_graph_l_suc[v]
+                    for k, v in rule.p_lhs.items()
+                }
+
+                new_rule_homomorphisms[(graph, successor)] = (
+                    l_graph_l_suc, p_graph_p_suc, p_graph_p_suc
+                )
+
+                for sp in hierarchy.predecessors(successor):
+                    # predecessor of a newly added graph
+                    # was already updated, which means that
+                    # it was in ancestors of graph
+                    if sp in rule_hierarchy["rules"].keys() and\
+                       sp != graph:
+                        path = nx.shortest_path(hierarchy, sp, graph)
+                        lhs_h, p_h, rhs_h = rule_hierarchy["rule_homomorphisms"][
+                            (path[0], path[1])]
+                        print("--------->", sp, graph)
+                        print(lhs_h, p_h, rhs_h)
+                        for i in range(2, len(path)):
+                            new_lhs_h, new_p_h, new_rhs_h = rule_hierarchy[
+                                "rule_homomorphisms"][(path[i - 1], path[i])]
+                            lhs_h = compose(lhs_h, new_lhs_h)
+                            p_h = compose(p_h, new_p_h)
+                            rhs_h = compose(rhs_h, new_rhs_h)
+                        new_rule_homomorphisms[(sp, successor)] = (
+                            compose(lhs_h, l_graph_l_suc),
+                            compose(p_h, p_graph_p_suc),
+                            compose(rhs_h, p_graph_p_suc)
+                        )
+                    if sp in new_rules.keys():
+                        hierarchy.typing[sp][successor]
+                        lhs_h = {
+                            keys_by_value(
+                                new_lhs_instances[successor],
+                                hierarchy.typing[sp][successor][v])[0]
+                            for k, v in new_lhs_instances[sp].items()
+                        }
+                        new_rule_homomorphisms[(sp, successor)] = (
+                            lhs_h, lhs_h, lhs_h
+                        )
+
+    # Update rule homomorphisms
+    for (source, target), (lhs_h, p_h, rhs_h) in rule_hierarchy[
+            "rule_homomorphisms"].items():
+        typing = hierarchy.get_typing(source, target)
+        source_rule = rule_hierarchy["rules"][source]
+        target_rule = rule_hierarchy["rules"][target]
+        for node in source_rule.lhs.nodes():
+            if node not in lhs_h.keys():
+                source_node = new_lhs_instances[source][node]
+                target_node = typing[source_node]
+                target_lhs_node = keys_by_value(
+                    new_lhs_instances[target], target_node)[0]
+                lhs_h[node] = target_lhs_node
+
+                if node in source_rule.p_lhs.values():
+                    source_p_node = keys_by_value(source_rule.p_lhs, node)[0]
+                    target_p_node = keys_by_value(target_rule.p_lhs, node)[0]
+                    p_h[source_p_node] = target_p_node
+
+                    source_rhs_node = source_rule.p_rhs[source_p_node]
+                    target_rhs_node = target_rule.p_rhs[target_p_node]
+                    rhs_h[source_rhs_node] = target_rhs_node
+
+    rule_hierarchy["rules"].update(new_rules)
+    rule_hierarchy["rule_homomorphisms"].update(
+        new_rule_homomorphisms)
+
+    return new_lhs_instances
