@@ -1,6 +1,7 @@
 import networkx as nx
 
 from regraph import NetworkXHierarchy
+
 from regraph.audit import VersionedGraph, VersionedHierarchy
 from regraph.rules import Rule
 from regraph import primitives
