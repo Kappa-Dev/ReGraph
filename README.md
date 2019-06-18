@@ -1,4 +1,4 @@
-# ReGraph ![alt text](https://github.com/Kappa-Dev/ReGraph/blob/gh-pages/_images/regraph_logo.png)
+# ![alt text](https://github.com/Kappa-Dev/ReGraph/blob/gh-pages/_images/regraph_logo.png)
 
 A graph rewriting library. Documentation is available at http://dev.executableknowledge.org/ReGraph.
 
