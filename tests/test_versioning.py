@@ -82,9 +82,6 @@ class TestVersioning(object):
             },
             message="Merge circle and triangle")
 
-        # print("\n")
-        # print(g._deltas["test"]["rule"])
-
         g.rollback(rollback_commit)
 
         g.merge_with("test")
@@ -177,7 +174,7 @@ class TestVersioning(object):
         rule1 = Rule.from_transform(pattern)
         rule1.inject_clone_node("wc")
 
-        h.rewrite(
+        _, clone_commit = h.rewrite(
             "ag",
             rule1, {"wc": "wc"},
             message="Clone 'wc'")
@@ -193,25 +190,7 @@ class TestVersioning(object):
 
         h.switch_branch("test1")
         h.switch_branch("master")
-
-        print(h._deltas["test1"])
-        for g, r in h._deltas["test1"]["rule_hierarchy"]["rules"].items():
-            print(g)
-            print(r)
         h.merge_with("test1")
 
-        print("-------> Nugget")
-        primitives.print_graph(h.hierarchy.graph["nugget"])
-        print("\n")
-        print("-------> AG")
-        primitives.print_graph(h.hierarchy.graph["ag"])
-        print("\n")
-        print("-------> Colors")
-        primitives.print_graph(h.hierarchy.graph["colors"])
-        print("\n")
-        print("-------> shapes")
-        primitives.print_graph(h.hierarchy.graph["shapes"])
-        print("\n")
-        print("-------> base")
-        primitives.print_graph(h.hierarchy.graph["base"])
-        print("\n")
+        h.rollback(clone_commit)
+        h.switch_branch("test1")

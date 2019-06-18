@@ -822,113 +822,6 @@ def _refine_rule_hierarchy(hierarchy, rule_hierarchy, lhs_instances):
             hierarchy.get_graph(graph), lhs_instances[graph])
         new_lhs_instances[graph] = new_lhs_instance
 
-    new_rules = {}
-    new_rule_homomorphisms = {}
-
-    for graph, rule in rule_hierarchy["rules"].items():
-        # add identity rules where needed
-        # to preserve the info on p/rhs_typing
-        # add ancestors that are not included in rule hierarchy
-        for predecessor in hierarchy.predecessors(graph):
-            if predecessor not in rule_hierarchy["rules"].keys() and\
-               predecessor not in new_rules.keys():
-                typing = hierarchy.typing[predecessor][graph]
-                l_pred, l_pred_pred, l_pred_l_graph = pullback(
-                    hierarchy.graph[graph], typing, new_lhs_instances[graph])
-                new_rules[predecessor] = Rule(p=l_pred, lhs=l_pred)
-                new_lhs_instances[predecessor] = l_pred_pred
-                r_pred_r_graph = {
-                    v: rule.p_rhs[k]
-                    for k, v in l_pred_l_graph.items()
-                }
-                new_rule_homomorphisms[(predecessor, graph)] = (
-                    l_pred_l_graph, l_pred_l_graph, r_pred_r_graph
-                )
-
-                for ps in hierarchy.successors(predecessor):
-                    # successor of a newly added graph
-                    # was already updated, which means that
-                    # it was in descendant of graph
-                    if ps in rule_hierarchy["rules"].keys() and\
-                       ps != graph:
-                        path = nx.shortest_path(hierarchy, graph, ps)
-                        lhs_h, p_h, rhs_h = rule_hierarchy["rule_homomorphisms"][
-                            (path[0], path[1])]
-                        for i in range(2, len(path)):
-                            new_lhs_h, new_p_h, new_rhs_h = rule_hierarchy[
-                                "rule_homomorphisms"][(path[i - 1], path[i])]
-                            lhs_h = compose(lhs_h, new_lhs_h)
-                            p_h = compose(p_h, new_p_h)
-                            rhs_h = compose(rhs_h, new_rhs_h)
-
-                        new_rule_homomorphisms[(predecessor, ps)] = (
-                            compose(l_pred_l_graph, lhs_h),
-                            compose(l_pred_l_graph, p_h),
-                            compose(r_pred_r_graph, rhs_h)
-                        )
-                    if ps in new_rules.keys():
-                        lhs_h = {
-                            keys_by_value(
-                                new_lhs_instances[ps],
-                                hierarchy.typing[predecessor][ps][v])[0]
-                            for k, v in new_lhs_instances[predecessor].items()
-                        }
-
-        # add descendants that are not included in rule hierarchy
-        for successor in hierarchy.successors(graph):
-            if successor not in rule_hierarchy["rules"].keys() and\
-               successor not in new_rules.keys():
-                typing = hierarchy.typing[graph][successor]
-                l_suc, l_graph_l_suc, l_suc_suc = image_factorization(
-                    rule.lhs, hierarchy.graph[successor],
-                    compose(
-                        new_lhs_instances[graph],
-                        typing))
-                new_rules[successor] = Rule(p=l_suc, lhs=l_suc)
-                new_lhs_instances[successor] = l_suc_suc
-                p_graph_p_suc = {
-                    k: l_graph_l_suc[v]
-                    for k, v in rule.p_lhs.items()
-                }
-
-                new_rule_homomorphisms[(graph, successor)] = (
-                    l_graph_l_suc, p_graph_p_suc, p_graph_p_suc
-                )
-
-                for sp in hierarchy.predecessors(successor):
-                    # predecessor of a newly added graph
-                    # was already updated, which means that
-                    # it was in ancestors of graph
-                    if sp in rule_hierarchy["rules"].keys() and\
-                       sp != graph:
-                        path = nx.shortest_path(hierarchy, sp, graph)
-                        lhs_h, p_h, rhs_h = rule_hierarchy["rule_homomorphisms"][
-                            (path[0], path[1])]
-                        print("--------->", sp, graph)
-                        print(lhs_h, p_h, rhs_h)
-                        for i in range(2, len(path)):
-                            new_lhs_h, new_p_h, new_rhs_h = rule_hierarchy[
-                                "rule_homomorphisms"][(path[i - 1], path[i])]
-                            lhs_h = compose(lhs_h, new_lhs_h)
-                            p_h = compose(p_h, new_p_h)
-                            rhs_h = compose(rhs_h, new_rhs_h)
-                        new_rule_homomorphisms[(sp, successor)] = (
-                            compose(lhs_h, l_graph_l_suc),
-                            compose(p_h, p_graph_p_suc),
-                            compose(rhs_h, p_graph_p_suc)
-                        )
-                    if sp in new_rules.keys():
-                        hierarchy.typing[sp][successor]
-                        lhs_h = {
-                            keys_by_value(
-                                new_lhs_instances[successor],
-                                hierarchy.typing[sp][successor][v])[0]
-                            for k, v in new_lhs_instances[sp].items()
-                        }
-                        new_rule_homomorphisms[(sp, successor)] = (
-                            lhs_h, lhs_h, lhs_h
-                        )
-
     # Update rule homomorphisms
     for (source, target), (lhs_h, p_h, rhs_h) in rule_hierarchy[
             "rule_homomorphisms"].items():
@@ -951,6 +844,137 @@ def _refine_rule_hierarchy(hierarchy, rule_hierarchy, lhs_instances):
                     source_rhs_node = source_rule.p_rhs[source_p_node]
                     target_rhs_node = target_rule.p_rhs[target_p_node]
                     rhs_h[source_rhs_node] = target_rhs_node
+
+    if len(rule_hierarchy["rules"]) == 0:
+        for graph in hierarchy.graphs():
+            rule_hierarchy["rules"][graph] = Rule.identity_rule()
+            new_lhs_instances[graph] = dict()
+        for (s, t) in hierarchy.typings():
+            rule_hierarchy["rule_homomorphisms"][(s, t)] = (dict(), dict(), dict())
+    else:
+        for graph, rule in rule_hierarchy["rules"].items():
+            # add identity rules where needed
+            # to preserve the info on p/rhs_typing
+            # add ancestors that are not included in rule hierarchy
+            for ancestor in nx.bfs_tree(hierarchy, graph, reverse=True):
+                if ancestor not in rule_hierarchy["rules"] and\
+                   ancestor not in new_rules:
+                    # Find a typing of ancestor by the graph
+                    typing = hierarchy.compose_path_typing(
+                        nx.shortest_path(hierarchy, ancestor, graph))
+                    l_pred, l_pred_pred, l_pred_l_graph = pullback(
+                        hierarchy.graph[graph], typing, new_lhs_instances[graph])
+                    new_rules[ancestor] = Rule(p=l_pred, lhs=l_pred)
+                    new_lhs_instances[ancestor] = l_pred_pred
+                    r_pred_r_graph = {
+                        v: rule.p_rhs[k]
+                        for k, v in l_pred_l_graph.items()
+                    }
+                    for successor in hierarchy.successors(ancestor):
+                        if successor in rule_hierarchy["rules"]:
+                            if successor == graph:
+                                new_rule_homomorphisms[(ancestor, graph)] = (
+                                    l_pred_l_graph, l_pred_l_graph, r_pred_r_graph
+                                )
+                            else:
+                                path = nx.shortest_path(hierarchy, graph, successor)
+                                lhs_h, p_h, rhs_h = rule_hierarchy["rule_homomorphisms"][
+                                    (path[0], path[1])]
+                                for i in range(2, len(path)):
+                                    new_lhs_h, new_p_h, new_rhs_h = rule_hierarchy[
+                                        "rule_homomorphisms"][(path[i - 1], path[i])]
+                                    lhs_h = compose(lhs_h, new_lhs_h)
+                                    p_h = compose(p_h, new_p_h)
+                                    rhs_h = compose(rhs_h, new_rhs_h)
+
+                                new_rule_homomorphisms[(ancestor, successor)] = (
+                                    compose(l_pred_l_graph, lhs_h),
+                                    compose(l_pred_l_graph, p_h),
+                                    compose(r_pred_r_graph, rhs_h)
+                                )
+                        if successor in new_rules:
+                            lhs_h = {
+                                k: keys_by_value(
+                                    new_lhs_instances[successor],
+                                    hierarchy.typing[ancestor][successor][v])[0]
+                                for k, v in new_lhs_instances[ancestor].items()
+                            }
+                            new_rule_homomorphisms[(ancestor, successor)] = (
+                                lhs_h, lhs_h, lhs_h
+                            )
+                    for predecessor in hierarchy.predecessors(ancestor):
+                        if predecessor in rule_hierarchy["rules"] or\
+                           predecessor in new_rules:
+                            lhs_h = {
+                                k: keys_by_value(
+                                    new_lhs_instances[ancestor],
+                                    hierarchy.typing[predecessor][ancestor][v])[0]
+                                for k, v in new_lhs_instances[predecessor].items()
+                            }
+                            new_rule_homomorphisms[(predecessor, ancestor)] = (
+                                lhs_h, lhs_h, lhs_h
+                            )
+
+            for descendant in nx.bfs_tree(hierarchy, graph, reverse=False):
+                if descendant not in rule_hierarchy["rules"] and\
+                   descendant not in new_rules:
+                    typing = typing = hierarchy.compose_path_typing(
+                        nx.shortest_path(hierarchy, graph, descendant))
+                    l_suc, l_graph_l_suc, l_suc_suc = image_factorization(
+                        rule.lhs, hierarchy.graph[descendant],
+                        compose(
+                            new_lhs_instances[graph],
+                            typing))
+                    new_rules[descendant] = Rule(p=l_suc, lhs=l_suc)
+                    new_lhs_instances[descendant] = l_suc_suc
+                    p_graph_p_suc = {
+                        k: l_graph_l_suc[v]
+                        for k, v in rule.p_lhs.items()
+                    }
+                    for predecessor in hierarchy.predecessors(descendant):
+                        if predecessor in rule_hierarchy["rules"]:
+                            if predecessor == graph:
+                                new_rule_homomorphisms[(predecessor, descendant)] = (
+                                    l_graph_l_suc, p_graph_p_suc, p_graph_p_suc
+                                )
+                            else:
+                                path = nx.shortest_path(hierarchy, predecessor, graph)
+                                lhs_h, p_h, rhs_h = rule_hierarchy["rule_homomorphisms"][
+                                    (path[0], path[1])]
+                                for i in range(2, len(path)):
+                                    new_lhs_h, new_p_h, new_rhs_h = rule_hierarchy[
+                                        "rule_homomorphisms"][(path[i - 1], path[i])]
+                                    lhs_h = compose(lhs_h, new_lhs_h)
+                                    p_h = compose(p_h, new_p_h)
+                                    rhs_h = compose(rhs_h, new_rhs_h)
+                                new_rule_homomorphisms[(predecessor, descendant)] = (
+                                    compose(lhs_h, l_graph_l_suc),
+                                    compose(p_h, p_graph_p_suc),
+                                    compose(rhs_h, p_graph_p_suc)
+                                )
+                        if predecessor in new_rules:
+                            lhs_h = {
+                                k: keys_by_value(
+                                    new_lhs_instances[descendant],
+                                    hierarchy.typing[predecessor][descendant][v])[0]
+                                for k, v in new_lhs_instances[predecessor].items()
+                            }
+                            new_rule_homomorphisms[(predecessor, descendant)] = (
+                                lhs_h, lhs_h, lhs_h
+                            )
+
+                    for successor in hierarchy.successors(descendant):
+                        if successor in rule_hierarchy["rules"] or\
+                           successor in new_rules:
+                            lhs_h = {
+                                k: keys_by_value(
+                                    new_lhs_instances[successor],
+                                    hierarchy.typing[descendant][successor][v])[0]
+                                for k, v in new_lhs_instances[descendant].items()
+                            }
+                            new_rule_homomorphisms[(descendant, successor)] = (
+                                lhs_h, lhs_h, lhs_h
+                            )
 
     rule_hierarchy["rules"].update(new_rules)
     rule_hierarchy["rule_homomorphisms"].update(

@@ -1989,8 +1989,7 @@ class Rule(object):
 
     def is_identity(self):
         """Test if the rule is identity."""
-        return len(self.lhs.nodes()) == 0 and len(self.p.nodes()) == 0 and\
-            len(self.rhs.nodes()) == 0
+        return not self.is_restrictive() and not self.is_relaxing()
 
 
 def _generate_p_instance(rule, lhs_instance, rhs_instance):
@@ -2053,6 +2052,7 @@ def compose_rules(rule1, lhs_instance1, rhs_instance1,
 
     p1_p, p1_p1_p, p1_p_h = pullback_complement(
         rule1.p, rule1.rhs, h, rule1.p_rhs, rhs1_h)
+
     p2_p, p2_p2_p, p2_p_h = pullback_complement(
         rule2.p, rule2.lhs, h, rule2.p_lhs, lhs2_h)
 
@@ -2250,8 +2250,6 @@ def _create_merging_rule_hierarchy(rule_hierarchy, lhs_instances, rhs_instances)
             rule, lhs_instances[graph], rhs_instances[graph])
         left_hierarchy["rules"][graph] = left_rule
         right_hierarchy["rules"][graph] = right_rule
-        print("!!!", graph)
-        print(rule)
 
     for (source, target), (lhs_h, p_h, rhs_h) in rule_hierarchy[
             "rule_homomorphisms"].items():
@@ -2282,6 +2280,11 @@ def _create_merging_rule_hierarchy(rule_hierarchy, lhs_instances, rhs_instances)
 def compose_rule_hierarchies(rule_hierarchy1, lhs_instances1, rhs_instances1,
                              rule_hierarchy2, lhs_instances2, rhs_instances2):
     """Compose two rule hierarchies."""
+    if len(rule_hierarchy1["rules"]) == 0:
+        return rule_hierarchy2, lhs_instances2, rhs_instances2
+    if len(rule_hierarchy2["rules"]) == 0:
+        return rule_hierarchy1, lhs_instances1, rhs_instances1
+
     graphs = set(rule_hierarchy1["rules"].keys()).union(
         rule_hierarchy2["rules"].keys())
     homomorphisms = set(rule_hierarchy1["rule_homomorphisms"].keys()).union(
@@ -2325,16 +2328,11 @@ def compose_rule_hierarchies(rule_hierarchy1, lhs_instances1, rhs_instances1,
 
     # Compute rule homomorphisms
     for source, target in homomorphisms:
-        if (source, target) in rule_hierarchy1["rule_homomorphisms"]:
-            lhs_hom1, p_hom1, rhs_hom1 = rule_hierarchy1["rule_homomorphisms"][
-                (source, target)]
-        else:
-            lhs_hom1, p_hom1, rhs_hom1 = ({}, {}, {})
-        if (source, target) in rule_hierarchy2["rule_homomorphisms"]:
-            lhs_hom2, p_hom2, rhs_hom2 = rule_hierarchy2["rule_homomorphisms"][
-                (source, target)]
-        else:
-            lhs_hom2, p_hom2, rhs_hom2 = ({}, {}, {})
+        lhs_hom1, p_hom1, rhs_hom1 = rule_hierarchy1["rule_homomorphisms"][
+            (source, target)]
+        lhs_hom2, p_hom2, rhs_hom2 = rule_hierarchy2["rule_homomorphisms"][
+            (source, target)]
+
         source_data = composition_data[source]
         target_data = composition_data[target]
 
@@ -2347,13 +2345,6 @@ def compose_rule_hierarchies(rule_hierarchy1, lhs_instances1, rhs_instances1,
             compose(lhs_hom2, target_data["lhs2_h"])
         )
         # P*G_1 -> P*T_1
-        print("^^^^^^^^^^")
-        print(target_data["p1_p1_p"])
-        print(target_data["p1_p_h"])
-        print(p_hom1)
-        print(source_data["p1_p1_p"])
-        print(compose(source_data["p1_p_h"], h_hom))
-        print("^^^^^^^^^^")
         p1_p_hom = get_unique_map_to_pullback_complement_full(
             target_data["p1_p1_p"], target_data["p1_p_h"],
             p_hom1, source_data["p1_p1_p"],

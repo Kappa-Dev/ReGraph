@@ -552,15 +552,21 @@ class VersionedHierarchy(Versioning):
         if relabel:
             # Relabel nodes to correspond to the stored rhs
             for graph, rhs_instance in delta["rhs_instances"].items():
+                old_rhs = rhs_instance
+                new_rhs = rhs_instances[graph]
                 new_labels = {
-                    v: delta["rhs_instances"][graph][k]
-                    for k, v in rhs_instance.items()
+                    v: old_rhs[k]
+                    for k, v in new_rhs.items()
                 }
-                self.hierarchy.relabel_nodes(graph, new_labels)
-                rhs_instance = {
-                    k: new_labels[v]
-                    for k, v in rhs_instance.items()
-                }
+                changed_labels = False
+                for k, v in new_labels.items():
+                    if k != v:
+                        changed_labels = True
+                        break
+                if changed_labels:
+                    self.hierarchy.relabel_nodes(graph, new_labels)
+                    rhs_instances[graph] = old_rhs
+
         return rhs_instances
 
     def _merge_into_current_branch(self, delta):
@@ -570,10 +576,6 @@ class VersionedHierarchy(Versioning):
                 delta["rule_hierarchy"],
                 delta["lhs_instances"],
                 delta["rhs_instances"])
-
-        for g, r in current_to_merged["rules"].items():
-            print(g)
-            print(r)
 
         _, rhs_instances = self.hierarchy.apply_rule_hierarchy(
             current_to_merged,
@@ -600,9 +602,9 @@ class VersionedHierarchy(Versioning):
         rule_hierarchy, lhs_instances = self.hierarchy.get_rule_propagations(
             graph_id, rule, instance, p_typing, rhs_typing)
 
-        print(rule_hierarchy["rule_homomorphisms"])
         lhs_instances = self.hierarchy.refine_rule_hierarchy(
             rule_hierarchy, lhs_instances)
+
         new_hierarchy, rhs_instances = self.hierarchy.apply_rule_hierarchy(
             rule_hierarchy, lhs_instances, inplace=True)
 

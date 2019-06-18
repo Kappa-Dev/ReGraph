@@ -1733,6 +1733,7 @@ class NetworkXHierarchy(nx.DiGraph):
                 g_m_g = {
                     n: n for n in g_m.nodes()
                 }
+
             if rule.is_relaxing():
                 g_prime, g_m_g_prime, r_g_prime = pushout(rule.p, g_m, rule.rhs,
                                                           p_g_m, rule.p_rhs, inplace)
@@ -1767,6 +1768,7 @@ class NetworkXHierarchy(nx.DiGraph):
                 if successor in updated_graphs:
                     lhs_h, p_h, rhs_h = rule_hierarchy[
                         "rule_homomorphisms"][(graph, successor)]
+
                     graph_m_successor_m =\
                         get_unique_map_to_pullback_complement_full(
                             updated_graphs[successor]["p_g_m"],
