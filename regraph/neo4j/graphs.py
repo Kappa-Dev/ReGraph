@@ -9,8 +9,8 @@ from regraph.utils import (normalize_attrs,
                            load_edges_from_json,
                            attrs_from_json, keys_by_value)
 from regraph.exceptions import ReGraphWarning, ReGraphError
-from . import cypher_utils as cypher
-from . import hierarchy
+from .cypher_utils import generic
+from .cypher_utils import rewriting
 
 
 class Neo4jGraph(object):
@@ -93,7 +93,7 @@ class Neo4jGraph(object):
         -------
         result : BoltStatementResult
         """
-        query = cypher.clear_graph(self._node_label)
+        query = generic.clear_graph(self._node_label)
         result = self.execute(query)
         return result
 
@@ -138,7 +138,7 @@ class Neo4jGraph(object):
         -------
         result : BoltStatementResult
         """
-        query = "CREATE " + cypher.constraint_query(
+        query = "CREATE " + generic.constraint_query(
             'n', self._node_label, prop)
         result = self.execute(query)
         return result
@@ -156,7 +156,7 @@ class Neo4jGraph(object):
         result : BoltStatementResult
         """
         try:
-            query = "DROP " + cypher.constraint_query('n', self._node_label, prop)
+            query = "DROP " + generic.constraint_query('n', self._node_label, prop)
             result = self.execute(query)
             return result
         except:
@@ -173,13 +173,13 @@ class Neo4jGraph(object):
             attrs = dict()
         normalize_attrs(attrs)
         query +=\
-            cypher.add_node(
+            rewriting.add_node(
                 "n", node, 'new_id',
                 node_label=self._node_label,
                 attrs=attrs,
                 literal_id=True,
                 ignore_naming=ignore_naming)[0] +\
-            cypher.return_vars(['new_id'])
+            generic.return_vars(['new_id'])
 
         result = self.execute(query)
         new_id = result.single()['new_id']
@@ -194,10 +194,10 @@ class Neo4jGraph(object):
         if attrs is None:
             attrs = dict()
         normalize_attrs(attrs)
-        query += cypher.match_nodes(
+        query += generic.match_nodes(
             {"s": source, "t": target},
             node_label=self._node_label)
-        query += cypher.add_edge(
+        query += rewriting.add_edge(
             edge_var='new_edge',
             source_var="s",
             target_var="t",
@@ -222,34 +222,37 @@ class Neo4jGraph(object):
                         normalize_attrs(
                             attrs)
                         q, carry_variables =\
-                            cypher.add_node(
+                            rewriting.add_node(
                                 n_id, n_id, 'new_id_' + n_id,
                                 node_label=self._node_label,
                                 attrs=attrs,
                                 ignore_naming=ignore_naming)
                     except ValueError as e:
                         q, carry_variables =\
-                            cypher.add_node(
+                            rewriting.add_node(
                                 n, n, 'new_id_' + n,
                                 node_label=self._node_label,
                                 ignore_naming=ignore_naming)
                 else:
                     q, carry_variables =\
-                        cypher.add_node(
+                        rewriting.add_node(
                             n, n, 'new_id_' + n,
                             node_label=self._node_label,
                             ignore_naming=ignore_naming)
-                query += q + cypher.with_vars(carry_variables)
+                query += q + generic.with_vars(carry_variables)
             if len(carry_variables) > 0:
-                query += cypher.return_vars(carry_variables)
+                query += generic.return_vars(carry_variables)
             result = self.execute(query)
             return result
         else:
             for n in nodes:
-                try:
-                    n_id, attrs = n
-                    self.add_node(n_id, attrs)
-                except ValueError:
+                if type(n) != str:
+                    try:
+                        n_id, attrs = n
+                        self.add_node(n_id, attrs)
+                    except ValueError:
+                        self.add_node(n)
+                else:
                     self.add_node(n)
 
     def add_edges_from(self, edges, profiling=False, holistic=False):
@@ -269,7 +272,7 @@ class Neo4jGraph(object):
                     nodes_to_match.add(v)
                     normalize_attrs(attrs)
                     edge_creation_queries.append(
-                        cypher.add_edge(
+                        rewriting.add_edge(
                             edge_var=u + "_" + v,
                             source_var=u,
                             target_var=v,
@@ -280,13 +283,13 @@ class Neo4jGraph(object):
                     nodes_to_match.add(u)
                     nodes_to_match.add(v)
                     edge_creation_queries.append(
-                        cypher.add_edge(
+                        rewriting.add_edge(
                             edge_var=u + "_" + v,
                             source_var=u,
                             target_var=v,
                             edge_label=self._edge_label))
             if len(edges) > 0:
-                query += cypher.match_nodes(
+                query += rewriting.match_nodes(
                     {n: n for n in nodes_to_match},
                     node_label=self._node_label)
                 for q in edge_creation_queries:
@@ -306,8 +309,8 @@ class Neo4jGraph(object):
         """Add attributes to the node."""
         normalize_attrs(attrs)
         query = (
-            cypher.match_node("n", node, self._node_label) +
-            cypher.add_attributes("n", attrs)
+            generic.match_node("n", node, self._node_label) +
+            rewriting.add_attributes("n", attrs)
         )
         result = self.execute(query)
         return result
@@ -327,8 +330,8 @@ class Neo4jGraph(object):
         """
         normalize_attrs(attrs)
         query = (
-            cypher.match_node("n", node, self._node_label) +
-            cypher.set_attributes("n", attrs, update)
+            generic.match_node("n", node, self._node_label) +
+            generic.set_attributes("n", attrs, update)
         )
         result = self.execute(query)
         return result
@@ -352,9 +355,9 @@ class Neo4jGraph(object):
         """Remove attributes from the node."""
         normalize_attrs(attrs)
         query = (
-            cypher.match_node(
+            generic.match_node(
                 "n", node, self._node_label) +
-            cypher.remove_attributes("n", attrs)
+            rewriting.remove_attributes("n", attrs)
         )
         result = self.execute(query)
         return result
@@ -363,11 +366,11 @@ class Neo4jGraph(object):
         """Add attributes to the edge."""
         normalize_attrs(attrs)
         query = (
-            cypher.match_edge(
+            generic.match_edge(
                 "s", "t", source, target, "rel",
                 self._node_label, self._node_label,
                 self._edge_label) +
-            cypher.add_attributes("rel", attrs)
+            rewriting.add_attributes("rel", attrs)
         )
         result = self.execute(query)
         return result
@@ -389,11 +392,11 @@ class Neo4jGraph(object):
         """
         normalize_attrs(attrs)
         query = (
-            cypher.match_edge(
+            generic.match_edge(
                 "s", "t", source, target, "rel",
                 self._node_label, self._node_label,
                 self._edge_label) +
-            cypher.set_attributes("rel", attrs, update)
+            generic.set_attributes("rel", attrs, update)
         )
         result = self.execute(query)
         return result
@@ -419,11 +422,11 @@ class Neo4jGraph(object):
         """Remove attributes from the edge."""
         normalize_attrs(attrs)
         query = (
-            cypher.match_edge(
+            generic.match_edge(
                 "s", "t", source, target, "rel",
                 self._node_label, self._edge_label,
                 self._edge_label) +
-            cypher.remove_attributes("rel", attrs)
+            rewriting.remove_attributes("rel", attrs)
         )
         result = self.execute(query)
         return result
@@ -435,10 +438,10 @@ class Neo4jGraph(object):
         else:
             query = ""
         query +=\
-            cypher.match_node(
+            generic.match_node(
                 "n", node,
                 node_label=self._node_label) +\
-            cypher.remove_node("n")
+            rewriting.remove_node("n")
         result = self.execute(query)
         return result
 
@@ -449,23 +452,23 @@ class Neo4jGraph(object):
         else:
             query = ""
         query +=\
-            cypher.match_edge(
+            generic.match_edge(
                 "s", "t", source, target, 'edge_var',
                 self._node_label, self._node_label,
                 edge_label='edge') +\
-            cypher.remove_edge('edge_var')
+            rewriting.remove_edge('edge_var')
         result = self.execute(query)
         return result
 
     def nodes(self):
         """Return a list of nodes of the graph."""
-        query = cypher.get_nodes(node_label=self._node_label)
+        query = generic.get_nodes(node_label=self._node_label)
         result = self.execute(query)
         return [list(d.values())[0] for d in result]
 
     def edges(self):
         """Return the list of edges of the graph."""
-        query = cypher.get_edges(
+        query = generic.get_edges(
             self._node_label,
             self._node_label,
             self._edge_label)
@@ -474,11 +477,11 @@ class Neo4jGraph(object):
 
     def get_node_attrs(self, node_id):
         """Return node's attributes."""
-        query = cypher.get_node_attrs(
+        query = generic.get_node_attrs(
             node_id, self._node_label,
             "attributes")
         result = self.execute(query)
-        return cypher.properties_to_attributes(
+        return generic.properties_to_attributes(
             result, "attributes")
 
     def get_node(self, node_id):
@@ -487,11 +490,11 @@ class Neo4jGraph(object):
 
     def get_edge_attrs(self, s, t):
         """Return edge attributes."""
-        query = cypher.get_edge_attrs(
+        query = generic.get_edge_attrs(
             s, t, self._edge_label,
             "attributes")
         result = self.execute(query)
-        return cypher.properties_to_attributes(
+        return generic.properties_to_attributes(
             result, "attributes")
 
     def get_edge(self, s, t):
@@ -500,7 +503,7 @@ class Neo4jGraph(object):
 
     def exists_edge(self, s, t):
         """Test if an edge 's'->'t' exists."""
-        query = cypher.exists_edge(
+        query = generic.exists_edge(
             s, t,
             node_label=self._node_label,
             edge_label=self._edge_label)
@@ -514,15 +517,15 @@ class Neo4jGraph(object):
         attrs = {"id": new_id}
         normalize_attrs(attrs)
         query = (
-            cypher.match_node("n", node_id) +
-            cypher.set_node_attrs("n", attrs, update=False)
+            generic.match_node("n", node_id) +
+            generic.set_node_attrs("n", attrs, update=False)
         )
         result = self.execute(query)
         return result
 
     def successors(self, node):
         """Return node's successors id."""
-        query = cypher.successors_query(
+        query = generic.successors_query(
             node, node,
             node_label=self._node_label,
             edge_label=self._edge_label)
@@ -535,7 +538,7 @@ class Neo4jGraph(object):
 
     def predecessors(self, node):
         """Return node's predecessors id."""
-        query = cypher.predecessors_query(
+        query = generic.predecessors_query(
             node, node,
             node_label=self._node_label,
             edge_label=self._edge_label)
@@ -559,10 +562,10 @@ class Neo4jGraph(object):
         if name is None:
             name = node
         query +=\
-            cypher.match_node(
+            generic.match_node(
                 'x', node,
                 node_label=self._node_label) +\
-            cypher.cloning_query(
+            rewriting.cloning_query(
                 original_var='x',
                 clone_var='new_node',
                 clone_id=name,
@@ -570,7 +573,7 @@ class Neo4jGraph(object):
                 node_label=self._node_label,
                 edge_labels=edge_labels,
                 ignore_naming=ignore_naming)[0] +\
-            cypher.return_vars(['uid'])
+            generic.return_vars(['uid'])
 
         result = self.execute(query)
         uid_records = []
@@ -591,10 +594,10 @@ class Neo4jGraph(object):
         else:
             name = "_".join(node_list)
         query +=\
-            cypher.match_nodes(
+            generic.match_nodes(
                 {"n" + str(i + 1): n for i, n in enumerate(node_list)},
                 node_label=self._node_label) + "\n" +\
-            cypher.merging_query(
+            rewriting.merging_query(
                 original_vars=["n" + str(i + 1) for i, _ in enumerate(node_list)],
                 merged_var='merged_node',
                 merged_id=name,
@@ -602,7 +605,7 @@ class Neo4jGraph(object):
                 node_label=self._node_label,
                 edge_label=self._edge_label,
                 ignore_naming=ignore_naming)[0] +\
-            cypher.return_vars(['new_id'])
+            generic.return_vars(['new_id'])
         result = self.execute(query)
         uid_records = []
         for record in result:
@@ -628,10 +631,10 @@ class Neo4jGraph(object):
         else:
             name = "_".join(node_list)
         query +=\
-            cypher.match_nodes(
+            generic.match_nodes(
                 {n: n for n in node_list},
                 node_label=self._node_label) + "\n" +\
-            cypher.merging_query1(
+            rewriting.merging_query1(
                 original_vars=node_list,
                 merged_var='merged_node',
                 merged_id=name,
@@ -640,7 +643,7 @@ class Neo4jGraph(object):
                 edge_label=self._edge_label,
                 merge_typing=merge_typing,
                 ignore_naming=ignore_naming)[0] +\
-            cypher.return_vars(['new_id'])
+            generic.return_vars(['new_id'])
         result = self.execute(query)
         uid_records = []
         for record in result:
@@ -651,7 +654,7 @@ class Neo4jGraph(object):
     def find_matching(self, pattern, nodes=None, pattern_typing=None):
         """Find matchings of a pattern in the graph."""
         if len(pattern.nodes()) != 0:
-            query = cypher.find_matching(
+            query = rewriting.find_matching(
                 pattern,
                 node_label=self._node_label,
                 edge_label=self._edge_label,
@@ -823,7 +826,7 @@ class Neo4jGraph(object):
         return
 
     def _nodes_from_json(self, json_data):
-        query = cypher.add_nodes_from_json(json_data, self._node_label)
+        query = generic.add_nodes_from_json(json_data, self._node_label)
         self.execute(query)
 
     @classmethod
@@ -835,7 +838,7 @@ class Neo4jGraph(object):
             driver=driver, uri=uri, user=user, password=password,
             node_label=node_label, edge_label=edge_label)
         if holistic:
-            query = cypher.load_graph_from_json(
+            query = generic.load_graph_from_json(
                 j_data, graph._node_label, graph._edge_label)
             graph.execute(query)
         else:
@@ -905,319 +908,3 @@ class Neo4jGraph(object):
             for i, k in enumerate(cc.keys())
         }
 
-
-class TypedNeo4jGraph(hierarchy.Neo4jHierarchy):
-    """Class implementing two level hiearchy.
-
-    This class encapsulates neo4j.v1.GraphDatabase object.
-    It provides an interface for accessing typed graphs
-    sitting in the Neo4j DB. Our system is assumed to
-    consist of two graphs (the data graph) and (the schema graph)
-    connected with a graph homomorphisms (defining typing of
-    the data graph by the schema graph).
-
-    Attributes
-    ----------
-    _driver :  neo4j.v1.GraphDatabase
-        Driver providing connection to a Neo4j database
-    _graph_label : str
-    _typing_label : str
-    _graph_edge_label : str
-    _graph_typing_label : str
-    _schema_node_label : str
-        Label of nodes inducing the schema graph.
-    _data_node_label : str
-
-    Top level represents a data instance, while bottom level represents
-    a graphical schema.
-    """
-
-    def __init__(self, 
-                 uri=None, user=None, password=None, driver=None,
-                 schema_graph=None, data_graph=None, typing=None, clear=False,
-                 graph_label="graph",
-                 typing_label="homomorphism",
-                 graph_edge_label="edge",
-                 graph_typing_label="typing",
-                 schema_node_label="type", data_node_label="node"):
-        """Initialize driver.
-
-        Parameters:
-        ----------
-        uri : str, optional
-            Uri of bolt listener, for example 'bolt://127.0.0.1:7687'
-        user : str, optional
-            Neo4j database user id
-        password : str, optional
-            Neo4j database password
-        driver : neo4j.v1.direct.DirectDriver, optional
-        graph_label : str, optional
-            Label to use for skeleton nodes representing graphs.
-        typing_label : str, optional
-            Relation type to use for skeleton edges
-            representing homomorphisms.
-        graph_edge_label : str, optional
-            Relation type to use for all graph edges.
-        graph_typing_label : str, optional
-            Relation type to use for edges encoding homomorphisms.
-        schema_graph : dict, optional
-            Schema graph to initialize the TypedGraph in JSON representation:
-            {"nodes": <networkx_like_nodes>, "edges": <networkx_like_edges>}.
-            By default is empty.
-        data_graph : dict, optional
-            Data graph to initialize the TypedGraph in JSON representation:
-            {"nodes": <networkx_like_nodes>, "edges": <networkx_like_edges>}.
-            By default is empty.
-        typing : dict, optional
-            Dictionary contaning typing of data nodes by schema nodes.
-            By default is empty.
-        """
-
-        if data_graph is None:
-            data_graph = {"nodes": [], "edges": []}
-
-        if schema_graph is None:
-            schema_graph = {"nodes": [], "edges": []}
-        if typing is None:
-            typing = dict()
-
-        if clear is True:
-            self._clear()
-
-        self._driver = GraphDatabase.driver(
-            uri, auth=(user, password))
-
-        self._graph_label = "graph"
-        self._typing_label = "homomorphism"
-        self._relation_label = None
-
-        self._graph_edge_label = "edge"
-        self._graph_typing_label = "typing"
-        self._graph_relation_label = "relation"
-
-        self._schema_node_label = "type"
-        self._data_node_label = "node"
-
-        # create data/schema nodes
-        # skeleton = self._access_graph(
-        #     self._graph_label, self._typing_label)
-        # skeleton_nodes = skeleton.nodes()
-        # if self._data_node_label not in skeleton_nodes:
-        #     self.add_graph(
-        #         self._data_node_label,
-        #         node_list=data_graph["nodes"],
-        #         edge_list=data_graph["edges"])
-        # else:
-        #     if len(data_graph["nodes"]) > 0:
-        #         old_data = self._access_graph(self._data_node_label)
-        #         if len(old_data.nodes()) > 0:
-        #             warnings.warn(
-        #                 "Data graph was non-empty and was overwritten with "
-        #                 "provided nodes and edges!", ReGraphWarning
-        #             )
-        #         old_data._clear()
-        #         old_data.add_nodes_from(data_graph["nodes"])
-        #         old_data.add_edges_from(data_graph["edges"])
-
-        # if self._schema_node_label not in skeleton_nodes:
-        #     self.add_graph(
-        #         self._schema_node_label,
-        #         node_list=schema_graph["nodes"],
-        #         edge_list=schema_graph["edges"])
-        # else:
-        #     if len(schema_graph["nodes"]) > 0:
-        #         old_schema = self._access_graph(self._schema_node_label)
-        #         if len(old_schema.nodes()) > 0:
-        #             warnings.warn(
-        #                 "Schema graph was non-empty and was overwritten with "
-        #                 "provided nodes and edges!", ReGraphWarning
-        #             )
-        #         old_schema._clear()
-        #         old_schema.add_nodes_from(schema_graph["nodes"])
-        #         old_schema.add_edges_from(schema_graph["edges"])
-
-        # # if (self._data_node_label, self._schema_node_label) not in skeleton.edges():
-        # self.add_typing(self._data_node_label, self._schema_node_label, typing)
-
-    def find_data_matching(self, pattern,
-                           pattern_typing=None, nodes=None):
-        schema_typing = None
-        if pattern_typing is not None:
-            schema_typing = {
-                self._schema_node_label: pattern_typing
-            }
-        return self.find_matching(
-            self._data_node_label,
-            pattern,
-            pattern_typing=schema_typing,
-            nodes=nodes)
-
-    def find_schema_matching(self, pattern, nodes=None):
-        return self.find_matching(
-            self._schema_node_label,
-            pattern,
-            nodes=nodes)
-
-    def rewrite_data(self, rule, instance,
-                     rhs_typing=None, strict=False):
-        if rhs_typing is None:
-            rhs_typing = dict()
-
-        res = self.rewrite(
-            self._data_node_label,
-            rule=rule,
-            instance=instance,
-            rhs_typing={
-                self._schema_node_label: rhs_typing
-            },
-            strict=strict)
-        return res
-
-    def rewrite_schema(self, rule, instance,
-                       p_typing=None, strict=False):
-        return self.rewrite(
-            self._schema_node_label,
-            rule=rule,
-            instance=instance,
-            p_typing={
-                self._data_node_label: p_typing
-            },
-            strict=strict)
-
-    def rename_schema_node(self, node_id, new_node_id):
-        self.rename_node(self._schema_node_label, node_id, new_node_id)
-
-    def rename_data_node(self, node_id, new_node_id):
-        self.rename_node(self._data_node_label, node_id, new_node_id)
-
-    def get_data(self):
-        return self.get_graph(self._data_node_label)
-
-    def get_schema(self):
-        return self.get_graph(self._schema_node_label)
-
-    def get_data_nodes(self):
-        data = self.get_data()
-        return data.nodes()
-
-    def get_data_edges(self):
-        data = self.get_data()
-        return data.edges()
-
-    def get_schema_nodes(self):
-        schema = self.get_schema()
-        return schema.nodes()
-
-    def get_schema_edges(self):
-        schema = self.get_schema()
-        return schema.edges()
-
-    def get_data_typing(self):
-        return self.get_typing(
-            self._data_node_label, self._schema_node_label)
-
-    def get_node_type(self, node_id):
-        t = self.node_type(self._data_node_label, node_id)
-        return t[self._schema_node_label]
-
-    def remove_data_node_attrs(self, node_id, attrs):
-        g = self._access_graph(self._data_node_label)
-        g.remove_node_attrs(node_id, attrs)
-
-    def remove_schema_node_attrs(self, node_id, attrs):
-        g = self._access_graph(self._schema_node_label)
-        g.remove_node_attrs(node_id, attrs)
-
-    def add_data_node_attrs(self, node_id, attrs):
-        g = self._access_graph(self._data_node_label)
-        g.add_node_attrs(node_id, attrs)
-
-    def add_schema_node_attrs(self, node_id, attrs):
-        g = self._access_graph(self._schema_node_label)
-        g.add_node_attrs(node_id, attrs)
-
-    def get_data_node(self, node_id):
-        g = self._access_graph(self._data_node_label)
-        return g.get_node(node_id)
-
-    def get_schema_node(self, node_id):
-        g = self._access_graph(self._schema_node_label)
-        return g.get_node(node_id)
-
-    # @classmethod
-    # def from_json(cls, uri=None, user=None, password=None,
-    #               driver=None, json_data=None, ignore=None, clear=False):
-    #     """Create hierarchy object from JSON representation.
-
-    #     Parameters
-    #     ----------
-
-    #     uri : str, optional
-    #         Uri for Neo4j database connection
-    #     user : str, optional
-    #         Username for Neo4j database connection
-    #     password : str, optional
-    #         Password for Neo4j database connection
-    #     driver : neo4j.v1.direct.DirectDriver, optional
-    #         DB driver object
-    #     json_data : dict, optional
-    #         JSON-like dict containing representation of a hierarchy
-    #     ignore : dict, optional
-    #         Dictionary containing components to ignore in the process
-    #         of converting from JSON, dictionary should respect the
-    #         following format:
-    #         {
-    #             "graphs": <collection of ids of graphs to ignore>,
-    #             "rules": <collection of ids of rules to ignore>,
-    #             "typing": <collection of tuples containing typing
-    #                 edges to ignore>,
-    #             "rule_typing": <collection of tuples containing rule
-    #                 typing edges to ignore>>,
-    #             "relations": <collection of tuples containing
-    #                 relations to ignore>,
-    #         }
-    #     directed : bool, optional
-    #         True if graphs from JSON representation should be loaded as
-    #         directed graphs, False otherwise, default value -- True
-
-    #     Returns
-    #     -------
-    #     hierarchy : regraph.neo4j.TypedGraph
-    #     """
-    #     print("Started creating object")
-    #     g = cls(
-    #         uri=uri, user=user, password=password, driver=driver)
-    #     print("Finished creating object")
-
-    #     if clear is True:
-    #         g._clear()
-
-    #     print("Started filling up graphs")
-    #     # add graphs
-    #     for graph_data in json_data["graphs"]:
-    #         if graph_data["id"] in ["node", "type"]:
-    #             if "attrs" not in graph_data.keys():
-    #                 attrs = dict()
-    #             else:
-    #                 attrs = attrs_from_json(graph_data["attrs"])
-    #             g.add_graph(
-    #                 graph_data["id"],)
-    #     print("Finished filling up graphs")
-
-    #     print("Started additng typing")
-    #     # add typing
-    #     for typing_data in json_data["typing"]:
-    #         if typing_data["from"] == "node" and\
-    #            typing_data["to"] == "type":
-    #             if "attrs" not in typing_data.keys():
-    #                 attrs = dict()
-    #             else:
-    #                 attrs = attrs_from_json(typing_data["attrs"])
-    #             g.remove_typing("node", "type")
-    #             g.add_typing(
-    #                 typing_data["from"],
-    #                 typing_data["to"],
-    #                 typing_data["mapping"],
-    #                 attrs)
-    #     print("Finished addiing typing")
-    #     return g

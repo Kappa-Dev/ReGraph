@@ -832,7 +832,7 @@ def find_matching(pattern, node_label, edge_label,
 
 
 def match_pattern_instance(pattern, pattern_vars, instance,
-                           node_label, edge_label):
+                           node_label, edge_label, match_edges=True):
     """Query to match an instance of the pattern.
 
     Parameters
@@ -850,7 +850,7 @@ def match_pattern_instance(pattern, pattern_vars, instance,
     query =\
         generic.match_nodes(instance, node_label=node_label)
 
-    if len(pattern.edges()) > 0:
+    if match_edges and len(pattern.edges()) > 0:
         query +=\
             ", " +\
             ", ".join(

@@ -1,6 +1,6 @@
 import networkx as nx
 
-from regraph import NetworkXHierarchy
+from regraph import NetworkXHierarchy, Neo4jHierarchy
 
 from regraph.audit import VersionedGraph, VersionedHierarchy
 from regraph.rules import Rule
@@ -194,3 +194,87 @@ class TestVersioning(object):
 
         h.rollback(clone_commit)
         h.switch_branch("test1")
+
+    def test_neo4j_hierarchy_versioning(self):
+        """Test hierarchy versioning functionality."""
+        # TODO add edges
+        hierarchy = Neo4jHierarchy(uri="bolt://localhost:7687",
+                                   user="neo4j",
+                                   password="admin")
+        hierarchy._clear()
+        hierarchy.add_graph("shapes", node_list=["c", "s"])
+        hierarchy.add_graph("colors", node_list=["w", "b"])
+        hierarchy.add_graph("ag", node_list=["wc", "bc", "ws", "bs"])
+        hierarchy.add_graph(
+            "nugget", node_list=["wc1", "wc2", "bc1", "ws1", "bs2"])
+
+        hierarchy.add_typing(
+            "ag", "shapes", {
+                "wc": "c",
+                "bc": "c",
+                "ws": "s",
+                "bs": "s"
+            })
+        hierarchy.add_typing(
+            "ag", "colors", {
+                "wc": "w",
+                "bc": "b",
+                "ws": "w",
+                "bs": "b"
+            })
+        hierarchy.add_typing(
+            "nugget", "ag", {
+                "wc1": "wc",
+                "wc2": "wc",
+                "bc1": "bc",
+                "ws1": "ws",
+                "bs2": "bs"
+            })
+        hierarchy.add_typing(
+            "nugget", "colors", {
+                "wc1": "w",
+                "wc2": "w",
+                "bc1": "b",
+                "ws1": "w",
+                "bs2": "b"
+            })
+
+        hierarchy.add_graph("base", node_list=["node"])
+        hierarchy.add_typing(
+            "colors",
+            "base", {
+                "w": "node",
+                "b": "node"
+            })
+
+        pattern = nx.DiGraph()
+        pattern.add_nodes_from(["s", "c"])
+        rule = Rule.from_transform(pattern)
+        rule.inject_add_edge("s", "c")
+
+        hierarchy.rewrite(
+            "shapes",
+            rule,
+            {"s": "s", "c": "c"})
+        hierarchy.rewrite(
+            "ag",
+            rule,
+            {"s": "ws", "c": "wc"})
+
+        h = VersionedHierarchy(hierarchy)
+
+        pattern = nx.DiGraph()
+        pattern.add_nodes_from(["s", "c"])
+        pattern.add_edges_from([("s", "c")])
+        rule2 = Rule.from_transform(pattern)
+        rule2.inject_clone_node("s")
+        rule2.inject_add_node("new_node")
+        rule2.inject_add_edge("new_node", "s")
+
+        hierarchy.get_rule_propagations(
+            "ag", rule2, {"s": "ws", "c": "wc"})
+
+        # h.rewrite(
+        #     "shapes",
+        #     rule2, {"s": "s"},
+        #     message="Remove square")

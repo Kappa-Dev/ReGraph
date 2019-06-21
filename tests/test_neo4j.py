@@ -10,8 +10,8 @@ class TestNeo4jGraph(object):
     def setup_class(self):
         try:
             self.g = Neo4jGraph(uri="bolt://localhost:7687",
-                                    user="neo4j",
-                                    password="admin")
+                                user="neo4j",
+                                password="admin")
             self.g._clear()
             nodes = [
                 ("a", {"name": "EGFR", "state": "p"}),

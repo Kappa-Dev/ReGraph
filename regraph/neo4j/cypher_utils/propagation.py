@@ -1,7 +1,12 @@
 """Collection of utils for generation of propagation-related Cypher queries."""
+import networkx as nx
 import warnings
 
 from regraph.exceptions import (TypingWarning, InvalidHomomorphism)
+from regraph.utils import keys_by_value
+# from regraph.primitives import add_nodes_from, add_edges_from
+from regraph.networkx.category_utils import pullback
+from regraph.rules import Rule
 
 from . import generic
 from . import rewriting
@@ -762,3 +767,220 @@ def preserve_tmp_typing(rewritten_graph, graph_label, typing_label,
         ")\n"
     )
     return query
+
+
+def get_rule_liftings(tx, graph_id, rule, instance, p_typing):
+    """Execute the query finding rule liftings."""
+    lhs_vars = {
+        n: generic.generate_var_name() for n in rule.lhs.nodes()}
+    match_instance_vars = {lhs_vars[k]: v for k, v in instance.items()}
+
+    # Match nodes
+    query = "// Match nodes the instance of the rewritten graph \n"
+    query += "MATCH {}".format(
+        ", ".join([
+            "({}:{} {{id: '{}'}})".format(k, graph_id, v)
+            for k, v in match_instance_vars.items()
+        ])
+    )
+    query += "\n\n"
+
+    carry_vars = list(lhs_vars.values())
+    for k, v in lhs_vars.items():
+        query += (
+            "OPTIONAL MATCH (n)-[:typing*1..]->({})\n".format(v) +
+            "WITH {} \n".format(
+                ", ".join(carry_vars + ["collect({{type:'node', origin: {}.id, id: n.id, graph:labels(n)[0]}}) as {}_dict\n".format(
+                    v, v)])
+            )
+        )
+        carry_vars.append("{}_dict".format(v))
+
+    # Match edges
+    for (u, v) in rule.lhs.edges():
+        edge_var = "{}_{}".format(lhs_vars[u], lhs_vars[v])
+        query += "OPTIONAL MATCH ({}_instance)-[{}:edge]->({}_instance)\n".format(
+            lhs_vars[u],
+            edge_var,
+            lhs_vars[v])
+        query += "WHERE ({})-[:typing*1..]->({}) AND ({})-[:typing*1..]->({})\n".format(
+            "{}_instance".format(lhs_vars[u]), lhs_vars[u],
+            "{}_instance".format(lhs_vars[v]), lhs_vars[v])
+        query += (
+            "WITH {} \n".format(
+                ", ".join(carry_vars + [
+                    "collect({{type: 'edge', source: {}.id, target: {}.id, graph:labels({})[0]}}) as {}\n".format(
+                        "{}_instance".format(lhs_vars[u]),
+                        "{}_instance".format(lhs_vars[v]),
+                        "{}_instance".format(lhs_vars[u]), edge_var)
+                ])
+            )
+        )
+        carry_vars.append(edge_var)
+    query += "RETURN {}".format(
+        ", ".join(
+            ["{}_dict as {}".format(v, v) for v in lhs_vars.values()] +
+            ["{}_{}".format(lhs_vars[u], lhs_vars[v]) for u, v in rule.lhs.edges()]))
+
+    result = tx.run(query)
+    record = result.single()
+    l_g_ls = {}
+    lhs_nodes = {}
+    lhs_edges = {}
+    for k, v in record.items():
+        if len(v) > 0:
+            if v[0]["type"] == "node":
+                for el in v:
+                    if el["graph"] in lhs_nodes:
+                        lhs_nodes[el["graph"]].append(el["id"])
+                        l_g_ls[el["graph"]][el["id"]] = el["origin"]
+                    else:
+                        lhs_nodes[el["graph"]] = [el["id"]]
+                        l_g_ls[el["graph"]] = {
+                            el["id"]: el["origin"]
+                        }
+            else:
+                for el in v:
+                    if el["graph"] in lhs_edges:
+                        lhs_edges[el["graph"]].append(
+                            (el["source"], el["target"])
+                        )
+                    else:
+                        lhs_edges[el["graph"]] = [
+                            (el["source"], el["target"])
+                        ]
+    # TODO: check what to do with attrs!
+
+    liftings = {}
+    for graph, nodes in lhs_nodes.items():
+
+        lhs = nx.DiGraph()
+        lhs.add_nodes_from(nodes)
+        if graph in lhs_edges:
+            lhs.add_edges_from(lhs_edges[graph])
+
+        # ALL these is commented for the reason of circular dependencies :(
+        # p, p_lhs, p_g_p = pullback(
+        #     lhs, rule.p, rule.lhs, l_g_ls[graph], rule.p_lhs)
+        # TODO: add stuff for controlled propagation
+
+        liftings[graph] = {
+            # "rule": Rule(p=p, lhs=lhs, p_lhs=p_lhs),
+            "instance": {n: n for n in nodes},
+            "l_g_l": l_g_ls[graph],
+            # "p_g_p": p_g_p
+        }
+
+    print(liftings)
+    return liftings
+
+
+def get_rule_projections(tx, graph_id, rule, instance, p_typing):
+    """Execute the query finding rule liftings."""
+    p_vars = {
+        n: n for n in rule.p.nodes()}
+    match_instance_vars = {
+        v: instance[rule.p_lhs[k]] for k, v in p_vars.items()
+    }
+
+    # Match nodes
+    query = "// Match nodes the instance of the rewritten graph \n"
+    query += "MATCH {}".format(
+        ", ".join([
+            "({}:{} {{id: '{}'}})".format(k, graph_id, v)
+            for k, v in match_instance_vars.items()
+        ])
+    )
+    query += "\n\n"
+
+    carry_vars = list(p_vars.values())
+    for k, v in p_vars.items():
+        query += (
+            "OPTIONAL MATCH (n)<-[:typing*1..]-({})\n".format(v) +
+            "WITH {} \n".format(
+                ", ".join(
+                    carry_vars +
+                    ["collect(DISTINCT {{type:'node', origin: {}.id, id: n.id, graph:labels(n)[0]}}) as {}_dict\n".format(
+                        v, v)])
+            )
+        )
+        carry_vars.append("{}_dict".format(v))
+
+    # Match edges
+    for (u, v) in rule.p.edges():
+        edge_var = "{}_{}".format(p_vars[u], p_vars[v])
+        query += "OPTIONAL MATCH ({}_instance)-[{}:edge]->({}_instance)\n".format(
+            p_vars[u],
+            edge_var,
+            p_vars[v])
+        query += "WHERE ({})<-[:typing*1..]-({}) AND ({})<-[:typing*1..]-({})\n".format(
+            "{}_instance".format(p_vars[u]), p_vars[u],
+            "{}_instance".format(p_vars[v]), p_vars[v])
+        query += (
+            "WITH {} \n".format(
+                ", ".join(carry_vars + [
+                    "collect({{type: 'edge', source: {}.id, target: {}.id, graph:labels({})[0]}}) as {}\n".format(
+                        "{}_instance".format(p_vars[u]),
+                        "{}_instance".format(p_vars[v]),
+                        "{}_instance".format(p_vars[u]), edge_var)
+                ])
+            )
+        )
+        carry_vars.append(edge_var)
+    query += "RETURN {}".format(
+        ", ".join(
+            ["{}_dict as {}".format(v, v) for v in p_vars.values()] +
+            ["{}_{}".format(p_vars[u], p_vars[v]) for u, v in rule.p.edges()]))
+
+    result = tx.run(query)
+    record = result.single()
+
+    # TODO: check attrs
+
+    p_p_ts = {}
+    p_nodes = {}
+    p_edges = {}
+    for k, v in record.items():
+        if len(v) > 0:
+            if v[0]["type"] == "node":
+                for el in v:
+                    if el["graph"] in p_nodes:
+                        p_nodes[el["graph"]].add(el["id"])
+                        p_p_ts[el["graph"]][el["origin"]] = el["id"]
+                    else:
+                        p_nodes[el["graph"]] = {el["id"]}
+                        p_p_ts[el["graph"]] = {
+                            el["origin"]: el["id"]
+                        }
+            else:
+                for el in v:
+                    if el["graph"] in p_edges:
+                        p_edges[el["graph"]].add(
+                            (el["source"], el["target"])
+                        )
+                    else:
+                        p_edges[el["graph"]] = {
+                            (el["source"], el["target"])
+                        }
+
+    projections = {}
+    for graph, nodes in p_nodes.items():
+
+        p = nx.DiGraph()
+        p.add_nodes_from(nodes)
+        if graph in p_edges:
+            p.add_edges_from(p_edges[graph])
+
+        # ALL these is commented for the reason of circular dependencies :(
+        # p, p_lhs, p_g_p = pullback(
+        #     lhs, rule.p, rule.lhs, l_g_ls[graph], rule.p_lhs)
+        # TODO: add stuff for controlled propagation
+
+        projections[graph] = {
+            # "rule": Rule(p=p, lhs=lhs, p_lhs=p_lhs),
+            "instance": {n: n for n in nodes},
+            "p_p_t": p_p_ts[graph],
+            # "r_r_t": r_r_t[graph]
+        }
+
+    return projections
