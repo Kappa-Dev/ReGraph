@@ -5,7 +5,8 @@ import warnings
 from regraph.exceptions import (TypingWarning, InvalidHomomorphism)
 from regraph.utils import keys_by_value
 # from regraph.primitives import add_nodes_from, add_edges_from
-from regraph.networkx.category_utils import pullback
+from regraph.networkx.category_utils import (pullback,
+                                             pushout)
 from regraph.rules import Rule
 
 from . import generic
@@ -860,15 +861,20 @@ def get_rule_liftings(tx, graph_id, rule, instance, p_typing):
             lhs.add_edges_from(lhs_edges[graph])
 
         # ALL these is commented for the reason of circular dependencies :(
-        # p, p_lhs, p_g_p = pullback(
-        #     lhs, rule.p, rule.lhs, l_g_ls[graph], rule.p_lhs)
+        print(lhs.nodes())
+        print(rule.p.nodes())
+        print(rule.lhs.nodes())
+        print(l_g_ls[graph])
+        print(rule.p_lhs)
+        p, p_lhs, p_g_p = pullback(
+            lhs, rule.p, rule.lhs, l_g_ls[graph], rule.p_lhs)
         # TODO: add stuff for controlled propagation
 
         liftings[graph] = {
-            # "rule": Rule(p=p, lhs=lhs, p_lhs=p_lhs),
+            "rule": Rule(p=p, lhs=lhs, p_lhs=p_lhs),
             "instance": {n: n for n in nodes},
             "l_g_l": l_g_ls[graph],
-            # "p_g_p": p_g_p
+            "p_g_p": p_g_p
         }
 
     print(liftings)
@@ -972,15 +978,15 @@ def get_rule_projections(tx, graph_id, rule, instance, p_typing):
             p.add_edges_from(p_edges[graph])
 
         # ALL these is commented for the reason of circular dependencies :(
-        # p, p_lhs, p_g_p = pullback(
-        #     lhs, rule.p, rule.lhs, l_g_ls[graph], rule.p_lhs)
+        rhs, p_rhs, r_r_t = pushout(
+            rule.p, p, rule.rhs, p_p_ts[graph], rule.p_rhs)
         # TODO: add stuff for controlled propagation
 
         projections[graph] = {
-            # "rule": Rule(p=p, lhs=lhs, p_lhs=p_lhs),
+            "rule": Rule(p=p, rhs=rhs, p_rhs=p_rhs),
             "instance": {n: n for n in nodes},
             "p_p_t": p_p_ts[graph],
-            # "r_r_t": r_r_t[graph]
+            "r_r_t": r_r_t
         }
 
     return projections
