@@ -28,7 +28,6 @@ from regraph.exceptions import (ReGraphError,
                                 GraphError,
                                 GraphAttrsWarning)
 from regraph.attribute_sets import (FiniteSet)
-from regraph.neo4j import Neo4jGraph
 
 
 def generate_new_node_id(graph, basename):
@@ -91,7 +90,7 @@ def add_node(graph, node_id, attrs=dict()):
                 graph.node[node_id][k] = v
         else:
             raise GraphError("Node '%s' already exists!" % node_id)
-    elif isinstance(graph, Neo4jGraph):
+    else:
         graph.add_node(node_id, attrs)
 
 
@@ -156,7 +155,7 @@ def add_node_attrs(graph, node, attrs):
                     node_attrs[key] = node_attrs[key].union(attrs[key])
                 else:
                     node_attrs[key] = attrs[key]
-    elif isinstance(graph, Neo4jGraph):
+    else:
         graph.add_node_attrs(node, attrs)
 
 
@@ -210,7 +209,7 @@ def add_edge(graph, s, t, attrs=None, **attr):
         graph.add_edge(s, t)
         assign_attrs(graph.adj[s][t], new_attrs)
         assign_attrs(graph.adj[t][s], new_attrs)
-    elif isinstance(graph, Neo4jGraph):
+    else:
         graph.add_edge(s, t, attrs)
 
 
@@ -229,14 +228,13 @@ def remove_edge(graph, s, t):
         If edge between `s` and `t` does not exist.
 
     """
-    if isinstance(graph, nx.DiGraph) or\
-       isinstance(graph, Neo4jGraph):
-        if (s, t) not in graph.edges():
+    if isinstance(graph, nx.Graph):
+        if (s, t) not in graph.edges() and (t, s) not in graph.edges():
             raise GraphError(
                 "Edge '%s->%s' does not exist!" % (str(s), str(t)))
         graph.remove_edge(s, t)
-    elif isinstance(graph, nx.Graph):
-        if (s, t) not in graph.edges() and (t, s) not in graph.edges():
+    else:
+        if (s, t) not in graph.edges():
             raise GraphError(
                 "Edge '%s->%s' does not exist!" % (str(s), str(t)))
         graph.remove_edge(s, t)
@@ -330,7 +328,7 @@ def remove_node(graph, node_id):
             neighbors = set(graph.__getitem__(node_id).keys())
             neighbors -= {node_id}
             graph.remove_node(node_id)
-        elif isinstance(graph, Neo4jGraph):
+        else:
             graph.remove_node(node_id)
     else:
         raise GraphError("Node %s does not exist!" % str(node_id))
@@ -340,14 +338,14 @@ def remove_node(graph, node_id):
 def set_node_attrs(graph, node_id, attrs, normalize=True, update=True):
     if normalize is True:
         normalize_attrs(attrs)
-    if isinstance(graph, Neo4jGraph):
-        graph.set_node_attrs(node_id, attrs, update=update)
-    else:
+    if isinstance(graph, nx.DiGraph) or isinstance(graph, nx.Graph):
         if not update:
             for k, v in attrs.items():
                 graph.node[node_id][k] = v
         else:
             update_node_attrs(graph, node_id, attrs, normalize)
+    else:
+        graph.set_node_attrs(node_id, attrs, update=update)
 
 
 def update_node_attrs(graph, node_id, attrs, normalize=True):
@@ -386,7 +384,7 @@ def update_node_attrs(graph, node_id, attrs, normalize=True):
             graph.add_node(node_id, **new_attrs)
             for k in attrs_to_remove:
                 del graph.node[node_id][k]
-        elif isinstance(graph, Neo4jGraph):
+        else:
             graph.set_node_attrs(node_id, new_attrs, update=True)
 
 
@@ -426,7 +424,7 @@ def remove_node_attrs(graph, node_id, attrs):
                     del old_attrs[key]
                 else:
                     old_attrs[key] = new_set
-    elif isinstance(graph, Neo4jGraph):
+    else:
         graph.remove_node_attrs(node_id, attrs)
 
 
@@ -536,7 +534,7 @@ def get_node(graph, n):
     if isinstance(graph, nx.DiGraph) or\
        isinstance(graph, nx.Graph):
         return graph.node[n]
-    elif isinstance(graph, Neo4jGraph):
+    else:
         return graph.get_node_attrs(n)
 
 
@@ -553,7 +551,7 @@ def get_edge(graph, s, t):
         return graph.adj[s][t]
     elif isinstance(graph, nx.Graph):
         return merge_attributes(graph.adj[s][t], graph.adj[s][t])
-    elif isinstance(graph, Neo4jGraph):
+    else:
         return graph.get_edge_attrs(s, t)
 
 
@@ -572,7 +570,7 @@ def exists_edge(graph, s, t):
         s_t = (s, t) in graph.edges()
         t_s = (t, s) in graph.edges()
         return(s_t or t_s)
-    elif isinstance(graph, Neo4jGraph):
+    else:
         return graph.exists_edge(s, t)
     return False
 
@@ -630,7 +628,7 @@ def set_edge(graph, s, t, attrs, normalize=True):
         graph.add_edge(s, t, **new_attrs)
         for k in attrs_to_remove:
             del graph.adj[s][t][k]
-    elif isinstance(graph, Neo4jGraph):
+    else:
         graph.set_edge_attrs(s, t, new_attrs, update=True)
 
 
@@ -726,10 +724,8 @@ def clone_node(graph, node_id, name=None):
                     graph, n, new_node,
                     get_edge(graph, new_node, n))
 
-    elif isinstance(graph, Neo4jGraph):
-        new_node = graph.clone_node(node_id, name=name)
     else:
-        raise ValueError("GOT smth else", graph)
+        new_node = graph.clone_node(node_id, name=name)
 
     return new_node
 
@@ -747,7 +743,7 @@ def relabel_node(graph, node_id, new_id):
        isinstance(graph, nx.Graph):
         clone_node(graph, node_id, new_id)
         graph.remove_node(node_id)
-    elif isinstance(graph, Neo4jGraph):
+    else:
         graph.relabel_node(node_id, new_id)
 
 
@@ -821,14 +817,13 @@ def get_relabeled_graph(graph, mapping):
     --------
     regraph.primitives.relabel_nodes
     """
-    if isinstance(graph, Neo4jGraph):
-        raise ReGraphError("Not available for Neo4j graphs!")
-    elif isinstance(graph, nx.DiGraph):
+    if isinstance(graph, nx.DiGraph):
         g = nx.DiGraph()
     elif isinstance(graph, nx.Graph):
         g = nx.DiGraph()
     else:
-        raise ReGraphError("Unknown type of graph: '{}'".format(
+
+        raise ReGraphError("Not available for graphs '{}'!".format(
             type(g)))
 
     old_nodes = set(mapping.keys())
@@ -921,12 +916,6 @@ def merge_nodes(graph, nodes, node_id=None, method="union", edge_method="union")
 
         if method is None:
             method = "union"
-
-        if isinstance(graph, Neo4jGraph) and\
-           (method == "intersection" or edge_method == "intersection"):
-            raise ReGraphError(
-                "Mergining nodes with intersection of "
-                "attributes is not available for Neo4jGraph!")
 
         if edge_method is None:
             method = "union"
@@ -1097,7 +1086,7 @@ def merge_nodes(graph, nodes, node_id=None, method="union", edge_method="union")
                         set_edge(graph, node_id, node, attrs)
 
             return node_id
-        elif isinstance(graph, Neo4jGraph):
+        else:
             new_id = graph.merge_nodes(nodes, node_id)
             return new_id
     else:
@@ -1134,11 +1123,6 @@ def subtract(a, b, ba_mapping):
     >>> diff.edges()
     [(2, 2)]
     """
-
-    if isinstance(a, Neo4jGraph) or isinstance(b, Neo4jGraph):
-        raise ReGraphError(
-            "Graph subtraction is not implemented "
-            "for Neo4jGraph!")
 
     res = type(a)()
     f = ba_mapping
@@ -1449,7 +1433,7 @@ def find_matching(graph, pattern, nodes=None):
             for key, value in instance.items():
                 instance[key] = inverse_mapping[value]
 
-    elif isinstance(graph, Neo4jGraph):
+    else:
         instances = graph.find_matching(pattern, nodes)
     return instances
 

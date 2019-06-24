@@ -30,8 +30,19 @@ from regraph import primitives
 from regraph.networkx.plotting import plot_rule
 from regraph.exceptions import (ReGraphWarning, ParsingError,
                                 RuleError)
-from regraph.neo4j.graphs import Neo4jGraph
-import regraph.neo4j.cypher_utils as cypher
+
+# from regraph.neo4j.cypher_utils.generic import (generate_var_name,
+#                                                 with_vars,
+#                                                 return_vars)
+# from regraph.neo4j.cypher_utils.rewriting import (match_pattern_instance,
+#                                                   cloning_query,
+#                                                   remove_nodes,
+#                                                   remove_edge,
+#                                                   remove_attributes,
+#                                                   merging_query1,
+#                                                   add_node,
+#                                                   add_edge,
+#                                                   add_attributes)
 
 
 class Rule(object):
@@ -997,16 +1008,17 @@ class Rule(object):
             instance = {
                 n: n for n in self.lhs.nodes()
             }
-        if isinstance(graph, Neo4jGraph):
-            g_prime = graph
-            rhs_g_prime = graph.rewrite(self, instance)
-        else:
+        if isinstance(graph, nx.DiGraph):
             g_m, p_g_m, g_m_g = pullback_complement(
                 self.p, self.lhs, graph, self.p_lhs, instance,
                 inplace
             )
             g_prime, g_m_g_prime, rhs_g_prime = pushout(
                 self.p, g_m, self.rhs, p_g_m, self.p_rhs, inplace)
+        else:
+            g_prime = graph
+            rhs_g_prime = graph.rewrite(self, instance)
+
         return (g_prime, rhs_g_prime)
 
     def added_nodes(self):
@@ -1501,356 +1513,6 @@ class Rule(object):
 
         self.p_lhs = new_p_lhs
         self.p_rhs = new_p_rhs
-
-    def to_cypher(self, instance, node_label="node",
-                  edge_label="edge", generate_var_ids=False):
-        """Convert a rule on the instance to a Cypher query.
-
-        instance : dict
-            Dictionary specifying an instance of the lhs of the rule
-        rhs_typing : dict
-        node_label : iterable, optional
-        edge_label : iterable, optional
-        generate_var_ids : boolean
-            If True the names of the variables will be generated as uuid
-            (unreadable, but more secure: guaranteed to avoid any var name
-            collisions)
-        """
-        # If names of nodes of the rule graphs (L, P, R) are used as
-        # var names, we need to perform escaping on these names
-        # for neo4j not to complain (some symbols are forbidden in
-        # Cypher's var names)
-
-        # fix the order of nodes from P
-        # this is to avoid problems with different
-        # selection of the cloning origin
-        preserved_nodes = self.p.nodes()
-        # Index of preserved nodes helps us to count clones
-        preserved_nodes_index = {
-            n: i for i, n in enumerate(preserved_nodes)
-        }
-        if generate_var_ids:
-            # Generate unique variable names corresponding to node names
-            lhs_vars = {
-                n: cypher.generate_var_name() for n in self.lhs.nodes()}
-            p_vars = {
-                n: cypher.generate_var_name() for n in preserved_nodes}
-            rhs_vars = {
-                n: cypher.generate_var_name() for n in self.rhs.nodes()}
-        else:
-            # rule._escape()
-            lhs_vars = {n: "lhs_" + str(n) for n in self.lhs.nodes()}
-            p_vars = {n: "p_" + str(n) for n in preserved_nodes}
-            rhs_vars = {n: "rhs_" + str(n) for n in self.rhs.nodes()}
-
-        # Variables of the nodes of instance
-        match_instance_vars = {lhs_vars[k]: v for k, v in instance.items()}
-        query = ""
-
-        # If instance is not empty, generate Cypher that matches the nodes
-        # of the instance
-        if len(instance) > 0:
-            query += "// Match nodes and edges of the instance \n"
-            query += cypher.match_pattern_instance(
-                self.lhs, lhs_vars, match_instance_vars,
-                node_label=node_label, edge_label=edge_label)
-            query += "\n\n"
-        else:
-            query += "// Empty instance \n\n"
-
-        # Add instance nodes to the set of vars to carry
-        carry_variables = set(match_instance_vars.keys())
-        for u, v in self.lhs.edges():
-            carry_variables.add(str(lhs_vars[u]) + "_" + str(lhs_vars[v]))
-
-        # Here we store nodes of lhs that we keep as one of the clones
-        fixed_nodes = dict()
-        all_p_clones = set()
-
-        # Generate cloning subquery
-        for lhs_node, p_nodes in self.cloned_nodes().items():
-            query += "// Cloning node '{}' of the lhs \n".format(lhs_node)
-            clones = set()
-            preds_to_ignore = dict()
-            sucs_to_ignore = dict()
-
-            # Set a p_node that will correspond to the original
-            fixed_node = keys_by_value(
-                preserved_nodes_index,
-                min([preserved_nodes_index[p_node] for p_node in p_nodes]))[0]
-            fixed_nodes[lhs_node] = fixed_node
-            clones = [
-                p_node for p_node in p_nodes if p_node != fixed_node]
-            all_p_clones.update(clones)
-
-            for n in clones:
-                preds_to_ignore = set()
-                sucs_to_ignore = set()
-                suc_vars_to_ignore = set()
-                pred_vars_to_ignore = set()
-                for u, v in self.removed_edges():
-                    if u == n:
-                        if v not in clones:
-                            if v not in all_p_clones:
-                                sucs_to_ignore.add(
-                                    instance[self.p_lhs[v]])
-                            else:
-                                suc_vars_to_ignore.add(p_vars[v])
-                    if v == n:
-                        if u not in clones:
-                            if u not in all_p_clones:
-                                preds_to_ignore.add(
-                                    instance[self.p_lhs[u]])
-                            else:
-                                pred_vars_to_ignore.add(p_vars[u])
-                query +=\
-                    "// Create clone corresponding to '{}' ".format(n) +\
-                    "of the preserved part\n"
-                if generate_var_ids:
-                    clone_id_var = cypher.generate_var_name()
-                else:
-                    clone_id_var = "p_" + str(n) + "_id"
-
-                q, carry_variables = cypher.cloning_query(
-                    original_var=lhs_vars[lhs_node],
-                    clone_var=p_vars[n],
-                    clone_id=n,
-                    clone_id_var=clone_id_var,
-                    node_label=node_label,
-                    edge_labels=["edge", "typing", "related"],
-                    sucs_to_ignore=sucs_to_ignore,
-                    preds_to_ignore=preds_to_ignore,
-                    suc_vars_to_ignore=suc_vars_to_ignore,
-                    pred_vars_to_ignore=pred_vars_to_ignore,
-                    carry_vars=carry_variables,
-                    ignore_naming=True)
-                query += q
-                query += cypher.with_vars(carry_variables)
-                query += "\n\n"
-
-        # Generate nodes removal subquery
-        for node in self.removed_nodes():
-            query += "// Removing node '{}' of the lhs \n".format(node)
-            query += cypher.remove_nodes([lhs_vars[node]])
-            carry_variables.remove(lhs_vars[node])
-            query += "\n"
-
-        # Generate edges removal subquery
-        for u, v in self.removed_edges():
-            if self.p_lhs[u] not in self.cloned_nodes().keys() and\
-               self.p_lhs[v] not in self.cloned_nodes().keys():
-                # if u in instance.keys() and v in instance.keys():
-                query += "// Removing pattern matched edges '{}->{}' of the lhs \n".format(
-                    self.p_lhs[u], self.p_lhs[v])
-                edge_var = "{}_{}".format(
-                    str(lhs_vars[self.p_lhs[u]]),
-                    str(lhs_vars[self.p_lhs[v]]))
-                query += cypher.remove_edge(edge_var)
-                query += "\n"
-                carry_variables.remove(edge_var)
-
-        if len(self.removed_nodes()) > 0 or len(self.removed_edges()) > 0:
-            query += cypher.with_vars(carry_variables)
-
-        # Rename untouched vars as they are in P
-        vars_to_rename = {}
-        for n in self.lhs.nodes():
-            if n not in self.removed_nodes():
-                if n not in self.cloned_nodes().keys():
-                    new_var_name = p_vars[keys_by_value(self.p_lhs, n)[0]]
-                    vars_to_rename[lhs_vars[n]] = new_var_name
-                    carry_variables.remove(lhs_vars[n])
-                elif n in fixed_nodes.keys():
-                    vars_to_rename[lhs_vars[n]] = p_vars[fixed_nodes[n]]
-                    carry_variables.remove(lhs_vars[n])
-
-        if len(vars_to_rename) > 0:
-            query += "\n// Renaming vars to correspond to the vars of P\n"
-            if len(carry_variables) > 0:
-                query +=\
-                    cypher.with_vars(carry_variables) +\
-                    ", " + ", ".join(
-                        "{} as {}".format(k, v)
-                        for k, v in vars_to_rename.items()) +\
-                    " "
-            else:
-                query +=\
-                    "WITH " + ", ".join(
-                        "{} as {}".format(k, v)
-                        for k, v in vars_to_rename.items()) +\
-                    " "
-            query += "\n\n"
-        for k, v in vars_to_rename.items():
-            carry_variables.add(v)
-
-        # Generate removal of edges between clones
-        matches = []
-        for u, v in self.removed_edges():
-            if self.p_lhs[u] in self.cloned_nodes().keys() or\
-               self.p_lhs[v] in self.cloned_nodes().keys():
-                matches.append((
-                    "({})-[{}:{}]->({})".format(
-                        p_vars[u],
-                        p_vars[u] + "_" + p_vars[v],
-                        edge_label,
-                        p_vars[v]),
-                    p_vars[u] + "_" + p_vars[v]))
-
-        if len(matches) > 0:
-            query += "// Removing edges not bound to vars by matching (edges from/to clones)\n"
-            for edge, var in matches:
-                query += (
-                    "// Removing '{}->{}' in P \n".format(u, v) +
-                    "OPTIONAL MATCH {}\n".format(edge) +
-                    "DELETE {}\n".format(var) +
-                    cypher.with_vars(carry_variables)
-                )
-
-        # !!we forget to add interclone edges!!
-        for (p_u, p_v) in self.p.edges():
-            if p_u not in fixed_nodes.keys() and\
-               p_v not in fixed_nodes.keys() and\
-               (p_u, p_v) not in self.removed_edges():
-                # lhs_u = self.p_lhs[p_u]
-                # lhs_v = self.p_lhs[p_v]
-                query += "MERGE ({})-[{}:{}]->({})\n".format(
-                    p_vars[p_u], p_vars[p_u] + "_" + p_vars[p_v],
-                    edge_label, p_vars[p_v])
-
-        # Generate node attrs removal subquery
-        for node, attrs in self.removed_node_attrs().items():
-            query += "// Removing properties from node '{}' of P \n".format(node)
-            query += cypher.remove_attributes(p_vars[node], attrs)
-            query += "\n\n"
-
-        # Generate edge attrs removal subquery
-        for e, attrs in self.removed_edge_attrs().items():
-            u = e[0]
-            v = e[1]
-            query += "// Removing properties from edge {}->{} of P \n".format(
-                u, v)
-            query += cypher.with_vars(carry_variables)
-            query += "MATCH ({})-[{}:edge]->({})\n".format(
-                p_vars[u], p_vars[u] + "_" + p_vars[v], p_vars[v])
-            carry_variables.add(p_vars[u] + "_" + p_vars[v])
-            query += cypher.remove_attributes(p_vars[u] + "_" + p_vars[v], attrs)
-            query += "\n\n"
-
-        # Generate merging subquery
-        for rhs_key, p_nodes in self.merged_nodes().items():
-            query +=\
-                "// Merging nodes '{}' of the preserved part ".format(p_nodes) +\
-                "into '{}' \n".format(rhs_key)
-            merged_id = "_".join(instance[self.p_lhs[p_n]]for p_n in p_nodes)
-            q, carry_variables = cypher.merging_query1(
-                original_vars=[p_vars[n] for n in p_nodes],
-                merged_var=rhs_vars[rhs_key],
-                merged_id=merged_id,
-                merged_id_var=cypher.generate_var_name(),
-                node_label=node_label,
-                edge_label=edge_label,
-                merge_typing=True,
-                carry_vars=carry_variables,
-                ignore_naming=True)
-            query += q
-            query += "\n\n"
-
-        # Generate nodes addition subquery
-        for rhs_node in self.added_nodes():
-            query += "// Adding node '{}' from the rhs \n".format(rhs_node)
-            if generate_var_ids:
-                new_node_id_var = cypher.generate_var_name()
-            else:
-                new_node_id_var = "rhs_" + str(rhs_node) + "_id"
-            q, carry_variables = cypher.add_node(
-                rhs_vars[rhs_node], rhs_node, new_node_id_var,
-                node_label=node_label,
-                carry_vars=carry_variables,
-                ignore_naming=True)
-            query += q
-            query += "\n\n"
-
-        # Rename untouched vars as they are in rhs
-        vars_to_rename = {}
-        for n in self.rhs.nodes():
-            if n not in self.added_nodes() and\
-               n not in self.merged_nodes().keys():
-                prev_var_name = p_vars[keys_by_value(self.p_rhs, n)[0]]
-                vars_to_rename[prev_var_name] = rhs_vars[n]
-                if prev_var_name in carry_variables:
-                    carry_variables.remove(prev_var_name)
-
-        if len(vars_to_rename) > 0:
-            query += "// Renaming vars to correspond to the vars of rhs\n"
-            if len(carry_variables) > 0:
-                query +=\
-                    cypher.with_vars(carry_variables) +\
-                    ", " + ", ".join(
-                        "{} as {}".format(k, v)
-                        for k, v in vars_to_rename.items()) +\
-                    " "
-            else:
-                query +=\
-                    "WITH " + ", ".join(
-                        "{} as {}".format(k, v)
-                        for k, v in vars_to_rename.items()) +\
-                    " "
-            query += "\n\n"
-
-        for k, v in vars_to_rename.items():
-            carry_variables.add(v)
-
-        # Generate node attrs addition subquery
-        for rhs_node, attrs in self.added_node_attrs().items():
-            query += "// Adding properties to the node " +\
-                "'{}' from the rhs \n".format(rhs_node)
-            query += cypher.add_attributes(rhs_vars[rhs_node], attrs)
-            query += "\n\n"
-
-        # Generate edges addition subquery
-        # query += (
-        #     "WITH [] as added_edges, " +
-        #     ", ".join(carry_variables) + "\n"
-        # )
-        for u, v in self.added_edges():
-            query += "// Adding edge '{}->{}' from the rhs \n".format(u, v)
-            new_edge_var = rhs_vars[u] + "_" + rhs_vars[v]
-            query += cypher.add_edge(
-                edge_var=new_edge_var,
-                source_var=rhs_vars[u],
-                target_var=rhs_vars[v],
-                edge_label=edge_label,
-                attrs=primitives.get_edge(self.rhs, u, v))
-            if (u, v) in self.added_edge_attrs().keys():
-                carry_variables.add(new_edge_var)
-            query += "\n\n"
-
-        # Generate edge attrs addition subquery
-        for e, attrs in self.added_edge_attrs().items():
-            u = e[0]
-            v = e[1]
-            query += "// Adding properties to an edge " +\
-                "'{}'->'{}' from the rhs \n".format(u, v)
-            query += cypher.with_vars(carry_variables) + '\n'
-
-            edge_var = rhs_vars[u] + "_" + rhs_vars[v]
-            if (u, v) not in self.added_edges():
-                query += "MATCH ({})-[{}:edge]->({})\n".format(
-                    rhs_vars[u], edge_var, rhs_vars[v])
-                carry_variables.add(edge_var)
-
-            query += cypher.add_attributes(edge_var, attrs)
-            query += cypher.with_vars(carry_variables)
-            query += "\n\n"
-
-        query += "// Return statement \n"
-        query += cypher.return_vars(carry_variables)
-
-        # Dictionary defining a mapping from the generated
-        # unique variable names to the names of nodes of the rhs
-        rhs_vars_inverse = {v: k for k, v in rhs_vars.items()}
-
-        return query, rhs_vars_inverse
 
     def plot(self, filename=None, title=None):
         """Plot the rule."""
