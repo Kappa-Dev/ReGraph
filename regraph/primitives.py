@@ -23,7 +23,8 @@ from regraph.utils import (merge_attributes,
                            load_nodes_from_json,
                            load_edges_from_json,
                            attrs_to_json,
-                           attrs_from_json)
+                           attrs_from_json,
+                           generate_new_id)
 from regraph.exceptions import (ReGraphError,
                                 GraphError,
                                 GraphAttrsWarning)
@@ -31,12 +32,7 @@ from regraph.attribute_sets import (FiniteSet)
 
 
 def generate_new_node_id(graph, basename):
-    node_id = basename
-    i = 1
-    while node_id in graph.nodes():
-        node_id = "{}_{}".format(basename, i)
-        i += 1
-    return node_id
+    return generate_new_id(graph.nodes(), basename)
 
 
 def assign_attrs(element, attrs):

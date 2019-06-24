@@ -586,32 +586,48 @@ def props_union_from_list(list_var, new_props_var, carry_vars=None):
 
     query += (
         "// accumulate all the attrs of the elements to be merged\n" +
-        "WITH [] as new_props, prop_to_merge, " + ", ".join(carry_vars) + "\n" +
+        "WITH [] as new_props, " + ", ".join(["prop_to_merge"] + list(carry_vars)) + "\n" +
         "WITH new_props + REDUCE(pairs = [], k in filter(k in keys(prop_to_merge) WHERE k <> 'id') | \n" +
         "\tpairs + REDUCE(inner_pairs = [], v in prop_to_merge[k] | \n" +
-        "\t\tinner_pairs + {key: k, value: v})) as new_props, prop_to_merge, " +
-        ", ".join(carry_vars) + "\n"
+        "\t\tinner_pairs + {key: k, value: v})) as new_props, prop_to_merge "
     )
+
+    if len(carry_vars) > 0:
+        query += ", " + ", ".join(carry_vars) + "\n"
+    else:
+        query += "\n"
 
     query += (
         "WITH collect(prop_to_merge) as {}, ".format(list_var) +
-        "collect(new_props) as new_props_col, " +
-        ", ".join(carry_vars) + "\n"
+        ", ".join(["collect(new_props) as new_props_col"] + list(carry_vars)) + "\n"
         "WITH REDUCE(init=[], props in new_props_col | init + props) as new_props, " +
-        "{}, ".format(list_var) + ", ".join(carry_vars) + "\n"
+        "{}".format(list_var)
     )
+
+    if len(carry_vars) > 0:
+        query += ", " + ", ".join(carry_vars) + "\n"
+    else:
+        query += "\n"
+
     carry_vars.add(list_var)
 
     query += (
-        "WITH apoc.map.groupByMulti(new_props, 'key') as new_props, " +
-        ", ".join(carry_vars) + "\n" +
+        "WITH " + ", ".join(
+            ["apoc.map.groupByMulti(new_props, 'key') as new_props"] + list(carry_vars)) + "\n" +
         "WITH apoc.map.fromValues(REDUCE(pairs=[], k in keys(new_props) | \n"
         "\tpairs + [k, REDUCE(values=[], v in new_props[k] | \n"
-        "\t\tvalues + CASE WHEN v.value IN values THEN [] ELSE v.value END)])) as new_props, " +
-        ", ".join(carry_vars) + "\n" +
-        merge_with_symbolic_sets("new_props", "new_props") + "," +
-        ", ".join(carry_vars) + "\n"
+        "\t\tvalues + CASE WHEN v.value IN values THEN [] ELSE v.value END)])) as new_props"
     )
+    if len(carry_vars) > 0:
+        query += ", " + ", ".join(carry_vars) + "\n"
+    else:
+        query += "\n"
+
+    query += merge_with_symbolic_sets("new_props", "new_props")
+    if len(carry_vars) > 0:
+        query += ", " + ", ".join(carry_vars) + "\n"
+    else:
+        query += "\n"
     return query
 
 

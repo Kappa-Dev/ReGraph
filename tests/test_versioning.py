@@ -256,6 +256,7 @@ class TestVersioning(object):
             "shapes",
             rule,
             {"s": "s", "c": "c"})
+
         hierarchy.rewrite(
             "ag",
             rule,

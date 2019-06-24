@@ -34,6 +34,7 @@ from .cypher_utils.propagation import (check_homomorphism,
                                        remove_edge_propagation_query,
                                        merge_propagation_query,
                                        propagate_add_node,
+                                       propagate_add_edge,
                                        add_edge_propagation_query,
                                        remove_targetting,
                                        remove_targeted_typing,
@@ -908,10 +909,9 @@ class Neo4jHierarchy(object):
                 tx = session.begin_transaction()
                 if len(rule.added_edges()) > 0 or\
                    len(rule.added_edge_attrs()) > 0:
-                    add_edges_query = add_edge_propagation_query(
-                        graph_id, successor)
-                    tx.run(add_edges_query)
-                    tx.commit()
+                    propagate_add_edge(
+                        tx, graph_id, successor)
+                tx.commit()
 
         for successor in successors:
             self._propagate_down(origin_graph, successor, rule)

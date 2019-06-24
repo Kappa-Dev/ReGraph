@@ -3,7 +3,7 @@ import networkx as nx
 import warnings
 
 from regraph.exceptions import (TypingWarning, InvalidHomomorphism)
-from regraph.utils import keys_by_value
+from regraph.utils import keys_by_value, generate_new_id
 # from regraph.primitives import add_nodes_from, add_edges_from
 from regraph.networkx.category_utils import (pullback,
                                              pushout)
@@ -653,6 +653,7 @@ def propagate_add_edge(tx, graph_id, successor_id):
         generic.nb_of_attrs_mismatch('r', 'tr') + " <> 0\n"
         "WITH tn, tm, tr, collect(r) + [tr] as edges_to_merge_props\n"
     )
+    carry_vars.add("tr")
     query += (
         generic.merge_properties_from_list(
             list_var='edges_to_merge_props',
@@ -671,7 +672,15 @@ def propagate_add_edge(tx, graph_id, successor_id):
         "CREATE (tn)-[tr:edge]->(tm)\n" +
         "SET tr = r\n"
     )
-    # print(query)
+    tx.run(query)
+    query = (
+        "// Add missing loops to {}\n".format(successor_id) +
+        "MATCH (tn:{})<-[:typing]-(n:{})-[r:edge]->(m:{})\n".format(
+            successor_id, graph_id, graph_id) +
+        "WHERE n=m AND NOT (tn)-[:edge]->(tn)\n" +
+        "CREATE (tn)-[tr:edge]->(tn)\n" +
+        "SET tr = r\n"
+    )
     tx.run(query)
 
     return query
@@ -770,8 +779,11 @@ def preserve_tmp_typing(rewritten_graph, graph_label, typing_label,
     return query
 
 
-def get_rule_liftings(tx, graph_id, rule, instance, p_typing):
+def get_rule_liftings(tx, graph_id, rule, instance, p_typing=None):
     """Execute the query finding rule liftings."""
+    if p_typing is None:
+        p_typing = {}
+
     lhs_vars = {
         n: generic.generate_var_name() for n in rule.lhs.nodes()}
     match_instance_vars = {lhs_vars[k]: v for k, v in instance.items()}
@@ -796,7 +808,6 @@ def get_rule_liftings(tx, graph_id, rule, instance, p_typing):
             )
         )
         carry_vars.append("{}_dict".format(v))
-
     # Match edges
     for (u, v) in rule.lhs.edges():
         edge_var = "{}_{}".format(lhs_vars[u], lhs_vars[v])
@@ -834,11 +845,11 @@ def get_rule_liftings(tx, graph_id, rule, instance, p_typing):
                 for el in v:
                     if el["graph"] in lhs_nodes:
                         lhs_nodes[el["graph"]].append(el["id"])
-                        l_g_ls[el["graph"]][el["id"]] = el["origin"]
+                        l_g_ls[el["graph"]][el["id"]] = keys_by_value(instance, el["origin"])[0]
                     else:
                         lhs_nodes[el["graph"]] = [el["id"]]
                         l_g_ls[el["graph"]] = {
-                            el["id"]: el["origin"]
+                            el["id"]: keys_by_value(instance, el["origin"])[0]
                         }
             else:
                 for el in v:
@@ -860,33 +871,56 @@ def get_rule_liftings(tx, graph_id, rule, instance, p_typing):
         if graph in lhs_edges:
             lhs.add_edges_from(lhs_edges[graph])
 
-        # ALL these is commented for the reason of circular dependencies :(
-        print(lhs.nodes())
-        print(rule.p.nodes())
-        print(rule.lhs.nodes())
-        print(l_g_ls[graph])
-        print(rule.p_lhs)
         p, p_lhs, p_g_p = pullback(
             lhs, rule.p, rule.lhs, l_g_ls[graph], rule.p_lhs)
-        # TODO: add stuff for controlled propagation
+
+        l_g_g = {n: n for n in nodes}
+
+        # Remove controlled things from P_G
+        if graph in p_typing.keys():
+            l_g_factorization = {
+                keys_by_value(l_g_g, k)[0]: v
+                for k, v in p_typing[graph].items()
+            }
+            p_g_nodes_to_remove = set()
+            for n in p.nodes():
+                l_g_node = p_lhs[n]
+                # If corresponding L_G node is specified in
+                # the controlling relation, remove all
+                # the instances of P nodes not mentioned
+                # in this relations
+                if l_g_node in l_g_factorization.keys():
+                    p_nodes = l_g_factorization[l_g_node]
+                    if p_g_p[n] not in p_nodes:
+                        del p_g_p[n]
+                        del p_lhs[n]
+                        p_g_nodes_to_remove.add(n)
+
+            for n in p_g_nodes_to_remove:
+                p.remove_node(n)
 
         liftings[graph] = {
             "rule": Rule(p=p, lhs=lhs, p_lhs=p_lhs),
-            "instance": {n: n for n in nodes},
+            "instance": l_g_g,
             "l_g_l": l_g_ls[graph],
             "p_g_p": p_g_p
         }
 
-    print(liftings)
     return liftings
 
 
-def get_rule_projections(tx, graph_id, rule, instance, p_typing):
+def get_rule_projections(tx, graph_id, rule, instance, rhs_typing=None):
     """Execute the query finding rule liftings."""
+    if rhs_typing is None:
+        rhs_typing = {}
+
+    p_instance = {
+        n: instance[rule.p_lhs[n]] for n in rule.p.nodes()
+    }
     p_vars = {
         n: n for n in rule.p.nodes()}
     match_instance_vars = {
-        v: instance[rule.p_lhs[k]] for k, v in p_vars.items()
+        v: p_instance[k] for k, v in p_vars.items()
     }
 
     # Match nodes
@@ -950,14 +984,14 @@ def get_rule_projections(tx, graph_id, rule, instance, p_typing):
         if len(v) > 0:
             if v[0]["type"] == "node":
                 for el in v:
+                    l_node = keys_by_value(instance, el["origin"])[0]
                     if el["graph"] in p_nodes:
                         p_nodes[el["graph"]].add(el["id"])
-                        p_p_ts[el["graph"]][el["origin"]] = el["id"]
                     else:
                         p_nodes[el["graph"]] = {el["id"]}
-                        p_p_ts[el["graph"]] = {
-                            el["origin"]: el["id"]
-                        }
+                        p_p_ts[el["graph"]] = {}
+                    for p_node in keys_by_value(rule.p_lhs, l_node):
+                        p_p_ts[el["graph"]][p_node] = el["id"]
             else:
                 for el in v:
                     if el["graph"] in p_edges:
@@ -971,7 +1005,6 @@ def get_rule_projections(tx, graph_id, rule, instance, p_typing):
 
     projections = {}
     for graph, nodes in p_nodes.items():
-
         p = nx.DiGraph()
         p.add_nodes_from(nodes)
         if graph in p_edges:
@@ -980,11 +1013,38 @@ def get_rule_projections(tx, graph_id, rule, instance, p_typing):
         # ALL these is commented for the reason of circular dependencies :(
         rhs, p_rhs, r_r_t = pushout(
             rule.p, p, rule.rhs, p_p_ts[graph], rule.p_rhs)
-        # TODO: add stuff for controlled propagation
+
+        p_t_t = {n: n for n in nodes}
+
+        # Modify P_T and R_T according to the controlling
+        # relation rhs_typing
+        if graph in rhs_typing.keys():
+            r_t_factorization = {
+                r_r_t[k]: v
+                for k, v in rhs_typing[graph].items()
+            }
+            added_t_nodes = set()
+            for n in rhs.nodes():
+                if n in r_t_factorization.keys():
+                    # If corresponding R_T node is specified in
+                    # the controlling relation add nodes of T
+                    # that type it to P
+                    t_nodes = r_t_factorization[n]
+                    for t_node in t_nodes:
+                        if t_node not in p_t_t.values() and\
+                           t_node not in added_t_nodes:
+                            new_p_node = generate_new_id(
+                                p.nodes(), t_node)
+                            p.add_node(new_p_node)
+                            added_t_nodes.add(t_node)
+                            p_rhs[new_p_node] = n
+                            p_t_t[new_p_node] = t_node
+                        else:
+                            p_rhs[keys_by_value(p_t_t, t_node)[0]] = n
 
         projections[graph] = {
             "rule": Rule(p=p, rhs=rhs, p_rhs=p_rhs),
-            "instance": {n: n for n in nodes},
+            "instance": p_t_t,
             "p_p_t": p_p_ts[graph],
             "r_r_t": r_r_t
         }

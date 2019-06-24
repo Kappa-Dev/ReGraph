@@ -6,6 +6,16 @@ from regraph.exceptions import ReGraphError, ParsingError
 from regraph.attribute_sets import AttributeSet, FiniteSet
 
 
+def generate_new_id(collection, basename):
+    """Generate unique id for a node."""
+    node_id = basename
+    i = 1
+    while node_id in collection:
+        node_id = "{}_{}".format(basename, i)
+        i += 1
+    return node_id
+
+
 def attrs_to_json(attrs):
     """Convert attributes to json."""
     normalize_attrs(attrs)
