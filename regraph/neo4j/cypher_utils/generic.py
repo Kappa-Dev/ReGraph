@@ -1010,6 +1010,26 @@ def get_edge_attrs(source_id, targe_id, edge_label, attrs_var):
     return query
 
 
+def convert_props_to_attrs(raw_dict):
+    attrs = {}
+    if 'id' in raw_dict:
+        del raw_dict['id']
+    for k, v in raw_dict.items():
+        try:
+            if len(v) == 1:
+                if v[0] == "IntegerSet":
+                    attrs[k] = IntegerSet.universal()
+                elif v[0] == "StringSet":
+                    attrs[k] = RegexSet.universal()
+                else:
+                    attrs[k] = FiniteSet(v)
+            else:
+                attrs[k] = FiniteSet(v)
+        except TypeError:
+            attrs[k] = FiniteSet([v])
+    return attrs
+
+
 def properties_to_attributes(result, var_name):
     """Retrieve attributes from raw Neo4j property dict."""
     attrs = {}
@@ -1017,19 +1037,5 @@ def properties_to_attributes(result, var_name):
         if var_name in record.keys():
             raw_dict = record[var_name]
             if raw_dict:
-                if 'id' in raw_dict:
-                    del raw_dict['id']
-                for k, v in raw_dict.items():
-                    try:
-                        if len(v) == 1:
-                            if v[0] == "IntegerSet":
-                                attrs[k] = IntegerSet.universal()
-                            elif v[0] == "StringSet":
-                                attrs[k] = RegexSet.universal()
-                            else:
-                                attrs[k] = FiniteSet(v)
-                        else:
-                            attrs[k] = FiniteSet(v)
-                    except TypeError:
-                        attrs[k] = FiniteSet([v])
+                attrs = convert_props_to_attrs(raw_dict)
     return attrs

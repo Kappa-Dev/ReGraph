@@ -3,8 +3,13 @@ import networkx as nx
 import warnings
 
 from regraph.exceptions import (TypingWarning, InvalidHomomorphism)
-from regraph.utils import keys_by_value, generate_new_id
-# from regraph.primitives import add_nodes_from, add_edges_from
+from regraph.utils import (keys_by_value,
+                           generate_new_id,
+                           attrs_intersection)
+from regraph.primitives import (add_nodes_from,
+                                add_edges_from,
+                                get_edge,
+                                get_node)
 from regraph.networkx.category_utils import (pullback,
                                              pushout)
 from regraph.rules import Rule
@@ -785,7 +790,7 @@ def get_rule_liftings(tx, graph_id, rule, instance, p_typing=None):
         p_typing = {}
 
     lhs_vars = {
-        n: generic.generate_var_name() for n in rule.lhs.nodes()}
+        n: n for n in rule.lhs.nodes()}
     match_instance_vars = {lhs_vars[k]: v for k, v in instance.items()}
 
     # Match nodes
@@ -803,8 +808,9 @@ def get_rule_liftings(tx, graph_id, rule, instance, p_typing=None):
         query += (
             "OPTIONAL MATCH (n)-[:typing*1..]->({})\n".format(v) +
             "WITH {} \n".format(
-                ", ".join(carry_vars + ["collect({{type:'node', origin: {}.id, id: n.id, graph:labels(n)[0]}}) as {}_dict\n".format(
-                    v, v)])
+                ", ".join(carry_vars + [
+                    "collect({{type:'node', origin: {}.id, id: n.id, graph:labels(n)[0], attrs: properties(n)}}) as {}_dict\n".format(
+                        v, v)])
             )
         )
         carry_vars.append("{}_dict".format(v))
@@ -821,10 +827,12 @@ def get_rule_liftings(tx, graph_id, rule, instance, p_typing=None):
         query += (
             "WITH {} \n".format(
                 ", ".join(carry_vars + [
-                    "collect({{type: 'edge', source: {}.id, target: {}.id, graph:labels({})[0]}}) as {}\n".format(
+                    "collect({{type: 'edge', source: {}.id, target: {}.id, attrs: properties({}), graph:labels({})[0]}}) as {}\n".format(
                         "{}_instance".format(lhs_vars[u]),
                         "{}_instance".format(lhs_vars[v]),
-                        "{}_instance".format(lhs_vars[u]), edge_var)
+                        edge_var,
+                        "{}_instance".format(lhs_vars[u]),
+                        edge_var)
                 ])
             )
         )
@@ -843,38 +851,44 @@ def get_rule_liftings(tx, graph_id, rule, instance, p_typing=None):
         if len(v) > 0:
             if v[0]["type"] == "node":
                 for el in v:
-                    if el["graph"] in lhs_nodes:
-                        lhs_nodes[el["graph"]].append(el["id"])
-                        l_g_ls[el["graph"]][el["id"]] = keys_by_value(instance, el["origin"])[0]
-                    else:
-                        lhs_nodes[el["graph"]] = [el["id"]]
-                        l_g_ls[el["graph"]] = {
-                            el["id"]: keys_by_value(instance, el["origin"])[0]
-                        }
+                    if el["graph"] not in lhs_nodes:
+                        lhs_nodes[el["graph"]] = []
+                        l_g_ls[el["graph"]] = {}
+                    l_g_ls[el["graph"]][el["id"]] = keys_by_value(
+                        instance, el["origin"])[0]
+                    # compute attr intersection
+                    attrs = attrs_intersection(
+                        generic.convert_props_to_attrs(el["attrs"]),
+                        get_node(rule.lhs, l_g_ls[el["graph"]][el["id"]]))
+                    lhs_nodes[el["graph"]].append((el["id"], attrs))
+
             else:
                 for el in v:
-                    if el["graph"] in lhs_edges:
-                        lhs_edges[el["graph"]].append(
-                            (el["source"], el["target"])
-                        )
-                    else:
-                        lhs_edges[el["graph"]] = [
-                            (el["source"], el["target"])
-                        ]
-    # TODO: check what to do with attrs!
+                    if el["graph"] not in lhs_edges:
+                        lhs_edges[el["graph"]] = []
+                    # compute attr intersection
+                    attrs = attrs_intersection(
+                        generic.convert_props_to_attrs(el["attrs"]),
+                        get_edge(
+                            rule.lhs,
+                            l_g_ls[el["graph"]][el["source"]],
+                            l_g_ls[el["graph"]][el["target"]]))
+                    lhs_edges[el["graph"]].append(
+                        (el["source"], el["target"], attrs)
+                    )
 
     liftings = {}
     for graph, nodes in lhs_nodes.items():
 
         lhs = nx.DiGraph()
-        lhs.add_nodes_from(nodes)
+        add_nodes_from(lhs, nodes)
         if graph in lhs_edges:
-            lhs.add_edges_from(lhs_edges[graph])
+            add_edges_from(lhs, lhs_edges[graph])
 
         p, p_lhs, p_g_p = pullback(
             lhs, rule.p, rule.lhs, l_g_ls[graph], rule.p_lhs)
 
-        l_g_g = {n: n for n in nodes}
+        l_g_g = {n[0]: n[0] for n in nodes}
 
         # Remove controlled things from P_G
         if graph in p_typing.keys():
@@ -906,6 +920,9 @@ def get_rule_liftings(tx, graph_id, rule, instance, p_typing=None):
             "p_g_p": p_g_p
         }
 
+    # print(liftings)
+    for g, data in liftings.items():
+        print(data["rule"])
     return liftings
 
 
@@ -940,7 +957,7 @@ def get_rule_projections(tx, graph_id, rule, instance, rhs_typing=None):
             "WITH {} \n".format(
                 ", ".join(
                     carry_vars +
-                    ["collect(DISTINCT {{type:'node', origin: {}.id, id: n.id, graph:labels(n)[0]}}) as {}_dict\n".format(
+                    ["collect(DISTINCT {{type:'node', origin: {}.id, id: n.id, graph:labels(n)[0], attrs: properties(n)}}) as {}_dict\n".format(
                         v, v)])
             )
         )
@@ -959,10 +976,12 @@ def get_rule_projections(tx, graph_id, rule, instance, rhs_typing=None):
         query += (
             "WITH {} \n".format(
                 ", ".join(carry_vars + [
-                    "collect({{type: 'edge', source: {}.id, target: {}.id, graph:labels({})[0]}}) as {}\n".format(
+                    "collect({{type: 'edge', source: {}.id, target: {}.id, graph:labels({})[0], attrs: properties({})}}) as {}\n".format(
                         "{}_instance".format(p_vars[u]),
                         "{}_instance".format(p_vars[v]),
-                        "{}_instance".format(p_vars[u]), edge_var)
+                        "{}_instance".format(p_vars[u]),
+                        edge_var,
+                        edge_var)
                 ])
             )
         )
@@ -975,8 +994,6 @@ def get_rule_projections(tx, graph_id, rule, instance, rhs_typing=None):
     result = tx.run(query)
     record = result.single()
 
-    # TODO: check attrs
-
     p_p_ts = {}
     p_nodes = {}
     p_edges = {}
@@ -985,32 +1002,37 @@ def get_rule_projections(tx, graph_id, rule, instance, rhs_typing=None):
             if v[0]["type"] == "node":
                 for el in v:
                     l_node = keys_by_value(instance, el["origin"])[0]
-                    if el["graph"] in p_nodes:
-                        p_nodes[el["graph"]].add(el["id"])
-                    else:
-                        p_nodes[el["graph"]] = {el["id"]}
+                    if el["graph"] not in p_nodes:
+                        p_nodes[el["graph"]] = {}
                         p_p_ts[el["graph"]] = {}
                     for p_node in keys_by_value(rule.p_lhs, l_node):
+                        if el["id"] in p_p_ts.values():
+                            p_nodes[el["graph"]][el["id"]] = attrs_union(
+                                p_nodes[el["graph"]][el["id"]],
+                                attrs_intersection(
+                                    generic.convert_props_to_attrs(el["attrs"]),
+                                    get_node(rule.p, p_node)))
+                        else:
+                            p_nodes[el["graph"]][el["id"]] = attrs_intersection(
+                                generic.convert_props_to_attrs(el["attrs"]),
+                                get_node(rule.p, p_node))
                         p_p_ts[el["graph"]][p_node] = el["id"]
             else:
                 for el in v:
-                    if el["graph"] in p_edges:
-                        p_edges[el["graph"]].add(
-                            (el["source"], el["target"])
-                        )
-                    else:
-                        p_edges[el["graph"]] = {
-                            (el["source"], el["target"])
-                        }
+                    if el["graph"] not in p_edges:
+                        p_edges[el["graph"]] = set()
+                    p_edges[el["graph"]].add(
+                        (el["source"], el["target"])
+                    )
+                    print(el["attrs"])
 
     projections = {}
     for graph, nodes in p_nodes.items():
         p = nx.DiGraph()
-        p.add_nodes_from(nodes)
+        add_nodes_from(p, [(k, v) for k, v in nodes.items()])
         if graph in p_edges:
-            p.add_edges_from(p_edges[graph])
+            add_edges_from(p, p_edges[graph])
 
-        # ALL these is commented for the reason of circular dependencies :(
         rhs, p_rhs, r_r_t = pushout(
             rule.p, p, rule.rhs, p_p_ts[graph], rule.p_rhs)
 
