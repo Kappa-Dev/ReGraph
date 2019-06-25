@@ -5,11 +5,14 @@ import warnings
 from regraph.exceptions import (TypingWarning, InvalidHomomorphism)
 from regraph.utils import (keys_by_value,
                            generate_new_id,
-                           attrs_intersection)
+                           attrs_intersection,
+                           attrs_union)
 from regraph.primitives import (add_nodes_from,
                                 add_edges_from,
                                 get_edge,
-                                get_node)
+                                get_node,
+                                print_graph,
+                                exists_edge)
 from regraph.networkx.category_utils import (pullback,
                                              pushout)
 from regraph.rules import Rule
@@ -1005,33 +1008,41 @@ def get_rule_projections(tx, graph_id, rule, instance, rhs_typing=None):
                     if el["graph"] not in p_nodes:
                         p_nodes[el["graph"]] = {}
                         p_p_ts[el["graph"]] = {}
+                    if el["id"] not in p_nodes[el["graph"]]:
+                        p_nodes[el["graph"]][el["id"]] = {}
                     for p_node in keys_by_value(rule.p_lhs, l_node):
-                        if el["id"] in p_p_ts.values():
-                            p_nodes[el["graph"]][el["id"]] = attrs_union(
-                                p_nodes[el["graph"]][el["id"]],
-                                attrs_intersection(
-                                    generic.convert_props_to_attrs(el["attrs"]),
-                                    get_node(rule.p, p_node)))
-                        else:
-                            p_nodes[el["graph"]][el["id"]] = attrs_intersection(
+                        p_nodes[el["graph"]][el["id"]] = attrs_union(
+                            p_nodes[el["graph"]][el["id"]],
+                            attrs_intersection(
                                 generic.convert_props_to_attrs(el["attrs"]),
-                                get_node(rule.p, p_node))
+                                get_node(rule.p, p_node)))
                         p_p_ts[el["graph"]][p_node] = el["id"]
             else:
                 for el in v:
-                    if el["graph"] not in p_edges:
-                        p_edges[el["graph"]] = set()
-                    p_edges[el["graph"]].add(
-                        (el["source"], el["target"])
-                    )
-                    print(el["attrs"])
+                    p_sources = keys_by_value(p_p_ts[el["graph"]], el["source"])
+                    p_targets = keys_by_value(p_p_ts[el["graph"]], el["target"])
 
+                    for p_source in p_sources:
+                        for p_target in p_targets:
+                            if exists_edge(rule.p, p_source, p_target):
+                                if el["graph"] not in p_edges:
+                                    p_edges[el["graph"]] = {}
+                                if (el["source"], el["target"]) not in p_edges[el["graph"]]:
+                                    p_edges[el["graph"]][(el["source"], el["target"])] = {}
+                                p_edges[el["graph"]][(el["source"], el["target"])] =\
+                                    attrs_union(
+                                        p_edges[el["graph"]][(el["source"], el["target"])],
+                                        attrs_intersection(
+                                            generic.convert_props_to_attrs(el["attrs"]),
+                                            get_edge(rule.p, p_source, p_target)))
     projections = {}
     for graph, nodes in p_nodes.items():
         p = nx.DiGraph()
         add_nodes_from(p, [(k, v) for k, v in nodes.items()])
         if graph in p_edges:
-            add_edges_from(p, p_edges[graph])
+            add_edges_from(
+                p,
+                [(s, t, v) for (s, t), v in p_edges[graph].items()])
 
         rhs, p_rhs, r_r_t = pushout(
             rule.p, p, rule.rhs, p_p_ts[graph], rule.p_rhs)
