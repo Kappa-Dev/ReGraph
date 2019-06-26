@@ -490,57 +490,27 @@ class Rule(object):
         RuleError
 
         """
-        if n1 not in self.lhs.nodes() and n1 not in self.p.nodes():
+        if n1 not in self.p.nodes():
             raise RuleError(
-                "Node '%s' exists in neither the left "
-                "hand side of the rule nor the preserved part" % n1
+                "Node '%s' does not exist in the preserved "
+                "part of the rule" % n1
             )
-        if n2 not in self.lhs.nodes() and n2 not in self.p.nodes():
+        if n2 not in self.p.nodes():
             raise RuleError(
-                "Node '%s' exists in neither the left "
-                "hand side of the rule nor the preserved part" % n2
+                "Node '%s' does not exist in preserved "
+                "part of the rule" % n2
             )
 
-        if n1 in self.lhs.nodes():
-            p_keys_1 = keys_by_value(self.p_lhs, n1)
-            if len(p_keys_1) == 0:
-                raise RuleError(
-                    "Node '%s' is being removed by the rule, cannot remove "
-                    "attributes from the incident edge" %
-                    n1
-                )
+        if (n1, n2) not in self.p.edges():
+            raise RuleError(
+                "Edge '%s->%s' does not exist in the preserved "
+                "part of the rule" %
+                (n1, n2)
+            )
         else:
-            p_keys_1 = [n1]
-        if n2 in self.lhs.nodes():
-            p_keys_2 = keys_by_value(self.p_lhs, n2)
-            if len(p_keys_2) == 0:
-                raise RuleError(
-                    "Node '%s' is being removed by the rule, cannot remove "
-                    "attributes from the incident edge" %
-                    n2
-                )
-        else:
-            p_keys_2 = [n2]
-
-        for k1 in p_keys_1:
-            for k2 in p_keys_2:
-                if self.p.is_directed():
-                    if (k1, k2) not in self.p.edges():
-                        raise RuleError(
-                            "Edge '%s->%s' does not exist in the preserved "
-                            "part of the rule" %
-                            (k1, k2)
-                        )
-                else:
-                    if (k1, k2) not in self.p.edges() and\
-                       (k2, k1) not in self.p.edges():
-                        raise RuleError(
-                            "Edge '%s->%s' does not exist in the preserved "
-                            "part of the rule" % (k1, k2)
-                        )
-                primitives.remove_edge_attrs(self.p, k1, k2, attrs)
-                primitives.remove_edge_attrs(
-                    self.rhs, self.p_rhs[k1], self.p_rhs[k2], attrs)
+            primitives.remove_edge_attrs(self.p, n1, n2, attrs)
+            primitives.remove_edge_attrs(
+                self.rhs, self.p_rhs[n1], self.p_rhs[n2], attrs)
         return
 
     def inject_add_node(self, node_id, attrs=None):
