@@ -38,10 +38,12 @@ from .cypher_utils.propagation import (check_homomorphism,
                                        add_edge_propagation_query,
                                        remove_targetting,
                                        remove_targeted_typing,
+                                       remove_tmp_typing,
                                        get_typing,
                                        get_rule_liftings,
                                        get_rule_projections,
-                                       check_tmp_consistency)
+                                       check_tmp_consistency,
+                                       preserve_tmp_typing)
 from .cypher_utils.rewriting import (add_edge,
                                      remove_nodes)
 from regraph.exceptions import (HierarchyError,
