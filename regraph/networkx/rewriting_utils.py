@@ -191,7 +191,7 @@ def _propagate_up(hierarchy, graph_id, rule, instance,
     updated_rule_h = dict()
 
     if rule.is_restrictive():
-        for graph in nx.bfs_tree(hierarchy, graph_id, reverse=True):
+        for graph in hierarchy.bfs_tree(graph_id, reverse=True):
             if graph != graph_id:
                 if hierarchy.is_graph(graph):
                     origin_typing = hierarchy.get_typing(graph, graph_id)
@@ -383,7 +383,7 @@ def _propagate_down(hierarchy, origin_id, origin_construct,
      rhs_origin_prime) = origin_construct
 
     if rule.is_relaxing():
-        for graph in nx.bfs_tree(hierarchy, origin_id):
+        for graph in hierarchy.bfs_tree(origin_id):
             if graph != origin_id:
                 relation_g_rhs = set()
                 for key, values in rhs_typing_rels[graph].items():
@@ -586,7 +586,7 @@ def _get_rule_liftings(hierarchy, origin_id, rule, instance,
         p_typing = {}
     liftings = {}
     if rule.is_restrictive():
-        for graph in nx.bfs_tree(hierarchy, origin_id, reverse=True):
+        for graph in hierarchy.bfs_tree(origin_id, reverse=True):
             if graph not in ignore:
                 if graph != origin_id:
                     # find the lifting to a graph
@@ -643,7 +643,7 @@ def _get_rule_projections(hierarchy, origin_id, rule, instance,
         rhs_typing = {}
     projections = {}
     if rule.is_relaxing():
-        for graph in nx.bfs_tree(hierarchy, origin_id):
+        for graph in hierarchy.bfs_tree(origin_id):
             if graph not in ignore:
                 if graph != origin_id:
                     if hierarchy.is_graph(graph):
@@ -856,7 +856,7 @@ def _refine_rule_hierarchy(hierarchy, rule_hierarchy, lhs_instances):
             # add identity rules where needed
             # to preserve the info on p/rhs_typing
             # add ancestors that are not included in rule hierarchy
-            for ancestor in nx.bfs_tree(hierarchy, graph, reverse=True):
+            for ancestor in hierarchy.bfs_tree(graph, reverse=True):
                 if ancestor not in rule_hierarchy["rules"] and\
                    ancestor not in new_rules:
                     # Find a typing of ancestor by the graph
@@ -915,7 +915,7 @@ def _refine_rule_hierarchy(hierarchy, rule_hierarchy, lhs_instances):
                                 lhs_h, lhs_h, lhs_h
                             )
 
-            for descendant in nx.bfs_tree(hierarchy, graph, reverse=False):
+            for descendant in hierarchy.bfs_tree(graph, reverse=False):
                 if descendant not in rule_hierarchy["rules"] and\
                    descendant not in new_rules:
                     typing = typing = hierarchy.compose_path_typing(

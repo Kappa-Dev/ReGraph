@@ -2558,3 +2558,14 @@ class NetworkXHierarchy(nx.DiGraph):
         """Refine rule of the input rule hierarchy."""
         return rewriting_utils._refine_rule_hierarchy(
             self, rule_hierarchy, lhs_instances)
+
+    def bfs_tree(self, graph, reverse=False):
+        return nx.bfs_tree(self, graph, reverse=reverse)
+
+
+    def shortest_path():
+        pass
+
+
+    def compose_path_typing():
+        pass

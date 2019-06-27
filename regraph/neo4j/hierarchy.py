@@ -40,7 +40,8 @@ from .cypher_utils.propagation import (check_homomorphism,
                                        remove_targeted_typing,
                                        get_typing,
                                        get_rule_liftings,
-                                       get_rule_projections)
+                                       get_rule_projections,
+                                       check_tmp_consistency)
 from .cypher_utils.rewriting import (add_edge,
                                      remove_nodes)
 from regraph.exceptions import (HierarchyError,
@@ -53,6 +54,7 @@ from regraph.utils import (normalize_attrs,
                            attrs_from_json,
                            attrs_to_json,
                            normalize_relation)
+from regraph.networkx import rewriting_utils
 
 
 class Neo4jHierarchy(object):
@@ -1553,23 +1555,30 @@ class Neo4jHierarchy(object):
             projections = get_rule_projections(
                 tx, graph_id, rule, instance, p_typing)
             tx.commit()
-        # rule_hierarchy = rewriting_utils.get_rule_hierarchy(
-        #     self, graph_id, rule, instance,
-        #     get_rule_liftings(
-        #         self, graph_id, rule, instance, p_typing),
-        #     get_rule_projections(
-        #         self, graph_id, rule, instance, rhs_typing)
-        # )
+        rule_hierarchy = rewriting_utils.get_rule_hierarchy(
+            self, graph_id, rule, instance,
+            liftings, projections)
 
-        # return rule_hierarchy
+        return rule_hierarchy
 
-    def refine_rule_hierarchy(rule_hierarchy, instances):
-        pass
+    def refine_rule_hierarchy(self, rule_hierarchy, instances):
+        """Refine rule of the input rule hierarchy."""
+        return rewriting_utils._refine_rule_hierarchy(
+            self, rule_hierarchy, instances)
 
     def apply_rule_hierarchy(rule_hierarchy, instances):
         pass
 
     def relabel_nodes(graph_id, new_labels):
+        pass
+
+    def bfs_tree(self, graph, reverse=False):
+        pass
+
+    def shortest_path():
+        pass
+
+    def compose_path_typing():
         pass
 
 

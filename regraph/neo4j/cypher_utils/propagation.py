@@ -924,17 +924,6 @@ def get_rule_liftings(tx, graph_id, rule, instance, p_typing=None):
             "p_g_p": p_g_p
         }
 
-    for g, data in liftings.items():
-        print(g)
-        print("--> lhs")
-        for s, t in data["rule"].lhs.edges():
-            print(s, t, data["rule"].lhs.adj[s][t])
-        print("--> p")
-        for s, t in data["rule"].p.edges():
-            print(s, t, data["rule"].p.adj[s][t])
-        print("--> rhs")
-        for s, t in data["rule"].rhs.edges():
-            print(s, t, data["rule"].rhs.adj[s][t])
     return liftings
 
 
@@ -1090,16 +1079,5 @@ def get_rule_projections(tx, graph_id, rule, instance, rhs_typing=None):
             "p_p_t": p_p_ts[graph],
             "r_r_t": r_r_t
         }
-    for g, data in projections.items():
-        print(g)
-        print("--> lhs")
-        for s, t in data["rule"].lhs.edges():
-            print(s, t, data["rule"].lhs.adj[s][t])
-        print("--> p")
-        for s, t in data["rule"].p.edges():
-            print(s, t, data["rule"].p.adj[s][t])
-        print("--> rhs")
-        for s, t in data["rule"].rhs.edges():
-            print(s, t, data["rule"].rhs.adj[s][t])
-
+    
     return projections

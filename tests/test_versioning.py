@@ -290,9 +290,10 @@ class TestVersioning(object):
         rule2.inject_add_edge("new_node", "s", {"d": 4})
         rule2.inject_remove_edge_attrs("s", "c", {"c": 3})
 
-        hierarchy.get_rule_propagations(
+        prop = hierarchy.get_rule_propagations(
             "ag", rule2, {"s": "bs", "c": "wc"})
 
+        print(prop)
         # h.rewrite(
         #     "shapes",
         #     rule2, {"s": "s"},
