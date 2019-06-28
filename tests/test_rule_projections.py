@@ -126,11 +126,11 @@ class TestRuleProjections(object):
         new_hierarchy, rhs_instances2 = self.hierarchy.apply_rule_hierarchy(
             rule_hierarchy2, lhs_instances2, inplace=False)
 
-        h, l, r = compose_rule_hierarchies(
-            rule_hierarchy1, lhs_instances1, rhs_instances1,
-            rule_hierarchy2, lhs_instances2, rhs_instances2)
+        # h, l, r = compose_rule_hierarchies(
+        #     rule_hierarchy1, lhs_instances1, rhs_instances1,
+        #     rule_hierarchy2, lhs_instances2, rhs_instances2)
 
         # print(h, l, r)
-        for k, v in h["rules"].items():
-            print("Rule for ", k)
-            print(v)
+        # for k, v in h["rules"].items():
+        #     print("Rule for ", k)
+        #     print(v)
