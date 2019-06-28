@@ -856,13 +856,12 @@ def _refine_rule_hierarchy(hierarchy, rule_hierarchy, lhs_instances):
             # add identity rules where needed
             # to preserve the info on p/rhs_typing
             # add ancestors that are not included in rule hierarchy
-            for ancestor in hierarchy.bfs_tree(graph, reverse=True):
+            for ancestor, typing in hierarchy.get_ancestors(graph).items():
                 if ancestor not in rule_hierarchy["rules"] and\
                    ancestor not in new_rules:
                     # Find a typing of ancestor by the graph
-                    typing = hierarchy.compose_path_typing(
-                        nx.shortest_path(hierarchy, ancestor, graph))
                     l_pred, l_pred_pred, l_pred_l_graph = pullback(
+                        hierarchy.graph[ancestor], rule.lhs,
                         hierarchy.graph[graph], typing, new_lhs_instances[graph])
                     new_rules[ancestor] = Rule(p=l_pred, lhs=l_pred)
                     new_lhs_instances[ancestor] = l_pred_pred
@@ -877,7 +876,7 @@ def _refine_rule_hierarchy(hierarchy, rule_hierarchy, lhs_instances):
                                     l_pred_l_graph, l_pred_l_graph, r_pred_r_graph
                                 )
                             else:
-                                path = nx.shortest_path(hierarchy, graph, successor)
+                                path = hierarchy.shortest_path(graph, successor)
                                 lhs_h, p_h, rhs_h = rule_hierarchy["rule_homomorphisms"][
                                     (path[0], path[1])]
                                 for i in range(2, len(path)):
@@ -915,11 +914,9 @@ def _refine_rule_hierarchy(hierarchy, rule_hierarchy, lhs_instances):
                                 lhs_h, lhs_h, lhs_h
                             )
 
-            for descendant in hierarchy.bfs_tree(graph, reverse=False):
+            for descendant, typing in hierarchy.get_descendants(graph).items():
                 if descendant not in rule_hierarchy["rules"] and\
                    descendant not in new_rules:
-                    typing = typing = hierarchy.compose_path_typing(
-                        nx.shortest_path(hierarchy, graph, descendant))
                     l_suc, l_graph_l_suc, l_suc_suc = image_factorization(
                         rule.lhs, hierarchy.graph[descendant],
                         compose(
@@ -938,7 +935,7 @@ def _refine_rule_hierarchy(hierarchy, rule_hierarchy, lhs_instances):
                                     l_graph_l_suc, p_graph_p_suc, p_graph_p_suc
                                 )
                             else:
-                                path = nx.shortest_path(hierarchy, predecessor, graph)
+                                path = hierarchy.shortest_path(predecessor, graph)
                                 lhs_h, p_h, rhs_h = rule_hierarchy["rule_homomorphisms"][
                                     (path[0], path[1])]
                                 for i in range(2, len(path)):

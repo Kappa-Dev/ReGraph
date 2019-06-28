@@ -284,16 +284,17 @@ class TestVersioning(object):
             pattern,
             [("s", "c", {"c": 3})])
         rule2 = Rule.from_transform(pattern)
-        rule2.inject_clone_node("s")
+        clone, _ = rule2.inject_clone_node("s")
         # print(c)
         rule2.inject_add_node("new_node")
         rule2.inject_add_edge("new_node", "s", {"d": 4})
-        rule2.inject_remove_edge_attrs("s", "c", {"c": 3})
+        rule2.inject_merge_nodes([clone, "c"])
+        rule2.inject_remove_edge("s", "c")
 
-        prop = hierarchy.get_rule_propagations(
+        rule_h, lhs_ins = hierarchy.get_rule_propagations(
             "ag", rule2, {"s": "bs", "c": "wc"})
 
-        print(prop)
+        hierarchy.apply_rule_hierarchy(rule_h, lhs_ins)
         # h.rewrite(
         #     "shapes",
         #     rule2, {"s": "s"},

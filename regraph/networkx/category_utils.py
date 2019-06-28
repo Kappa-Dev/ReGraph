@@ -498,8 +498,12 @@ def pushout(a, b, c, a_b, a_c, inplace=False):
                 for group in groups_to_remove:
                     del merged_nodes[group]
             elif not merge_done:
-                new_name = merge_nodes(d, nodes_to_merge)
-                merged_nodes[new_name] = nodes_to_merge
+                if len(nodes_to_merge) > 1:
+                    new_name = merge_nodes(d, nodes_to_merge)
+                    merged_nodes[new_name] = nodes_to_merge
+                else:
+                    new_name = list(nodes_to_merge)[0]
+
             c_d[c_n] = new_name
 
             for node in nodes_to_merge:

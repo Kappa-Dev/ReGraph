@@ -1039,3 +1039,29 @@ def properties_to_attributes(result, var_name):
             if raw_dict:
                 attrs = convert_props_to_attrs(raw_dict)
     return attrs
+
+
+def descendants_query(node_id, node_label, edge_label="edge"):
+    """Generate Cypher query finding descendant nodes starting at 'node_id'."""
+    return (
+        "MATCH path=(n:{} {{id: '{}'}})-[:{}*1..]->(m:{})\n".format(
+            node_label, node_id, edge_label, node_label) +
+        "RETURN m.id AS descendant, REDUCE(p=[], n in nodes(path) | p + [n.id]) as path\n"
+    )
+
+
+def ancestors_query(node_id, node_label, edge_label="edge"):
+    """Generate Cypher query finding ancestors nodes starting at 'node_id'."""
+    return (
+        "MATCH path=(m:{})-[:{}*1..]->(n:{} {{id: '{}'}})\n".format(
+            node_label, node_id, edge_label, node_label) +
+        "RETURN m.id AS ancestor, REDUCE(p=[], n in nodes(path) | p + [n.id]) as path\n"
+    )
+
+
+def shortest_path_query(source_id, target_id, node_label, edge_label):
+    return (
+        "MATCH path=shortestPath((n:{} {{id: '{}'}})-[{}*1..]->(m:{} {{id: '{}'}})) \n".format(
+            node_label, source_id, edge_label, node_label, target_id) +
+        "RETURN REDUCE(p=[], l in nodes(path) | p + [l.id]) as path"
+    )

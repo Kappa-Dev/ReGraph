@@ -9,6 +9,7 @@ from neo4j.v1 import GraphDatabase
 from neo4j.exceptions import ConstraintError
 
 from . import graphs
+from regraph.networkx.category_utils import compose
 from .cypher_utils.generic import (predecessors_query,
                                    successors_query,
                                    constraint_query,
@@ -25,7 +26,10 @@ from .cypher_utils.generic import (predecessors_query,
                                    get_edge_attrs,
                                    exists_edge,
                                    match_edge,
-                                   attributes_inclusion)
+                                   attributes_inclusion,
+                                   ancestors_query,
+                                   descendants_query,
+                                   shortest_path_query)
 from .cypher_utils.propagation import (check_homomorphism,
                                        set_intergraph_edge,
                                        check_consistency,
@@ -35,7 +39,6 @@ from .cypher_utils.propagation import (check_homomorphism,
                                        merge_propagation_query,
                                        propagate_add_node,
                                        propagate_add_edge,
-                                       add_edge_propagation_query,
                                        remove_targetting,
                                        remove_targeted_typing,
                                        remove_tmp_typing,
@@ -1568,20 +1571,102 @@ class Neo4jHierarchy(object):
         return rewriting_utils._refine_rule_hierarchy(
             self, rule_hierarchy, instances)
 
-    def apply_rule_hierarchy(rule_hierarchy, instances):
+    def apply_rule_hierarchy(self, rule_hierarchy, instances):
+        rhs_instances = {}
+        for graph_id, rule in rule_hierarchy["rules"].items():
+            g = self._access_graph(graph_id)
+            rhs_instances[graph_id] = g.rewrite(
+                rule, instances[graph_id], holistic=False,
+                edge_labels=[
+                    self._graph_typing_label,
+                    self._graph_edge_label,
+                    self._graph_relation_label])
+
+        # Fix broken typing
+        # Fix parallel typing edges when merged
+        query = (
+            "MATCH (n)-[rel1:{}]->(m)<-[rel2:{}]-(n) \n".format(
+                self._graph_typing_label, self._graph_typing_label) +
+            "WHERE rel1 <> rel2 \n" +
+            "DELETE rel1 DELETE rel2 \n" +
+            "MERGE (n)-[:typing]->(m)\n"
+        )
+        self.execute(query)
+        # Fix missing typing edges
+        # and extra typing edges when cloned
+        for graph_id, rule in rule_hierarchy["rules"].items():
+            for n in rule.added_nodes():
+                g_node = rhs_instances[graph_id][n]
+                for s in self.successors(graph_id):
+                    rhs_s_node = rule_hierarchy[
+                        "rule_homomorphisms"][(graph_id, s)][2][n]
+                    s_node = rhs_instances[s][rhs_s_node]
+                    query = (
+                        "MATCH (n:{} {{id: '{}'}}), (m:{} {{id: '{}'}})\n".format(
+                            graph_id, g_node, s, s_node) +
+                        "CREATE (n)-[:typing]->(m)\n"
+                    )
+                    self.execute(query)
+            for lhs_node, p_nodes in rule.cloned_nodes().items():
+                for p_node in p_nodes:
+                    rhs_node = rule.p_rhs[p_node]
+                    g_node = rhs_instances[graph_id][rhs_node]
+                    for s in self.successors(graph_id):
+                        if (graph_id, s) in rule_hierarchy["rule_homomorphisms"]:
+                            p_s_node = rule_hierarchy[
+                                "rule_homomorphisms"][(graph_id, s)][1][p_node]
+                            rhs_s_node = rule_hierarchy["rules"][s].p_rhs[p_s_node]
+                            s_node = rhs_instances[s][rhs_s_node]
+                            query = (
+                                "MATCH (n:{} {{id: '{}'}})-[r:{}]->(m:{}) ".format(
+                                    graph_id, g_node, self._graph_typing_label, s) +
+                                "WHERE m.id <> '{}' \n".format(s_node) +
+                                "DELETE r\n"
+                            )
+                            self.execute(query)
+        return (self, rhs_instances)
+
+    def relabel_nodes(self, graph_id, new_labels):
         pass
 
-    def relabel_nodes(graph_id, new_labels):
-        pass
+    def compose_path_typing(self, path):
+        """Compose typings along the path."""
+        if len(path) > 1:
+            typing = self.get_typing(path[0], path[1])
+            for i in range(2, len(path)):
+                typing = compose(
+                    typing, self.get_typing(
+                        path[i - 1],
+                        path[i]))
+            return typing
 
-    def bfs_tree(self, graph, reverse=False):
-        pass
+    def get_ancestors(self, graph):
+        """Get all the ancestors + typings of the graph."""
+        query = ancestors_query(
+            graph, self._graph_label, self._typing_label)
+        result = self.execute(query)
+        ancestors = dict()
+        for record in result:
+            ancestors[record["ancestor"]] = self.compose_path_typing(
+                record["path"])
+        return ancestors
 
-    def shortest_path():
-        pass
+    def get_descendants(self, graph):
+        """Get all the descendants + typings of the graph."""
+        query = descendants_query(
+            graph, self._graph_label, self._typing_label)
+        result = self.execute(query)
+        descendants = dict()
+        for record in result:
+            descendants[record["descendant"]] = self.compose_path_typing(
+                record["path"])
+        return descendants
 
-    def compose_path_typing():
-        pass
+    def shortest_path(self, source, target):
+        query = shortest_path_query(
+            source, target, self._graph_label, self._typing_label)
+        result = self.execute(query)
+        return result.single()["path"]
 
 
 class TypedNeo4jGraph(Neo4jHierarchy):

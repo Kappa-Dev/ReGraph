@@ -1858,10 +1858,6 @@ class NetworkXHierarchy(nx.DiGraph):
             "relations": base_changes["relations"]
         }
 
-        # end = time.time() - start
-        # print("\t\t\t\tTime to compute base: ", end)
-
-        # start = time.time()
         # 4. Propagate rewriting up the hierarchy
         new_upstream_changes =\
             rewriting_utils._propagate_up(
@@ -1877,30 +1873,20 @@ class NetworkXHierarchy(nx.DiGraph):
         upstream_changes["relations"] += new_upstream_changes["relations"]
 
         graph_construct = (g_m, g_m_g, g_prime, g_m_g_prime, r_g_prime)
-        # end = time.time() - start
-        # print("\t\t\t\tTime to propagate up: ", end)
 
-        # start = time.time()
         downstream_changes = dict()
         downstream_changes =\
             rewriting_utils._propagate_down(
                 self, graph_id, graph_construct,
                 rule, instance, rhs_typing, inplace)
-        # end = time.time() - start
-        # print("\t\t\t\tTime to propagate down: ", end)
 
         # 6. Apply all the changes in the hierarchy
         if inplace:
-            # start = time.time()
             rewriting_utils._apply_changes(
                 self, upstream_changes, downstream_changes)
-            # end = time.time() - start
-            # print("\t\t\t\tTime to apply changes: ", end)
 
             return (self, r_g_prime)
         else:
-            # start = time.time()
-            # First, create a new hierarchy
             new_graph = copy.deepcopy(self)
             rewriting_utils._apply_changes(
                 new_graph, upstream_changes, downstream_changes)
@@ -1942,7 +1928,7 @@ class NetworkXHierarchy(nx.DiGraph):
             mapping = self.adj[pred][graph_id]["mapping"]
             pred_ancestors = self.get_ancestors(pred)
             if pred in ancestors.keys():
-                ancestors.update(mapping)
+                ancestors.update(pred_ancestors)
             else:
                 ancestors[pred] = mapping
             for anc, anc_typing in pred_ancestors.items():
@@ -2560,12 +2546,9 @@ class NetworkXHierarchy(nx.DiGraph):
             self, rule_hierarchy, lhs_instances)
 
     def bfs_tree(self, graph, reverse=False):
+        """BFS tree from the graph to all other reachable graphs."""
         return nx.bfs_tree(self, graph, reverse=reverse)
 
-
-    def shortest_path():
-        pass
-
-
-    def compose_path_typing():
-        pass
+    def shortest_path(self, source, target):
+        """Shortest path from 'source' to 'target'."""
+        return nx.shortest_path(self, source, target)
