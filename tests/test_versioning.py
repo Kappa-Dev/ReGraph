@@ -263,11 +263,6 @@ class TestVersioning(object):
         rule = Rule.from_transform(pattern)
         rule.inject_add_edge("s", "c", {"c": 3})
 
-        # hierarchy.rewrite(
-        #     "shapes",
-        #     rule,
-        #     {"s": "s", "c": "c"})
-
         hierarchy.rewrite(
             "nugget",
             rule,
@@ -285,17 +280,36 @@ class TestVersioning(object):
             [("s", "c", {"c": 3})])
         rule2 = Rule.from_transform(pattern)
         clone, _ = rule2.inject_clone_node("s")
-        # print(c)
         rule2.inject_add_node("new_node")
         rule2.inject_add_edge("new_node", "s", {"d": 4})
-        rule2.inject_merge_nodes([clone, "c"])
+        merged_rule_node = rule2.inject_merge_nodes([clone, "c"])
         rule2.inject_remove_edge("s", "c")
 
-        rule_h, lhs_ins = hierarchy.get_rule_propagations(
-            "ag", rule2, {"s": "bs", "c": "wc"})
+        rhs_instances, _ = h.rewrite(
+            "ag", rule2, {"s": "bs", "c": "wc"},
+            message="Rewriting neo4j graph")
 
-        hierarchy.apply_rule_hierarchy(rule_h, lhs_ins)
-        # h.rewrite(
-        #     "shapes",
-        #     rule2, {"s": "s"},
-        #     message="Remove square")
+        merged_ag_node = rhs_instances["ag"][merged_rule_node]
+
+        h.branch('test')
+
+        pattern = nx.DiGraph()
+        pattern.add_nodes_from(["ws"])
+        rule3 = Rule.from_transform(pattern)
+        rule3.inject_remove_node("ws")
+
+        h.rewrite(
+            "ag", rule3, {"ws": "ws"},
+            message="Removed ws from ag")
+
+        h.switch_branch("master")
+
+        pattern = nx.DiGraph()
+        pattern.add_nodes_from([merged_ag_node])
+        rule4 = Rule.from_transform(pattern)
+        rule4.inject_clone_node(merged_ag_node)
+
+        h.rewrite(
+            "ag", rule4, {merged_ag_node: merged_ag_node},
+            message="Removed ws from ag")
+        h.merge_with("test")

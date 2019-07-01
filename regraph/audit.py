@@ -15,6 +15,7 @@ from regraph.rules import (compose_rules, Rule,
                            invert_rule_hierarchy)
 from regraph.primitives import relabel_nodes
 from regraph.utils import keys_by_value
+from regraph.networkx.hierarchy import NetworkXHierarchy
 
 
 def _generate_new_commit_meta_data():
@@ -547,8 +548,12 @@ class VersionedHierarchy(Versioning):
 
     def _apply_delta(self, delta, relabel=True):
         """Apply delta to the current hierarchy version."""
-        _, rhs_instances = self.hierarchy.apply_rule_hierarchy(
-            delta["rule_hierarchy"], delta["lhs_instances"], inplace=True)
+        if isinstance(self.hierarchy, NetworkXHierarchy):
+            _, rhs_instances = self.hierarchy.apply_rule_hierarchy(
+                delta["rule_hierarchy"], delta["lhs_instances"], inplace=True)
+        else:
+            _, rhs_instances = self.hierarchy.apply_rule_hierarchy(
+                delta["rule_hierarchy"], delta["lhs_instances"])
         if relabel:
             # Relabel nodes to correspond to the stored rhs
             for graph, rhs_instance in delta["rhs_instances"].items():
@@ -577,9 +582,14 @@ class VersionedHierarchy(Versioning):
                 delta["lhs_instances"],
                 delta["rhs_instances"])
 
-        _, rhs_instances = self.hierarchy.apply_rule_hierarchy(
-            current_to_merged,
-            delta["lhs_instances"], inplace=True)
+        if isinstance(self.hierarchy, NetworkXHierarchy):
+            _, rhs_instances = self.hierarchy.apply_rule_hierarchy(
+                current_to_merged,
+                delta["lhs_instances"], inplace=True)
+        else:
+            _, rhs_instances = self.hierarchy.apply_rule_hierarchy(
+                current_to_merged,
+                delta["lhs_instances"])
 
         current_to_merged_delta = {
             "rule_hierarchy": current_to_merged,
@@ -597,7 +607,7 @@ class VersionedHierarchy(Versioning):
 
     def rewrite(self, graph_id, rule, instance=None,
                 p_typing=None, rhs_typing=None,
-                strict=False, inplace=True, message=""):
+                strict=False, message=""):
         """Rewrite the versioned hierarchy and commit."""
         rule_hierarchy, lhs_instances = self.hierarchy.get_rule_propagations(
             graph_id, rule, instance, p_typing, rhs_typing)
@@ -605,8 +615,13 @@ class VersionedHierarchy(Versioning):
         lhs_instances = self.hierarchy.refine_rule_hierarchy(
             rule_hierarchy, lhs_instances)
 
-        new_hierarchy, rhs_instances = self.hierarchy.apply_rule_hierarchy(
-            rule_hierarchy, lhs_instances, inplace=True)
+        if isinstance(self.hierarchy, NetworkXHierarchy):
+            new_hierarchy, rhs_instances = self.hierarchy.apply_rule_hierarchy(
+                rule_hierarchy, lhs_instances,
+                inplace=True)
+        else:
+            new_hierarchy, rhs_instances = self.hierarchy.apply_rule_hierarchy(
+                rule_hierarchy, lhs_instances)
 
         commit_id = self.commit({
             "rule_hierarchy": rule_hierarchy,

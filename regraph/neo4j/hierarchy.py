@@ -1558,7 +1558,7 @@ class Neo4jHierarchy(object):
             liftings = get_rule_liftings(
                 tx, graph_id, rule, instance, p_typing)
             projections = get_rule_projections(
-                tx, graph_id, rule, instance, p_typing)
+                tx, self, graph_id, rule, instance, p_typing)
             tx.commit()
         rule_hierarchy = rewriting_utils.get_rule_hierarchy(
             self, graph_id, rule, instance,
@@ -1627,7 +1627,17 @@ class Neo4jHierarchy(object):
         return (self, rhs_instances)
 
     def relabel_nodes(self, graph_id, new_labels):
-        pass
+        query = (
+            "MATCH {}\n".format(
+                ", ".join(
+                    ["(`{}`:{} {{id: '{}'}})".format(k, graph_id, k) for k in new_labels.keys()]
+                )) +
+            "SET {}\n".format(
+                ", ".join(
+                    ["`{}`.id = '{}'".format(k, v) for k, v in new_labels.items()]
+                ))
+        )
+        self.execute(query)
 
     def compose_path_typing(self, path):
         """Compose typings along the path."""

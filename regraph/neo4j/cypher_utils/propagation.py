@@ -14,7 +14,9 @@ from regraph.primitives import (add_nodes_from,
                                 print_graph,
                                 exists_edge)
 from regraph.networkx.category_utils import (pullback,
-                                             pushout)
+                                             pushout,
+                                             image_factorization,
+                                             compose)
 from regraph.rules import Rule
 
 from . import generic
@@ -792,292 +794,317 @@ def get_rule_liftings(tx, graph_id, rule, instance, p_typing=None):
     if p_typing is None:
         p_typing = {}
 
-    lhs_vars = {
-        n: n for n in rule.lhs.nodes()}
-    match_instance_vars = {lhs_vars[k]: v for k, v in instance.items()}
-
-    # Match nodes
-    query = "// Match nodes the instance of the rewritten graph \n"
-    query += "MATCH {}".format(
-        ", ".join([
-            "({}:{} {{id: '{}'}})".format(k, graph_id, v)
-            for k, v in match_instance_vars.items()
-        ])
-    )
-    query += "\n\n"
-
-    carry_vars = list(lhs_vars.values())
-    for k, v in lhs_vars.items():
-        query += (
-            "OPTIONAL MATCH (n)-[:typing*1..]->({})\n".format(v) +
-            "WITH {} \n".format(
-                ", ".join(carry_vars + [
-                    "collect({{type:'node', origin: {}.id, id: n.id, graph:labels(n)[0], attrs: properties(n)}}) as {}_dict\n".format(
-                        v, v)])
-            )
-        )
-        carry_vars.append("{}_dict".format(v))
-    # Match edges
-    for (u, v) in rule.lhs.edges():
-        edge_var = "{}_{}".format(lhs_vars[u], lhs_vars[v])
-        query += "OPTIONAL MATCH ({}_instance)-[{}:edge]->({}_instance)\n".format(
-            lhs_vars[u],
-            edge_var,
-            lhs_vars[v])
-        query += "WHERE ({})-[:typing*1..]->({}) AND ({})-[:typing*1..]->({})\n".format(
-            "{}_instance".format(lhs_vars[u]), lhs_vars[u],
-            "{}_instance".format(lhs_vars[v]), lhs_vars[v])
-        query += (
-            "WITH {} \n".format(
-                ", ".join(carry_vars + [
-                    "collect({{type: 'edge', source: {}.id, target: {}.id, attrs: properties({}), graph:labels({})[0]}}) as {}\n".format(
-                        "{}_instance".format(lhs_vars[u]),
-                        "{}_instance".format(lhs_vars[v]),
-                        edge_var,
-                        "{}_instance".format(lhs_vars[u]),
-                        edge_var)
-                ])
-            )
-        )
-        carry_vars.append(edge_var)
-    query += "RETURN {}".format(
-        ", ".join(
-            ["{}_dict as {}".format(v, v) for v in lhs_vars.values()] +
-            ["{}_{}".format(lhs_vars[u], lhs_vars[v]) for u, v in rule.lhs.edges()]))
-
-    result = tx.run(query)
-    record = result.single()
-    l_g_ls = {}
-    lhs_nodes = {}
-    lhs_edges = {}
-    for k, v in record.items():
-        if len(v) > 0:
-            if v[0]["type"] == "node":
-                for el in v:
-                    if el["graph"] not in lhs_nodes:
-                        lhs_nodes[el["graph"]] = []
-                        l_g_ls[el["graph"]] = {}
-                    l_g_ls[el["graph"]][el["id"]] = keys_by_value(
-                        instance, el["origin"])[0]
-                    # compute attr intersection
-                    attrs = attrs_intersection(
-                        generic.convert_props_to_attrs(el["attrs"]),
-                        get_node(rule.lhs, l_g_ls[el["graph"]][el["id"]]))
-                    lhs_nodes[el["graph"]].append((el["id"], attrs))
-
-            else:
-                for el in v:
-                    if el["graph"] not in lhs_edges:
-                        lhs_edges[el["graph"]] = []
-                    # compute attr intersection
-                    attrs = attrs_intersection(
-                        generic.convert_props_to_attrs(el["attrs"]),
-                        get_edge(
-                            rule.lhs,
-                            l_g_ls[el["graph"]][el["source"]],
-                            l_g_ls[el["graph"]][el["target"]]))
-                    lhs_edges[el["graph"]].append(
-                        (el["source"], el["target"], attrs)
-                    )
-
     liftings = {}
-    for graph, nodes in lhs_nodes.items():
+    if len(rule.lhs.nodes()) > 0:
+        lhs_vars = {
+            n: n for n in rule.lhs.nodes()}
+        match_instance_vars = {lhs_vars[k]: v for k, v in instance.items()}
 
-        lhs = nx.DiGraph()
-        add_nodes_from(lhs, nodes)
-        if graph in lhs_edges:
-            add_edges_from(
-                lhs, lhs_edges[graph])
+        # Match nodes
+        query = "// Match nodes the instance of the rewritten graph \n"
+        query += "MATCH {}".format(
+            ", ".join([
+                "({}:{} {{id: '{}'}})".format(k, graph_id, v)
+                for k, v in match_instance_vars.items()
+            ])
+        )
+        query += "\n\n"
 
-        p, p_lhs, p_g_p = pullback(
-            lhs, rule.p, rule.lhs, l_g_ls[graph], rule.p_lhs)
+        carry_vars = list(lhs_vars.values())
+        for k, v in lhs_vars.items():
+            query += (
+                "OPTIONAL MATCH (n)-[:typing*1..]->({})\n".format(v) +
+                "WITH {} \n".format(
+                    ", ".join(carry_vars + [
+                        "collect({{type:'node', origin: {}.id, id: n.id, graph:labels(n)[0], attrs: properties(n)}}) as {}_dict\n".format(
+                            v, v)])
+                )
+            )
+            carry_vars.append("{}_dict".format(v))
+        # Match edges
+        for (u, v) in rule.lhs.edges():
+            edge_var = "{}_{}".format(lhs_vars[u], lhs_vars[v])
+            query += "OPTIONAL MATCH ({}_instance)-[{}:edge]->({}_instance)\n".format(
+                lhs_vars[u],
+                edge_var,
+                lhs_vars[v])
+            query += "WHERE ({})-[:typing*1..]->({}) AND ({})-[:typing*1..]->({})\n".format(
+                "{}_instance".format(lhs_vars[u]), lhs_vars[u],
+                "{}_instance".format(lhs_vars[v]), lhs_vars[v])
+            query += (
+                "WITH {} \n".format(
+                    ", ".join(carry_vars + [
+                        "collect({{type: 'edge', source: {}.id, target: {}.id, attrs: properties({}), graph:labels({})[0]}}) as {}\n".format(
+                            "{}_instance".format(lhs_vars[u]),
+                            "{}_instance".format(lhs_vars[v]),
+                            edge_var,
+                            "{}_instance".format(lhs_vars[u]),
+                            edge_var)
+                    ])
+                )
+            )
+            carry_vars.append(edge_var)
+        query += "RETURN {}".format(
+            ", ".join(
+                ["{}_dict as {}".format(v, v) for v in lhs_vars.values()] +
+                ["{}_{}".format(lhs_vars[u], lhs_vars[v]) for u, v in rule.lhs.edges()]))
 
-        l_g_g = {n[0]: n[0] for n in nodes}
+        result = tx.run(query)
+        record = result.single()
+        l_g_ls = {}
+        lhs_nodes = {}
+        lhs_edges = {}
+        for k, v in record.items():
+            if len(v) > 0:
+                if v[0]["type"] == "node":
+                    for el in v:
+                        if el["graph"] not in lhs_nodes:
+                            lhs_nodes[el["graph"]] = []
+                            l_g_ls[el["graph"]] = {}
+                        l_g_ls[el["graph"]][el["id"]] = keys_by_value(
+                            instance, el["origin"])[0]
+                        # compute attr intersection
+                        attrs = attrs_intersection(
+                            generic.convert_props_to_attrs(el["attrs"]),
+                            get_node(rule.lhs, l_g_ls[el["graph"]][el["id"]]))
+                        lhs_nodes[el["graph"]].append((el["id"], attrs))
 
-        # Remove controlled things from P_G
-        if graph in p_typing.keys():
-            l_g_factorization = {
-                keys_by_value(l_g_g, k)[0]: v
-                for k, v in p_typing[graph].items()
+                else:
+                    for el in v:
+                        if el["graph"] not in lhs_edges:
+                            lhs_edges[el["graph"]] = []
+                        # compute attr intersection
+                        attrs = attrs_intersection(
+                            generic.convert_props_to_attrs(el["attrs"]),
+                            get_edge(
+                                rule.lhs,
+                                l_g_ls[el["graph"]][el["source"]],
+                                l_g_ls[el["graph"]][el["target"]]))
+                        lhs_edges[el["graph"]].append(
+                            (el["source"], el["target"], attrs)
+                        )
+
+        for graph, nodes in lhs_nodes.items():
+
+            lhs = nx.DiGraph()
+            add_nodes_from(lhs, nodes)
+            if graph in lhs_edges:
+                add_edges_from(
+                    lhs, lhs_edges[graph])
+
+            p, p_lhs, p_g_p = pullback(
+                lhs, rule.p, rule.lhs, l_g_ls[graph], rule.p_lhs)
+
+            l_g_g = {n[0]: n[0] for n in nodes}
+
+            # Remove controlled things from P_G
+            if graph in p_typing.keys():
+                l_g_factorization = {
+                    keys_by_value(l_g_g, k)[0]: v
+                    for k, v in p_typing[graph].items()
+                }
+                p_g_nodes_to_remove = set()
+                for n in p.nodes():
+                    l_g_node = p_lhs[n]
+                    # If corresponding L_G node is specified in
+                    # the controlling relation, remove all
+                    # the instances of P nodes not mentioned
+                    # in this relations
+                    if l_g_node in l_g_factorization.keys():
+                        p_nodes = l_g_factorization[l_g_node]
+                        if p_g_p[n] not in p_nodes:
+                            del p_g_p[n]
+                            del p_lhs[n]
+                            p_g_nodes_to_remove.add(n)
+
+                for n in p_g_nodes_to_remove:
+                    p.remove_node(n)
+
+            liftings[graph] = {
+                "rule": Rule(p=p, lhs=lhs, p_lhs=p_lhs),
+                "instance": l_g_g,
+                "l_g_l": l_g_ls[graph],
+                "p_g_p": p_g_p
             }
-            p_g_nodes_to_remove = set()
-            for n in p.nodes():
-                l_g_node = p_lhs[n]
-                # If corresponding L_G node is specified in
-                # the controlling relation, remove all
-                # the instances of P nodes not mentioned
-                # in this relations
-                if l_g_node in l_g_factorization.keys():
-                    p_nodes = l_g_factorization[l_g_node]
-                    if p_g_p[n] not in p_nodes:
-                        del p_g_p[n]
-                        del p_lhs[n]
-                        p_g_nodes_to_remove.add(n)
-
-            for n in p_g_nodes_to_remove:
-                p.remove_node(n)
-
-        liftings[graph] = {
-            "rule": Rule(p=p, lhs=lhs, p_lhs=p_lhs),
-            "instance": l_g_g,
-            "l_g_l": l_g_ls[graph],
-            "p_g_p": p_g_p
-        }
+    else:
+        query = generic.ancestors_query(graph_id, "graph", "homomorphism")
+        result = tx.run(query)
+        ancestors = [record["ancestor"] for record in result]
+        for a in ancestors:
+            liftings[a] = {
+                "rule": Rule.identity_rule(),
+                "instance": {},
+                "l_g_l": {},
+                "p_g_p": {}
+            }
 
     return liftings
 
 
-def get_rule_projections(tx, graph_id, rule, instance, rhs_typing=None):
+def get_rule_projections(tx, hierarchy, graph_id, rule, instance, rhs_typing=None):
     """Execute the query finding rule liftings."""
     if rhs_typing is None:
         rhs_typing = {}
 
-    p_instance = {
-        n: instance[rule.p_lhs[n]] for n in rule.p.nodes()
-    }
-    p_vars = {
-        n: n for n in rule.p.nodes()}
-    match_instance_vars = {
-        v: p_instance[k] for k, v in p_vars.items()
-    }
+    projections = {}
 
-    # Match nodes
-    query = "// Match nodes the instance of the rewritten graph \n"
-    query += "MATCH {}".format(
-        ", ".join([
-            "({}:{} {{id: '{}'}})".format(k, graph_id, v)
-            for k, v in match_instance_vars.items()
-        ])
-    )
-    query += "\n\n"
+    if rule.is_relaxing():
+        if len(rule.lhs.nodes()) > 0:
+            lhs_instance = {
+                n: instance[n] for n in rule.lhs.nodes()
+            }
+            lhs_vars = {
+                n: n for n in rule.lhs.nodes()}
+            match_instance_vars = {
+                v: lhs_instance[k] for k, v in lhs_vars.items()
+            }
 
-    carry_vars = list(p_vars.values())
-    for k, v in p_vars.items():
-        query += (
-            "OPTIONAL MATCH (n)<-[:typing*1..]-({})\n".format(v) +
-            "WITH {} \n".format(
-                ", ".join(
-                    carry_vars +
-                    ["collect(DISTINCT {{type:'node', origin: {}.id, id: n.id, graph:labels(n)[0], attrs: properties(n)}}) as {}_dict\n".format(
-                        v, v)])
-            )
-        )
-        carry_vars.append("{}_dict".format(v))
-
-    # Match edges
-    for (u, v) in rule.p.edges():
-        edge_var = "{}_{}".format(p_vars[u], p_vars[v])
-        query += "OPTIONAL MATCH ({}_instance)-[{}:edge]->({}_instance)\n".format(
-            p_vars[u],
-            edge_var,
-            p_vars[v])
-        query += "WHERE ({})<-[:typing*1..]-({}) AND ({})<-[:typing*1..]-({})\n".format(
-            "{}_instance".format(p_vars[u]), p_vars[u],
-            "{}_instance".format(p_vars[v]), p_vars[v])
-        query += (
-            "WITH {} \n".format(
-                ", ".join(carry_vars + [
-                    "collect({{type: 'edge', source: {}.id, target: {}.id, graph:labels({})[0], attrs: properties({})}}) as {}\n".format(
-                        "{}_instance".format(p_vars[u]),
-                        "{}_instance".format(p_vars[v]),
-                        "{}_instance".format(p_vars[u]),
-                        edge_var,
-                        edge_var)
+            # Match nodes
+            query = "// Match nodes the instance of the rewritten graph \n"
+            query += "MATCH {}".format(
+                ", ".join([
+                    "({}:{} {{id: '{}'}})".format(k, graph_id, v)
+                    for k, v in match_instance_vars.items()
                 ])
             )
-        )
-        carry_vars.append(edge_var)
-    query += "RETURN {}".format(
-        ", ".join(
-            ["{}_dict as {}".format(v, v) for v in p_vars.values()] +
-            ["{}_{}".format(p_vars[u], p_vars[v]) for u, v in rule.p.edges()]))
+            query += "\n\n"
 
-    result = tx.run(query)
-    record = result.single()
+            carry_vars = list(lhs_vars.values())
+            for k, v in lhs_vars.items():
+                query += (
+                    "OPTIONAL MATCH (n)<-[:typing*1..]-({})\n".format(v) +
+                    "WITH {} \n".format(
+                        ", ".join(
+                            carry_vars +
+                            ["collect(DISTINCT {{type:'node', origin: {}.id, id: n.id, graph:labels(n)[0], attrs: properties(n)}}) as {}_dict\n".format(
+                                v, v)])
+                    )
+                )
+                carry_vars.append("{}_dict".format(v))
 
-    p_p_ts = {}
-    p_nodes = {}
-    p_edges = {}
-    for k, v in record.items():
-        if len(v) > 0:
-            if v[0]["type"] == "node":
-                for el in v:
-                    l_node = keys_by_value(instance, el["origin"])[0]
-                    if el["graph"] not in p_nodes:
-                        p_nodes[el["graph"]] = {}
-                        p_p_ts[el["graph"]] = {}
-                    if el["id"] not in p_nodes[el["graph"]]:
-                        p_nodes[el["graph"]][el["id"]] = {}
-                    for p_node in keys_by_value(rule.p_lhs, l_node):
-                        p_nodes[el["graph"]][el["id"]] = attrs_union(
-                            p_nodes[el["graph"]][el["id"]],
-                            attrs_intersection(
-                                generic.convert_props_to_attrs(el["attrs"]),
-                                get_node(rule.p, p_node)))
-                        p_p_ts[el["graph"]][p_node] = el["id"]
+            # Match edges
+            for (u, v) in rule.p.edges():
+                edge_var = "{}_{}".format(lhs_vars[u], lhs_vars[v])
+                query += "OPTIONAL MATCH ({}_instance)-[{}:edge]->({}_instance)\n".format(
+                    lhs_vars[u],
+                    edge_var,
+                    lhs_vars[v])
+                query += "WHERE ({})<-[:typing*1..]-({}) AND ({})<-[:typing*1..]-({})\n".format(
+                    "{}_instance".format(lhs_vars[u]), lhs_vars[u],
+                    "{}_instance".format(lhs_vars[v]), lhs_vars[v])
+                query += (
+                    "WITH {} \n".format(
+                        ", ".join(carry_vars + [
+                            "collect({{type: 'edge', source: {}.id, target: {}.id, graph:labels({})[0], attrs: properties({})}}) as {}\n".format(
+                                "{}_instance".format(lhs_vars[u]),
+                                "{}_instance".format(lhs_vars[v]),
+                                "{}_instance".format(lhs_vars[u]),
+                                edge_var,
+                                edge_var)
+                        ])
+                    )
+                )
+                carry_vars.append(edge_var)
+            query += "RETURN {}".format(
+                ", ".join(
+                    ["{}_dict as {}".format(v, v) for v in lhs_vars.values()] +
+                    ["{}_{}".format(lhs_vars[u], lhs_vars[v]) for u, v in rule.p.edges()]))
+
+            result = tx.run(query)
+            record = result.single()
+
+            l_l_ts = {}
+            l_nodes = {}
+            l_edges = {}
+            for k, v in record.items():
+                if len(v) > 0:
+                    if v[0]["type"] == "node":
+                        for el in v:
+                            l_node = keys_by_value(instance, el["origin"])[0]
+                            if el["graph"] not in l_nodes:
+                                l_nodes[el["graph"]] = {}
+                                l_l_ts[el["graph"]] = {}
+                            if el["id"] not in l_nodes[el["graph"]]:
+                                l_nodes[el["graph"]][el["id"]] = {}
+                            l_nodes[el["graph"]][el["id"]] = attrs_union(
+                                l_nodes[el["graph"]][el["id"]],
+                                attrs_intersection(
+                                    generic.convert_props_to_attrs(el["attrs"]),
+                                    get_node(rule.lhs, l_node)))
+                            l_l_ts[el["graph"]][l_node] = el["id"]
+                    else:
+                        for el in v:
+                            l_sources = keys_by_value(l_l_ts[el["graph"]], el["source"])
+                            l_targets = keys_by_value(l_l_ts[el["graph"]], el["target"])
+
+                            for l_source in l_sources:
+                                for l_target in l_targets:
+                                    if exists_edge(rule.l, l_source, l_target):
+                                        if el["graph"] not in l_edges:
+                                            l_edges[el["graph"]] = {}
+                                        if (el["source"], el["target"]) not in l_edges[el["graph"]]:
+                                            l_edges[el["graph"]][(el["source"], el["target"])] = {}
+                                        l_edges[el["graph"]][(el["source"], el["target"])] =\
+                                            attrs_union(
+                                                l_edges[el["graph"]][(el["source"], el["target"])],
+                                                attrs_intersection(
+                                                    generic.convert_props_to_attrs(el["attrs"]),
+                                                    get_edge(rule.lhs, l_source, l_target)))
+
+        for graph, typing in hierarchy.get_descendants(graph_id).items():
+            if graph in l_nodes:
+                nodes = l_nodes[graph]
             else:
-                for el in v:
-                    p_sources = keys_by_value(p_p_ts[el["graph"]], el["source"])
-                    p_targets = keys_by_value(p_p_ts[el["graph"]], el["target"])
+                nodes = {}
+            if graph in l_edges:
+                edges = l_edges[graph]
+            else:
+                edges = {}
 
-                    for p_source in p_sources:
-                        for p_target in p_targets:
-                            if exists_edge(rule.p, p_source, p_target):
-                                if el["graph"] not in p_edges:
-                                    p_edges[el["graph"]] = {}
-                                if (el["source"], el["target"]) not in p_edges[el["graph"]]:
-                                    p_edges[el["graph"]][(el["source"], el["target"])] = {}
-                                p_edges[el["graph"]][(el["source"], el["target"])] =\
-                                    attrs_union(
-                                        p_edges[el["graph"]][(el["source"], el["target"])],
-                                        attrs_intersection(
-                                            generic.convert_props_to_attrs(el["attrs"]),
-                                            get_edge(rule.p, p_source, p_target)))
-    projections = {}
-    for graph, nodes in p_nodes.items():
-        p = nx.DiGraph()
-        add_nodes_from(p, [(k, v) for k, v in nodes.items()])
-        if graph in p_edges:
-            add_edges_from(
-                p,
-                [(s, t, v) for (s, t), v in p_edges[graph].items()])
+            l = nx.DiGraph()
+            add_nodes_from(l, [(k, v) for k, v in nodes.items()])
+            if graph in l_edges:
+                add_edges_from(
+                    l,
+                    [(s, t, v) for (s, t), v in edges.items()])
 
-        rhs, p_rhs, r_r_t = pushout(
-            rule.p, p, rule.rhs, p_p_ts[graph], rule.p_rhs)
+            rhs, p_rhs, r_r_t = pushout(
+                rule.p, l, rule.rhs, compose(rule.p_lhs, l_l_ts[graph]), rule.p_rhs)
 
-        p_t_t = {n: n for n in nodes}
+            l_t_t = {n: n for n in nodes}
 
-        # Modify P_T and R_T according to the controlling
-        # relation rhs_typing
-        if graph in rhs_typing.keys():
-            r_t_factorization = {
-                r_r_t[k]: v
-                for k, v in rhs_typing[graph].items()
+            # Modify P_T and R_T according to the controlling
+            # relation rhs_typing
+            if graph in rhs_typing.keys():
+                r_t_factorization = {
+                    r_r_t[k]: v
+                    for k, v in rhs_typing[graph].items()
+                }
+                added_t_nodes = set()
+                for n in rhs.nodes():
+                    if n in r_t_factorization.keys():
+                        # If corresponding R_T node is specified in
+                        # the controlling relation add nodes of T
+                        # that type it to P
+                        t_nodes = r_t_factorization[n]
+                        for t_node in t_nodes:
+                            if t_node not in l_t_t.values() and\
+                               t_node not in added_t_nodes:
+                                new_p_node = generate_new_id(
+                                    l.nodes(), t_node)
+                                l.add_node(new_p_node)
+                                added_t_nodes.add(t_node)
+                                p_rhs[new_p_node] = n
+                                l_t_t[new_p_node] = t_node
+                            else:
+                                p_rhs[keys_by_value(l_t_t, t_node)[0]] = n
+
+            projections[graph] = {
+                "rule": Rule(p=l, rhs=rhs, p_rhs=p_rhs),
+                "instance": l_t_t,
+                "l_l_t": l_l_ts[graph],
+                "p_p_t": {k: l_l_ts[graph][v] for k, v in rule.p_lhs.items()},
+                "r_r_t": r_r_t
             }
-            added_t_nodes = set()
-            for n in rhs.nodes():
-                if n in r_t_factorization.keys():
-                    # If corresponding R_T node is specified in
-                    # the controlling relation add nodes of T
-                    # that type it to P
-                    t_nodes = r_t_factorization[n]
-                    for t_node in t_nodes:
-                        if t_node not in p_t_t.values() and\
-                           t_node not in added_t_nodes:
-                            new_p_node = generate_new_id(
-                                p.nodes(), t_node)
-                            p.add_node(new_p_node)
-                            added_t_nodes.add(t_node)
-                            p_rhs[new_p_node] = n
-                            p_t_t[new_p_node] = t_node
-                        else:
-                            p_rhs[keys_by_value(p_t_t, t_node)[0]] = n
 
-        projections[graph] = {
-            "rule": Rule(p=p, rhs=rhs, p_rhs=p_rhs),
-            "instance": p_t_t,
-            "p_p_t": p_p_ts[graph],
-            "r_r_t": r_r_t
-        }
-    
     return projections
