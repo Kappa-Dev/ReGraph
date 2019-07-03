@@ -13,7 +13,9 @@ from regraph.rules import (compose_rules, Rule,
                            _create_merging_rule_hierarchy,
                            compose_rule_hierarchies,
                            invert_rule_hierarchy)
-from regraph.primitives import relabel_nodes
+from regraph.primitives import (relabel_nodes,
+                                graph_to_json,
+                                networkx_from_json)
 from regraph.utils import keys_by_value
 from regraph.networkx.hierarchy import NetworkXHierarchy
 
@@ -52,22 +54,34 @@ class Versioning(ABC):
     _compose_delta_path
     """
 
-    def __init__(self, init_branch="master"):
+    def __init__(self, init_branch="master", current_branch=None,
+                 deltas=None, heads=None, revision_graph=None):
         """Initialize revision object."""
-        self._current_branch = init_branch
-        self._deltas = {}
+        if current_branch is None:
+            self._current_branch = init_branch
+        else:
+            self._current_branch = current_branch
 
-        # Create initial commit
-        time, commit_id = _generate_new_commit_meta_data()
-        self._heads = {}
-        self._heads[init_branch] = commit_id
-        self._revision_graph = nx.DiGraph()
-        self._revision_graph.add_node(
-            commit_id,
-            branch=self._current_branch,
-            message="Initial commit",
-            time=time
-        )
+        if deltas is None:
+            self._deltas = {}
+        else:
+            self._deltas = deltas
+
+        if heads is None:
+            # Create initial commit
+            time, commit_id = _generate_new_commit_meta_data()
+            self._heads = {}
+            self._heads[init_branch] = commit_id
+            self._revision_graph = nx.DiGraph()
+            self._revision_graph.add_node(
+                commit_id,
+                branch=self._current_branch,
+                message="Initial commit",
+                time=time
+            )
+        else:
+            self._heads = heads
+            self._revision_graph = revision_graph
 
     @abstractmethod
     def _compose_deltas(self, delta1, delta2):
@@ -370,14 +384,86 @@ class Versioning(ABC):
                         print("Removed a head for '{}'".format(h))
                         del self._heads[h]
 
+    def _revision_graph_to_json(self):
+        data = {
+            "nodes": [],
+            "edges": []
+        }
+        for n in self._revision_graph.nodes():
+            data["nodes"].append({
+                "id": n,
+                "branch": self._revision_graph.node[n]["branch"],
+                "time": self._revision_graph.node[n]["time"],
+                "message": self._revision_graph.node[n]["message"]
+            })
+        for (s, t) in self._revision_graph.edges():
+            data["edges"].append({
+                "from": s,
+                "to": t,
+                "delta": self._delta_to_json(
+                    self._revision_graph.adj[s][t]["delta"])
+            })
+        return data
+
+    @classmethod
+    def _revision_graph_from_json(cls, json_data):
+        revision_graph = nx.DiGraph()
+        for node_json in json_data["nodes"]:
+            revision_graph.add_node(
+                node_json["id"],
+                branch=node_json["branch"],
+                time=node_json["time"],
+                message=node_json["message"])
+        for edge_json in json_data["edges"]:
+            revision_graph.add_edge(
+                edge_json["from"],
+                edge_json["to"],
+                delta=cls._delta_from_json(edge_json["delta"]))
+        return revision_graph
+
+    @staticmethod
+    @abstractmethod
+    def _delta_to_json(delta):
+        pass
+
+    @staticmethod
+    @abstractmethod
+    def _delta_from_json(json_data):
+        pass
+
+    def to_json(self):
+        """Convert versioning object to JSON."""
+        data = {}
+        data["current_branch"] = self._current_branch
+        data["deltas"] = {}
+        for k, v in self._deltas.items():
+            data["deltas"][k] = self._delta_to_json(v)
+        data["heads"] = {}
+        data["heads"] = self._heads
+        data["revision_graph"] = self._revision_graph_to_json()
+        return data
+
+    def from_json(self, json_data):
+        """Retrieve versioning object from JSON."""
+        self._current_branch = json_data["current_branch"]
+        self._deltas = {
+            k: self._delta_from_json(v)
+            for k, v in json_data["deltas"].items()}
+        self._heads = json_data["heads"]
+        self._revision_graph = self._revision_graph_from_json(
+            json_data["revision_graph"])
+
 
 class VersionedGraph(Versioning):
     """Class for versioned hierarchies."""
 
-    def __init__(self, graph, init_branch="master"):
+    def __init__(self, graph, init_branch="master", current_branch=None,
+                 deltas=None, heads=None, revision_graph=None):
         """Initialize versioned graph object."""
         self.graph = graph
-        super().__init__(init_branch)
+        super().__init__(init_branch=init_branch, current_branch=current_branch,
+                         deltas=deltas, heads=heads,
+                         revision_graph=revision_graph)
 
     def _refine_delta(self, delta):
         lhs = delta["rule"].refine(self.graph, delta["lhs_instance"])
@@ -444,7 +530,6 @@ class VersionedGraph(Versioning):
 
     def _merge_into_current_branch(self, delta):
         """Merge branch with delta into the current branch."""
-
         current_to_merged_rule, other_to_merged_rule =\
             _create_merging_rule(
                 delta["rule"], delta["lhs_instance"], delta["rhs_instance"])
@@ -480,14 +565,40 @@ class VersionedGraph(Versioning):
         }, message=message)
         return rhs_instance, commit_id
 
+    @staticmethod
+    def _delta_to_json(delta):
+        data = {}
+        data["rule"] = delta["rule"].to_json()
+        data["lhs_instance"] = delta["lhs_instance"]
+        data["rhs_instance"] = delta["rhs_instance"]
+        return data
+
+    @staticmethod
+    def _delta_from_json(json_data):
+        delta = {}
+        delta["rule"] = Rule.from_json(json_data["rule"])
+        delta["lhs_instance"] = json_data["lhs_instance"]
+        delta["rhs_instance"] = json_data["rhs_instance"]
+        return delta
+
+    @classmethod
+    def from_json(cls, graph, json_data):
+        """Retrieve versioning object from JSON."""
+        obj = cls(graph)
+        super(VersionedGraph, cls).from_json(obj, json_data)
+        return obj
+
 
 class VersionedHierarchy(Versioning):
-    """."""
+    """Class for versioned hierarchies."""
 
-    def __init__(self, hierarchy, init_branch="master"):
+    def __init__(self, hierarchy, init_branch="master", current_branch=None,
+                 deltas=None, heads=None, revision_graph=None):
         """Initialize versioned hierarchy object."""
         self.hierarchy = hierarchy
-        super().__init__(init_branch)
+        super().__init__(init_branch=init_branch, current_branch=current_branch,
+                         deltas=deltas, heads=heads,
+                         revision_graph=revision_graph)
 
     def _refine_delta(self, delta):
         lhs_instances = self.hierarchy.refine_rule_hierarchy(
@@ -629,3 +740,38 @@ class VersionedHierarchy(Versioning):
             "rhs_instances": rhs_instances
         }, message=message)
         return rhs_instances, commit_id
+
+    @staticmethod
+    def _delta_to_json(delta):
+        data = {}
+        data["rule_hierarchy"] = {
+            "rules": {},
+            "rule_homomorphisms": delta["rule_hierarchy"]["rule_homomorphisms"]
+        }
+        for graph, rule in delta["rule_hierarchy"]["rules"].items():
+            data["rule_hierarchy"]["rules"][graph] = rule.to_json()
+
+        data["lhs_instances"] = delta["lhs_instances"]
+        data["rhs_instances"] = delta["rhs_instances"]
+        return data
+
+    @staticmethod
+    def _delta_from_json(json_data):
+        delta = {}
+        delta["rule_hierarchy"] = {
+            "rules": {},
+            "rule_homomorphisms": json_data["rule_hierarchy"]["rule_homomorphisms"]
+        }
+        for graph, rule in json_data["rule_hierarchy"]["rules"].items():
+            delta["rule_hierarchy"]["rules"][graph] = Rule.from_json(rule)
+
+        delta["lhs_instances"] = json_data["lhs_instances"]
+        delta["rhs_instances"] = json_data["rhs_instances"]
+        return delta
+
+    @classmethod
+    def from_json(cls, hierarchy, json_data):
+        """Retrieve versioning object from JSON."""
+        obj = cls(hierarchy)
+        super(VersionedHierarchy, cls).from_json(obj, json_data)
+        return obj
