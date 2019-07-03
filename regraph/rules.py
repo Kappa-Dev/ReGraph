@@ -1573,7 +1573,6 @@ class Rule(object):
             all_attrs = primitives.get_node(graph, instance[n])
             primitives.set_node_attrs(
                 self.lhs, n, all_attrs, update=True)
-
             # Add nodes adjacent to removed nodes
             add_neighbors_to_rule(n, self.removed_edges())
 

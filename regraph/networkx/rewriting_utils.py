@@ -752,6 +752,17 @@ def get_rule_hierarchy(hierarchy, origin_id, rule, instance,
                         graph_p_successor_p,
                         graph_p_successor_p
                     )
+                elif successor in projections:
+                    rule_hierarchy["rule_homomorphisms"][(graph, successor)] = (
+                        compose(liftings[graph]["l_g_l"],
+                                projections[successor]["l_l_t"]),
+                        compose(liftings[graph]["p_g_p"],
+                                projections[successor]["p_p_t"]),
+                        compose(
+                            compose(liftings[graph]["p_g_p"],
+                                    rule.p_rhs),
+                            projections[successor]["r_r_t"])
+                    )
                 # didn't touch the successor or projected to it
                 else:
                     pass

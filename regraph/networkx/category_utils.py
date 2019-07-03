@@ -204,6 +204,7 @@ def get_unique_map_to_pullback_complement_full(a_p, p_c,
                 raise ValueError("Something is wrong")
     return z_p
 
+
 def get_unique_map_to_pullback_complement(a_b, b_c, a_p, p_c, a_z, z_c):
     """Find a unique map to pullback complement."""
     z_p = {
