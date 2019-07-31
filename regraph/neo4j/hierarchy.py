@@ -976,6 +976,7 @@ class Neo4jHierarchy(object):
                 for node in rhs_typing[graph].keys():
                     rhs_typed_var = "n{}_{}".format(rhs_g[node].replace(
                         " ", "_").replace(",", "_"), graph_id)
+
                     rhs_typing_var = "n{}_{}".format(
                         rhs_typing[graph][node].replace(
                             " ", "_").replace(",", "_"), graph)

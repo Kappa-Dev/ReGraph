@@ -246,7 +246,7 @@ class TestPrimitives(object):
         assert('a' in g.nodes())
 
     def test_subtract(self):
-        g = deepcopy(self.graph)
+        g = copy.deepcopy(self.graph)
         remove_node(g, '1')
         remove_node(g, '4')
         remove_node(g, '2')
@@ -255,7 +255,7 @@ class TestPrimitives(object):
         assert(('4', '2') in sub_graph.edges())
 
     def test_append_to_node_names(self):
-        g = deepcopy(self.graph)
+        g = copy.deepcopy(self.graph)
         mapping = dict((str(n) + '_lala', n) for n in g.nodes())
         append_to_node_names(g, 'lala')
         relabel_nodes(g, mapping)

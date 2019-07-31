@@ -871,7 +871,7 @@ def compose_relation_dicts(left_dict, right_dict):
 
 def image_factorization(a, b, a_b):
     """Compute the image factorization given A, B and A->B."""
-    c = deepcopy(a)
+    c = copy.deepcopy(a)
     a_c = {}
     c_b = {}
 

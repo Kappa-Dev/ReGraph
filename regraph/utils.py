@@ -6,6 +6,21 @@ from regraph.exceptions import ReGraphError, ParsingError
 from regraph.attribute_sets import AttributeSet, FiniteSet
 
 
+def safe_deepcopy_dict(d):
+    """Util for safe deepcopy of a dict.
+
+    Solves the issue with 'TypeError: can't pickle dict_items objects'
+    of the default 'copy.deepcopy'.
+    """
+    try:
+        new_d = copy.deepcopy(d)
+    except TypeError:
+        new_d = dict()
+        for k, v in d.items():
+            new_d[k] = copy.deepcopy(list(v.items()))
+    return new_d
+
+
 def generate_new_id(collection, basename):
     """Generate unique id for a node."""
     node_id = basename

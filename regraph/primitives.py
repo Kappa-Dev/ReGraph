@@ -3,16 +3,14 @@
 This package contains a collection of utils for various transformations on
 `networkx.(Di)Graph` objects. Attributes: `regraph.attribute_sets`
 """
-
-import warnings
-import os
-import json
-import itertools
 import copy
+import itertools
+import json
 import networkx as nx
 import numpy as np
+import os
+import warnings
 
-from copy import deepcopy
 from networkx.algorithms import isomorphism
 
 from regraph.utils import (merge_attributes,
@@ -24,7 +22,8 @@ from regraph.utils import (merge_attributes,
                            load_edges_from_json,
                            attrs_to_json,
                            attrs_from_json,
-                           generate_new_id)
+                           generate_new_id,
+                           safe_deepcopy_dict)
 from regraph.exceptions import (ReGraphError,
                                 GraphError,
                                 GraphAttrsWarning)
@@ -78,7 +77,7 @@ def add_node(graph, node_id, attrs=dict()):
         if attrs is None:
             new_attrs = dict()
         else:
-            new_attrs = deepcopy(attrs)
+            new_attrs = safe_deepcopy_dict(attrs)
             normalize_attrs(new_attrs)
         if node_id not in graph.nodes():
             graph.add_node(node_id)
@@ -143,7 +142,7 @@ def add_node_attrs(graph, node, attrs):
        isinstance(graph, nx.Graph):
         node_attrs = get_node(graph, node)
         if node_attrs is None:
-            graph.node[node] = copy.deepcopy(attrs)
+            graph.node[node] = safe_deepcopy_dict(attrs)
         else:
             for key in attrs:
                 if key in node_attrs:
@@ -186,7 +185,7 @@ def add_edge(graph, s, t, attrs=None, **attr):
                 "The attr_dict argument must be a dictionary."
             )
 
-    new_attrs = deepcopy(attrs)
+    new_attrs = safe_deepcopy_dict(attrs)
     if s not in graph.nodes():
         raise GraphError("Node '%s' does not exist!" % s)
     if t not in graph.nodes():
@@ -360,7 +359,7 @@ def update_node_attrs(graph, node_id, attrs, normalize=True):
         If a node with the specified id does not exist.
 
     """
-    new_attrs = deepcopy(attrs)
+    new_attrs = safe_deepcopy_dict(attrs)
     if node_id not in graph.nodes():
         raise GraphError("Node '%s' does not exist!" % str(node_id))
     elif new_attrs is None:
@@ -440,7 +439,7 @@ def add_edge_attrs(graph, s, t, attrs):
     GraphError
         If an edge between `s` and `t` does not exist.
     """
-    new_attrs = deepcopy(attrs)
+    new_attrs = safe_deepcopy_dict(attrs)
     if not exists_edge(graph, s, t):
         raise(
             GraphError("Edge '%s->%s' does not exist" %
@@ -609,7 +608,7 @@ def set_edge(graph, s, t, attrs, normalize=True):
     GraphError
         If an edge between `s` and `t` does not exist.
     """
-    new_attrs = deepcopy(attrs)
+    new_attrs = safe_deepcopy_dict(attrs)
     if not exists_edge(graph, s, t):
         raise GraphError(
             "Edge %s->%s does not exist" % (str(s), str(t)))
@@ -681,7 +680,7 @@ def clone_node(graph, node_id, name=None):
             else:
                 new_node = name
 
-        graph.add_node(new_node, **deepcopy(get_node(graph, node_id)))
+        graph.add_node(new_node, **safe_deepcopy_dict(get_node(graph, node_id)))
 
         # Connect all the edges
         if graph.is_directed():
@@ -698,11 +697,11 @@ def clone_node(graph, node_id, name=None):
             for s, t in graph.in_edges(node_id):
                 set_edge(
                     graph, s, new_node,
-                    deepcopy(get_edge(graph, s, t)))
+                    safe_deepcopy_dict(get_edge(graph, s, t)))
             for s, t in graph.out_edges(node_id):
                 set_edge(
                     graph, new_node, t,
-                    deepcopy(get_edge(graph, s, t)))
+                    safe_deepcopy_dict(get_edge(graph, s, t)))
         else:
             add_edges_from(
                 graph,
@@ -715,7 +714,7 @@ def clone_node(graph, node_id, name=None):
             for n in graph.neighbors(node_id):
                 set_edge(
                     graph, new_node, n,
-                    deepcopy(get_edge(graph, n, node_id)))
+                    safe_deepcopy_dict(get_edge(graph, n, node_id)))
                 set_edge(
                     graph, n, new_node,
                     get_edge(graph, new_node, n))
@@ -934,7 +933,7 @@ def merge_nodes(graph, nodes, node_id=None, method="union", edge_method="union")
             if method == "union":
                 attr_accumulator = {}
             elif method == "intersection":
-                attr_accumulator = deepcopy(
+                attr_accumulator = safe_deepcopy_dict(
                     get_node(graph, nodes[0]))
             else:
                 raise ReGraphError("Merging method '%s' is not defined!" % method)
@@ -1528,8 +1527,8 @@ def find_matching_with_types(graph, pattern, graph_typings,
         def _compare_dicts(d1, d2):
             types1 = d1[typing_key]
             types2 = d2[typing_key]
-            d1_without_types = copy.copy(d1)
-            d2_without_types = copy.copy(d1)
+            d1_without_types = safe_deepcopy_dict(d1)
+            d2_without_types = safe_deepcopy_dict(d1)
             del d1_without_types[typing_key]
             del d2_without_types[typing_key]
             return (valid_attributes(types2, types1) and
@@ -1667,7 +1666,7 @@ def new_merge_nodes(graph, nodes, node_id=None, method="union", edge_method="uni
         if method == "union":
             attrs_acc = {}
         elif method == "intersection":
-            attrs_acc = deepcopy(get_node(graph, invariant_node))
+            attrs_acc = safe_deepcopy_dict(get_node(graph, invariant_node))
         else:
             raise ReGraphError("Merging method '%s' is not defined!" % method)
 
