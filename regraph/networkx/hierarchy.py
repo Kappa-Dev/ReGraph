@@ -567,7 +567,6 @@ class NetworkXHierarchy(nx.DiGraph):
             self.typing[graph_id] = dict()
         return
 
-
     def add_empty_graph(self, graph_id, attrs):
         if self.directed is True:
             graph_obj = nx.DiGraph()
