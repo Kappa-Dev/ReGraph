@@ -6,6 +6,60 @@ from regraph.exceptions import ReGraphError, ParsingError
 from regraph.attribute_sets import AttributeSet, FiniteSet
 
 
+def set_attrs(old_attrs, attrs, normalize=True, update=True):
+    if normalize:
+        normalize_attrs(attrs)
+
+    for key in attrs:
+        old_attrs[key] = attrs[key]
+    if update:
+        for key in old_attrs:
+            if key not in attrs:
+                del old_attrs[key]
+    return old_attrs
+
+
+def add_attrs(old_attrs, attrs, normalize=True):
+    if normalize:
+        normalize_attrs(attrs)
+    for key in attrs:
+        if key in old_attrs:
+            old_attrs[key] = old_attrs[key].union(attrs[key])
+        else:
+            old_attrs[key] = attrs[key]
+
+
+def remove_attrs(old_attrs, attrs, normalize=True): 
+    for key, value in attrs.items():
+        if key in old_attrs:
+            new_set = old_attrs[key].difference(value)
+            if not new_set:
+                del old_attrs[key]
+            else:
+                old_attrs[key] = new_set
+
+def assign_attrs(element, attrs):
+    for k, v in attrs.items():
+        element[k] = v
+
+
+def merge_attrs(original_dict, attrs):
+    """Add attrs to the container."""
+    if attrs is not None:
+        normalize_attrs(attrs)
+    else:
+        attrs = dict()
+    if original_dict is None:
+        original_dict = attrs
+    else:
+        for key in attrs:
+            if key in original_dict:
+                original_dict[key] = original_dict[key].union(attrs[key])
+            else:
+                original_dict[key] = attrs[key]
+    return
+
+
 def safe_deepcopy_dict(d):
     """Util for safe deepcopy of a dict.
 

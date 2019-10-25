@@ -34,27 +34,6 @@ def generate_new_node_id(graph, basename):
     return generate_new_id(graph.nodes(), basename)
 
 
-def assign_attrs(element, attrs):
-    for k, v in attrs.items():
-        element[k] = v
-
-
-def merge_attrs(original_dict, attrs):
-    """Add attrs to the container."""
-    if attrs is not None:
-        normalize_attrs(attrs)
-    else:
-        attrs = dict()
-    if original_dict is None:
-        original_dict = attrs
-    else:
-        for key in attrs:
-            if key in original_dict:
-                original_dict[key] = original_dict[key].union(attrs[key])
-            else:
-                original_dict[key] = attrs[key]
-    return
-
 
 def add_node(graph, node_id, attrs=dict()):
     """Add a node to a graph.
