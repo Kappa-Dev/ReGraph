@@ -2,6 +2,7 @@
 import itertools
 import json
 import os
+from neo4j.v1 import GraphDatabase
 import networkx as nx
 from networkx.algorithms import isomorphism
 import warnings
@@ -14,6 +15,8 @@ from regraph.exceptions import (ReGraphError,
                                 GraphError,
                                 GraphAttrsWarning,
                                 )
+from regraph.neo4j.cypher_utils import generic
+from regraph.neo4j.cypher_utils import rewriting
 from regraph.utils import (load_nodes_from_json,
                            load_edges_from_json,
                            generate_new_id,
@@ -23,7 +26,8 @@ from regraph.utils import (load_nodes_from_json,
                            add_attrs,
                            remove_attrs,
                            merge_attributes,
-                           valid_attributes
+                           valid_attributes,
+                           keys_by_value,
                            )
 
 
@@ -46,9 +50,10 @@ class Graph(ABC):
 
         Parameters
         ----------
-        graph : networkx.(Di)Graph or regraph.neo4j.Neo4jGraph
-        s : hashable, source node id.
-        t : hashable, target node id.
+        s : hashable
+            Source node id.
+        t : hashable,
+            Target node id.
         """
         pass
 
@@ -58,9 +63,10 @@ class Graph(ABC):
 
         Parameters
         ----------
-        graph : networkx.(Di)Graph
-        s : hashable, source node id.
-        t : hashable, target node id.
+        s : hashable
+            Source node id.
+        t : hashable
+            Target node id.
         """
         pass
 
@@ -83,8 +89,8 @@ class Graph(ABC):
 
         Parameters
         ----------
-        graph : networkx.(Di)Graph
-        node_id : hashable, node to remove.
+        node_id : hashable
+            Node to remove.
         """
         pass
 
@@ -94,9 +100,10 @@ class Graph(ABC):
 
         Parameters
         ----------
-        graph : networkx.(Di)Graph
-        s : hashable, source node id.
-        t : hashable, target node id.
+        s : hashable
+            Source node id.
+        t : hashable
+            Target node id.
         attrs : dict
             Edge attributes.
         """
@@ -108,9 +115,10 @@ class Graph(ABC):
 
         Parameters
         ----------
-        graph : networkx.(Di)Graph
-        s : hashable, source node id.
-        t : hashable, target node id.
+        s : hashable
+            Source node id.
+        t : hashable
+            Target node id.
         """
         pass
 
@@ -120,10 +128,10 @@ class Graph(ABC):
 
         Parameters
         ----------
-        node_id : hashable, node to update.
+        node_id : hashable
+            Node to update.
         attrs : dict
             New attributes to assign to the node
-
         """
         pass
 
@@ -133,8 +141,10 @@ class Graph(ABC):
 
         Parameters
         ----------
-        s : hashable, source node of the edge to update.
-        t : hashable, target node of the edge to update.
+        s : hashable
+            Source node of the edge to update.
+        t : hashable
+            Target node of the edge to update.
         attrs : dict
             New attributes to assign to the node
 
@@ -166,12 +176,51 @@ class Graph(ABC):
         """Find matching of a pattern in a graph."""
         pass
 
+    def __str__(self):
+        """Pretty-print the graph."""
+        print("\nNodes:\n")
+        for n in self.nodes():
+            print(n, " : ", self.get_node(n))
+        print("\nEdges:\n")
+        for (n1, n2) in self.edges():
+            print(n1, '->', n2, ' : ', self.get_edge(n1, n2))
+        return
+
+    def __eq__(self, graph):
+        """Eqaulity operator.
+
+        Parameters
+        ----------
+        graph : regraph.Graph
+            Another graph object
+
+
+        Returns
+        -------
+        bool
+            True if two graphs are equal, False otherwise.
+        """
+        if set(self.nodes()) != set(graph.nodes()):
+            return False
+        if set(self.edges()) != set(graph.edges()):
+            return False
+        for node in self.nodes():
+            if self.get_node(node) != graph.get_node(node):
+                return False
+        for s, t in self.edges():
+            if self.get_edge(s, t) != graph.get_edge(s, t):
+                return False
+        return True
+
+    def __ne__(self, graph):
+        """Non-equality operator."""
+        return not (self == graph)
+
     def add_nodes_from(self, node_list):
         """Add nodes from a node list.
 
         Parameters
         ----------
-        graph : networkx.(Di)Graph
         node_list : iterable
             Iterable containing a collection of nodes, optionally,
             with their attributes
@@ -191,7 +240,6 @@ class Graph(ABC):
 
         Parameters
         ----------
-        graph : networkx.(Di)Graph
         edge_list : iterable
             Iterable containing a collection of edges, optionally,
             with their attributes
@@ -212,17 +260,33 @@ class Graph(ABC):
 
         Parameters
         ----------
-        graph : networkx.(Di)Graph
-        s : hashable, source node id.
-        t : hashable, target node id.
+        s : hashable
+            Source node id.
+        t : hashable
+            Target node id.
         """
         return((s, t) in self.edges())
 
     def set_node_attrs(self, node_id, attrs, normalize=True, update=True):
-        """Abstract method for setting node attrs.
+        """Set node attrs.
 
-        This sets key/values specified in the input attrs, but
-        does not change other the values of other keys.
+        Parameters
+        ----------
+        node_id : hashable
+            Id of the node to update
+        attrs : dict
+            Dictionary with new attributes to set
+        normalize : bool, optional
+            Flag, when set to True attributes are normalized to be set-valued.
+            True by default
+        update : bool, optional
+            Flag, when set to True attributes whose keys are not present
+            in attrs are removed, True by default
+
+        Raises
+        ------
+        GraphError
+            If a node `node_id` does not exist.
         """
         if node_id not in self.nodes():
             raise GraphError("Node '{}' does not exist!".format(node_id))
@@ -236,12 +300,15 @@ class Graph(ABC):
 
         Parameters
         ----------
-        graph : networkx.(Di)Graph
         node : hashable
             Id of a node to add attributes to.
         attrs : dict
             Attributes to add.
 
+        Raises
+        ------
+        GraphError
+            If a node `node_id` does not exist.
         """
         if node not in self.nodes():
             raise GraphError("Node '{}' does not exist!".format(node))
@@ -282,10 +349,14 @@ class Graph(ABC):
 
         Parameters
         ----------
-        s : hashable, source node id.
-        t : hashable, target node id.
-        attrs : dictionary
-            Dictionary with attributes to set.
+        attrs : dict
+            Dictionary with new attributes to set
+        normalize : bool, optional
+            Flag, when set to True attributes are normalized to be set-valued.
+            True by default
+        update : bool, optional
+            Flag, when set to True attributes whose keys are not present
+            in attrs are removed, True by default
 
         Raises
         ------
@@ -305,8 +376,10 @@ class Graph(ABC):
 
         Parameters
         ----------
-        s : hashable, source node id.
-        t : hashable, target node id.
+        s : hashable
+            Source node id.
+        t : hashable
+            Target node id.
         attrs : dictionary
             Dictionary with attributes to set.
 
@@ -322,8 +395,10 @@ class Graph(ABC):
 
         Parameters
         ----------
-        s : hashable, source node id.
-        t : hashable, target node id.
+        s : hashable
+            Source node id.
+        t : hashable
+            Target node id.
         attrs : dict
             Dictionary with attributes to remove.
 
@@ -345,8 +420,10 @@ class Graph(ABC):
 
         Parameters
         ----------
-        s : hashable, source node id.
-        t : hashable, target node id.
+        s : hashable
+            Source node id.
+        t : hashable
+            Target node id.
         attrs : dict
             Dictionary with attributes to remove.
 
@@ -371,13 +448,15 @@ class Graph(ABC):
 
         Parameters
         ----------
-        node_id : id of a node to clone.
-        name : id for the clone, optional
-            If is not specified, new id will be generated.
+        node_id : hashable,
+            Id of a node to clone.
+        name : hashable, optional
+            Id for the clone, if is not specified, new id will be generated.
 
         Returns
         -------
-        new_node : hashable, clone's id
+        new_node : hashable
+            Id of the new node corresponding to the clone
 
         Raises
         ------
@@ -428,9 +507,10 @@ class Graph(ABC):
 
         Parameters
         ----------
-        graph : networkx.(Di)Graph
-        node_id : id of a node to relabel.
-        new_id : hashable, new label of a node.
+        node_id : hashable
+            Id of the node to relabel.
+        new_id : hashable
+            New label of a node.
         """
         self.clone_node(node_id, new_id)
         self.remove_node(node_id)
@@ -441,7 +521,6 @@ class Graph(ABC):
         Parameters
         ----------
 
-        graph : nx.(Di)Graph
         nodes : iterable
             Collection of node id's to merge.
         node_id : hashable, optional
@@ -589,7 +668,8 @@ class Graph(ABC):
 
         Parameters
         ----------
-        node_id : hashable, node to copy.
+        node_id : hashable
+            Node to copy.
 
         Returns
         -------
@@ -654,7 +734,8 @@ class Graph(ABC):
 
         Parameters
         ----------
-        attrs_key : attribute key
+        attrs_key : hashable
+            Attribute key
         attrs_cond : callable
             Condition for an attribute to satisfy: callable that returns
             `True` if condition is satisfied, `False` otherwise.
@@ -751,7 +832,6 @@ class Graph(ABC):
 
         Parameters
         ----------
-        graph : networkx.(Di)Graph
         filename : str
             Name of the file to save the json serialization of the graph
 
@@ -763,15 +843,21 @@ class Graph(ABC):
         return
 
     @classmethod
-    def networkx_from_json(cls, j_data, directed=True):
-        """Create a NetworkX graph from a json-like dictionary."""
+    def networkx_from_json(cls, json_data):
+        """Create a NetworkX graph from a json-like dictionary.
+
+        Parameters
+        ----------
+        json_data : dict
+            JSON-like dictionary with graph representation
+        """
         graph = cls()
-        graph.add_nodes_from(load_nodes_from_json(j_data))
-        graph.add_edges_from(load_edges_from_json(j_data))
+        graph.add_nodes_from(load_nodes_from_json(json_data))
+        graph.add_edges_from(load_edges_from_json(json_data))
         return graph
 
     @classmethod
-    def load_networkx_graph(cls, filename, directed=True):
+    def load_networkx_graph(cls, filename):
         """Load a NetworkX graph from a JSON file.
 
         Create a `networkx.(Di)Graph` object from
@@ -781,13 +867,11 @@ class Graph(ABC):
         ----------
         filename : str
             Name of the file to load the json serialization of the graph
-        directed : bool, optional
-            `True` if the graph to load is directed, `False` otherwise.
-            Default value `True`.
+
 
         Returns
         -------
-        nx.(Di)Graph object
+        Graph object
 
         Raises
         ------
@@ -805,8 +889,98 @@ class Graph(ABC):
                 filename
             )
 
+    def rewrite(self, rule, instance=None):
+        """Perform SqPO rewiting of the graph with a rule.
 
-class NetworkXGraph(Graph):
+        Parameters
+        ----------
+        rule : regraph.Rule
+            SqPO rewriting rule
+        instance : dict, optional
+            Instance of the input rule. If not specified,
+            the identity map of the rule's left-hand side
+            is used
+
+        """
+        if instance is None:
+            instance = {
+                n: n for n in self.lhs.nodes()
+            }
+
+        # Restrictive phase
+        p_g = dict()
+        cloned_lhs_nodes = set()
+
+        # Clone nodes
+        for lhs, p_nodes in rule.cloned_nodes().items():
+            for i, p in enumerate(p_nodes):
+                if i == 0:
+                    p_g[p] = instance[lhs]
+                    cloned_lhs_nodes.add(lhs)
+                else:
+                    clone_id = self.clone_node(instance[lhs])
+                    p_g[p] = clone_id
+
+        # Delete nodes and add preserved nodes to p_g dictionary
+        removed_nodes = rule.removed_nodes()
+        for n in rule.lhs.nodes():
+            if n in removed_nodes:
+                self.remove_node(instance[n])
+            elif n not in cloned_lhs_nodes:
+                p_g[keys_by_value(rule.p_lhs, n)[0]] =\
+                    instance[n]
+
+        # Delete edges
+        for u, v in rule.removed_edges():
+            self.remove_edge(p_g[u], p_g[v])
+
+        # Remove node attributes
+        for p_node, attrs in rule.removed_node_attrs().items():
+            self.remove_node_attrs(
+                p_g[p_node],
+                attrs)
+
+        # Remove edge attributes
+        for (u, v), attrs in rule.removed_edge_attrs().items():
+            self.remove_edge_attrs(p_g[u], p_g[v], attrs)
+
+        # Expansive phase
+        rhs_g = dict()
+        merged_nodes = set()
+
+        # Merge nodes
+        for rhs, p_nodes in rule.merged_nodes().items():
+            merge_id = self.merge_nodes(
+                [p_g[p] for p in p_nodes])
+            merged_nodes.add(rhs)
+            rhs_g[rhs] = merge_id
+
+        # Add nodes and add preserved nodes to rhs_g dictionary
+        added_nodes = rule.added_nodes()
+        for n in rule.rhs.nodes():
+            if n in added_nodes:
+                new_id = self.add_node(n)
+                rhs_g[n] = new_id
+            elif n not in merged_nodes:
+                rhs_g[n] = p_g[keys_by_value(rule.p_rhs, n)[0]]
+
+        # Add edges
+        for u, v in rule.added_edges():
+            self.add_edge(rhs_g[u], rhs_g[v])
+
+        # Add node attributes
+        for rhs_node, attrs in rule.added_node_attrs().items():
+            self.add_node_attrs(
+                rhs_g[rhs_node], attrs)
+
+        # Add edge attributes
+        for (u, v), attrs in rule.added_edge_attrs().items():
+            self.add_edge_attrs(
+                rhs_g[u], rhs_g[v], attrs)
+        return rhs_g
+
+
+class NXGraph(Graph):
     """Wrapper for NetworkX directed graphs."""
 
     node_dict_factory = dict
@@ -1195,64 +1369,207 @@ class NetworkXGraph(Graph):
 
         return instances
 
-    def rewrite(self, rule, instance=None):
-        """Perform graph rewriting with the rule.
+    # def rewrite(self, rule, instance=None):
+    #     """Perform graph rewriting with the rule.
 
-        Parameters
-        ----------
-        rule : regraph.rules.Rule
-        instance : dict
-            Instance of the `lhs` pattern in the graph
-            defined by a dictionary where keys are nodes
-            of `lhs` and values are nodes of the graph.
+    #     Parameters
+    #     ----------
+    #     rule : regraph.rules.Rule
+    #     instance : dict
+    #         Instance of the `lhs` pattern in the graph
+    #         defined by a dictionary where keys are nodes
+    #         of `lhs` and values are nodes of the graph.
 
-        Returns
-        -------
-        rhs_g_prime : dict
-            Matching of the `rhs` in `g_prime`, a dictionary,
-            where keys are nodes of `rhs` and values are
-            nodes of `g_prime`.
+    #     Returns
+    #     -------
+    #     rhs_g_prime : dict
+    #         Matching of the `rhs` in `g_prime`, a dictionary,
+    #         where keys are nodes of `rhs` and values are
+    #         nodes of `g_prime`.
 
-        """
-        if instance is None:
-            instance = {
-                n: n for n in rule.lhs.nodes()
-            }
-        g_m, p_g_m, g_m_g = pullback_complement(
-            rule.p, rule.lhs, self, rule.p_lhs, instance,
-            inplace=False
-        )
-        g_prime, g_m_g_prime, rhs_g_prime = pushout(
-            rule.p, g_m, rule.rhs, p_g_m, rule.p_rhs, inplace=False)
+    #     """
+    #     if instance is None:
+    #         instance = {
+    #             n: n for n in rule.lhs.nodes()
+    #         }
+    #     g_m, p_g_m, g_m_g = pullback_complement(
+    #         rule.p, rule.lhs, self._graph, rule.p_lhs, instance,
+    #         inplace=False
+    #     )
+    #     g_prime, g_m_g_prime, rhs_g_prime = pushout(
+    #         rule.p, g_m, rule.rhs, p_g_m, rule.p_rhs, inplace=False)
 
-        return rhs_g_prime
+    #     return rhs_g_prime
 
 
 class Neo4jGraph(Graph):
-    """."""
+    """Class implementing Neo4j graph instance.
 
-    def __init__(self):
-        """."""
-        pass
+    This class encapsulates neo4j.v1.GraphDatabase object.
+    It provides an interface for accessing graph sitting
+    in the DB. This interface is similar (in fact is
+    intended to be as similar as possible) to the
+    `networkx.DiGraph` object.
+
+    Attributes
+    ----------
+    _driver :  neo4j.v1.GraphDatabase
+        Driver providing connection to a Neo4j database
+    _node_label : str
+        Label of nodes inducing the manipulated subgraph.
+    _edge_label : str
+        Type of relations used in the manipulated subgraph.
+    """
+
+    def __init__(self, driver=None, uri=None,
+                 user=None, password=None,
+                 node_label="node",
+                 edge_label="edge",
+                 unique_node_ids=True):
+        """Initialize Neo4jGraph object.
+
+        Parameters
+        ----------
+        driver : neo4j.v1.direct.DirectDriver, optional
+            Driver providing connection to a Neo4j database
+        uri : str, optional
+            Uri for a new Neo4j database connection (bolt)
+        user : str, optional
+            Username for the Neo4j database connection
+        password : str, optional
+            Password for the Neo4j database connection
+        node_label : optional
+            Label of nodes inducing the subgraph to scope.
+            By default `"node"`.
+        edge_label : optional
+            Type of relations inducing the subgraph to scope.
+            By default `"edge"`.
+        unique_node_ids : bool, optional
+            Flag, if True the uniqueness constraint on the property
+            'id' of nodes is imposed, by default True
+
+        If database driver is provided, uses it for
+        connecting to database, otherwise creates
+        a new driver object using provided credentials.
+        """
+        if driver is None:
+            self._driver = GraphDatabase.driver(
+                uri, auth=(user, password))
+        else:
+            self._driver = driver
+
+        self._node_label = node_label
+        self._edge_label = edge_label
+        self.unique_node_ids = unique_node_ids
+        if unique_node_ids:
+            try:
+                self._set_constraint('id')
+            except:
+                warnings.warn(
+                    "Failed to create id uniqueness constraint")
+
+    def _execute(self, query):
+        """Execute a Cypher query."""
+        with self._driver.session() as session:
+            if len(query) > 0:
+                result = session.run(query)
+                return result
+
+    def _close(self):
+        """Close connection to the database."""
+        self._driver.close()
+
+    def _clear(self):
+        """Clear graph database.
+
+        Returns
+        -------
+        result : BoltStatementResult
+        """
+        query = generic.clear_graph(self._node_label)
+        result = self._execute(query)
+        return result
+
+    def _set_constraint(self, prop):
+        """Set a uniqueness constraint on the property.
+
+        Parameters
+        ----------
+        prop : str
+            Name of the property that is required to be unique
+            for the nodes of the database
+
+
+        Returns
+        -------
+        result : BoltStatementResult
+        """
+        query = "CREATE " + generic.constraint_query(
+            'n', self._node_label, prop)
+        result = self._execute(query)
+        return result
+
+    def _drop_constraint(self, prop):
+        """Drop a uniqueness constraint on the property.
+
+        Parameters
+        ----------
+        prop : str
+            Name of the property
+
+        Returns
+        -------
+        result : BoltStatementResult
+        """
+        try:
+            query = "DROP " + generic.constraint_query('n', self._node_label, prop)
+            result = self.execute(query)
+            return result
+        except:
+            warnings.warn("Failed to drop constraint")
 
     def nodes(self):
-        """Return the list of nodes."""
-        pass
+        """Return a list of nodes of the graph."""
+        query = generic.get_nodes(node_label=self._node_label)
+        result = self._execute(query)
+        return [list(d.values())[0] for d in result]
 
     def edges(self):
-        """Return the list of edges."""
-        pass
+        """Return the list of edges of the graph."""
+        query = generic.get_edges(
+            self._node_label,
+            self._node_label,
+            self._edge_label)
+        result = self._execute(query)
+        return [(d["n.id"], d["m.id"]) for d in result]
 
-    def get_node(self, n):
+    def get_node_attrs(self, node_id):
+        """Return node's attributes."""
+        query = generic.get_node_attrs(
+            node_id, self._node_label,
+            "attributes")
+        result = self._execute(query)
+        return generic.properties_to_attributes(
+            result, "attributes")
+
+    def get_node(self, node_id):
         """Get node attributes.
 
         Parameters
         ----------
         graph : networkx.(Di)Graph or regraph.neo4j.Neo4jGraph
-        s : hashable, source node id.
-        t : hashable, target node id.
+        node_id : hashable, node id.
         """
-        pass
+        return self.get_node_attrs(node_id)
+
+    def get_edge_attrs(self, s, t):
+        """Return edge attributes."""
+        query = generic.get_edge_attrs(
+            s, t, self._edge_label,
+            "attributes")
+        result = self._execute(query)
+        return generic.properties_to_attributes(
+            result, "attributes")
 
     def get_edge(self, s, t):
         """Get edge attributes.
@@ -1263,21 +1580,35 @@ class Neo4jGraph(Graph):
         s : hashable, source node id.
         t : hashable, target node id.
         """
-        pass
+        return self.get_edge_attrs(s, t)
 
-    def add_node(self, node_id, attrs=None):
+    def add_node(self, node, attrs=None, ignore_naming=False):
         """Abstract method for adding a node.
 
         Parameters
         ----------
-        node_id : hashable
+        node : hashable
             Prefix that is prepended to the new unique name.
         attrs : dict, optional
             Node attributes.
         """
-        pass
+        if attrs is None:
+            attrs = dict()
+        normalize_attrs(attrs)
+        query =\
+            rewriting.add_node(
+                "n", node, 'new_id',
+                node_label=self._node_label,
+                attrs=attrs,
+                literal_id=True,
+                ignore_naming=ignore_naming)[0] +\
+            generic.return_vars(['new_id'])
 
-    def remove_node(self, node_id):
+        result = self._execute(query)
+        new_id = result.single()['new_id']
+        return new_id
+
+    def remove_node(self, node):
         """Remove node.
 
         Parameters
@@ -1285,7 +1616,13 @@ class Neo4jGraph(Graph):
         graph : networkx.(Di)Graph
         node_id : hashable, node to remove.
         """
-        pass
+        query =\
+            generic.match_node(
+                "n", node,
+                node_label=self._node_label) +\
+            rewriting.remove_node("n")
+        result = self._execute(query)
+        return result
 
     def add_edge(self, s, t, attrs=None, **attr):
         """Add an edge to a graph.
@@ -1298,9 +1635,22 @@ class Neo4jGraph(Graph):
         attrs : dict
             Edge attributes.
         """
-        pass
+        if attrs is None:
+            attrs = dict()
+        normalize_attrs(attrs)
+        query = generic.match_nodes(
+            {"s": s, "t": t},
+            node_label=self._node_label)
+        query += rewriting.add_edge(
+            edge_var='new_edge',
+            source_var="s",
+            target_var="t",
+            edge_label=self._edge_label,
+            attrs=attrs)
+        result = self._execute(query)
+        return result
 
-    def remove_edge(self, source_id, target_id):
+    def remove_edge(self, s, t):
         """Remove edge from the graph.
 
         Parameters
@@ -1309,9 +1659,16 @@ class Neo4jGraph(Graph):
         s : hashable, source node id.
         t : hashable, target node id.
         """
-        pass
+        query =\
+            generic.match_edge(
+                "s", "t", s, t, 'edge_var',
+                self._node_label, self._node_label,
+                edge_label='edge') +\
+            rewriting.remove_edge('edge_var')
+        result = self._execute(query)
+        return result
 
-    def update_node_attrs(self, node_id, attrs, normalize=True):
+    def update_node_attrs(self, node_id, attrs):
         """Update attributes of a node.
 
         Parameters
@@ -1321,9 +1678,15 @@ class Neo4jGraph(Graph):
             New attributes to assign to the node
 
         """
-        pass
+        normalize_attrs(attrs)
+        query = (
+            generic.match_node("n", node_id, self._node_label) +
+            generic.set_attributes("n", attrs, update=True)
+        )
+        result = self._execute(query)
+        return result
 
-    def update_edge_attrs(self, s, t, attrs, normalize=True):
+    def update_edge_attrs(self, s, t, attrs):
         """Update attributes of a node.
 
         Parameters
@@ -1334,7 +1697,16 @@ class Neo4jGraph(Graph):
             New attributes to assign to the node
 
         """
-        pass
+        normalize_attrs(attrs)
+        query = (
+            generic.match_edge(
+                "s", "t", s, t, "rel",
+                self._node_label, self._node_label,
+                self._edge_label) +
+            generic.set_attributes("rel", attrs, update=True)
+        )
+        result = self._execute(query)
+        return result
 
     def in_edges(self, node_id):
         """Return the set of in-coming edges."""
@@ -1346,12 +1718,46 @@ class Neo4jGraph(Graph):
 
     def successors(self, node_id):
         """Return the set of successors."""
-        pass
+        query = generic.successors_query(
+            node_id, node_id,
+            node_label=self._node_label,
+            edge_label=self._edge_label)
+        result = self._execute(query)
+        succ = set()
+        for record in result:
+            if record["suc"] is not None:
+                succ.add(record["suc"])
+        return succ
 
     def predecessors(self, node_id):
         """Return the set of predecessors."""
-        pass
+        query = generic.predecessors_query(
+            node_id, node_id,
+            node_label=self._node_label,
+            edge_label=self._edge_label)
+        result = self._execute(query)
+        pred = set()
+        for record in result:
+            if record["pred"] is not None:
+                pred.add(record["pred"])
+        return pred
 
     def find_matching(self, pattern, nodes=None):
         """Find matching of a pattern in a graph."""
-        pass
+        if len(pattern.nodes()) != 0:
+            query = rewriting.find_matching(
+                pattern,
+                node_label=self._node_label,
+                edge_label=self._edge_label,
+                nodes=nodes)
+            result = self._execute(query)
+            instances = list()
+
+            for record in result:
+                instance = dict()
+                for k, v in record.items():
+                    instance[k] = dict(v)["id"]
+                instances.append(instance)
+        else:
+            instances = []
+        return instances

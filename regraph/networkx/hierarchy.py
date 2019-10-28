@@ -111,8 +111,7 @@ class NetworkXHierarchy(nx.DiGraph):
     rule_rhs_typing_dict_factory = dict
     rel_dict_factory = dict
 
-    def __init__(self, directed=True,
-                 attrs=None):
+    def __init__(self, directed=True, attrs=None):
         """Initialize an hierarchy of graphs.
 
         Parameters
