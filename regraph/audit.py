@@ -618,6 +618,7 @@ class VersionedHierarchy(Versioning):
                         rule.p_lhs[keys_by_value(rule.p_rhs, n)[0]]]
             delta["rhs_instances"][graph] = rhs_instance
 
+    @staticmethod
     def _compose_deltas(self, delta1, delta2):
         """Computing composition of two deltas."""
         rule, lhs, rhs = compose_rule_hierarchies(

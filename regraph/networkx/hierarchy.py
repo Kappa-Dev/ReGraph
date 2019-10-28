@@ -57,7 +57,7 @@ from regraph.utils import (is_subdict,
                            keys_by_value,
                            normalize_attrs,
                            json_dict_to_attrs)
-from regraph.rules import Rule, compose_rules
+from regraph.rules import Rule
 from regraph.exceptions import (HierarchyError,
                                 TotalityWarning,
                                 ReGraphError,
