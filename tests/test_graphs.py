@@ -1,5 +1,4 @@
 """Units tests for graph classes."""
-import networkx as nx
 from regraph import Rule
 from regraph.graphs import Neo4jGraph, NXGraph
 

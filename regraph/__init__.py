@@ -1,7 +1,5 @@
 """."""
 
-from regraph.networkx.hierarchy import NetworkXHierarchy
-
 from regraph.neo4j.hierarchy import Neo4jHierarchy
 
 from regraph.rules import Rule, compose_rule_hierarchies, compose_rules

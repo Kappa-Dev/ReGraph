@@ -1,5 +1,6 @@
 import networkx as nx
 
+from regraph.graphs import NXGraph
 from regraph import Rule
 from regraph.rules import compose_rules, _create_merging_rule
 from regraph import keys_by_value
@@ -14,7 +15,7 @@ class TestRule(object):
     def __init__(self):
         """Initialize test."""
         # Define the left hand side of the rule
-        self.pattern = nx.DiGraph()
+        self.pattern = NXGraph()
         self.pattern.add_node(1)
         self.pattern.add_node(2)
         self.pattern.add_node(3)
@@ -28,7 +29,7 @@ class TestRule(object):
         prim.add_edge(self.pattern, 2, 3, {'a': {1}})
 
         # Define preserved part of the rule
-        self.p = nx.DiGraph()
+        self.p = NXGraph()
         self.p.add_node('a')
         self.p.add_node('b')
         self.p.add_node('c')
@@ -41,7 +42,7 @@ class TestRule(object):
         prim.add_edge(self.p, 'b', 'c', {'a': {1}})
 
         # Define the right hand side of the rule
-        self.rhs = nx.DiGraph()
+        self.rhs = NXGraph()
         self.rhs.add_node('x')
         self.rhs.add_node('y')
         self.rhs.add_node('z')
@@ -63,7 +64,7 @@ class TestRule(object):
         return
 
     def test_inject_remove_node(self):
-        pattern = nx.DiGraph()
+        pattern = NXGraph()
         prim.add_nodes_from(pattern, [1, 2, 3])
         prim.add_edges_from(pattern, [(1, 2), (3, 2)])
         rule = Rule.from_transform(pattern)
@@ -75,7 +76,7 @@ class TestRule(object):
         assert(2 not in rule.rhs.nodes())
 
     def test_inject_clone_node(self):
-        pattern = nx.DiGraph()
+        pattern = NXGraph()
         prim.add_nodes_from(pattern, [1, 2, 3])
         prim.add_edges_from(pattern, [(1, 2), (3, 2)])
         rule = Rule.from_transform(pattern)
@@ -101,7 +102,7 @@ class TestRule(object):
             pass
 
     def test_inject_remove_edge(self):
-        pattern = nx.DiGraph()
+        pattern = NXGraph()
         prim.add_nodes_from(pattern, [1, 2, 3])
         prim.add_edges_from(pattern, [(1, 2), (3, 2)])
         rule = Rule.from_transform(pattern)
@@ -117,7 +118,7 @@ class TestRule(object):
         assert((1, 2) in rule.p.edges())
 
     def test_inject_remove_node_attrs(self):
-        pattern = nx.DiGraph()
+        pattern = NXGraph()
         prim.add_nodes_from(
             pattern,
             [1, (2, {"a2": {True}}), (3, {"a3": {False}})])
@@ -138,7 +139,7 @@ class TestRule(object):
         assert("a2" in rule.rhs.node[2])
 
     def test_inject_remove_edge_attrs(self):
-        pattern = nx.DiGraph()
+        pattern = NXGraph()
         prim.add_nodes_from(
             pattern,
             [1, 2, 3])
@@ -157,7 +158,7 @@ class TestRule(object):
         assert("a32" not in rule.rhs.adj[3][new_rhs_node])
 
     def test_inject_add_node(self):
-        pattern = nx.DiGraph()
+        pattern = NXGraph()
         prim.add_nodes_from(pattern, [1, 2, 3])
         prim.add_edges_from(pattern, [(1, 2), (3, 2)])
         rule = Rule.from_transform(pattern)
@@ -174,7 +175,7 @@ class TestRule(object):
                4 not in rule.p.nodes())
 
     def test_inject_add_edge(self):
-        pattern = nx.DiGraph()
+        pattern = NXGraph()
         prim.add_nodes_from(pattern, [1, 2, 3])
         prim.add_edges_from(pattern, [(1, 2), (3, 2)])
         rule = Rule.from_transform(pattern)
@@ -195,7 +196,7 @@ class TestRule(object):
         assert((new_rhs_node, merge_node) in rule.rhs.edges())
 
     def test_inject_merge_nodes(self):
-        pattern = nx.DiGraph()
+        pattern = NXGraph()
         prim.add_nodes_from(pattern, [1, 2, 3])
         prim.add_edges_from(pattern, [(1, 2), (3, 2)])
         rule = Rule.from_transform(pattern)
@@ -213,7 +214,7 @@ class TestRule(object):
         assert(new_p_name in rule.rhs.nodes())
 
     def test_inject_add_node_attrs(self):
-        pattern = nx.DiGraph()
+        pattern = NXGraph()
         prim.add_nodes_from(pattern, [1, 2, 3])
         prim.add_edges_from(pattern, [(1, 2), (3, 2)])
         rule = Rule.from_transform(pattern)
@@ -233,7 +234,7 @@ class TestRule(object):
         check_homomorphism(rule.p, rule.rhs, rule.p_rhs)
 
     def test_inject_add_edge_attrs(self):
-        pattern = nx.DiGraph()
+        pattern = NXGraph()
         prim.add_nodes_from(pattern, [0, 1, 2, 3])
         prim.add_edges_from(pattern, [(0, 1), (0, 2), (1, 2), (3, 2)])
         rule = Rule.from_transform(pattern)
@@ -242,15 +243,15 @@ class TestRule(object):
         rule.inject_add_edge(4, 3)
         merge = rule.inject_merge_nodes([1, 3])
 
-        rule.inject_add_edge_attrs(0, 1, {"a": {True}})
-        assert("a" in rule.rhs.adj[0][merge])
+        rule.inject_add_edge_attrs(0, merge, {"a": {True}})
+        assert("a" in rule.rhs.get_edge(0, merge))
         rule.inject_add_edge_attrs(0, clone_name_p, {"b": {True}})
-        assert("b" in rule.rhs.adj[0][clone_name_rhs])
+        assert("b" in rule.rhs.get_edge(0, clone_name_rhs))
         rule.inject_add_edge_attrs(merge, clone_name_p, {"c": {True}})
-        assert("c" in rule.rhs.adj[merge][clone_name_rhs])
-        assert("c" not in rule.rhs.adj[merge][2])
+        assert("c" in rule.rhs.get_edge(merge, clone_name_rhs))
+        assert("c" not in rule.rhs.get_edge(merge, 2))
         rule.inject_add_edge_attrs(4, merge, {"d": {True}})
-        assert("d" in rule.rhs.adj[4][merge])
+        assert("d" in rule.rhs.get_edge(4, merge))
         check_homomorphism(rule.p, rule.lhs, rule.p_lhs)
         check_homomorphism(rule.p, rule.rhs, rule.p_rhs)
 
@@ -268,7 +269,7 @@ class TestRule(object):
         assert(3 not in rule.rhs.nodes())
 
     def test_component_getters(self):
-        pattern = nx.DiGraph()
+        pattern = NXGraph()
         prim.add_nodes_from(
             pattern,
             [(1, {"a1": {1}}), (2, {"a2": {2}}), (3, {"a3": {3}})]
@@ -310,7 +311,7 @@ class TestRule(object):
         assert(rule.is_restrictive() and rule.is_relaxing())
 
     def test_from_commands(self):
-        pattern = nx.DiGraph()
+        pattern = NXGraph()
         prim.add_nodes_from(
             pattern,
             [(1, {'state': 'p'}),
@@ -325,14 +326,14 @@ class TestRule(object):
              (3, 4)]
         )
 
-        p = nx.DiGraph()
+        p = NXGraph()
         prim.add_nodes_from(
             p,
             [(1, {'state': 'p'}), ("1_clone", {'state': 'p'}), (2, {'name': 'BND'}), 3, 4])
         prim.add_edges_from(
             p, [(1, 2), ('1_clone', 2), (3, 4)])
 
-        rhs = nx.DiGraph()
+        rhs = NXGraph()
         prim.add_nodes_from(
             rhs,
             [(1, {'state': 'p'}), ("1_clone", {'state': 'p'}), (2, {'name': 'BND'}), 3, 4, 5])
@@ -356,7 +357,7 @@ class TestRule(object):
         assert((2, 4) in rule2.rhs.edges())
 
     def test_refinement(self):
-        graph = nx.DiGraph()
+        graph = NXGraph()
 
         prim.add_nodes_from(
             graph, [
@@ -373,7 +374,7 @@ class TestRule(object):
                 ("d", "a", {"type": "siblings"})
             ])
 
-        pattern = nx.DiGraph()
+        pattern = NXGraph()
         pattern.add_nodes_from(["x", "y"])
         pattern.add_edges_from([("y", "x")])
         instance = {
@@ -382,7 +383,7 @@ class TestRule(object):
         }
 
         # Remove node side-effects
-        rule = Rule.from_transform(pattern)
+        rule = Rule.from_transform(NXGraph.copy(pattern))
         rule.inject_remove_node("x")
 
         new_instance = rule.refine(graph, instance)
@@ -396,7 +397,7 @@ class TestRule(object):
             prim.get_edge(rule.lhs, "c", "x") == prim.get_edge(graph, "c", "a"))
 
         # Remove edge side-effects
-        rule = Rule.from_transform(pattern)
+        rule = Rule.from_transform(NXGraph.copy(pattern))
         rule.inject_remove_edge("y", "x")
 
         new_instance = rule.refine(graph, instance)
@@ -404,10 +405,11 @@ class TestRule(object):
                prim.get_edge(graph, "d", "a"))
 
         # Merge side-effects
-        rule = Rule.from_transform(pattern)
+        rule = Rule.from_transform(NXGraph.copy(pattern))
         rule.inject_merge_nodes(["x", "y"])
         new_instance = rule.refine(graph, instance)
 
+        print(new_instance)
         assert(new_instance == {
             "x": "a", "y": "d", "b": "b", "c": "c"
         })
@@ -425,7 +427,7 @@ class TestRule(object):
         pattern.add_node("z")
         pattern.add_edge("x", "z")
         instance["z"] = "b"
-        rule = Rule.from_transform(pattern)
+        rule = Rule.from_transform(NXGraph.copy(pattern))
         p_node, _ = rule.inject_clone_node("x")
         rule.inject_remove_node("z")
         rule.inject_remove_edge("y", p_node)
@@ -444,25 +446,28 @@ class TestRule(object):
             prim.get_edge(graph, "d", "a"))
 
         # test with rule inversion
-        new_graph, rhs_g = rule.apply_to(graph, new_instance)
+        backup = NXGraph.copy(graph)
+        rhs_g = graph.rewrite(rule, new_instance)
 
         inverted = rule.get_inverted_rule()
 
-        new_new_graph, rhs_gg = inverted.apply_to(new_graph, rhs_g)
-
+        rhs_gg = graph.rewrite(inverted, rhs_g)
+        print(rhs_gg)
         old_node_labels = {
             v: new_instance[k]
             for k, v in rhs_gg.items()
         }
 
-        prim.relabel_nodes(new_new_graph, old_node_labels)
+        print(old_node_labels)
+        print(graph.nodes())
+        graph.relabel_nodes(old_node_labels)
 
-        assert(prim.equal(graph, new_new_graph))
+        assert(backup == graph)
 
     def test_compose_rules(self):
-        lhs1 = nx.DiGraph()
-        p1 = nx.DiGraph()
-        rhs1 = nx.DiGraph()
+        lhs1 = NXGraph()
+        p1 = NXGraph()
+        rhs1 = NXGraph()
         lhs1.add_nodes_from(
             ["circle", "square", "heart"])
         p1.add_nodes_from(
@@ -475,9 +480,9 @@ class TestRule(object):
             {"circle": "circle", "square": "square"},
             {"circle": "circle_square", "square": "circle_square"})
 
-        lhs2 = nx.DiGraph()
-        p2 = nx.DiGraph()
-        rhs2 = nx.DiGraph()
+        lhs2 = NXGraph()
+        p2 = NXGraph()
+        rhs2 = NXGraph()
         lhs2.add_nodes_from(
             ["circle_square", "diamond"])
         p2.add_nodes_from(
@@ -512,7 +517,7 @@ class TestRule(object):
 
     def test_create_merging_rule(test):
         # Create a rule
-        pattern = nx.DiGraph()
+        pattern = NXGraph()
         pattern.add_nodes_from(["circle", "square", "triangle"])
         rule = Rule.from_transform(pattern)
         rule.inject_remove_node("triangle")

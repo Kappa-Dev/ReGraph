@@ -7,7 +7,7 @@ https://link.springer.com/chapter/10.1007/11841883_4).
 import copy
 import warnings
 
-import networkx as nx
+from regraph.graphs import NXGraph
 
 from regraph.command_parser import parser
 from regraph.utils import (keys_by_value,
@@ -26,30 +26,16 @@ from regraph.networkx.category_utils import (identity,
                                              pushout,
                                              pullback,
                                              compose)
-from regraph import primitives
 from regraph.networkx.plotting import plot_rule
 from regraph.exceptions import (ReGraphWarning, ParsingError,
                                 RuleError)
-
-# from regraph.neo4j.cypher_utils.generic import (generate_var_name,
-#                                                 with_vars,
-#                                                 return_vars)
-# from regraph.neo4j.cypher_utils.rewriting import (match_pattern_instance,
-#                                                   cloning_query,
-#                                                   remove_nodes,
-#                                                   remove_edge,
-#                                                   remove_attributes,
-#                                                   merging_query1,
-#                                                   add_node,
-#                                                   add_edge,
-#                                                   add_attributes)
 
 
 class Rule(object):
     """Class representing rewriting rules.
 
     A rewriting rule consists of the three graphs:
-    `p` -- preserved part, `lhs` -- left hand side,
+    `p` -- preserved part (or interface), `lhs` -- left hand side,
     `rhs` -- right hand side, and two mappings:
     from `p` to `lhs` and from `p` to `rhs`.
     Informally, `lhs` represents a pattern to match
@@ -69,11 +55,11 @@ class Rule(object):
 
     Attributes
     ----------
-    p : networkx.(Di)Graph
+    p : regaph.graphs.Graph
         Preserved part of the rule
-    lhs : networkx.(Di)Graph
+    lhs : regaph.graphs.Graph
         Left-hand side (pattern) of the rule
-    rhs : networkx.(Di)Graph
+    rhs : regaph.graphs.Graph
         Right-hand side of the rule
     p_lhs : dict
         Homomorphism between `p` and `lhs` given by
@@ -85,7 +71,8 @@ class Rule(object):
         values -- nodes of `rhs`.
     """
 
-    def __init__(self, p=None, lhs=None, rhs=None, p_lhs=None, p_rhs=None):
+    def __init__(self, p=None, lhs=None, rhs=None,
+                 p_lhs=None, p_rhs=None):
         """Rule initialization.
 
         A rule is initialized with p, lhs, rhs graphs, and
@@ -97,11 +84,11 @@ class Rule(object):
 
         Parameters
         ----------
-        p : networkx.(Di)Graph
+        p : regaph.graphs.Graph
             Preserved part of the rule
-        lhs : networkx.(Di)Graph
+        lhs : regaph.graphs.Graph
             Left-hand side (pattern) of the rule
-        rhs : networkx.(Di)Graph
+        rhs : regaph.graphs.Graph
             Right-hand side of the rule
         p_lhs : dict
             Homomorphism between `p` and `lhs` given by
@@ -112,22 +99,22 @@ class Rule(object):
             a dictionary with keys -- nodes of `p`,
             values -- nodes of `rhs`
         """
+        if p is None:
+            p = NXGraph()
         if lhs is None:
-            if p is not None:
-                lhs = p
-            else:
-                lhs = p = nx.DiGraph()
+            lhs = NXGraph.copy(p)
         if rhs is None:
-            if p is not None:
-                rhs = p
-            else:
-                p = rhs = nx.DiGraph()
+            rhs = NXGraph.copy(rhs)
+
+        self.p = p
+        self.lhs = lhs
+        self.rhs = rhs
 
         if not p_lhs:
             self.p_lhs = identity(p, lhs)
         else:
             check_homomorphism(p, lhs, p_lhs)
-            self.p_lhs = copy.deepcopy(p_lhs)
+            self.p_lhs = p_lhs
 
         if not rhs:
             rhs = p
@@ -136,11 +123,7 @@ class Rule(object):
             self.p_rhs = identity(p, rhs)
         else:
             check_homomorphism(p, rhs, p_rhs)
-            self.p_rhs = copy.deepcopy(p_rhs)
-
-        self.p = copy.deepcopy(p)
-        self.lhs = copy.deepcopy(lhs)
-        self.rhs = copy.deepcopy(rhs)
+            self.p_rhs = p_rhs
 
         return
 
@@ -165,17 +148,14 @@ class Rule(object):
             can be parsed by `regraph.parser.parse`.
 
         """
-        lhs = nx.DiGraph()
-        for n in pattern.nodes():
-            attrs = primitives.get_node(pattern, n)
-            primitives.add_node(lhs, n, attrs)
+        if not isinstance(pattern, NXGraph):
+            RuleError(
+                "The initial pattern should be an instance of NXGraph")
 
-        for u, v in pattern.edges():
-            attrs = primitives.get_edge(pattern, u, v)
-            primitives.add_edge(lhs, u, v, attrs)
+        lhs = pattern
 
-        p = copy.deepcopy(lhs)
-        rhs = copy.deepcopy(lhs)
+        p = NXGraph.copy(lhs)
+        rhs = NXGraph.copy(lhs)
 
         p_lhs = dict([(n, n) for n in pattern.nodes()])
         p_rhs = dict([(n, n) for n in pattern.nodes()])
@@ -185,7 +165,7 @@ class Rule(object):
         # if the commands are provided, perform respecitive transformations
         if commands:
             # 1. make the commands canonical
-            commands = make_canonical_commands(p, commands, p.is_directed())
+            commands = make_canonical_commands(p, commands, True)
             # 2. apply the commands
 
             command_strings = [
@@ -261,20 +241,25 @@ class Rule(object):
     def __eq__(self, rule):
         """Rule equality operator."""
         return (
-            primitives.equal(self.p, rule.p) and
-            primitives.equal(self.lhs, rule.lhs) and
-            primitives.equal(self.rhs, rule.rhs) and
+            self.p == rule.p and
+            self.lhs == rule.lhs and
+            self.rhs == rule.rhs and
             self.p_lhs == rule.p_lhs and
             self.p_rhs == rule.p_rhs
         )
 
     def __str__(self):
         """String representation of a rule."""
-        return "Left hand side\n%s\n%s\n" % (self.lhs.node, self.lhs.edges()) +\
-            "Preserved part\n%s\n%s\n" % (self.p.node, self.p.edges()) +\
-            "Right hand side\n%s\n%s\n" % (self.rhs.node, self.rhs.edges()) +\
-            "P->L Homomorphism : %s\n" % self.p_lhs +\
-            "P->R Homomorphism : %s\n" % self.p_rhs
+        return (
+            "Left hand side\n{}\n{}\n".format(
+                self.lhs.nodes(data=True), self.lhs.edges(data=True)) +
+            "Preserved part\n{}\n{}\n".format(
+                self.p.nodes(data=True), self.p.edges(data=True)) +
+            "Right hand side\n{}\n{}\n".format(
+                self.rhs.nodes(data=True), self.rhs.edges(data=True)) +
+            "P->L Homomorphism : {}\n".format(self.p_lhs) +
+            "P->R Homomorphism : {}\n".format(self.p_rhs)
+        )
 
     def inject_clone_node(self, n, new_node_id=None):
         """Inject cloning of a node by the rule.
@@ -315,59 +300,55 @@ class Rule(object):
                     "Node with id '%s' already exists in the "
                     "preserved part!")
             some_p_node = p_nodes[0]
-            p_new_node_id = primitives.clone_node(
-                self.p, some_p_node, new_node_id)
+            p_new_node_id = self.p.clone_node(some_p_node, new_node_id)
             self.p_lhs[p_new_node_id] = n
             # add it to the rhs
             # generate a new id for rhs
             rhs_new_node_id = p_new_node_id
             if rhs_new_node_id in self.rhs.nodes():
-                rhs_new_node_id = primitives.unique_node_id(
-                    self.rhs, rhs_new_node_id)
-            primitives.add_node(
-                self.rhs, rhs_new_node_id, self.p.node[p_new_node_id])
+                rhs_new_node_id = self.rhs.generate_new_node_id(
+                    rhs_new_node_id)
+            self.rhs.add_node(
+                rhs_new_node_id, self.p.node[p_new_node_id])
             self.p_rhs[p_new_node_id] = rhs_new_node_id
             # reconnect the new rhs node with necessary edges
             for pred in self.p.predecessors(p_new_node_id):
                 if (self.p_rhs[pred], rhs_new_node_id) not in self.rhs.edges():
-                    primitives.add_edge(
-                        self.rhs,
+                    self.rhs.add_edge(
                         self.p_rhs[pred], rhs_new_node_id,
                         self.p.adj[pred][p_new_node_id])
             for suc in self.p.successors(p_new_node_id):
                 if (rhs_new_node_id, self.p_rhs[suc]) not in self.rhs.edges():
-                    primitives.add_edge(
-                        self.rhs,
+                    self.rhs.add_edge(
                         rhs_new_node_id, self.p_rhs[suc],
                         self.p.adj[p_new_node_id][suc])
 
         return (p_new_node_id, rhs_new_node_id)
 
-    def inject_remove_node(self, lhs_node_id):
+    def inject_remove_node(self, p_node_id):
         """Inject a new node removal to the rule.
 
-        This method removes from `p` all the nodes that map
-        to the node with the id `lhs_node_id`. In addition,
-        all the nodes from `rhs` that are mapped by the nodes
-        removed in `p` are also removed.
+        This method removes the indicated node from `p`
 
         Parameters
         ----------
-        lhs_node_id
-            Id of the node in `lhs` that should be removed
+        p_node_id
+            Id of the node in `p` that should be removed
             by the rule.
         """
         # remove corresponding nodes from p and rhs
-        p_keys = keys_by_value(self.p_lhs, lhs_node_id)
-        for k in p_keys:
-            if k in self.p.nodes():
-                primitives.remove_node(self.p, k)
-            if self.p_rhs[k] in self.rhs.nodes():
-                primitives.remove_node(self.rhs, self.p_rhs[k])
-                affected_nodes = keys_by_value(self.p_rhs, self.p_rhs[k])
-                for node in affected_nodes:
-                    del self.p_rhs[node]
-            del self.p_lhs[k]
+        if p_node_id in self.p.nodes():
+            self.p.remove_node(p_node_id)
+        else:
+            raise RuleError(
+                "Node '{}' does not exist in the preserved part".format(
+                    p_node_id))
+        if self.p_rhs[p_node_id] in self.rhs.nodes():
+            self.rhs.remove_node(self.p_rhs[p_node_id])
+            affected_nodes = keys_by_value(self.p_rhs, self.p_rhs[p_node_id])
+            for node in affected_nodes:
+                del self.p_rhs[node]
+            del self.p_lhs[p_node_id]
         return
 
     def inject_remove_edge(self, n1, n2):
@@ -376,41 +357,20 @@ class Rule(object):
         Parameters
         ----------
         n1 : hashable
-            Id of an edge's source node in `lhs`.
+            Id of an edge's source node in `p`.
         n2 : hashable
-            Id of an edge's target node in `lhs`.
+            Id of an edge's target node in `p`.
 
         Raises
         ------
         RuleError
-            If some of the nodes are not found in neither
-            `lhs` nor `p`, or if a corresponding edge in
-            `p` does not exist.
+            If some of the nodes are not found in `p`,
+            or if a corresponding edge in `p` does not exist.
         """
-        # Find nodes in p mapping to n1 & n2
-        # p_keys_1 = keys_by_value(self.p_lhs, n1)
-        # p_keys_2 = keys_by_value(self.p_lhs, n2)
-
-        # # n1 is actually a node from `p`
-        # if len(p_keys_1) == 0:
-        #     if n1 in self.p.nodes():
-        #         p_keys_1 = [n1]
-        #     else:
-        #         raise RuleError(
-        #             "Node '{}' is not found in neither left-hand "
-        #             "side nor preserved part".format(n1))
-
-        # if len(p_keys_2) == 0:
-        #     if n2 in self.p.nodes():
-        #         p_keys_2 = [n2]
-        #     else:
-        #         raise RuleError(
-        #             "Node '{}' is not found in neither left-hand "
-        #             "side nor preserved part".format(n2))
 
         if (n1, n2) in self.p.edges():
-            primitives.remove_edge(self.p, n1, n2)
-            primitives.remove_edge(self.rhs, self.p_rhs[n1], self.p_rhs[n2])
+            self.p.remove_edge(n1, n2)
+            self.rhs.remove_edge(self.p_rhs[n1], self.p_rhs[n2])
         else:
             raise RuleError(
                 "Edge '{}->{}' does not exist in the preserved part".format(
@@ -421,95 +381,70 @@ class Rule(object):
     def inject_remove_node_attrs(self, n, attrs):
         """Inject a removal of node attrs by the rule.
 
-        First, tries to find a node with the id `n` in the
-        left-hand side, injects its attrs removal if found,
-        otherwise, tries to find the corresponding node in
-        the preserved part (it helps us to implement injection
-        of the node attrs removal to only one of the clone nodes).
-
-
         Parameters
         ----------
         n : hashable
             Id of a node whose attrs to remove (node from the
-            left-hand side or the preserved part).
+            preserved part).
         attrs : dict
             Dictionary with attributes to remove.
 
         Raises
         ------
         RuleError
-            If `n` does not exist in neither the left-hand side
-            nor the preserved part of the rule, or when the node
-            whose attrs should be removed is itself is being removed
-            by the rule.
+            If `n` does not exist in the preserved part of the rule,
+            or when the node whose attrs should be removed
+            is itself is being removed by the rule.
 
         """
-        if n not in self.lhs.nodes() and n not in self.p.nodes():
+        if n not in self.p.nodes():
             raise RuleError(
-                "Node '%s' exists in neither the left "
-                "hand side of the rule nor the preserved part" % n)
+                "Node '{}' does not exist in the preserved part".format(
+                    n))
 
-        if n in self.lhs.nodes():
-            p_keys = keys_by_value(self.p_lhs, n)
-            if len(p_keys) == 0:
-                raise RuleError(
-                    "Node '%s' is being removed by the rule, "
-                    "cannot remove attributes" % n)
-        else:
-            p_keys = [n]
-
-        for k in p_keys:
-            primitives.remove_node_attrs(self.p, k, attrs)
-            primitives.remove_node_attrs(self.rhs, self.p_rhs[k], attrs)
+        self.p.remove_node_attrs(n, attrs)
+        self.rhs.remove_node_attrs(self.p_rhs[n], attrs)
         return
 
     def inject_remove_edge_attrs(self, n1, n2, attrs):
         """Inject a removal of edge attrs by the rule.
 
-        For both `n1` and `n2`, first, tries to find
-        a node with this id in the left-hand side,
-        injects the removal of the respective edge attrs if found,
-        otherwise, tries to find the corresponding node in
-        the preserved part (it helps us to implement injection
-        of the edge attrs removal to only one of the edges
-        incident to the clone).
-
         Parameters
         ----------
         n1 : hashable
-            Id of an edge's source node in `lhs` or `p`.
+            Id of an edge's source node in  `p`.
         n2 : hashable
-            Id of an edge's target node in `lhs` or `p`.
+            Id of an edge's target node in `p`.
         attrs : dict
             Dictionary with attributes to remove.
 
         Raises
         ------
         RuleError
+            If edge `n1-> n2` does not exist in the preserved part of the rule,
+            or when the node whose attrs should be removed
+            is itself is being removed by the rule.
 
         """
         if n1 not in self.p.nodes():
             raise RuleError(
-                "Node '%s' does not exist in the preserved "
-                "part of the rule" % n1
+                "Node '{}' does not exist in the preserved "
+                "part of the rule".format(n1)
             )
         if n2 not in self.p.nodes():
             raise RuleError(
-                "Node '%s' does not exist in preserved "
-                "part of the rule" % n2
+                "Node '{}' does not exist in preserved "
+                "part of the rule".format(n2)
             )
 
         if (n1, n2) not in self.p.edges():
             raise RuleError(
-                "Edge '%s->%s' does not exist in the preserved "
-                "part of the rule" %
-                (n1, n2)
+                "Edge '{}->{}' does not exist in the preserved "
+                "part of the rule".format(n1, n2)
             )
         else:
-            primitives.remove_edge_attrs(self.p, n1, n2, attrs)
-            primitives.remove_edge_attrs(
-                self.rhs, self.p_rhs[n1], self.p_rhs[n2], attrs)
+            self.p.remove_edge_attrs(n1, n2, attrs)
+            self.rhs.remove_edge_attrs(self.p_rhs[n1], self.p_rhs[n2], attrs)
         return
 
     def inject_add_node(self, node_id, attrs=None):
@@ -531,12 +466,11 @@ class Rule(object):
             If node with this id already exists in the `rhs`.
         """
         if node_id not in self.rhs.nodes():
-            primitives.add_node(self.rhs, node_id, attrs)
+            self.rhs.add_node(node_id, attrs)
         else:
             raise RuleError(
-                "Node with the id '%s' already exists in the "
-                "right hand side of the rule" %
-                node_id
+                "Node with the id '{}' already exists in the "
+                "right hand side of the rule".format(node_id)
             )
 
     def inject_add_nodes_from(self, node_list):
@@ -586,19 +520,18 @@ class Rule(object):
         """
         if n1 not in self.rhs.nodes():
             raise RuleError(
-                "Node with the id '%s' does not exist in the "
-                "right-hand side of the rule" % n1)
+                "Node with the id '{}' does not exist in the "
+                "right-hand side of the rule".format(n1))
         if n2 not in self.rhs.nodes():
             raise RuleError(
-                "Node with the id '%s' does not exist in the "
-                "right-hand side of the rule" % n2)
+                "Node with the id '{}' does not exist in the "
+                "right-hand side of the rule".format(n2))
         if (n1, n2) in self.rhs.edges():
             raise RuleError(
-                "Edge '%s->%s' already exists in the right-"
-                "hand side of the rule" %
-                (n1, n2)
+                "Edge '{}->{}' already exists in the right-"
+                "hand side of the rule".format(n1, n2)
             )
-        primitives.add_edge(self.rhs, n1, n2, attrs)
+        self.rhs.add_edge(n1, n2, attrs)
         return
 
     def inject_add_edges_from(self, edge_list):
@@ -627,8 +560,8 @@ class Rule(object):
                 self.inject_add_edge(e[0], e[1], e[2])
             else:
                 raise RuleError(
-                    "Was expecting 2 or 3 elements per tuple, got %s." %
-                    str(len(e))
+                    "Was expecting 2 or 3 elements per tuple, got {}.".format(
+                        len(e))
                 )
 
     def inject_merge_nodes(self, node_list, node_id=None):
@@ -637,8 +570,7 @@ class Rule(object):
         Parameters
         ----------
         node_list : iterable
-            Collection of ids of nodes from the preserved part or
-            the rhs to merge.
+            Collection of ids of nodes from the preserved part.
         node_id : hashable
             Id of the new node corresponding to the result of merge.
 
@@ -650,7 +582,7 @@ class Rule(object):
         Raises
         ------
         RuleError
-            If a node with some id specified in `node_lust` does not
+            If a node with some id specified in `node_list` does not
             exist in the preserved part of the rule.
         """
         # Update graphs
@@ -660,16 +592,13 @@ class Rule(object):
         for n in node_list:
             if n in self.p.nodes():
                 rhs_node = self.p_rhs[n]
-            elif n in self.rhs.nodes():
-                rhs_node = n
             else:
                 raise RuleError(
-                    "Node with the id '%s' does not exist in neither the "
-                    "preserved part of the rule nor its rhs" % n
+                    "Node with the id '{}' does not exist in the "
+                    "preserved part of the rule".fromat(n)
                 )
             nodes_to_merge.add(rhs_node)
-        new_name = primitives.merge_nodes(
-            self.rhs,
+        new_name = self.rhs.merge_nodes(
             list(nodes_to_merge),
             node_id=node_id
         )
@@ -686,22 +615,10 @@ class Rule(object):
     def inject_add_node_attrs(self, n, attrs):
         """Inject addition of  node attributes by the rule.
 
-        First, tries to find a node with the id `n` in the
-        left-hand side, injects its attrs add to all the `rhs` nodes
-        related to it through l<-p->r, if found,
-        otherwise, tries to find the corresponding node in
-        the preserved part and adds attrs to the node to which `n`
-        maps in p->r, if it is not found in `p`, tries to find it in
-        the `rhs` (it helps us to implement injection
-        of the node attrs add to only one of the clone nodes, or to new nodes,
-        or to merged nodes).
-
         Parameters
         ----------
-        n1 : hashable
-            Id of an edge's source node in `lhs`, `p` or `rhs`.
-        n2 : hashable
-            Id of an edge's target node in `lhs`, `p` or `rhs`.
+        n : hashable
+            Id of the node in the `rhs` to add attributes to.
         attrs : dict
             Dictionary with attrs to add
 
@@ -711,39 +628,22 @@ class Rule(object):
             If node `n` does not exist in the rhs of the rule
 
         """
-        if n not in list(self.rhs.nodes()):
+        if n not in self.rhs.nodes():
             raise RuleError(
-                "Node '%s' exists in neither lhs, nor p, nor rhs of the rule" %
-                n)
-        r_nodes = set()
-        # if n in self.lhs.nodes():
-        #     p_keys = keys_by_value(self.p_lhs, n)
-        #     for p in p_keys:
-        #         r_nodes.add(self.p_rhs[p])
-        # elif n in self.p.nodes():
-        #     r_nodes.add(self.p_rhs[n])
-        if n in self.rhs.nodes():
-            r_nodes.add(n)
-        for r in r_nodes:
-            primitives.add_node_attrs(self.rhs, r, attrs)
+                "Node '{}' exists in the RHS of the rule".format(n))
+
+        self.rhs.add_node_attrs(n, attrs)
         return
 
     def inject_add_edge_attrs(self, n1, n2, attrs):
         """Inject addition of edge attributes by the rule.
 
-        For `n1` and `n2`, first, tries to find a node with this id in the
-        left-hand side, finds a node from `rhs` related to it through
-        l<-p->r, if found, otherwise, tries to find the corresponding node in
-        the preserved part and finds the node to which `n` maps in p->r,
-        if it is not found in `p`, tries to find it in
-        the `rhs` (it helps us to implement injection
-        of the edge attrs add to only one of the edges incident to clones,
-        or to new edges, or to edges produced by merges).
-
         Parameters
         ----------
         n1 : hashable
+            Source node in the RHS
         n2 : hashable
+            Target node in the RHS
         attrs : dict
             Dictionary with attrs to add
 
@@ -751,65 +651,15 @@ class Rule(object):
         ------
         RuleError
             If some of the nodes defining an edge are not found in neither
-            `lhs`, nor `p` nor `rhs`, or if an edge is incident to smth thats
+            `rhs`, or if an edge is incident to smth thats
             is going to be removed by the rule.
         """
-        if n1 not in list(self.lhs.nodes()) + list(self.rhs.nodes()) + list(self.p.nodes()):
+        if (n1, n2) not in self.rhs.edges():
             raise RuleError(
-                "Node '%s' exists in neither lhs, nor p, nor rhs "
-                "of the rule" % n1
+                "Edge '{}->{}' does not exist in the "
+                "right-hand side of the rule ".format(n1, n2)
             )
-
-        if n2 not in list(self.lhs.nodes()) + list(self.rhs.nodes()) + list(self.p.nodes()):
-            raise RuleError(
-                "Node '%s' exists in neither lhs, nor p, nor rhs "
-                "of the rule" % n2
-            )
-
-        if n1 in self.lhs.nodes():
-            p_keys = keys_by_value(self.p_lhs, n1)
-            if len(p_keys) == 0:
-                raise RuleError(
-                    "Node '%s' is being removed by the rule, cannot add "
-                    "attributes to the incident edge" %
-                    n1
-                )
-            rhs_keys_1 = [self.p_rhs[p] for p in p_keys]
-        elif n1 in self.p.nodes():
-            rhs_keys_1 = [self.p_rhs[n1]]
-        elif n1 in self.rhs.nodes():
-            rhs_keys_1 = [n1]
-
-        if n2 in self.lhs.nodes():
-            p_keys = keys_by_value(self.p_lhs, n2)
-            if len(p_keys) == 0:
-                raise RuleError(
-                    "Node '%s' is being removed by the rule, cannot add "
-                    "attributes to the incident edge" %
-                    n2
-                )
-            rhs_keys_2 = [self.p_rhs[p] for p in p_keys]
-        elif n2 in self.p.nodes():
-            rhs_keys_2 = [self.p_rhs[n2]]
-        elif n2 in self.rhs.nodes():
-            rhs_keys_2 = [n2]
-
-        for r1 in rhs_keys_1:
-            for r2 in rhs_keys_2:
-                if self.rhs.is_directed() and (r1, r2) not in self.rhs.edges():
-                        raise RuleError(
-                            "Edge '%s->%s' does not exist in the right "
-                            "hand side of the rule" %
-                            (r1, r2))
-                elif (r1, r2) not in self.rhs.edges() and\
-                     (r2, r1) not in self.rhs.edges():
-                    raise RuleError(
-                        "Edge '%s->%s' does not exist in the right "
-                        "hand side of the rule" %
-                        (r1, r2)
-                    )
-                primitives.add_edge_attrs(
-                    self.rhs, r1, r2, attrs)
+        self.rhs.add_edge_attrs(n1, n2, attrs)
         return
 
     def inject_update_node_attrs(self, n, attrs):
@@ -841,8 +691,8 @@ class Rule(object):
                 "cannot update attributes" % n)
         for k in p_keys:
             # self.p.node[k] = None
-            primitives.set_node_attrs(self.p, k, {}, update=True)
-            primitives.set_node_attrs(self.rhs, self.p_rhs[k], attrs, update=True)
+            self.p.set_node_attrs(k, {}, update=True)
+            self.rhs.set_node_attrs(self.p_rhs[k], attrs, update=True)
         return
 
     def inject_update_edge_attrs(self, n1, n2, attrs):
@@ -857,77 +707,43 @@ class Rule(object):
                 "Node '%s' does not exist in the left hand side of the rule" %
                 n2
             )
-        if self.lhs.is_directed():
-            if (n1, n2) not in self.lhs.edges():
-                raise RuleError(
-                    "Edge '%s->%s' does not exist in the left hand "
-                    "side of the rule" % (n1, n2)
-                )
+        if (n1, n2) not in self.lhs.edges():
+            raise RuleError(
+                "Edge '%s->%s' does not exist in the left hand "
+                "side of the rule" % (n1, n2)
+            )
 
-            p_keys_1 = keys_by_value(self.p_lhs, n1)
-            p_keys_2 = keys_by_value(self.p_lhs, n2)
+        p_keys_1 = keys_by_value(self.p_lhs, n1)
+        p_keys_2 = keys_by_value(self.p_lhs, n2)
 
-            if len(p_keys_1) == 0:
-                raise RuleError(
-                    "Node '%s' is being removed by the rule, cannot update "
-                    "attributes from the incident edge" %
-                    n2
+        if len(p_keys_1) == 0:
+            raise RuleError(
+                "Node '%s' is being removed by the rule, cannot update "
+                "attributes from the incident edge" %
+                n2
+            )
+        if len(p_keys_2) == 0:
+            raise RuleError(
+                "Node '%s' is being removed by the rule, cannot update "
+                "attributes from the incident edge" %
+                n1
+            )
+        for k1 in p_keys_1:
+            for k2 in p_keys_2:
+                self.p.adj[k1][k2] = None
+                self.rhs.update_edge_attrs(
+                    self.p_rhs[k1],
+                    self.p_rhs[k2],
+                    attrs
                 )
-            if len(p_keys_2) == 0:
-                raise RuleError(
-                    "Node '%s' is being removed by the rule, cannot update "
-                    "attributes from the incident edge" %
-                    n1
-                )
-            for k1 in p_keys_1:
-                for k2 in p_keys_2:
-                    self.p.adj[k1][k2] = None
-                    primitives.update_edge_attrs(
-                        self.rhs,
-                        self.p_rhs[k1],
-                        self.p_rhs[k2],
-                        attrs
-                    )
-        else:
-            if (n1, n2) not in self.lhs.edges() and\
-               (n2, n1) not in self.lhs.edges():
-                raise RuleError(
-                    "Edge '%s->%s' does not exist in the "
-                    "left hand side of the rule" %
-                    (n1, n2)
-                )
-
-            p_keys_1 = keys_by_value(self.p_lhs, n1)
-            p_keys_2 = keys_by_value(self.p_lhs, n2)
-            if len(p_keys_1) == 0:
-                raise RuleError(
-                    "Node '%s' is being removed by the rule, cannot update "
-                    "attributes from the incident edge" %
-                    n1
-                )
-            if len(p_keys_2) == 0:
-                raise RuleError(
-                    "Node '%s' is being removed by the rule, cannot update "
-                    "attributes from the incident edge" %
-                    n2
-                )
-            for k1 in p_keys_1:
-                for k2 in p_keys_2:
-                    self.p.adj[k1][k2] = None
-                    primitives.update_edge_attrs(
-                        self.rhs,
-                        self.p_rhs[k1],
-                        self.p_rhs[k2],
-                        attrs
-                    )
         return
 
     def to_json(self):
         """Convert the rule to JSON repr."""
         json_data = {}
-        json_data["lhs"] = primitives.graph_to_json(self.lhs)
-        json_data["p"] = primitives.graph_to_json(self.p)
-        json_data["rhs"] = primitives.graph_to_json(self.rhs)
+        json_data["lhs"] = self.lhs.to_json()
+        json_data["p"] = self.p.to_json()
+        json_data["rhs"] = self.rhs.to_json()
         json_data["p_lhs"] = self.p_lhs
         json_data["p_rhs"] = self.p_rhs
         return json_data
@@ -935,61 +751,60 @@ class Rule(object):
     @classmethod
     def from_json(cls, json_data, directed=True):
         """Create a rule obj from JSON repr."""
-        lhs = primitives.networkx_from_json(json_data["lhs"], directed)
-        p = primitives.networkx_from_json(json_data["p"], directed)
-        rhs = primitives.networkx_from_json(json_data["rhs"], directed)
+        lhs = NXGraph.from_json(json_data["lhs"], directed)
+        p = NXGraph.from_json(json_data["p"], directed)
+        rhs = NXGraph.from_json(json_data["rhs"], directed)
         p_lhs = json_data["p_lhs"]
         p_rhs = json_data["p_rhs"]
         rule = cls(p, lhs, rhs, p_lhs, p_rhs)
         return rule
 
-    def apply_to(self, graph, instance=None, inplace=False):
-        """Perform graph rewriting with the rule.
+    # def apply_to(self, graph, instance=None, inplace=False):
+    #     """Perform graph rewriting with the rule.
 
-        Parameters
-        ----------
-        graph : nx.(Di)Graph
-            Graph to rewrite with the rule.
-        instance : dict
-            Instance of the `lhs` pattern in the graph
-            defined by a dictionary where keys are nodes
-            of `lhs` and values are nodes of the graph.
-        inplace : bool, optional
-            If `True`, the rewriting will be performed
-            in-place by applying primitve transformations
-            to the graph object, otherwise the result of
-            the rewriting is a new graph object.
-            Default value is `False`.
+    #     Parameters
+    #     ----------
+    #     graph : nx.(Di)Graph
+    #         Graph to rewrite with the rule.
+    #     instance : dict
+    #         Instance of the `lhs` pattern in the graph
+    #         defined by a dictionary where keys are nodes
+    #         of `lhs` and values are nodes of the graph.
+    #     inplace : bool, optional
+    #         If `True`, the rewriting will be performed
+    #         in-place by applying primitve transformations
+    #         to the graph object, otherwise the result of
+    #         the rewriting is a new graph object.
+    #         Default value is `False`.
 
-        Returns
-        -------
-        g_prime : nx.(Di)Graph
-            Result of the rewriting. If parameter
-            `inplace` was `True`, `g_prime` is exactly
-            the (transformed) input graph object `graph`.
-        rhs_g_prime : dict
-            Matching of the `rhs` in `g_prime`, a dictionary,
-            where keys are nodes of `rhs` and values are
-            nodes of `g_prime`.
+    #     Returns
+    #     -------
+    #     g_prime : nx.(Di)Graph
+    #         Result of the rewriting. If parameter
+    #         `inplace` was `True`, `g_prime` is exactly
+    #         the (transformed) input graph object `graph`.
+    #     rhs_g_prime : dict
+    #         Matching of the `rhs` in `g_prime`, a dictionary,
+    #         where keys are nodes of `rhs` and values are
+    #         nodes of `g_prime`.
 
-        """
-        if instance is None:
-            instance = {
-                n: n for n in self.lhs.nodes()
-            }
-        if isinstance(graph, nx.DiGraph):
-            g_m, p_g_m, g_m_g = pullback_complement(
-                self.p, self.lhs, graph, self.p_lhs, instance,
-                inplace
-            )
-            g_prime, g_m_g_prime, rhs_g_prime = pushout(
-                self.p, g_m, self.rhs, p_g_m, self.p_rhs, inplace)
-        else:
-            g_prime = graph
-            rhs_g_prime = graph.rewrite(self, instance)
+    #     """
+    #     if instance is None:
+    #         instance = {
+    #             n: n for n in self.lhs.nodes()
+    #         }
+    #     if isinstance(graph, nx.DiGraph):
+    #         g_m, p_g_m, g_m_g = pullback_complement(
+    #             self.p, self.lhs, graph, self.p_lhs, instance,
+    #             inplace
+    #         )
+    #         g_prime, g_m_g_prime, rhs_g_prime = pushout(
+    #             self.p, g_m, self.rhs, p_g_m, self.p_rhs, inplace)
+    #     else:
+    #         g_prime = graph
+    #         rhs_g_prime = graph.rewrite(self, instance)
 
-        return (g_prime, rhs_g_prime)
-
+    #     return (g_prime, rhs_g_prime)
     def added_nodes(self):
         """Get nodes added by the rule.
 
@@ -1282,16 +1097,17 @@ class Rule(object):
 
     def _add_node_lhs(self, node_id, attrs=None):
         if node_id not in self.lhs.nodes():
-            primitives.add_node(self.lhs, node_id, attrs)
+            self.lhs.add_node(node_id, attrs)
             new_p_node_id = node_id
             if new_p_node_id in self.p.nodes():
-                new_p_node_id = primitives.unique_node_id(new_p_node_id)
-            primitives.add_node(self.p, new_p_node_id, attrs)
+                new_p_node_id = self.p.generate_new_node_id(new_p_node_id)
+            self.p.add_node(new_p_node_id, attrs)
             self.p_lhs[new_p_node_id] = node_id
             new_rhs_node_id = node_id
             if new_rhs_node_id in self.rhs.nodes():
-                new_rhs_node_id = primitives.unique_node_id(new_rhs_node_id)
-            primitives.add_node(self.rhs, new_rhs_node_id, attrs)
+                new_rhs_node_id = self.rhs.generate_new_node_id(
+                    new_rhs_node_id)
+            self.rhs.add_node(new_rhs_node_id, attrs)
             self.p_rhs[new_p_node_id] = new_rhs_node_id
         else:
             raise RuleError(
@@ -1301,15 +1117,15 @@ class Rule(object):
     def _add_edge_lhs(self, source, target, attrs=None):
         if (source, target) not in self.lhs.edges():
             if source in self.lhs.nodes() and target in self.rhs.nodes():
-                primitives.add_edge(self.lhs, source, target, attrs)
+                self.lhs.add_edge(source, target, attrs)
                 p_sources = keys_by_value(self.p_lhs, source)
                 p_targets = keys_by_value(self.p_lhs, target)
                 if len(p_sources) > 0 and len(p_targets) > 0:
                     for p_s in p_sources:
                         for p_t in p_targets:
-                            primitives.add_edge(self.p, p_s, p_t, attrs)
-                            primitives.add_edge(
-                                self.rhs, self.p_rhs[p_s],
+                            self.p.add_edge(p_s, p_t, attrs)
+                            self.rhs.add_edge(
+                                self.p_rhs[p_s],
                                 self.p_rhs[p_t], attrs)
             else:
                 raise RuleError(
@@ -1329,26 +1145,26 @@ class Rule(object):
         """
         p_keys = keys_by_value(self.p_rhs, node_id)
         for p_node in p_keys:
-            primitives.remove_node(self.p, p_node)
+            self.p.remove_node(p_node)
             del self.p_rhs[p_node]
             del self.p_lhs[p_node]
-        primitives.remove_node(self.rhs, node_id)
+        self.rhs.remove_node(node_id)
 
     def _add_edge_rhs(self, n1, n2, attrs=None):
         """Add an edge in the rhs."""
-        primitives.add_edge(self.rhs, n1, n2, attrs)
+        self.rhs.add_edge(n1, n2, attrs)
 
     def _remove_edge_p(self, node1, node2):
         """Remove edge from the p of the graph."""
-        primitives.remove_edge(self.p, node1, node2)
+        self.p.remove_edge(node1, node2)
 
     def _remove_edge_rhs(self, node1, node2):
         """Remove edge from the rhs of the graph."""
-        primitives.remove_edge(self.rhs, node1, node2)
+        self.rhs.remove_edge(node1, node2)
         for pn1 in keys_by_value(self.p_rhs, node1):
             for pn2 in keys_by_value(self.p_rhs, node2):
                 if (pn1, pn2) in self.p.edges():
-                    primitives.remove_edge(self.p, pn1, pn2)
+                    self.p.remove_edge(pn1, pn2)
 
     def _clone_rhs_node(self, node, new_name=None):
         """Clone an rhs node."""
@@ -1359,10 +1175,10 @@ class Rule(object):
             )
         p_keys = keys_by_value(self.p_rhs, node)
         if len(p_keys) == 0:
-            primitives.clone_node(self.rhs, node, new_name)
+            self.rhs.clone_node(node, new_name)
         elif len(p_keys) == 1:
-            primitives.clone_node(self.rhs, node, new_name)
-            new_p_node = primitives.clone_node(self.p, p_keys[0])
+            self.rhs.clone_node(node, new_name)
+            new_p_node = self.p.clone_node(p_keys[0])
             self.p_rhs[new_p_node] = new_name
             self.p_lhs[new_p_node] = self.p_lhs[p_keys[0]]
         else:
@@ -1374,7 +1190,7 @@ class Rule(object):
             raise RuleError("Node '%s' is not a node of the rhs" % n1)
         if n2 not in self.rhs.nodes():
             raise RuleError("Node '%s' is not a node of the rhs" % n2)
-        primitives.merge_nodes(self.rhs, [n1, n2], node_id=new_name)
+        self.rhs.merge_nodes([n1, n2], node_id=new_name)
         for (source, target) in self.p_rhs.items():
             if target == n1 or target == n2:
                 self.p_rhs[source] = new_name
@@ -1385,7 +1201,7 @@ class Rule(object):
             raise RuleError(
                 "Node %s does not exist in the right "
                 "hand side of the rule" % n)
-        primitives.add_node_attrs(self.rhs, n, attrs)
+        self.rhs.add_node_attrs(n, attrs)
 
     def _remove_node_attrs_rhs(self, n, attrs):
         """Remove attrs of a node in the rhs."""
@@ -1396,8 +1212,8 @@ class Rule(object):
 
         p_keys = keys_by_value(self.p_rhs, n)
         for p_node in p_keys:
-            primitives.remove_node_attrs(self.p, p_node, attrs)
-        primitives.remove_node_attrs(self.rhs, n, attrs)
+            self.p.remove_node_attrs(p_node, attrs)
+        self.rhs.remove_node_attrs(n, attrs)
 
     def _remove_node_attrs_p(self, n, attrs):
         """Remove attrs of a node in the p."""
@@ -1405,7 +1221,7 @@ class Rule(object):
             raise RuleError(
                 "Node '%s' does not exist in the preserved "
                 "part of the rule" % n)
-        primitives.remove_node_attrs(self.p, n, attrs)
+        self.p.remove_node_attrs(n, attrs)
 
     def _merge_node_list(self, node_list, node_name=None):
         """Merge a list of nodes."""
@@ -1427,10 +1243,10 @@ class Rule(object):
             raise RuleError(
                 "Node '%s' does not exist in the lhs "
                 "of the rule" % n)
-        primitives.add_node_attrs(self.lhs, n, attrs)
+        self.lhs.add_node_attrs(n, attrs)
         p_nodes = keys_by_value(self.p_rhs, n)
         for p_node in p_nodes:
-            primitives.add_node_attrs(self.p, p_node, attrs)
+            self.p.add_node_attrs(p_node, attrs)
 
     def _remove_attrs(self):
         for n in self.lhs.nodes():
@@ -1464,9 +1280,9 @@ class Rule(object):
             new_name = remove_forbidden(node)
             rhs_relabel[node] = new_name
 
-        nx.relabel_nodes(self.lhs, lhs_relabel, copy=False)
-        nx.relabel_nodes(self.p, p_relabel, copy=False)
-        nx.relabel_nodes(self.rhs, rhs_relabel, copy=False)
+        self.lhs.relabel_nodes(lhs_relabel, copy=False)
+        self.p.relabel_nodes(p_relabel, copy=False)
+        self.rhs.relabel_nodes(rhs_relabel, copy=False)
 
         new_p_lhs = dict()
         for k, v in self.p_lhs.items():
@@ -1507,19 +1323,18 @@ class Rule(object):
                 for sp in p_sources:
                     for tp in p_targets:
                         if (sp, tp) not in removed_edges:
-                            if not primitives.exists_edge(self.p, sp, tp):
-                                primitives.add_edge(self.p, sp, tp)
-                                if not primitives.exists_edge(self.rhs, self.p_rhs[sp], self.p_rhs[tp]):
-                                    primitives.add_edge(
-                                        self.rhs, self.p_rhs[sp], self.p_rhs[tp])
+                            if not self.p.exists_edge(sp, tp):
+                                self.p.add_edge(sp, tp)
+                                if not self.rhs.exists_edge(
+                                        self.p_rhs[sp], self.p_rhs[tp]):
+                                    self.rhs.add_edge(self.p_rhs[sp], self.p_rhs[tp])
                             # Compute preserved edge attributes
                             for k, v in edge_attrs.items():
                                 if (sp, tp) not in removed_edge_attrs.keys() or\
                                    k not in removed_edge_attrs[(sp, tp)]:
-                                    primitives.add_edge_attrs(
-                                        self.p, sp, tp, {k: v})
-                                    primitives.add_edge_attrs(
-                                        self.rhs, self.p_rhs[sp], self.p_rhs[tp],
+                                    self.p.add_edge_attrs(sp, tp, {k: v})
+                                    self.rhs.add_edge_attrs(
+                                        self.p_rhs[sp], self.p_rhs[tp],
                                         {k: v})
 
             visited = set()
@@ -1528,7 +1343,7 @@ class Rule(object):
                 if s not in visited:
                     visited.add(s)
                     if s not in instance.values():
-                        new_lhs_node = primitives.unique_node_id(self.lhs, s)
+                        new_lhs_node = self.lhs.generate_new_node_id(s)
                         if s not in added_nodes:
                             self._add_node_lhs(new_lhs_node)
                             added_nodes[s] = new_lhs_node
@@ -1537,11 +1352,11 @@ class Rule(object):
                         new_instance[new_lhs_node] = s
                     else:
                         new_lhs_node = keys_by_value(instance, s)[0]
-                    edge_attrs = primitives.get_edge(graph, instance[n], s)
-                    if not primitives.exists_edge(self.lhs, n, new_lhs_node):
-                        primitives.add_edge(self.lhs, n, new_lhs_node, edge_attrs)
+                    edge_attrs = graph.get_edge(instance[n], s)
+                    if not self.lhs.exists_edge(n, new_lhs_node):
+                        self.lhs.add_edge(n, new_lhs_node, edge_attrs)
                     else:
-                        primitives.add_edge_attrs(self.lhs, n, new_lhs_node, edge_attrs)
+                        self.lhs.add_edge_attrs(n, new_lhs_node, edge_attrs)
                     add_preserved_edges(n, new_lhs_node, edge_attrs, removed_edges)
 
             visited = set()
@@ -1550,7 +1365,7 @@ class Rule(object):
                 if p not in visited:
                     visited.add(p)
                     if p not in instance.values():
-                        new_lhs_node = primitives.unique_node_id(self.lhs, p)
+                        new_lhs_node = self.lhs.generate_new_node_id(p)
                         if p not in added_nodes:
                             self._add_node_lhs(new_lhs_node)
                             added_nodes[p] = new_lhs_node
@@ -1559,19 +1374,18 @@ class Rule(object):
                         new_instance[new_lhs_node] = p
                     else:
                         new_lhs_node = keys_by_value(instance, p)[0]
-                    edge_attrs = primitives.get_edge(graph, p, instance[n])
-                    if not primitives.exists_edge(self.lhs, new_lhs_node, n):
-                        primitives.add_edge(self.lhs, new_lhs_node, n, edge_attrs)
+                    edge_attrs = graph.get_edge(p, instance[n])
+                    if not self.lhs.exists_edge(new_lhs_node, n):
+                        self.lhs.add_edge(new_lhs_node, n, edge_attrs)
                     else:
-                        primitives.add_edge_attrs(self.lhs, new_lhs_node, n, edge_attrs)
+                        self.lhs.add_edge_attrs(new_lhs_node, n, edge_attrs)
                     add_preserved_edges(new_lhs_node, n, edge_attrs, removed_edges)
 
         # Remove side-effects of node removal
         for n in self.removed_nodes():
             # Add nodes adjacent to removed nodes
-            all_attrs = primitives.get_node(graph, instance[n])
-            primitives.set_node_attrs(
-                self.lhs, n, all_attrs, update=True)
+            all_attrs = graph.get_node(instance[n])
+            self.lhs.set_node_attrs(n, all_attrs, update=True)
             # Add nodes adjacent to removed nodes
             add_neighbors_to_rule(n, self.removed_edges())
 
@@ -1581,27 +1395,27 @@ class Rule(object):
             if (instance[self.p_lhs[sp]], instance[self.p_lhs[tp]]) not in visited_edges:
                 visited_edges.add((
                     instance[self.p_lhs[sp]], instance[self.p_lhs[tp]]))
-                all_edge_attrs = primitives.get_edge(
-                    graph, instance[self.p_lhs[sp]], instance[self.p_lhs[tp]])
-                primitives.set_edge(
-                    self.lhs, self.p_lhs[sp], self.p_lhs[tp],
+                all_edge_attrs = graph.get_edge(
+                    instance[self.p_lhs[sp]], instance[self.p_lhs[tp]])
+                self.lhs.set_edge(
+                    self.p_lhs[sp], self.p_lhs[tp],
                     all_edge_attrs)
 
         # Remove side-effects of merges
         for rhs_node, p_nodes in self.merged_nodes().items():
             for p_node in p_nodes:
-                all_attrs = primitives.get_node(
-                    graph, instance[self.p_lhs[p_node]])
-                primitives.set_node_attrs(
-                    self.lhs, self.p_lhs[p_node], all_attrs, update=True)
+                all_attrs = graph.get_node(
+                    instance[self.p_lhs[p_node]])
+                self.lhs.set_node_attrs(
+                    self.p_lhs[p_node], all_attrs, update=True)
 
                 for k, v in all_attrs.items():
                     if p_node not in removed_attrs or\
                        k not in removed_attrs[p_node]:
-                        primitives.add_node_attrs(
-                            self.p, p_node, {k: v})
-                        primitives.add_node_attrs(
-                            self.rhs, rhs_node, {k: v})
+                        self.p.add_node_attrs(
+                            p_node, {k: v})
+                        self.rhs.add_node_attrs(
+                            rhs_node, {k: v})
 
                 # Add nodes adjacent to removed nodes
                 add_neighbors_to_rule(self.p_lhs[p_node], self.removed_edges())
@@ -1615,7 +1429,7 @@ class Rule(object):
     @classmethod
     def identity_rule(cls):
         """Create an identity rule."""
-        return cls(nx.DiGraph(), nx.DiGraph(), nx.DiGraph())
+        return cls(NXGraph(), NXGraph(), NXGraph())
 
     def is_identity(self):
         """Test if the rule is identity."""
@@ -1674,7 +1488,7 @@ def compose_rules(rule1, lhs_instance1, rhs_instance1,
         if v in lhs_instance2.values()
     }
 
-    d = nx.DiGraph()
+    d = NXGraph()
     d.add_nodes_from(d_nodes)
 
     h, rhs1_h, lhs2_h = pushout(
@@ -1758,7 +1572,7 @@ def compose_rules(rule1, lhs_instance1, rhs_instance1,
     for lhs_node, p_nodes in rule.cloned_nodes().items():
         rhs_nodes = set([rule.p_rhs[p] for p in p_nodes])
         if len(rhs_nodes) == 1:
-            new_p_node = primitives.merge_nodes(rule.p, p_nodes)
+            new_p_node = rule.p.merge_nodes(p_nodes)
             for n in p_nodes:
                 del rule.p_lhs[n]
                 del rule.p_rhs[n]
@@ -1807,7 +1621,7 @@ def _fold_lhs(rule, lhs_instance, rhs_instance):
     for v in set(p_instance.values()):
         p_nodes = keys_by_value(p_instance, v)
         if len(p_nodes) > 1:
-            p_name = primitives.merge_nodes(p, p_nodes)
+            p_name = p.merge_nodes(p_nodes)
             rhs_nodes = set([
                 merged_rhs_nodes[rule.p_rhs[n]]
                 if rule.p_lhs[n] in merged_rhs_nodes else rule.p_rhs[n]
@@ -1817,17 +1631,17 @@ def _fold_lhs(rule, lhs_instance, rhs_instance):
                 updated_p_nodes[n] = p_name
 
             if len(rhs_nodes) > 1:
-                rhs_name = primitives.merge_nodes(rhs, rhs_nodes)
+                rhs_name = rhs.merge_nodes(rhs_nodes)
                 for n in rhs_nodes:
                     merged_rhs_nodes[n] = rhs_name
 
     # Make the rule preserve removed nodes
     for n in rule.removed_nodes():
-        p_node = primitives.generate_new_node_id(p, n)
-        primitives.add_node(p, p_node)
+        p_node = p.generate_new_node_id(n)
+        p.add_node(p_node)
         updated_p_nodes[n] = p_node
-        rhs_node = primitives.generate_new_node_id(rhs, n)
-        primitives.add_node(rhs, rhs_node)
+        rhs_node = rhs.generate_new_node_id(n)
+        rhs.add_node(rhs_node)
         p_rhs[p_node] = rhs_node
         instance[p_node] = lhs_instance[n]
 

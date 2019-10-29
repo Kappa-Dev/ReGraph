@@ -77,17 +77,10 @@ def check_homomorphism(source, target, dictionary, total=True):
                     t in dictionary.keys() and
                     not (dictionary[s], dictionary[t])
                     in target.edges()):
-                if not target.is_directed():
-                    if not (dictionary[t], dictionary[s]) in target.edges():
-                        raise InvalidHomomorphism(
-                            "Connectivity is not preserved!"
-                            " Was expecting an edge '%s' and '%s'" %
-                            (dictionary[t], dictionary[s]))
-                else:
-                    raise InvalidHomomorphism(
-                        "Connectivity is not preserved!"
-                        " Was expecting an edge between '%s' and '%s'" %
-                        (dictionary[s], dictionary[t]))
+                raise InvalidHomomorphism(
+                    "Connectivity is not preserved!"
+                    " Was expecting an edge between '%s' and '%s'" %
+                    (dictionary[s], dictionary[t]))
         except KeyError:
             pass
 
@@ -388,10 +381,8 @@ def pullback(b, c, d, b_d, c_d, inplace=False):
 
     for n1 in a.nodes():
         for n2 in a.nodes():
-            if (hom1[n1], hom1[n2]) in b.edges() or \
-               ((not a.is_directed()) and (hom1[n2], hom1[n1]) in b.edges()):
-                if (hom2[n1], hom2[n2]) in c.edges() or \
-                   ((not a.is_directed) and (hom2[n2], hom2[n1]) in c.edges()):
+            if (hom1[n1], hom1[n2]) in b.edges():
+                if (hom2[n1], hom2[n2]) in c.edges():
                     add_edge(a, n1, n2)
                     set_edge(
                         a,
@@ -410,12 +401,8 @@ def partial_pushout(a, b, c, a_b, a_c):
     """Find the partial pushout."""
     check_homomorphism(a, b, a_b, total=False)
     check_homomorphism(a, c, a_c, total=False)
-    if a.is_directed():
-        ab_dom = nx.DiGraph(a.subgraph(a_b.keys()))
-        ac_dom = nx.DiGraph(a.subgraph(a_c.keys()))
-    else:
-        ab_dom = nx.Graph(a.subgraph(a_b.keys()))
-        ac_dom = nx.Graph(a.subgraph(a_c.keys()))
+    ab_dom = nx.DiGraph(a.subgraph(a_b.keys()))
+    ac_dom = nx.DiGraph(a.subgraph(a_c.keys()))
 
     ac_a = {n: n for n in ac_dom.nodes()}
     ab_a = {n: n for n in ab_dom.nodes()}
@@ -517,18 +504,10 @@ def pushout(a, b, c, a_b, a_c, inplace=False):
 
     # Add edges
     for (n1, n2) in c.edges():
-        if b.is_directed():
-            if (c_d[n1], c_d[n2]) not in d.edges():
-                add_edge(
-                    d, c_d[n1], c_d[n2],
-                    get_edge(c, n1, n2))
-        else:
-            if (c_d[n1], c_d[n2]) not in d.edges() and\
-               (c_d[n2], c_d[n1]) not in d.edges():
-                add_edge(
-                    d, c_d[n1], c_d[n2],
-                    get_edge(c, n1, n2)
-                )
+        if (c_d[n1], c_d[n2]) not in d.edges():
+            add_edge(
+                d, c_d[n1], c_d[n2],
+                get_edge(c, n1, n2))
 
     # Add node attrs
     for c_n in c.nodes():
@@ -555,24 +534,14 @@ def pushout(a, b, c, a_b, a_c, inplace=False):
     for (n1, n2) in c.edges():
         d_n1 = c_d[n1]
         d_n2 = c_d[n2]
-        if d.is_directed():
-            attrs_to_add = dict_sub(
-                get_edge(c, n1, n2),
-                get_edge(d, d_n1, d_n2)
-            )
-            add_edge_attrs(
-                d, c_d[n1], c_d[n2],
-                attrs_to_add
-            )
-        else:
-            attrs_to_add = dict_sub(
-                get_edge(c, n1, n2),
-                get_edge(d, d_n1, d_n2)
-            )
-            add_edge_attrs(
-                d, c_d[n1], c_d[n2],
-                attrs_to_add
-            )
+        attrs_to_add = dict_sub(
+            get_edge(c, n1, n2),
+            get_edge(d, d_n1, d_n2)
+        )
+        add_edge_attrs(
+            d, c_d[n1], c_d[n2],
+            attrs_to_add
+        )
     return (d, b_d, c_d)
 
 
@@ -629,16 +598,10 @@ def pullback_complement(a, b, d, a_b, b_d, inplace=False):
         if len(a_keys_1) > 0 and len(a_keys_2) > 0:
             for k1 in a_keys_1:
                 for k2 in a_keys_2:
-                    if d.is_directed():
-                        if (k1, k2) not in a.edges() and\
-                           (a_c[k1], a_c[k2]) in c.edges():
-                            remove_edge(c, a_c[k1], a_c[k2])
-                    else:
-                        if (k1, k2) not in a.edges() and\
-                           (k2, k1) not in a.edges():
-                            if (a_c[k1], a_c[k2]) in d.edges() or\
-                               (a_c[k2], a_c[k1]) in d.edges():
-                                remove_edge(c, a_c[k1], a_c[k2])
+                    if (k1, k2) not in a.edges() and\
+                       (a_c[k1], a_c[k2]) in c.edges():
+                        remove_edge(c, a_c[k1], a_c[k2])
+
     # Remove node attrs
     for a_node in a.nodes():
         attrs_to_remove = dict_sub(
