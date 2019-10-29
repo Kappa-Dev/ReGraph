@@ -9,8 +9,6 @@ import warnings
 
 from abc import ABC, abstractmethod
 
-from regraph.category_utils import (pullback_complement,
-                                    pushout)
 from regraph.exceptions import (ReGraphError,
                                 GraphError,
                                 GraphAttrsWarning,
@@ -35,12 +33,12 @@ class Graph(ABC):
     """Abstract class for graph objects in ReGraph."""
 
     @abstractmethod
-    def nodes(self):
+    def nodes(self, data=False):
         """Return the list of nodes."""
         pass
 
     @abstractmethod
-    def edges(self):
+    def edges(self, data=False):
         """Return the list of edges."""
         pass
 
@@ -152,16 +150,6 @@ class Graph(ABC):
         pass
 
     @abstractmethod
-    def in_edges(self, node_id):
-        """Return the set of in-coming edges."""
-        pass
-
-    @abstractmethod
-    def out_edges(self, node_id):
-        """Return the set of out-going edges."""
-        pass
-
-    @abstractmethod
     def successors(self, node_id):
         """Return the set of successors."""
         pass
@@ -176,7 +164,7 @@ class Graph(ABC):
         """Find matching of a pattern in a graph."""
         pass
 
-    def __str__(self):
+    def print_graph(self):
         """Pretty-print the graph."""
         print("\nNodes:\n")
         for n in self.nodes():
@@ -185,6 +173,10 @@ class Graph(ABC):
         for (n1, n2) in self.edges():
             print(n1, '->', n2, ' : ', self.get_edge(n1, n2))
         return
+
+    def __str__(self):
+        """String representation of the graph."""
+        return "Graph({} nodes, {} edges)".format(len(self.nodes()), len(self.edges()))
 
     def __eq__(self, graph):
         """Eqaulity operator.
@@ -215,6 +207,14 @@ class Graph(ABC):
     def __ne__(self, graph):
         """Non-equality operator."""
         return not (self == graph)
+
+    def in_edges(self, node_id):
+        """Return the set of in-coming edges."""
+        return [(p, node_id) for p in self.predecessors(node_id)]
+
+    def out_edges(self, node_id):
+        """Return the set of out-going edges."""
+        return [(node_id, s) for s in self.successors(node_id)]
 
     def add_nodes_from(self, node_list):
         """Add nodes from a node list.
@@ -481,7 +481,7 @@ class Graph(ABC):
             else:
                 new_node = name
 
-        self.add_node(new_node, **safe_deepcopy_dict(self.get_node(node_id)))
+        self.add_node(new_node, self.get_node(node_id))
 
         # Connect all the edges
         self.add_edges_from(
@@ -512,6 +512,11 @@ class Graph(ABC):
         new_id : hashable
             New label of a node.
         """
+        if new_id in self.nodes():
+            raise ReGraphError(
+                "Cannot relabel '{}' to '{}', '{}' ".format(
+                    node_id, new_id, new_id) +
+                "already exists in the graph")
         self.clone_node(node_id, new_id)
         self.remove_node(node_id)
 
@@ -535,10 +540,7 @@ class Graph(ABC):
             merged will contain the union of all attributes,
             if `"intersection"` -- their ntersection. Default value is `"union"`.
         """
-        if len(nodes) == 1:
-            if node_id is not None:
-                self.relabel_node(nodes[0], node_id)
-        elif len(nodes) > 1:
+        if len(nodes) > 1:
 
             if method is None:
                 method = "union"
@@ -658,9 +660,10 @@ class Graph(ABC):
 
             return node_id
         else:
-            raise ReGraphError("Cannot merge an empty set of nodes!")
+            raise ReGraphError(
+                "More than two nodes should be specified for merging!")
 
-    def copy_node(self, node_id):
+    def copy_node(self, node_id, copy_id=None):
         """Copy node.
 
         Create a copy of a node in a graph. A new id for the copy is
@@ -677,10 +680,16 @@ class Graph(ABC):
             Id of the copy node.
 
         """
-        new_name = self.generate_new_node_id(node_id)
+        if copy_id is None:
+            copy_id = self.generate_new_node_id(node_id)
+        if copy_id in self.nodes():
+            raise ReGraphError(
+                "Cannot create a copy of '{}' with id '{}', ".format(
+                    node_id, copy_id) +
+                "node '{}' already exists in the graph".format(copy_id))
         attrs = self.get_node(node_id)
-        self.add_node(new_name, attrs)
-        return new_name
+        self.add_node(copy_id, attrs)
+        return copy_id
 
     def relabel_nodes(self, mapping):
         """Relabel graph nodes inplace given a mapping.
@@ -747,7 +756,7 @@ class Graph(ABC):
                     not attr_cond(edge_attrs[attr_key])):
                 self.remove_edge(s, t)
 
-    def graph_to_json(self):
+    def to_json(self):
         """Create a JSON representation of a graph."""
         j_data = {"edges": [], "nodes": []}
         # dump nodes
@@ -776,7 +785,7 @@ class Graph(ABC):
             j_data["edges"].append(edge_data)
         return j_data
 
-    def graph_to_d3_json(self,
+    def to_d3_json(self,
                          attrs=True,
                          node_attrs_to_attach=None,
                          edge_attrs_to_attach=None,
@@ -827,7 +836,7 @@ class Graph(ABC):
 
         return j_data
 
-    def export_graph(self, filename):
+    def export(self, filename):
         """Export graph to JSON file.
 
         Parameters
@@ -838,12 +847,12 @@ class Graph(ABC):
 
         """
         with open(filename, 'w') as f:
-            j_data = self.graph_to_json()
+            j_data = self.to_json()
             json.dump(j_data, f)
         return
 
     @classmethod
-    def networkx_from_json(cls, json_data):
+    def from_json(cls, json_data):
         """Create a NetworkX graph from a json-like dictionary.
 
         Parameters
@@ -857,8 +866,8 @@ class Graph(ABC):
         return graph
 
     @classmethod
-    def load_networkx_graph(cls, filename):
-        """Load a NetworkX graph from a JSON file.
+    def load(cls, filename):
+        """Load a graph from a JSON file.
 
         Create a `networkx.(Di)Graph` object from
         a JSON representation stored in a file.
@@ -882,11 +891,11 @@ class Graph(ABC):
         if os.path.isfile(filename):
             with open(filename, "r+") as f:
                 j_data = json.loads(f.read())
-                return cls.networkx_from_json(j_data, directed)
+                return cls.from_json(j_data)
         else:
             raise ReGraphError(
-                "Error loading graph: file '%s' does not exist!" %
-                filename
+                "Error loading graph: file '{}' does not exist!".format(
+                    filename)
             )
 
     def rewrite(self, rule, instance=None):
@@ -959,7 +968,11 @@ class Graph(ABC):
         added_nodes = rule.added_nodes()
         for n in rule.rhs.nodes():
             if n in added_nodes:
-                new_id = self.add_node(n)
+                if n in self.nodes():
+                    new_id = self.generate_new_node_id(n)
+                else:
+                    new_id = n
+                self.add_node(new_id)
                 rhs_g[n] = new_id
             elif n not in merged_nodes:
                 rhs_g[n] = p_g[keys_by_value(rule.p_rhs, n)[0]]
@@ -979,6 +992,10 @@ class Graph(ABC):
                 rhs_g[u], rhs_g[v], attrs)
         return rhs_g
 
+    def number_of_edges(self, u, v):
+        """Return number of directed edges from u to v."""
+        return 1
+
 
 class NXGraph(Graph):
     """Wrapper for NetworkX directed graphs."""
@@ -986,7 +1003,7 @@ class NXGraph(Graph):
     node_dict_factory = dict
     adj_dict_factory = dict
 
-    def __init___(self, incoming_graph_data=None, **attr):
+    def __init__(self, incoming_graph_data=None, **attr):
         """Initialize NetworkX graph."""
         self.node_dict_factory = ndf = self.node_dict_factory
         self.adj_dict_factory = adf = self.adj_dict_factory
@@ -996,12 +1013,17 @@ class NXGraph(Graph):
         self.node = ndf()
         self.adj = adf()
 
-    def nodes(self):
+    def nodes(self, data=False):
         """Return the list of nodes."""
-        return self._graph.nodes()
+        if data:
+            return [(n, self.get_node(n)) for n in self._graph.nodes()]
+        else:
+            return self._graph.nodes()
 
-    def edges(self):
+    def edges(self, data=False):
         """Return the list of edges."""
+        if data:
+            return [(s, t, self.get_edge(s, t)) for s, t in self.edges()]
         return self._graph.edges()
 
     def get_node(self, n):
@@ -1024,7 +1046,7 @@ class NXGraph(Graph):
         s : hashable, source node id.
         t : hashable, target node id.
         """
-        self._graph.adj[s][t]
+        return self._graph.adj[s][t]
 
     def add_node(self, node_id, attrs=None):
         """Abstract method for adding a node.
@@ -1062,9 +1084,11 @@ class NXGraph(Graph):
         if node_id in self.nodes():
             self._graph.remove_node(node_id)
             del self.node[node_id]
+
+            if node_id in self.adj.items():
+                del self.adj[node_id]
+
             for k, v in self.adj.items():
-                if k == node_id:
-                    del self.adj[k]
                 if v == node_id:
                     del self.adj[k][v]
         else:
@@ -1154,7 +1178,6 @@ class NXGraph(Graph):
             self.node[node_id] = new_attrs
             for k in attrs_to_remove:
                 del self._graph.node[node_id][k]
-                del self.node[node_id][k]
 
     def update_edge_attrs(self, s, t, attrs, normalize=True):
         """Update attributes of a node.
@@ -1170,31 +1193,22 @@ class NXGraph(Graph):
         if not self._graph.has_edge(s, t):
             raise GraphError("Edge '{}->{}' does not exist!".format(
                              s, t))
-        elif attrs is None:
+        if attrs is None:
             warnings.warn(
                 "You want to update '{}->{}' attrs with an empty attrs_dict".format(
                     s, t), GraphAttrsWarning
             )
-        else:
-            if normalize is True:
-                normalize_attrs(attrs)
-            attrs_to_remove = set()
-            for k in self._graph.adj[s][t].keys():
-                if k not in attrs.keys():
-                    attrs_to_remove.add(k)
-            self._graph.add_edge(s, t, **attrs)
-            self.adj[s][t] = attrs
-            for k in attrs_to_remove:
-                del self._graph.adj[s][t]
-                del self.adj[s][t]
 
-    def in_edges(self, node_id):
-        """Return the set of in-coming edges."""
-        return self._graph.in_edges(node_id)
-
-    def out_edges(self, node_id):
-        """Return the set of out-going edges."""
-        return self._graph.out_edges(node_id)
+        if normalize is True:
+            normalize_attrs(attrs)
+        attrs_to_remove = set()
+        for k in self._graph.adj[s][t].keys():
+            if k not in attrs.keys():
+                attrs_to_remove.add(k)
+        self._graph.add_edge(s, t, **attrs)
+        self.adj[s][t] = attrs
+        for k in attrs_to_remove:
+            del self._graph.adj[s][t][k]
 
     def successors(self, node_id):
         """Return the set of successors."""
@@ -1258,6 +1272,16 @@ class NXGraph(Graph):
             g.adj[s][t] = attributes[(s, t)]
         return g
 
+    def subgraph(self, nodes):
+        g = NXGraph()
+        g.add_nodes_from([
+            (n, attrs) for n, attrs in self.nodes(data=True)
+            if n in nodes])
+        for s, t, attrs in self.edges(data=True):
+            if s in g.nodes() and t in g.nodes():
+                g.add_edge(s, t, attrs)
+        return g
+
     def find_matching(self, pattern, nodes=None):
         """Find matching of a pattern in a graph.
 
@@ -1302,7 +1326,7 @@ class NXGraph(Graph):
             g = self._graph
 
         labels_mapping = dict([(n, i + 1) for i, n in enumerate(g.nodes())])
-        g = self.get_relabeled_graph(g, labels_mapping)
+        g = self.get_relabeled_graph(labels_mapping)
         matching_nodes = set()
 
         # find all the nodes matching the nodes in pattern
@@ -1312,6 +1336,7 @@ class NXGraph(Graph):
                     pattern.node[pattern_node],
                         g.node[node]):
                     matching_nodes.add(node)
+
         reduced_graph = g.subgraph(matching_nodes)
         instances = []
         isomorphic_subgraphs = []
@@ -1320,24 +1345,18 @@ class NXGraph(Graph):
             subg = reduced_graph.subgraph(sub_nodes)
             for edgeset in itertools.combinations(subg.edges(),
                                                   len(pattern.edges())):
-                if g.is_directed():
-                    edge_induced_graph = nx.DiGraph(list(edgeset))
-                    edge_induced_graph.add_nodes_from(
-                        [n for n in subg.nodes()
-                         if n not in edge_induced_graph.nodes()])
+                edge_induced_graph = nx.DiGraph(list(edgeset))
+                edge_induced_graph.add_nodes_from(
+                    [n for n in subg.nodes()
+                     if n not in edge_induced_graph.nodes()])
+                if isinstance(pattern, Graph):
+                    matching_obj = isomorphism.DiGraphMatcher(
+                        pattern._graph, edge_induced_graph)
+                else:
                     matching_obj = isomorphism.DiGraphMatcher(
                         pattern, edge_induced_graph)
-                    for isom in matching_obj.isomorphisms_iter():
-                        isomorphic_subgraphs.append((subg, isom))
-                else:
-                    edge_induced_graph = nx.Graph(edgeset)
-                    edge_induced_graph.add_nodes_from(
-                        [n for n in subg.nodes()
-                         if n not in edge_induced_graph.nodes()])
-                    matching_obj = isomorphism.GraphMatcher(
-                        pattern, edge_induced_graph)
-                    for isom in matching_obj.isomorphisms_iter():
-                        isomorphic_subgraphs.append((subg, isom))
+                for isom in matching_obj.isomorphisms_iter():
+                    isomorphic_subgraphs.append((subg, isom))
 
         for subgraph, mapping in isomorphic_subgraphs:
             # check node matches
@@ -1528,20 +1547,34 @@ class Neo4jGraph(Graph):
         except:
             warnings.warn("Failed to drop constraint")
 
-    def nodes(self):
+    def nodes(self, data=False):
         """Return a list of nodes of the graph."""
-        query = generic.get_nodes(node_label=self._node_label)
+        query = generic.get_nodes(node_label=self._node_label, data=data)
         result = self._execute(query)
-        return [list(d.values())[0] for d in result]
 
-    def edges(self):
+        if data:
+            node_list = []
+            for d in result:
+                node_id = d["node_id"]
+                attrs = d["attrs"]
+                del attrs["id"]
+                node_list.append((node_id, attrs))
+            return node_list
+        else:
+            return [d["node_id"] for d in result]
+
+    def edges(self, data=False):
         """Return the list of edges of the graph."""
         query = generic.get_edges(
             self._node_label,
             self._node_label,
-            self._edge_label)
+            self._edge_label,
+            data=data)
         result = self._execute(query)
-        return [(d["n.id"], d["m.id"]) for d in result]
+        if data:
+            return [(d["source_id"], d["target_id"], d["attrs"]) for d in result]
+        else:
+            return [(d["source_id"], d["target_id"]) for d in result]
 
     def get_node_attrs(self, node_id):
         """Return node's attributes."""
@@ -1708,14 +1741,6 @@ class Neo4jGraph(Graph):
         result = self._execute(query)
         return result
 
-    def in_edges(self, node_id):
-        """Return the set of in-coming edges."""
-        pass
-
-    def out_edges(self, node_id):
-        """Return the set of out-going edges."""
-        pass
-
     def successors(self, node_id):
         """Return the set of successors."""
         query = generic.successors_query(
@@ -1761,3 +1786,88 @@ class Neo4jGraph(Graph):
         else:
             instances = []
         return instances
+
+    def relabel_node(self, node_id, new_id):
+        """Relabel a node in the graph.
+
+        Parameters
+        ----------
+        node_id : hashable
+            Id of the node to relabel.
+        new_id : hashable
+            New label of a node.
+        """
+        if new_id in self.nodes():
+            raise ReGraphError(
+                "Cannot relabel '{}' to '{}', '{}' ".format(
+                    node_id, new_id, new_id) +
+                "already exists in the graph")
+        query = generic.set_id(self._node_label, node_id, new_id)
+        result = self._execute(query)
+        return result
+
+    @classmethod
+    def from_json(cls, driver=None, uri=None, user=None, password=None,
+                  json_data=None, node_label="node", edge_label="edge"):
+        """Create a Neo4jGraph from a json-like dictionary.
+
+        Parameters
+        ----------
+        json_data : dict
+            JSON-like dictionary with graph representation
+        """
+        graph = cls(
+            driver=driver, uri=uri, user=user, password=password,
+            node_label=node_label, edge_label=edge_label)
+        graph.add_nodes_from(load_nodes_from_json(json_data))
+        graph.add_edges_from(load_edges_from_json(json_data))
+        return graph
+
+    @classmethod
+    def load(cls, driver=None, uri=None, user=None, password=None,
+             filename=None, node_label="node", edge_label="edge"):
+        """Load a Neo4jGraph from a JSON file.
+
+        Create a graph object from
+        a JSON representation stored in a file.
+
+        Parameters
+        ----------
+        driver : neo4j.v1.direct.DirectDriver, optional
+            Driver providing connection to a Neo4j database
+        uri : str, optional
+            Uri for a new Neo4j database connection (bolt)
+        user : str, optional
+            Username for the Neo4j database connection
+        password : str, optional
+            Password for the Neo4j database connection
+        filename : str, optional
+            Name of the file to load the json serialization of the graph
+        node_label : optional
+            Label of nodes inducing the subgraph to scope.
+            By default `"node"`.
+        edge_label : optional
+            Type of relations inducing the subgraph to scope.
+            By default `"edge"`.
+
+        Returns
+        -------
+        Graph object
+
+        Raises
+        ------
+        ReGraphError
+            If was not able to load the file
+
+        """
+        if os.path.isfile(filename):
+            with open(filename, "r+") as f:
+                j_data = json.loads(f.read())
+                return cls.from_json(
+                    driver=driver, uri=uri, user=user, password=password,
+                    json_data=j_data, node_label=node_label, edge_label=edge_label)
+        else:
+            raise ReGraphError(
+                "Error loading graph: file '{}' does not exist!".format(
+                    filename)
+            )

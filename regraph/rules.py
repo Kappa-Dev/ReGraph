@@ -388,34 +388,33 @@ class Rule(object):
             `p` does not exist.
         """
         # Find nodes in p mapping to n1 & n2
-        p_keys_1 = keys_by_value(self.p_lhs, n1)
-        p_keys_2 = keys_by_value(self.p_lhs, n2)
+        # p_keys_1 = keys_by_value(self.p_lhs, n1)
+        # p_keys_2 = keys_by_value(self.p_lhs, n2)
 
-        # n1 is actually a node from `p`
-        if len(p_keys_1) == 0:
-            if n1 in self.p.nodes():
-                p_keys_1 = [n1]
-            else:
-                raise RuleError(
-                    "Node '{}' is not found in neither left-hand "
-                    "side nor preserved part".format(n1))
+        # # n1 is actually a node from `p`
+        # if len(p_keys_1) == 0:
+        #     if n1 in self.p.nodes():
+        #         p_keys_1 = [n1]
+        #     else:
+        #         raise RuleError(
+        #             "Node '{}' is not found in neither left-hand "
+        #             "side nor preserved part".format(n1))
 
-        if len(p_keys_2) == 0:
-            if n2 in self.p.nodes():
-                p_keys_2 = [n2]
-            else:
-                raise RuleError(
-                    "Node '{}' is not found in neither left-hand "
-                    "side nor preserved part".format(n2))
+        # if len(p_keys_2) == 0:
+        #     if n2 in self.p.nodes():
+        #         p_keys_2 = [n2]
+        #     else:
+        #         raise RuleError(
+        #             "Node '{}' is not found in neither left-hand "
+        #             "side nor preserved part".format(n2))
 
-        for k1 in p_keys_1:
-            for k2 in p_keys_2:
-                if (k1, k2) in self.p.edges():
-                    primitives.remove_edge(self.p, k1, k2)
-                    primitives.remove_edge(self.rhs, self.p_rhs[k1], self.p_rhs[k2])
-                else:
-                    raise RuleError(
-                        "Edge '{}->{}' does not exist in the preserved part".format(k1, k2))
+        if (n1, n2) in self.p.edges():
+            primitives.remove_edge(self.p, n1, n2)
+            primitives.remove_edge(self.rhs, self.p_rhs[n1], self.p_rhs[n2])
+        else:
+            raise RuleError(
+                "Edge '{}->{}' does not exist in the preserved part".format(
+                    n1, n2))
 
         return
 

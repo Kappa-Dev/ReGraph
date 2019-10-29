@@ -13,9 +13,12 @@ def set_attrs(old_attrs, attrs, normalize=True, update=True):
     for key in attrs:
         old_attrs[key] = attrs[key]
     if update:
+        keys_to_remove = set()
         for key in old_attrs:
             if key not in attrs:
-                del old_attrs[key]
+                keys_to_remove.add(key)
+        for key in keys_to_remove:
+            del old_attrs[key]
     return old_attrs
 
 
@@ -30,6 +33,8 @@ def add_attrs(old_attrs, attrs, normalize=True):
 
 
 def remove_attrs(old_attrs, attrs, normalize=True): 
+    if normalize:
+        normalize_attrs(attrs)
     for key, value in attrs.items():
         if key in old_attrs:
             new_set = old_attrs[key].difference(value)
@@ -37,6 +42,7 @@ def remove_attrs(old_attrs, attrs, normalize=True):
                 del old_attrs[key]
             else:
                 old_attrs[key] = new_set
+
 
 def assign_attrs(element, attrs):
     for k, v in attrs.items():

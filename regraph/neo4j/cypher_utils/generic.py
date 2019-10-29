@@ -15,9 +15,6 @@ from regraph.utils import attrs_from_json
 RESERVED_SET_NAMES = ["IntegerSet", "StringSet", "BooleanSet"]
 
 
-# def escape(string):
-#     # 
-
 def load_graph_from_json_apoc(tx, json_data, node_label, edge_label,
                               tmp_dir=None):
     # store json-file somewhere, generate attr repr.
@@ -141,50 +138,64 @@ def generate_var_name():
     return uid
 
 
-def set_attributes(var_name, attrs, update=False):
+def set_id(node_label, old_id, new_id):
+    """Generate a subquery to set new id for the node."""
+    query = (
+        "MATCH (n:{} {{id : '{}'}})\n".format(node_label, old_id) +
+        "SET n.id = '{}'".format(new_id)
+    )
+    return query
+
+
+def set_attributes(var_name, attrs=None, update=False):
     """Generate a subquery to set the attributes for some variable."""
     query = ""
-    if attrs:
-        for k, value in attrs.items():
-            if isinstance(value, IntegerSet):
-                if value.is_universal:
-                    query += "\tSET {}.{} = ['IntegerSet']\n".format(var_name, k)
-                else:
-                    raise ReGraphError(
-                        "Non universal IntegerSet is not allowed as "
-                        "an attribute value (not implemented)")
-            elif isinstance(value, RegexSet):
-                if value.is_universal:
-                    query += "\tSET {}.{} = ['StringSet']\n".format(var_name, k)
-                else:
-                    raise ReGraphError(
-                        "Non universal RegexSet is not allowed as "
-                        "an attribute value (not implemented)")
-            elif isinstance(value, FiniteSet):
-                elements = []
-                for el in value:
-                    if type(el) == str:
-                        elements.append("'{}'".format(el.replace("'", "\\'")))
-                    else:
-                        elements.append("{}".format(el))
-                if value not in RESERVED_SET_NAMES:
-                    query += "SET {}.{}=[{}]\n".format(var_name, k, ", ".join(
-                        el for el in elements))
-                else:
-                    query += "SET {}.{}={}\n".format(var_name, k, ", ".join(
-                        el for el in elements))
+    if not attrs:
+        query += (
+            "SET {} = apoc.map.clean(properties({}), \n".format(var_name, var_name) +
+            "\tfilter(x IN keys({}) WHERE NOT x IN [] AND x <> 'id'), [])".format(
+                var_name)
+        )
+    for k, value in attrs.items():
+        if isinstance(value, IntegerSet):
+            if value.is_universal:
+                query += "\tSET {}.{} = ['IntegerSet']\n".format(var_name, k)
             else:
-                raise ValueError(
-                    "Unknown type of attribute '{}': '{}'".format(
-                        k, type(value)))
-        if update is True:
-            # remove all the attributes not mentioned in 'attrs'
-            query += (
-                "SET {} = apoc.map.clean(properties({}), \n".format(var_name, var_name) +
-                "\tfilter(x IN keys({}) WHERE NOT x IN [{}]), [])".format(
-                    var_name,
-                    ", ".join("'{}'".format(k) for k in attrs.keys()))
-            )
+                raise ReGraphError(
+                    "Non universal IntegerSet is not allowed as "
+                    "an attribute value (not implemented)")
+        elif isinstance(value, RegexSet):
+            if value.is_universal:
+                query += "\tSET {}.{} = ['StringSet']\n".format(var_name, k)
+            else:
+                raise ReGraphError(
+                    "Non universal RegexSet is not allowed as "
+                    "an attribute value (not implemented)")
+        elif isinstance(value, FiniteSet):
+            elements = []
+            for el in value:
+                if type(el) == str:
+                    elements.append("'{}'".format(el.replace("'", "\\'")))
+                else:
+                    elements.append("{}".format(el))
+            if value not in RESERVED_SET_NAMES:
+                query += "SET {}.{}=[{}]\n".format(var_name, k, ", ".join(
+                    el for el in elements))
+            else:
+                query += "SET {}.{}={}\n".format(var_name, k, ", ".join(
+                    el for el in elements))
+        else:
+            raise ValueError(
+                "Unknown type of attribute '{}': '{}'".format(
+                    k, type(value)))
+    if update is True:
+        # remove all the attributes not mentioned in 'attrs'
+        query += (
+            "SET {} = apoc.map.clean(properties({}), \n".format(var_name, var_name) +
+            "\tfilter(x IN keys({}) WHERE NOT x IN [{}] AND x <> 'id'), [])".format(
+                var_name,
+                ", ".join("'{}'".format(k) for k in attrs.keys()))
+        )
     return query
 
 
@@ -348,7 +359,7 @@ def clear_graph(node_label=None):
     return query
 
 
-def get_nodes(node_label):
+def get_nodes(node_label, data=False):
     """Generate query returning ids of all nodes of the graph.
 
     Parameters
@@ -356,12 +367,15 @@ def get_nodes(node_label):
     label
         Label of the nodes to match, default is 'node'
     """
-    query = "MATCH (n:{}) RETURN n.id\n".format(node_label)
+    if data:
+        query = "MATCH (n:{}) RETURN n.id as node_id, properties(n) as attrs\n".format(node_label)
+    else:
+        query = "MATCH (n:{}) RETURN n.id as node_id\n".format(node_label)
     return query
 
 
 def get_edges(source_label, target_label,
-              edge_label):
+              edge_label, data=False):
     """Generate query for getting all the edges of the graph.
 
     Parameters
@@ -373,10 +387,16 @@ def get_edges(source_label, target_label,
     edge_label : iterable, optional
         Label of the edges to match
     """
-    query = "MATCH (n:{})-[r:{}]->(m:{})\nRETURN n.id, m.id\n".format(
-            source_label,
-            edge_label,
-            target_label)
+    if data:
+        query = "MATCH (n:{})-[r:{}]->(m:{})\nRETURN n.id as source_id, m.id as target_id, properties(r) as attrs\n".format(
+                source_label,
+                edge_label,
+                target_label)
+    else:
+        query = "MATCH (n:{})-[r:{}]->(m:{})\nRETURN n.id as source_id, m.id as target_id\n".format(
+                source_label,
+                edge_label,
+                target_label)
     return query
 
 

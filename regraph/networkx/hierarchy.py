@@ -45,18 +45,19 @@ from regraph.primitives import (attrs_to_json,
                                 get_relabeled_graph,
                                 relabel_node,
                                 relabel_nodes,
-                                merge_attrs,
                                 get_edge,
                                 graph_to_json,
                                 networkx_from_json,
                                 equal,
                                 update_node_attrs,
                                 update_edge_attrs,
-                                assign_attrs)
+                                )
 from regraph.utils import (is_subdict,
                            keys_by_value,
                            normalize_attrs,
-                           json_dict_to_attrs)
+                           json_dict_to_attrs,
+                           merge_attrs,
+                           assign_attrs)
 from regraph.rules import Rule, compose_rules
 from regraph.exceptions import (HierarchyError,
                                 TotalityWarning,
