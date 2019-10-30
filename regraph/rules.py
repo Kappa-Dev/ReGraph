@@ -602,6 +602,7 @@ class Rule(object):
             list(nodes_to_merge),
             node_id=node_id
         )
+
         # Update mappings
         for n in node_list:
             if n in self.p.nodes():

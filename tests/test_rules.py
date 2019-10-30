@@ -409,17 +409,16 @@ class TestRule(object):
         rule.inject_merge_nodes(["x", "y"])
         new_instance = rule.refine(graph, instance)
 
-        print(new_instance)
         assert(new_instance == {
             "x": "a", "y": "d", "b": "b", "c": "c"
         })
         assert(
-            prim.get_node(rule.lhs, "x") == prim.get_node(graph, "a"))
+            rule.lhs.get_node("x") == graph.get_node("a"))
         assert(
-            prim.get_node(rule.lhs, "y") == prim.get_node(graph, "d"))
+            rule.lhs.get_node("y") == graph.get_node("d"))
         assert(
-            prim.get_edge(rule.lhs, "y", "x") ==
-            prim.get_edge(graph, "d", "a"))
+            rule.lhs.get_edge("y", "x") ==
+            graph.get_edge("d", "a"))
 
         # Combined side-effects
         # Ex1: Remove cloned edge + merge with some node
@@ -432,6 +431,7 @@ class TestRule(object):
         rule.inject_remove_node("z")
         rule.inject_remove_edge("y", p_node)
         rule.inject_merge_nodes([p_node, "y"])
+
         new_instance = rule.refine(graph, instance)
 
         assert(new_instance == {
@@ -452,14 +452,12 @@ class TestRule(object):
         inverted = rule.get_inverted_rule()
 
         rhs_gg = graph.rewrite(inverted, rhs_g)
-        print(rhs_gg)
+        # print(rhs_gg)
         old_node_labels = {
             v: new_instance[k]
             for k, v in rhs_gg.items()
         }
 
-        print(old_node_labels)
-        print(graph.nodes())
         graph.relabel_nodes(old_node_labels)
 
         assert(backup == graph)

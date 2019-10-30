@@ -637,6 +637,7 @@ class Graph(ABC):
                             self.get_edge(edge[0], edge[1]),
                             edge_method)
                         target_dict.update({edge[1]: attrs})
+                self.remove_node(node)
 
             self.add_node(node_id, attr_accumulator)
 
