@@ -19,27 +19,27 @@ class TestRule(object):
         self.pattern.add_node(1)
         self.pattern.add_node(2)
         self.pattern.add_node(3)
-        prim.add_node(self.pattern, 4, {'a': 1})
+        self.pattern.add_node(4, {'a': 1})
 
         self.pattern.add_edges_from([
             (1, 2),
             (3, 2),
             (4, 1)
         ])
-        prim.add_edge(self.pattern, 2, 3, {'a': {1}})
+        self.pattern.add_edge(2, 3, {'a': {1}})
 
         # Define preserved part of the rule
         self.p = NXGraph()
         self.p.add_node('a')
         self.p.add_node('b')
         self.p.add_node('c')
-        prim.add_node(self.p, 'd', {'a': 1})
+        self.p.add_node('d', {'a': 1})
 
         self.p.add_edges_from([
             ('a', 'b'),
             ('d', 'a')
         ])
-        prim.add_edge(self.p, 'b', 'c', {'a': {1}})
+        self.p.add_edge('b', 'c', {'a': {1}})
 
         # Define the right hand side of the rule
         self.rhs = NXGraph()
@@ -47,7 +47,7 @@ class TestRule(object):
         self.rhs.add_node('y')
         self.rhs.add_node('z')
         # self.rhs.add_node('s', {'a': 1})
-        prim.add_node(self.rhs, 's', {'a': 1})
+        self.rhs.add_node('s', {'a': 1})
         self.rhs.add_node('t')
 
         self.rhs.add_edges_from([
@@ -56,7 +56,7 @@ class TestRule(object):
             ('s', 'x'),
             ('t', 'y')
         ])
-        prim.add_edge(self.rhs, 'y', 'z', {'a': {1}})
+        self.rhs.add_edge('y', 'z', {'a': {1}})
 
         # Define mappings
         self.p_lhs = {'a': 1, 'b': 2, 'c': 3, 'd': 4}
@@ -65,8 +65,8 @@ class TestRule(object):
 
     def test_inject_remove_node(self):
         pattern = NXGraph()
-        prim.add_nodes_from(pattern, [1, 2, 3])
-        prim.add_edges_from(pattern, [(1, 2), (3, 2)])
+        pattern.add_nodes_from([1, 2, 3])
+        pattern.add_edges_from([(1, 2), (3, 2)])
         rule = Rule.from_transform(pattern)
         rule.inject_remove_node(2)
         check_homomorphism(rule.p, rule.lhs, rule.p_lhs)
@@ -77,8 +77,8 @@ class TestRule(object):
 
     def test_inject_clone_node(self):
         pattern = NXGraph()
-        prim.add_nodes_from(pattern, [1, 2, 3])
-        prim.add_edges_from(pattern, [(1, 2), (3, 2)])
+        pattern.add_nodes_from([1, 2, 3])
+        pattern.add_edges_from([(1, 2), (3, 2)])
         rule = Rule.from_transform(pattern)
         new_p_node, new_rhs_node = rule.inject_clone_node(2)
         check_homomorphism(rule.p, rule.lhs, rule.p_lhs)
@@ -103,8 +103,8 @@ class TestRule(object):
 
     def test_inject_remove_edge(self):
         pattern = NXGraph()
-        prim.add_nodes_from(pattern, [1, 2, 3])
-        prim.add_edges_from(pattern, [(1, 2), (3, 2)])
+        pattern.add_nodes_from([1, 2, 3])
+        pattern.add_edges_from([(1, 2), (3, 2)])
         rule = Rule.from_transform(pattern)
         rule.inject_remove_edge(3, 2)
         check_homomorphism(rule.p, rule.lhs, rule.p_lhs)
@@ -119,10 +119,9 @@ class TestRule(object):
 
     def test_inject_remove_node_attrs(self):
         pattern = NXGraph()
-        prim.add_nodes_from(
-            pattern,
+        pattern.add_nodes_from(
             [1, (2, {"a2": {True}}), (3, {"a3": {False}})])
-        prim.add_edges_from(pattern, [(1, 2), (3, 2)])
+        pattern.add_edges_from([(1, 2), (3, 2)])
         rule = Rule.from_transform(pattern)
         rule.inject_remove_node_attrs(3, {"a3": {False}})
         check_homomorphism(rule.p, rule.lhs, rule.p_lhs)
@@ -140,11 +139,9 @@ class TestRule(object):
 
     def test_inject_remove_edge_attrs(self):
         pattern = NXGraph()
-        prim.add_nodes_from(
-            pattern,
+        pattern.add_nodes_from(
             [1, 2, 3])
-        prim.add_edges_from(
-            pattern,
+        pattern.add_edges_from(
             [(1, 2, {"a12": {True}}), (3, 2, {"a32": {True}})])
         rule = Rule.from_transform(pattern)
         rule.inject_remove_edge_attrs(1, 2, {"a12": {True}})
@@ -159,8 +156,8 @@ class TestRule(object):
 
     def test_inject_add_node(self):
         pattern = NXGraph()
-        prim.add_nodes_from(pattern, [1, 2, 3])
-        prim.add_edges_from(pattern, [(1, 2), (3, 2)])
+        pattern.add_nodes_from([1, 2, 3])
+        pattern.add_edges_from([(1, 2), (3, 2)])
         rule = Rule.from_transform(pattern)
         try:
             rule.inject_add_node(3)
@@ -176,8 +173,8 @@ class TestRule(object):
 
     def test_inject_add_edge(self):
         pattern = NXGraph()
-        prim.add_nodes_from(pattern, [1, 2, 3])
-        prim.add_edges_from(pattern, [(1, 2), (3, 2)])
+        pattern.add_nodes_from([1, 2, 3])
+        pattern.add_edges_from([(1, 2), (3, 2)])
         rule = Rule.from_transform(pattern)
         rule.inject_add_node(4)
         rule.inject_add_edge(1, 4)
@@ -329,14 +326,18 @@ class TestRule(object):
         p = NXGraph()
         prim.add_nodes_from(
             p,
-            [(1, {'state': 'p'}), ("1_clone", {'state': 'p'}), (2, {'name': 'BND'}), 3, 4])
+            [(1, {'state': 'p'}),
+             ("1_clone", {'state': 'p'}),
+             (2, {'name': 'BND'}), 3, 4])
         prim.add_edges_from(
             p, [(1, 2), ('1_clone', 2), (3, 4)])
 
         rhs = NXGraph()
         prim.add_nodes_from(
             rhs,
-            [(1, {'state': 'p'}), ("1_clone", {'state': 'p'}), (2, {'name': 'BND'}), 3, 4, 5])
+            [(1, {'state': 'p'}),
+             ("1_clone", {'state': 'p'}),
+             (2, {'name': 'BND'}), 3, 4, 5])
 
         prim.add_edges_from(
             rhs, [(1, 2, {'s': 'u'}), ('1_clone', 2), (2, 4), (3, 4), (5, 3)])
@@ -490,8 +491,10 @@ class TestRule(object):
 
         rule2 = Rule(
             p2, lhs2, rhs2,
-            {"circle_square1": "circle_square", "circle_square2": "circle_square"},
-            {"circle_square1": "circle_square1", "circle_square2": "circle_square2"})
+            {"circle_square1": "circle_square",
+             "circle_square2": "circle_square"},
+            {"circle_square1": "circle_square1",
+             "circle_square2": "circle_square2"})
         rule, lhs_instance, rhs_instance = compose_rules(
             rule1,
             {"circle": "circle", "square": "square", "heart": "heart"},
