@@ -674,16 +674,15 @@ class NetworkXHierarchy(nx.DiGraph):
         """
         if source not in self.nodes():
             raise HierarchyError(
-                "Node '%s' is not defined in the hierarchy!" % source)
+                "Node '{}' is not defined in the hierarchy!".format(source))
         if target not in self.nodes():
             raise HierarchyError(
-                "Node '%s' is not defined in the hierarchy!" % target)
+                "Node '{}' is not defined in the hierarchy!".format(target))
 
         if (source, target) in self.edges():
             raise HierarchyError(
-                "Edge '%s->%s' already exists in the hierarchy: "
-                "no muliple edges allowed!" %
-                (source, target)
+                "Edge '{}->{}' already exists in the hierarchy: "
+                "no muliple edges allowed!".format(source, target)
             )
         if "graph" not in self.node[source]:
             if self.is_rule(source):
