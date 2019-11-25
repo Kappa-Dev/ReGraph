@@ -1632,15 +1632,6 @@ class Neo4jGraph(Graph):
         else:
             return [(d["source_id"], d["target_id"]) for d in result]
 
-    def get_node_attrs(self, node_id):
-        """Return node's attributes."""
-        query = generic.get_node_attrs(
-            node_id, self._node_label,
-            "attributes")
-        result = self._execute(query)
-        return generic.properties_to_attributes(
-            result, "attributes")
-
     def get_node(self, node_id):
         """Get node attributes.
 
@@ -1649,12 +1640,8 @@ class Neo4jGraph(Graph):
         graph : networkx.(Di)Graph or regraph.neo4j.Neo4jGraph
         node_id : hashable, node id.
         """
-        return self.get_node_attrs(node_id)
-
-    def get_edge_attrs(self, s, t):
-        """Return edge attributes."""
-        query = generic.get_edge_attrs(
-            s, t, self._edge_label,
+        query = generic.get_node_attrs(
+            node_id, self._node_label,
             "attributes")
         result = self._execute(query)
         return generic.properties_to_attributes(
@@ -1669,7 +1656,12 @@ class Neo4jGraph(Graph):
         s : hashable, source node id.
         t : hashable, target node id.
         """
-        return self.get_edge_attrs(s, t)
+        query = generic.get_edge_attrs(
+            s, t, self._edge_label,
+            "attributes")
+        result = self._execute(query)
+        return generic.properties_to_attributes(
+            result, "attributes")
 
     def add_node(self, node, attrs=None, ignore_naming=False):
         """Abstract method for adding a node.
