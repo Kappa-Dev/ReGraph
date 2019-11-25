@@ -258,6 +258,16 @@ class Rule(object):
                                        action["keyword"])
         return rule
 
+    # @classmethod
+    # def get_restrictive_from(cls, rule):
+    #     """Obtain a restrictive rule from the input rule."""
+    #     return cls(p=rule.p, lhs=rule.lhs, p_lhs=rule.p_lhs)
+
+    # @classmethod
+    # def get_expansive_from(cls, rule):
+    #     """Obtain an expansive rule from the input rule."""
+    #     return cls(p=rule.p, rhs=rule.rhs, p_rhs=rule.p_rhs)
+
     def __eq__(self, rule):
         """Rule equality operator."""
         return (
