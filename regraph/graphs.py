@@ -787,10 +787,10 @@ class Graph(ABC):
         return j_data
 
     def to_d3_json(self,
-                         attrs=True,
-                         node_attrs_to_attach=None,
-                         edge_attrs_to_attach=None,
-                         nodes=None):
+                   attrs=True,
+                   node_attrs_to_attach=None,
+                   edge_attrs_to_attach=None,
+                   nodes=None):
         """Create a JSON representation of a graph."""
         j_data = {"links": [], "nodes": []}
         if nodes is None:
@@ -1302,6 +1302,7 @@ class NXGraph(Graph):
         return g
 
     def subgraph(self, nodes):
+        """Get a subgraph induced by the collection of nodes."""
         g = NXGraph()
         g.add_nodes_from([
             (n, attrs) for n, attrs in self.nodes(data=True)
@@ -1311,7 +1312,8 @@ class NXGraph(Graph):
                 g.add_edge(s, t, attrs)
         return g
 
-    def find_matching(self, pattern, nodes=None):
+    def find_matching(self, pattern, nodes=None,
+                      graph_typing=None, pattern_typing=None):
         """Find matching of a pattern in a graph.
 
         This function takes as an input a graph and a pattern graph, optionally,
@@ -1333,6 +1335,11 @@ class NXGraph(Graph):
         Uses `networkx.isomorphism.(Di)GraphMatcher` class, which implements
         subgraph matching algorithm.
 
+        In addition, two parameters `graph_typing` and `pattern_typing`
+        can be specified. They restrict the space of admisible solutions
+        by checking if an isomorphic subgraph found in the input graph respects
+        the provided pattern typings according to the specified graph typings.
+
         Parameters
         ----------
         graph : nx.(Di)Graph
@@ -1340,6 +1347,10 @@ class NXGraph(Graph):
             Pattern graph to search for
         nodes : iterable, optional
             Subset of nodes to search for matching
+        graph_typing : dict of dict, optional
+            Dictionary defining typing of graph nodes
+        pattern_typing : dict of dict, optional
+            Dictionary definiting typing of pattern nodes
 
         Returns
         -------
@@ -1349,6 +1360,19 @@ class NXGraph(Graph):
             pattern, and values are corresponding nodes of the graph.
 
         """
+        if pattern_typing is None:
+            pattern_typing = {}
+
+        if graph_typing is None:
+            graph_typing = {}
+
+        # check graph/pattern typing is consistent
+        for g, mapping in pattern_typing.items():
+            if g not in graph_typing:
+                raise ReGraphError(
+                    "Graph is not typed by '{}' from the specified pattern typing".format(
+                        g))
+
         if nodes is not None:
             g = self._graph.subgraph(nodes)
         else:
@@ -1356,15 +1380,39 @@ class NXGraph(Graph):
 
         labels_mapping = dict([(n, i + 1) for i, n in enumerate(g.nodes())])
         g = self.get_relabeled_graph(labels_mapping)
+        inverse_mapping = dict(
+            [(value, key) for key, value in labels_mapping.items()]
+        )
+
         matching_nodes = set()
 
         # find all the nodes matching the nodes in pattern
         for pattern_node in pattern.nodes():
             for node in g.nodes():
-                if valid_attributes(
-                    pattern.node[pattern_node],
-                        g.node[node]):
-                    matching_nodes.add(node)
+                if pattern_typing:
+                    # check types match
+                    match = False
+                    for g, pattern_mapping in pattern_typing.items():
+                        if node in graph_typing[g].keys() and\
+                           pattern_node in pattern_mapping.keys():
+                            if graph_typing[g][node] == pattern_mapping[
+                                    pattern_node]:
+                                if valid_attributes(
+                                        pattern.node[pattern_node],
+                                        g.node[node]):
+                                    match = True
+                        else:
+                            if valid_attributes(
+                                    pattern.node[pattern_node],
+                                    g.node[node]):
+                                match = True
+                    if match:
+                        matching_nodes.add(node)
+                else:
+                    if valid_attributes(
+                            pattern.node[pattern_node],
+                            g.node[node]):
+                        matching_nodes.add(node)
 
         reduced_graph = g.subgraph(matching_nodes)
         instances = []
@@ -1392,10 +1440,25 @@ class NXGraph(Graph):
             # exclude subgraphs which nodes information does not
             # correspond to pattern
             for (pattern_node, node) in mapping.items():
-                if not valid_attributes(
-                    pattern.node[pattern_node],
-                        subgraph.node[node]):
+                if pattern_typing:
+                    for g, mapping in pattern_typing.items():
+                        if node in graph_typing[g].keys() and\
+                           pattern_node in mapping.keys():
+                            if graph_typing[g][node] != mapping[
+                                    pattern_node]:
+                                break
+                        if not valid_attributes(
+                                pattern.node[pattern_node],
+                                subgraph.node[node]):
+                            break
+                    else:
+                        continue
                     break
+                else:
+                    if not valid_attributes(
+                            pattern.node[pattern_node],
+                            subgraph.node[node]):
+                        break
             else:
                 # check edge attribute matched
                 for edge in pattern.edges():
@@ -1408,46 +1471,11 @@ class NXGraph(Graph):
                     instances.append(mapping)
 
         # bring back original labeling
-        inverse_mapping = dict(
-            [(value, key) for key, value in labels_mapping.items()]
-        )
         for instance in instances:
             for key, value in instance.items():
                 instance[key] = inverse_mapping[value]
 
         return instances
-
-    # def rewrite(self, rule, instance=None):
-    #     """Perform graph rewriting with the rule.
-
-    #     Parameters
-    #     ----------
-    #     rule : regraph.rules.Rule
-    #     instance : dict
-    #         Instance of the `lhs` pattern in the graph
-    #         defined by a dictionary where keys are nodes
-    #         of `lhs` and values are nodes of the graph.
-
-    #     Returns
-    #     -------
-    #     rhs_g_prime : dict
-    #         Matching of the `rhs` in `g_prime`, a dictionary,
-    #         where keys are nodes of `rhs` and values are
-    #         nodes of `g_prime`.
-
-    #     """
-    #     if instance is None:
-    #         instance = {
-    #             n: n for n in rule.lhs.nodes()
-    #         }
-    #     g_m, p_g_m, g_m_g = pullback_complement(
-    #         rule.p, rule.lhs, self._graph, rule.p_lhs, instance,
-    #         inplace=False
-    #     )
-    #     g_prime, g_m_g_prime, rhs_g_prime = pushout(
-    #         rule.p, g_m, rule.rhs, p_g_m, rule.p_rhs, inplace=False)
-
-    #     return rhs_g_prime
 
 
 class Neo4jGraph(Graph):

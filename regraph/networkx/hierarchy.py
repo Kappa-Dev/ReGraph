@@ -21,6 +21,8 @@ import warnings
 
 
 from networkx.algorithms import isomorphism
+from networkx.algorithms.dag import ancestors as nx_ancestors
+from networkx.algorithms.dag import descendants as nx_descendants
 from networkx.exception import NetworkXNoPath
 
 from regraph.networkx import rewriting_utils
@@ -1386,22 +1388,22 @@ class NetworkXHierarchy(nx.DiGraph):
         return self.is_rule(s)
 
     def _get_descendants_paths(self, graph_id):
-        ancestors = dict()
+        descendants = dict()
         for typing in self.successors(graph_id):
-            typing_ancestors = self._get_descendants_paths(typing)
-            if typing in ancestors.keys():
-                ancestors[typing].append([graph_id, typing])
+            typing_descendants = self._get_descendants_paths(typing)
+            if typing in descendants.keys():
+                descendants[typing].append([graph_id, typing])
             else:
-                ancestors[typing] = [[graph_id, typing]]
+                descendants[typing] = [[graph_id, typing]]
 
-            for (anc, paths) in typing_ancestors.items():
-                if anc in ancestors.keys():
+            for (anc, paths) in typing_descendants.items():
+                if anc in descendants.keys():
                     for p in paths:
-                        ancestors[anc] += [[graph_id] + p]
+                        descendants[anc] += [[graph_id] + p]
                 else:
                     for p in paths:
-                        ancestors[anc] = [[graph_id] + p]
-        return ancestors
+                        descendants[anc] = [[graph_id] + p]
+        return descendants
 
     def add_node_type(self, graph_id, node_id, typing_dict):
         """Type a node in a graph according to `typing_dict`."""
@@ -1491,10 +1493,10 @@ class NetworkXHierarchy(nx.DiGraph):
         # Check that 'typing_graph' and 'pattern_typing' are correctly
         # specified
 
-        ancestors = self.get_descendants(graph_id)
+        descendants = self.get_descendants(graph_id)
         if pattern_typing is not None:
             for typing_graph, _ in pattern_typing.items():
-                if typing_graph not in ancestors.keys():
+                if typing_graph not in descendants.keys():
                     raise HierarchyError(
                         "Pattern typing graph '%s' is not in "
                         "the (transitive) typing graphs of '%s'!" %
