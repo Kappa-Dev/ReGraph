@@ -208,6 +208,27 @@ class Graph(ABC):
         """Non-equality operator."""
         return not (self == graph)
 
+    def get_node_attrs(self, n):
+        """Get node attributes.
+
+        Parameters
+        ----------
+        n : hashable
+            Node id.
+        """
+        return self.get_node(n)
+
+    def get_edge_attrs(self, s, t):
+        """Get edge attributes.
+
+        Parameters
+        ----------
+        graph : networkx.(Di)Graph
+        s : hashable, source node id.
+        t : hashable, target node id.
+        """
+        return self.get_edge(s, t)
+
     def in_edges(self, node_id):
         """Return the set of in-coming edges."""
         return [(p, node_id) for p in self.predecessors(node_id)]
@@ -997,14 +1018,6 @@ class Graph(ABC):
         """Return number of directed edges from u to v."""
         return 1
 
-    @classmethod
-    def copy(cls, graph):
-        """Copy the input graph object."""
-        new_graph = cls()
-        new_graph.add_nodes_from(graph.nodes(data=True))
-        new_graph.add_edges_from(graph.edges(data=True))
-        return new_graph
-
 
 class NXGraph(Graph):
     """Wrapper for NetworkX directed graphs."""
@@ -1045,16 +1058,6 @@ class NXGraph(Graph):
         """
         return self._graph.node[n]
 
-    def get_node_attrs(self, n):
-        """Get node attributes.
-
-        Parameters
-        ----------
-        n : hashable
-            Node id.
-        """
-        return self.get_node(n)
-
     def get_edge(self, s, t):
         """Get edge attributes.
 
@@ -1065,17 +1068,6 @@ class NXGraph(Graph):
         t : hashable, target node id.
         """
         return self._graph.adj[s][t]
-
-    def get_edge_attrs(self, s, t):
-        """Get edge attributes.
-
-        Parameters
-        ----------
-        graph : networkx.(Di)Graph
-        s : hashable, source node id.
-        t : hashable, target node id.
-        """
-        return self.get_edge(s, t)
 
     def add_node(self, node_id, attrs=None):
         """Abstract method for adding a node.
@@ -1477,6 +1469,13 @@ class NXGraph(Graph):
 
         return instances
 
+    @classmethod
+    def copy(cls, graph):
+        """Copy the input graph object."""
+        new_graph = cls()
+        new_graph.add_nodes_from(graph.nodes(data=True))
+        new_graph.add_edges_from(graph.edges(data=True))
+        return new_graph
 
 class Neo4jGraph(Graph):
     """Class implementing Neo4j graph instance.
