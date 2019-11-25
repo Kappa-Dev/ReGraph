@@ -83,6 +83,7 @@ class Neo4jGraph(object):
         """Execute a Cypher query."""
         with self._driver.session() as session:
             if len(query) > 0:
+                print(query)
                 result = session.run(query)
                 return result
 
@@ -672,7 +673,7 @@ class Neo4jGraph(object):
             instances = []
         return instances
 
-    def rewrite(self, rule, instance, holistic=True, edge_labels=None):
+    def rewrite(self, rule, instance, holistic=False, edge_labels=None):
         """Perform SqPO rewiting of the graph with a rule."""
         # Generate corresponding Cypher query
         if holistic:

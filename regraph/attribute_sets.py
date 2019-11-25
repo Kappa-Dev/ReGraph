@@ -956,7 +956,7 @@ class IntegerSet(AttributeSet):
 
     def is_empty(self):
         """Test if empty."""
-        return self == IntegerSet.empty()
+        return (len(self.intervals) == 0) or (self == IntegerSet.empty())
 
     @classmethod
     def from_finite_set(cls, s):

@@ -10,7 +10,6 @@ from regraph.exceptions import (HierarchyError,
 
 def pullback(b, c, d, a=None, inplace=False):
     """Find the pullback from b -> d <- c.
-
     Returns
     -------
     query1 : str
@@ -86,7 +85,6 @@ def pullback(b, c, d, a=None, inplace=False):
 
 def pushout(a, b, c, d=None, inplace=False):
     """Find the pushout of the span b <- a -> c.
-
     Returns
     -------
     query1 : str
@@ -205,4 +203,3 @@ def pushout(a, b, c, d=None, inplace=False):
 
 def pullback_complement(a, b, d, c=None, inplace=False):
     pass
-
