@@ -333,7 +333,7 @@ def _check_instance(hierarchy, graph_id, pattern, instance, pattern_typing):
     try:
         check_homomorphism(
             pattern,
-            hierarchy.graph[graph_id],
+            hierarchy.get_graph(graph_id),
             instance,
             total=True
         )
