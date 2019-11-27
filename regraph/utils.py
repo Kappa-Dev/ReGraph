@@ -1073,7 +1073,8 @@ def normalize_typing_relation(typing_rel):
                         value_set.add(v)
                 except TypeError:
                     value_set.add(values)
-            new_typing_rel[g][key] = value_set
+            if len(value_set) > 0:
+                new_typing_rel[g][key] = value_set
     return new_typing_rel
 
 

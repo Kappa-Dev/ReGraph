@@ -1219,22 +1219,8 @@ class Hierarchy(ABC):
         TypingWarning
             If the rhs typing is inconsistent
         """
-        if instance is None:
-            instance = {
-                n: n for n in rule.lhs.nodes()
-            }
-
-        if p_typing is None:
-            p_typing = dict()
-        else:
-            p_typing = normalize_typing_relation(p_typing)
-        if rhs_typing is None:
-            rhs_typing = dict()
-        else:
-            rhs_typing = normalize_typing_relation(rhs_typing)
-
         # Type check the input rule, its instance and typing
-        p_typing, rhs_typing = self._check_rule_instance_typing(
+        instance, p_typing, rhs_typing = self._check_rule_instance_typing(
             self, graph_id, rule, instance, p_typing, rhs_typing, strict)
 
         # Perform a restrictive rewrite
@@ -1254,6 +1240,20 @@ class Hierarchy(ABC):
 
     def _check_rule_instance_typing(self, origin_id, rule, instance,
                                     p_typing, rhs_typing, strict):
+        # Normalize the instance, p_typing and rhs_typing
+        if instance is None:
+            instance = {
+                n: n for n in rule.lhs.nodes()
+            }
+
+        if p_typing is None:
+            p_typing = dict()
+        else:
+            p_typing = normalize_typing_relation(p_typing)
+        if rhs_typing is None:
+            rhs_typing = dict()
+        else:
+            rhs_typing = normalize_typing_relation(rhs_typing)
 
         # Check that the instance is valid
         try:
@@ -1289,6 +1289,109 @@ class Hierarchy(ABC):
                             "node '{}' is typed by '{}'.".format(
                                 vv, instance[rule.p_lhs[vv]]))
 
+        # Check composability of p_typing
+        for graph_id, typing in p_typing.items():
+            predecessors = self.predecessors(graph_id)
+            for pred in predecessors:
+                if pred not in p_typing:
+                    # check that the typing of 'graph_id' is canonical
+                    canonical = False
+                    for graph_n, p_nodes in typing.items():
+                        if len(p_nodes) > 0:
+                            lhs_n = rule.p_lhs[list(p_nodes)[0]]
+                            canonical_clones = set(keys_by_value(rule.p_lhs, lhs_n))
+                            if p_nodes == canonical_clones:
+                                canonical = False
+                    if not canonical:
+                        raise RewritingError(
+                            "Typing of '{}' by the interface ".format(
+                                graph_id) +
+                            "is not composable with the "
+                            "typig of '{}': ".format(pred) +
+                            "propagation to '{}' ".format(pred) +
+                            "is canonical and produces instances for {}, ".format(
+                                canonical_clones) +
+                            "while propagation to '{}' ".format(
+                                graph_id) +
+                            "produces only for '{}' ".format(
+                                p_nodes)
+                        )
+
+        successors = self.successors(graph_id)
+        for suc in successors:
+            suc_typing = self.get_typing(graph_id, suc)
+            # check p_typing for suc is composable
+            for graph_n, p_nodes in typing.items():
+                suc_n = suc_typing[graph_n]
+                if suc_n in p_typing[suc]:
+                    suc_p_nodes = p_typing[suc][suc_n]
+                    if not p_nodes.issubset(suc_p_nodes):
+                        raise RewritingError(
+                            "Typing of '{}' by the interface ".format(
+                                graph_id) +
+                            "is not composable with the "
+                            "typig of '{}': ".format(suc) +
+                            "propagation to the node "
+                            "'{}' of '{}' ".format(graph_n, graph_id) +
+                            "will produce instances for {} ".format(
+                                p_nodes) +
+                            "while propagation to '{}' ".format(
+                                suc_n) +
+                            "typing it produces only {} ".format(
+                                suc_p_nodes)
+                        )
+                else:
+                    # ok, because suc_n is canonically cloned
+                    pass
+
+        # Autocomplete and check rhs_typing
+        new_rhs_typing = {}
+        for graph_id, typing in rhs_typing.items():
+            for descendant, descendant_typing in self.get_descendants(
+                    graph_id).items():
+                if descendant not in rhs_typing:
+                    # autocomplete descendant typing in the new rhs typing
+                    new_rhs_typing[descendant] = {
+                        rhs_n: {
+                            descendant_typing[graph_n]
+                            for graph_n in graph_ns
+                        }
+                        for rhs_n, graph_ns in typing.items()
+                    }
+                else:
+                    # autocomplete descendant typing with missing rhs nodes
+                    # and check that already specified types for descendant
+                    # are composable with the typing for 'graph_id'
+                    descendant_rhs_typing = rhs_typing[descendant]
+                    for rhs_n, graph_ns in typing.items():
+                        if rhs_n in descendant_rhs_typing:
+                            descendant_ns = descendant_rhs_typing[rhs_n]
+                            for graph_n in graph_ns:
+                                if descendant_typing[graph_n] not in descendant_ns:
+                                    raise RewritingError(
+                                        "Typing of the RHS "
+                                        "by '{}' is not composable ".format(
+                                            graph_id) +
+                                        "with its typing by '{}': ".format(
+                                            descendant) +
+                                        "node '{}' is typed by '{}' ".format(
+                                            rhs_n, graph_n) +
+                                        "in '{}' that is not typed by ".format(
+                                            graph_id) +
+                                        "either of {} from '{}'".format(
+                                            descendant_ns, descendant)
+                                    )
+
+                        else:
+                            new_rhs_typing[descendant] = rhs_typing[descendant]
+                            new_rhs_typing[descendant][rhs_n] = {
+                                descendant_typing[graph_n]
+                                for graph_n in graph_ns
+                            }
+
+        for g, t in new_rhs_typing.items():
+            rhs_typing[g] = t
+
         # Check rhs_typing does not retype nodes
         for graph_id, typing in rhs_typing.items():
             origin_to_graph = self.get_typing(origin_id, graph_id)
@@ -1300,16 +1403,36 @@ class Hierarchy(ABC):
                         for p_node in p_nodes])
                     if graph_nodes != v:
                         raise RewritingError(
-                            "The specified typing of the RHS"
+                            "The specified typing of the RHS "
                             "by the graph '{}' ".format(graph_id) +
                             "is not valid: "
-                            "node '{}' is a merge of {} ".format(
+                            "node '{}' is a typed by {} ".format(
                                 k, graph_nodes) +
                             "in the origin of rewriting, while it is "
-                            "typed by {} in the typing.".format(vv))
+                            "typed by {} in the typing.".format(v))
 
-        # Check composability of p_typing
-        # Check composability of rhs_typing
+        # If rewriting is strict, check rhs typing types all new nodes
+        if strict is True:
+            if len(rule.added_nodes()) > 0:
+                descendants = self.get_descendants(origin_id).keys()
+                for desc in descendants:
+                    if desc not in rhs_typing:
+                        raise RewritingError(
+                            "Rewriting is strict (no propagation of types is "
+                            "allowed), typing of the added nodes '{}' ".format(
+                                rule.added_nodes()) +
+                            "by '{}' is required".format(desc))
+                    else:
+                        for rhs_n in rule.added_nodes():
+                            if rhs_n not in rhs_typing[desc] or\
+                                    len(rhs_typing[desc][rhs_n]) != 1:
+                                raise RewritingError(
+                                    "Rewriting is strict (no propagation of "
+                                    "types is allowed), typing of the added "
+                                    "nodee '{}' by '{}' is required".format(
+                                        rhs_n, desc))
+
+        return instance, p_typing, rhs_typing
 
     def _propagate_backward(self, origin_id, rule, instance, p_origin_m,
                             origin_m_origin, p_typing):
@@ -1413,7 +1536,7 @@ class Hierarchy(ABC):
                 self._propagate_node_addition(
                     origin_id, graph, rule,
                     rhs_origin_prime, rhs_graph_typing,
-                    origin_prime_g_prime)
+                    g_g_prime, origin_prime_g_prime)
 
             # Propagate node attrs additions
             if len(rule.added_node_attrs()) > 0:
@@ -2287,7 +2410,7 @@ class NXHierarchy(NXGraph, Hierarchy):
 
     def _propagate_node_addition(self, origin_id, graph_id, rule,
                                  rhs_origin_prime, rhs_typing,
-                                 origin_prime_g_prime):
+                                 g_g_prime, origin_prime_g_prime):
         """Propagate node additions from 'origin_id' to 'graph_id'.
 
         Perform a propagation of additions to 'graph'
@@ -2312,11 +2435,21 @@ class NXHierarchy(NXGraph, Hierarchy):
         for rhs_node in rule.added_nodes():
             origin_node = rhs_origin_prime[rhs_node]
             if rhs_node in rhs_typing:
-                origin_prime_g_prime[origin_node] = rhs_typing[rhs_node]
+                if len(rhs_typing[rhs_node]) == 1:
+                    origin_prime_g_prime[origin_node] = list(
+                        rhs_typing[rhs_node])[0]
+                else:
+                    new_node_id = graph.merge_nodes(rhs_typing[rhs_node])
+                    origin_prime_g_prime[origin_node] = new_node_id
+                    for n in rhs_typing[rhs_node]:
+                        g_g_prime[n] = new_node_id
             else:
                 new_node_id = graph.generate_new_node_id(rhs_node)
                 graph.add_node(new_node_id)
                 origin_prime_g_prime[origin_node] = new_node_id
+
+        self._expansive_update_incident_homs(graph_id, g_g_prime)
+        self._expansive_update_adjacent_rels(graph_id, g_g_prime)
 
     def _propagate_node_attrs_addition(self, origin_id, graph_id, rule,
                                        rhs_origin_prime, origin_prime_g_prime):

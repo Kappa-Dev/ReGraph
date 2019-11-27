@@ -135,6 +135,61 @@ def remove_edge(graph, s, t):
     graph.remove_edge(s, t)
 
 
+def get_relabeled_graph(graph, mapping):
+        """Return a graph with node labeling specified in the mapping.
+
+        Parameters
+        ----------
+        graph : networkx.(Di)Graph
+        mapping: dict
+            A dictionary with keys being old node ids and their values
+            being new id's of the respective nodes.
+
+        Returns
+        -------
+        g : networkx.(Di)Graph
+            New graph object isomorphic to the `graph` with the relabled nodes.
+
+        Raises
+        ------
+        ReGraphError
+            If new id's do not define a set of distinct node id's.
+
+
+        See also
+        --------
+        regraph.primitives.relabel_nodes
+        """
+        g = nx.DiGraph()
+        old_nodes = set(mapping.keys())
+
+        for old_node in old_nodes:
+            try:
+                new_node = mapping[old_node]
+            except KeyError:
+                continue
+            try:
+                g.add_node(
+                    new_node,
+                    **graph.get_node(old_node))
+            except KeyError:
+                raise GraphError("Node '%s' does not exist!" % old_node)
+
+        new_edges = list()
+        attributes = dict()
+        for s, t in graph.edges():
+            new_edges.append((
+                mapping[s],
+                mapping[t]))
+            attributes[(mapping[s], mapping[t])] =\
+                graph.get_edge(s, t)
+
+        g.add_edges_from(new_edges)
+        for s, t in g.edges():
+            g.adj[s][t] = attributes[(s, t)]
+        return g
+
+
 def add_edges_from(graph, edge_list):
     """Add edges from an edge list.
 
