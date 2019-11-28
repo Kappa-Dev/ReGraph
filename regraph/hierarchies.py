@@ -1495,17 +1495,8 @@ class Hierarchy(ABC):
 
         # Reconnect broken homomorphisms by composability
         for graph_id, g_m_g in g_m_gs.items():
-            graph_nodes = self.get_graph(graph_id).nodes()
-            for pred in self.predecessors(graph_id):
-                pred_typing = self.get_typing(pred, graph_id)
-                pred_graph = get_unique_map_to_pullback(
-                    graph_nodes,
-                    g_m_g,
-                    g_m_origin_ms[graph_id],
-                    pred_typing,
-                    g_m_origin_ms[pred])
-                self.remove_typing(pred, graph_id)
-                self.add_typing(pred, graph_id, pred_graph)
+            self._restore_by_backward_composability(
+                graph_id, g_m_g, g_m_origin_ms)
 
     def _propagate_forward(self, origin_id, rule, instance, p_origin_m,
                            rhs_origin_prime, origin_m_origin_prime,
@@ -1580,6 +1571,19 @@ class Hierarchy(ABC):
         return {
             n: n for n in self.get_graph(graph_id).nodes()
         }
+
+    def _restore_by_backward_composability(self, target_id, g_m_g, g_m_origin_ms):
+        graph_nodes = self.get_graph(target_id).nodes()
+        for pred in self.predecessors(target_id):
+            pred_typing = self.get_typing(pred, target_id)
+            pred_graph = get_unique_map_to_pullback(
+                graph_nodes,
+                g_m_g,
+                g_m_origin_ms[target_id],
+                pred_typing,
+                g_m_origin_ms[pred])
+            self.remove_typing(pred, target_id)
+            self.add_typing(pred, target_id, pred_graph)
 
 
 class NXHierarchy(Hierarchy, NXGraph):
@@ -2433,8 +2437,6 @@ class NXHierarchy(Hierarchy, NXGraph):
                     if rhs_m_rhs[rhs_clone] == original_rhs_node:
                         rule.p_rhs[n] = rhs_clone
                         break
-
-            print("!!! ", rule.p_lhs, rule.p_rhs)
 
         self._restrictive_update_incident_homs(node_id, g_m_g)
         self._restrictive_update_adjacent_rels(node_id, g_m_g)
@@ -3351,7 +3353,14 @@ class NXHierarchy(Hierarchy, NXGraph):
     def _expansive_update_incident_homs(self, graph_id, g_m_g_prime):
         for pred in self.predecessors(graph_id):
             typing = self.get_typing(pred, graph_id)
-            self._update_mapping(pred, graph_id, compose(typing, g_m_g_prime))
+            if self.is_graph(pred):
+                self._update_mapping(
+                    pred, graph_id, compose(typing, g_m_g_prime))
+            else:
+                self._update_rule_homomorphism(
+                    pred, graph_id,
+                    compose(typing[0], g_m_g_prime),
+                    compose(typing[1], g_m_g_prime))
 
     def _expansive_update_adjacent_rels(self, graph_id, g_m_g_prime):
         for related_g in self.adjacent_relations(graph_id):
@@ -3450,3 +3459,34 @@ class NXHierarchy(Hierarchy, NXGraph):
                 n: n for n in self.get_rule(node_id).rhs.nodes()
             }
             return (lhs_map, p_map, rhs_map)
+
+    def _restore_by_backward_composability(self, target_id, g_m_g, g_m_origin_ms):
+        if self.is_graph(target_id):
+            graph_nodes = self.get_graph(target_id).nodes()
+            for pred in self.predecessors(target_id):
+                pred_typing = self.get_typing(pred, target_id)
+                if self.is_graph(pred):
+                    pred_graph = get_unique_map_to_pullback(
+                        graph_nodes,
+                        g_m_g,
+                        g_m_origin_ms[target_id],
+                        pred_typing,
+                        g_m_origin_ms[pred])
+                    self.remove_typing(pred, target_id)
+                    self.add_typing(pred, target_id, pred_graph)
+                else:
+                    lhs_typing, rhs_typing = pred_typing
+                    lhs_pred_graph = get_unique_map_to_pullback(
+                        graph_nodes,
+                        g_m_g,
+                        g_m_origin_ms[target_id],
+                        lhs_typing,
+                        g_m_origin_ms[pred][0])
+                    rhs_pred_graph = get_unique_map_to_pullback(
+                        graph_nodes,
+                        g_m_g,
+                        g_m_origin_ms[target_id],
+                        rhs_typing,
+                        g_m_origin_ms[pred][1])
+                    self.remove_typing(pred, target_id)
+                    self.add_rule_typing(pred, target_id, lhs_pred_graph, rhs_pred_graph)
