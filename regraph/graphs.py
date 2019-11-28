@@ -314,7 +314,7 @@ class Graph(ABC):
 
         node_attrs = safe_deepcopy_dict(self.get_node(node_id))
         set_attrs(node_attrs, attrs, normalize, update)
-        self.update_node_attrs(node_id, node_attrs)
+        self.update_node_attrs(node_id, node_attrs, normalize)
 
     def add_node_attrs(self, node, attrs):
         """Add new attributes to a node.
@@ -390,7 +390,7 @@ class Graph(ABC):
 
         edge_attrs = safe_deepcopy_dict(self.get_edge(s, t))
         set_attrs(edge_attrs, attrs, normalize, update)
-        self.update_edge_attrs(s, t, edge_attrs)
+        self.update_edge_attrs(s, t, edge_attrs, normalize=normalize)
 
     def set_edge(self, s, t, attrs, normalize=True, update=True):
         """Set edge attrs.
@@ -1384,10 +1384,10 @@ class NXGraph(Graph):
                 if pattern_typing:
                     # check types match
                     match = False
-                    for g, pattern_mapping in pattern_typing.items():
-                        if node in graph_typing[g].keys() and\
+                    for graph, pattern_mapping in pattern_typing.items():
+                        if node in graph_typing[graph].keys() and\
                            pattern_node in pattern_mapping.keys():
-                            if graph_typing[g][node] == pattern_mapping[
+                            if graph_typing[graph][node] == pattern_mapping[
                                     pattern_node]:
                                 if valid_attributes(
                                         pattern.node[pattern_node],
@@ -1433,10 +1433,10 @@ class NXGraph(Graph):
             # correspond to pattern
             for (pattern_node, node) in mapping.items():
                 if pattern_typing:
-                    for g, mapping in pattern_typing.items():
-                        if node in graph_typing[g].keys() and\
-                           pattern_node in mapping.keys():
-                            if graph_typing[g][node] != mapping[
+                    for g, pattern_mapping in pattern_typing.items():
+                        if inverse_mapping[node] in graph_typing[g].keys() and\
+                           pattern_node in pattern_mapping.keys():
+                            if graph_typing[g][inverse_mapping[node]] != pattern_mapping[
                                     pattern_node]:
                                 break
                         if not valid_attributes(

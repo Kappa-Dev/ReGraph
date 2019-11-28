@@ -5,18 +5,20 @@ import copy
 import json
 import networkx as nx
 import os
+import warnings
 
-from regraph import propagation_utils
 from regraph.exceptions import (HierarchyError,
                                 ReGraphError,
                                 InvalidHomomorphism,
-                                RewritingError)
+                                RewritingError,
+                                ReGraphWarning)
 from regraph.graphs import NXGraph
 
 from regraph.networkx.category_utils import (compose,
                                              check_homomorphism,
                                              right_relation_dict,
                                              pullback_complement,
+                                             relation_to_span,
                                              pushout,
                                              get_unique_map_to_pullback,
                                              get_unique_map_from_pushout,
@@ -25,7 +27,6 @@ from regraph.utils import (attrs_from_json,
                            attrs_to_json,
                            normalize_attrs,
                            normalize_relation,
-                           relation_to_span,
                            keys_by_value,
                            normalize_typing_relation)
 
@@ -390,20 +391,20 @@ class Hierarchy(ABC):
         """
         pass
 
-    @abstractmethod
-    def apply_rule_hierarchy(self, rule_hierarchy, instances):
-        """Apply a rule hierarchy.
+    # @abstractmethod
+    # def apply_rule_hierarchy(self, rule_hierarchy, instances):
+    #     """Apply a rule hierarchy.
 
-        Parameters
-        ----------
-        rule_hierarchy : dict
-            Dictionary contraing a rule hierarchy, keys are id's of
-            graphs, values are rules
-        instances : dict
-            Dictionary contraing rule instances from the rule hierarchy
-            keys are id's of graphs, values are instance dictionaries
-        """
-        pass
+    #     Parameters
+    #     ----------
+    #     rule_hierarchy : dict
+    #         Dictionary contraing a rule hierarchy, keys are id's of
+    #         graphs, values are rules
+    #     instances : dict
+    #         Dictionary contraing rule instances from the rule hierarchy
+    #         keys are id's of graphs, values are instance dictionaries
+    #     """
+    #     pass
 
     @abstractmethod
     def _restrictive_rewrite(self, graph_id, rule, instance):
@@ -880,7 +881,7 @@ class Hierarchy(ABC):
         """Return a list of related graphs."""
         if g not in self.graphs():
             raise HierarchyError(
-                "Node '{}' is not defined in the hierarchy!".format(g))
+                "Graph node '{}' does not exist in the hierarchy!".format(g))
         return [
             r
             for l, r in self.relations()
@@ -926,7 +927,7 @@ class Hierarchy(ABC):
         """Return descendants of a graph with the typing morphisms."""
         descendants = dict()
         for _, typing in self.out_edges(graph_id):
-            mapping = self.get_typing(graph_id, typing)["mapping"]
+            mapping = self.get_typing(graph_id, typing)
             typing_descendants = self.get_descendants(typing, maybe)
             if typing in descendants.keys():
                 descendants[typing].update(mapping)
@@ -975,7 +976,7 @@ class Hierarchy(ABC):
             t = path[i]
             homomorphism = compose(
                 homomorphism,
-                self.typing[s][t]
+                self.get_typing(s, t)
             )
         return homomorphism
 
@@ -1221,7 +1222,7 @@ class Hierarchy(ABC):
         """
         # Type check the input rule, its instance and typing
         instance, p_typing, rhs_typing = self._check_rule_instance_typing(
-            self, graph_id, rule, instance, p_typing, rhs_typing, strict)
+            graph_id, rule, instance, p_typing, rhs_typing, strict)
 
         # Perform a restrictive rewrite
         p_g_m, g_m_g = self._restrictive_rewrite(graph_id, rule, instance)
@@ -1232,11 +1233,14 @@ class Hierarchy(ABC):
 
         # Perform an expansive rewrite
         rhs_g_prime, g_m_g_prime = self._expansive_rewrite(
-            graph_id, rule, instance)
+            graph_id, rule, p_g_m)
 
         # Propagate forward and fix broken homomorphisms
         self._propagate_forward(
-            graph_id, rule, instance, rhs_g_prime, g_m_g_prime, rhs_typing)
+            graph_id, rule, instance, p_g_m, rhs_g_prime,
+            g_m_g_prime, rhs_typing)
+
+        return rhs_g_prime
 
     def _check_rule_instance_typing(self, origin_id, rule, instance,
                                     p_typing, rhs_typing, strict):
@@ -1316,33 +1320,32 @@ class Hierarchy(ABC):
                             "produces only for '{}' ".format(
                                 p_nodes)
                         )
-
-        successors = self.successors(graph_id)
-        for suc in successors:
-            suc_typing = self.get_typing(graph_id, suc)
-            # check p_typing for suc is composable
-            for graph_n, p_nodes in typing.items():
-                suc_n = suc_typing[graph_n]
-                if suc_n in p_typing[suc]:
-                    suc_p_nodes = p_typing[suc][suc_n]
-                    if not p_nodes.issubset(suc_p_nodes):
-                        raise RewritingError(
-                            "Typing of '{}' by the interface ".format(
-                                graph_id) +
-                            "is not composable with the "
-                            "typig of '{}': ".format(suc) +
-                            "propagation to the node "
-                            "'{}' of '{}' ".format(graph_n, graph_id) +
-                            "will produce instances for {} ".format(
-                                p_nodes) +
-                            "while propagation to '{}' ".format(
-                                suc_n) +
-                            "typing it produces only {} ".format(
-                                suc_p_nodes)
-                        )
-                else:
-                    # ok, because suc_n is canonically cloned
-                    pass
+            successors = self.successors(graph_id)
+            for suc in successors:
+                suc_typing = self.get_typing(graph_id, suc)
+                # check p_typing for suc is composable
+                for graph_n, p_nodes in typing.items():
+                    suc_n = suc_typing[graph_n]
+                    if suc_n in p_typing[suc]:
+                        suc_p_nodes = p_typing[suc][suc_n]
+                        if not p_nodes.issubset(suc_p_nodes):
+                            raise RewritingError(
+                                "Typing of '{}' by the interface ".format(
+                                    graph_id) +
+                                "is not composable with the "
+                                "typig of '{}': ".format(suc) +
+                                "propagation to the node "
+                                "'{}' of '{}' ".format(graph_n, graph_id) +
+                                "will produce instances for {} ".format(
+                                    p_nodes) +
+                                "while propagation to '{}' ".format(
+                                    suc_n) +
+                                "typing it produces only {} ".format(
+                                    suc_p_nodes)
+                            )
+                    else:
+                        # ok, because suc_n is canonically cloned
+                        pass
 
         # Autocomplete and check rhs_typing
         new_rhs_typing = {}
@@ -1446,48 +1449,49 @@ class Hierarchy(ABC):
         """
         g_m_gs = {}
         g_m_origin_ms = {}
-        for graph in self.bfs_tree(origin_id, reverse=True):
+
+        for graph_id in self.bfs_tree(origin_id, reverse=True):
 
             graph_p_typing = {}
-            if graph in p_typing.keys():
-                graph_p_typing = p_typing[graph]
+            if graph_id in p_typing.keys():
+                graph_p_typing = p_typing[graph_id]
 
-            g_m_g = {
-                n: n for n in self.get_graph(graph)
-            }
-            g_m_origin_m = {
-                self.get_typing(graph, origin_id)
-            }
+            origin_typing = self.get_typing(graph_id, origin_id)
+
+            g_m_g = self._get_identity_map(graph_id)
+
+            g_m_origin_m = copy.deepcopy(origin_typing)
 
             # Propagate node clones
             if len(rule.cloned_nodes()) > 0:
                 self._propagate_clone(
-                    origin_id, graph, p_origin_m,
+                    origin_id, graph_id, p_origin_m,
                     origin_m_origin, graph_p_typing,
                     g_m_g, g_m_origin_m)
 
             # Propagate node deletes
             if len(rule.removed_nodes()) > 0:
                 self._propagate_node_removal(
-                    origin_id, graph, rule, instance,
+                    origin_id, graph_id, rule, instance,
                     g_m_g, g_m_origin_m)
 
             # Propagate node attrs deletes
             if len(rule.removed_node_attrs()) > 0:
-                self._propagate_node_attrs_removal(origin_id, graph, g_m_g)
+                self._propagate_node_attrs_removal(
+                    origin_id, graph_id, rule, instance)
 
             # Propagate edge deletes
             if len(rule.removed_edges()) > 0:
                 self._propagate_edge_removal(
-                    origin_id, graph, g_m_origin_m)
+                    origin_id, graph_id, g_m_origin_m)
 
             # Propagate edge attrs deletes
             if len(rule.removed_edge_attrs()) > 0:
                 self._propagate_edge_attrs_removal(
-                    origin_id, graph, rule, p_origin_m)
+                    origin_id, graph_id, rule, p_origin_m)
 
-            g_m_gs[graph] = g_m_g
-            g_m_origin_ms[graph] = g_m_g
+            g_m_gs[graph_id] = g_m_g
+            g_m_origin_ms[graph_id] = g_m_origin_m
 
         # Reconnect broken homomorphisms by composability
         for graph_id, g_m_g in g_m_gs.items():
@@ -1510,18 +1514,18 @@ class Hierarchy(ABC):
         g_g_primes = {}
         origin_prime_g_primes = {}
 
-        for graph in self.bfs_tree(origin_id):
+        for graph, origin_typing in self.get_descendants(origin_id).items():
 
             rhs_graph_typing = {}
             if graph in rhs_typing.keys():
                 rhs_graph_typing = rhs_typing[graph]
 
             g_g_prime = {
-                n: n for n in self.get_graph(graph)
+                n: n for n in self.get_graph(graph).nodes()
             }
 
             origin_prime_g_prime = {
-                self.get_typing(graph, origin_id)
+                k: v for k, v in origin_typing.items()
             }
 
             # Propagate node merges
@@ -1572,8 +1576,13 @@ class Hierarchy(ABC):
                 self.remove_typing(graph_id, suc)
                 self.add_typing(graph_id, suc, graph_suc)
 
+    def _get_identity_map(self, graph_id):
+        return {
+            n: n for n in self.get_graph(graph_id).nodes()
+        }
 
-class NXHierarchy(NXGraph, Hierarchy):
+
+class NXHierarchy(Hierarchy, NXGraph):
     """Class for in-memory graphs.
 
     Attributes
@@ -1590,7 +1599,7 @@ class NXHierarchy(NXGraph, Hierarchy):
         if data:
             return [
                 (n, n_data["attrs"])
-                for n, n_data in self.nodes(True).items()
+                for n, n_data in self.nodes(True)
                 if "graph" in n_data]
         else:
             return [n for n, n_data in self.nodes(True) if "graph" in n_data]
@@ -1600,7 +1609,7 @@ class NXHierarchy(NXGraph, Hierarchy):
         if data:
             return [
                 (s, t, e_data["attrs"])
-                for s, t, e_data in self.edges(True).items()
+                for s, t, e_data in self.edges(True)
                 if "mapping" in e_data]
         else:
             return [
@@ -1608,25 +1617,45 @@ class NXHierarchy(NXGraph, Hierarchy):
                 for s, t, e_data in self.edges(True)
                 if "mapping" in e_data]
 
-    def relations(self):
+    def relations(self, data=False):
         """Return a list of relations."""
-        return list(set(self.relation_edges.keys()))
+        if data:
+            return [
+                (l, r, attrs)
+                for (l, r), attrs in self.relation_edges.items()
+            ]
+        else:
+            return list(set(self.relation_edges.keys()))
+
+    def successors(self, node_id):
+        """Return the set of successors."""
+        return self._graph.successors(node_id)
+
+    def predecessors(self, node_id):
+        """Return the set of predecessors."""
+        return self._graph.predecessors(node_id)
 
     def get_graph(self, graph_id):
         """Get a graph object associated to the node 'graph_id'."""
         if graph_id not in self.nodes():
-            pass
+            raise HierarchyError(
+                "Hierarchy node '{}' does not exist!".format(graph_id))
         if not self.is_graph(graph_id):
-            pass
+            raise HierarchyError(
+                "Hierarchy node '{}' is a rule!".format(graph_id))
         return self.node[graph_id]["graph"]
 
     def get_typing(self, source, target):
         """Get a typing dict associated to the edge 'source->target'."""
         if (source, target) in self.edges():
-            return self.adj[source][target]["mapping"]
+            if self.is_graph(source):
+                return self.get_edge(source, target)["mapping"]
+            else:
+                edge = self.get_edge(source, target)
+                return (edge["lhs_mapping"], edge["rhs_mapping"])
         else:
             try:
-                path = nx.shortest_path(self, source, target)
+                path = nx.shortest_path(self._graph, source, target)
             except:
                 raise HierarchyError(
                     "No path from '{}' to '{}' in the hierarchy".format(
@@ -1736,11 +1765,11 @@ class NXHierarchy(NXGraph, Hierarchy):
         if graph_attrs is not None:
             normalize_attrs(graph_attrs)
         else:
-            attrs = dict()
+            graph_attrs = dict()
         self.update_node_attrs(
             graph_id, {
                 "graph": graph,
-                "attrs": attrs
+                "attrs": graph_attrs
             }, normalize=False)
         return
 
@@ -1838,7 +1867,7 @@ class NXHierarchy(NXGraph, Hierarchy):
 
         # check no cycles are produced
         self.add_edge(source, target)
-        if not nx.is_directed_acyclic_graph(self):
+        if not nx.is_directed_acyclic_graph(self._graph):
             self.remove_edge(source, target)
             raise HierarchyError(
                 "Edge '{}->{}' creates a cycle in the hierarchy!".format(
@@ -1851,7 +1880,6 @@ class NXHierarchy(NXGraph, Hierarchy):
             self.get_graph(source),
             self.get_graph(target),
             mapping,
-            total=True
         )
 
         # check if newly created path commutes with existing shortest paths
@@ -2016,11 +2044,11 @@ class NXHierarchy(NXGraph, Hierarchy):
 
     def bfs_tree(self, graph, reverse=False):
         """BFS tree from the graph to all other reachable graphs."""
-        return nx.bfs_tree(self, graph, reverse=reverse)
+        return list(nx.bfs_tree(self._graph, graph, reverse=reverse))[1:]
 
     def shortest_path(self, source, target):
         """Shortest path from 'source' to 'target'."""
-        return nx.shortest_path(self, source, target)
+        return nx.shortest_path(self._graph, source, target)
 
     def find_matching(self, graph_id, pattern,
                       pattern_typing=None, nodes=None):
@@ -2073,11 +2101,10 @@ class NXHierarchy(NXGraph, Hierarchy):
                     )
 
         graph_typing = {
-            self.compose_path_typing(
-                nx.shortest_path(self, graph_id, typing_graph))
+            typing_graph: self.compose_path_typing(
+                nx.shortest_path(self._graph, graph_id, typing_graph))
             for typing_graph in pattern_typing.keys()
         }
-
         instances = self.get_graph(graph_id).find_matching(
             pattern, nodes, graph_typing, pattern_typing)
         return instances
@@ -2165,9 +2192,89 @@ class NXHierarchy(NXGraph, Hierarchy):
         """
         self.relabel_nodes(mapping)
 
-    def _check_rule_instance_typing(self, graph_id, rule, instance,
-                                    p_typing, rhs_typing, strict):
-        pass
+    def _check_consistency(self, source, target, mapping=None):
+        all_paths = dict(nx.all_pairs_shortest_path(self._graph))
+
+        paths_to_source = {}
+        paths_from_target = {}
+        for s in self.nodes():
+            if source in all_paths[s].keys():
+                paths_to_source[s] = all_paths[s][source]
+            if s == target:
+                for key in all_paths[target].keys():
+                    paths_from_target[key] = all_paths[target][key]
+
+        for s in paths_to_source.keys():
+            if self.is_rule(paths_to_source[s][0]):
+                for t in paths_from_target.keys():
+                    # find homomorphism from s to t via new path
+                    if s == source:
+                        raise HierarchyError(
+                            "Found a rule typing some node in the self!"
+                        )
+                    new_lhs_h, new_rhs_h = self.compose_path_typing(
+                        paths_to_source[s])
+                    new_lhs_h = compose(new_lhs_h, mapping)
+                    new_rhs_h = compose(new_rhs_h, mapping)
+
+                    if t != target:
+                        new_lhs_h = compose(
+                            new_lhs_h,
+                            self.compose_path_typing(paths_from_target[t])
+                        )
+                        new_rhs_h = compose(
+                            new_rhs_h,
+                            self.compose_path_typing(paths_from_target[t]),
+                        )
+                    try:
+                        # find homomorphisms from s to t via other paths
+                        s_t_paths = nx.all_shortest_paths(self._graph, s, t)
+                        for path in s_t_paths:
+                            lhs_h, rhs_h = self.compose_path_typing(path)
+                            if lhs_h != new_lhs_h:
+                                raise HierarchyError(
+                                    "Invalid lhs typing: homomorphism does "
+                                    "not commute with an existing " +
+                                    "path from '%s' to '%s'!" % (s, t)
+                                )
+                            if rhs_h != new_rhs_h:
+                                raise HierarchyError(
+                                    "Invalid rhs typing: homomorphism does "
+                                    "not commute with an existing " +
+                                    "path from '%s' to '%s'!" % (s, t)
+                                )
+                    except(nx.NetworkXNoPath):
+                        pass
+            else:
+                for t in paths_from_target.keys():
+                    # find homomorphism from s to t via new path
+                    if s != source:
+                        new_homomorphism = self.compose_path_typing(
+                            paths_to_source[s])
+                    else:
+                        new_homomorphism = dict([(key, key)
+                                                 for key, _ in mapping.items()])
+                    new_homomorphism = compose(
+                        new_homomorphism, mapping)
+                    if t != target:
+                        new_homomorphism = compose(
+                            new_homomorphism,
+                            self.compose_path_typing(paths_from_target[t])
+                        )
+
+                    # find homomorphisms from s to t via other paths
+                    s_t_paths = nx.all_shortest_paths(self._graph, s, t)
+                    try:
+                        # check only the first path
+                        for path in s_t_paths:
+                            path_homomorphism = self.compose_path_typing(path)
+                            if path_homomorphism != new_homomorphism:
+                                raise HierarchyError(
+                                    "Homomorphism does not commute with an " +
+                                    "existing path from '%s' to '%s'!" % (s, t)
+                                )
+                    except(nx.NetworkXNoPath):
+                            pass
 
     def _restrictive_rewrite(self, graph_id, rule, instance):
         """Perform a restrictive rewrite of the specified graph.
@@ -2202,9 +2309,9 @@ class NXHierarchy(NXGraph, Hierarchy):
         self._expansive_update_incident_homs(graph_id, g_m_g_prime)
         self._expansive_update_adjacent_rels(graph_id, g_m_g_prime)
 
-        return g_m_g_prime, r_g_prime
+        return r_g_prime, g_m_g_prime
 
-    def _propagate_clone(self, origin_id, graph_id, p_origin_m,
+    def _propagate_clone(self, origin_id, node_id, p_origin_m,
                          origin_m_origin, p_typing,
                          g_m_g, g_m_origin_m):
         """Propagate clones from 'origin_id' to 'graph_id'.
@@ -2230,41 +2337,111 @@ class NXHierarchy(NXGraph, Hierarchy):
         g_m_g : dict
             Map from the updated 'graph_id' to the 'graph_id'
         """
-        graph = self.get_graph(graph_id)
-        origin_typing = self.get_typing(graph_id, origin_id)
+        def produce_clones(origin_clones, g, origin_typing, graph_p,
+                           local_g_m_g, local_g_m_origin_m):
+            cloned_nodes = {}
+            for n, clones in origin_clones.items():
+                nodes_to_clone = keys_by_value(origin_typing, n)
+                for node in nodes_to_clone:
+                    if node in graph_p.keys():
+                        p_nodes = graph_p[node]
+                    else:
+                        p_nodes = [
+                            keys_by_value(p_origin_m, c)[0] for c in clones
+                        ]
+                    for i, p_node in enumerate(p_nodes):
+                        if i == 0:
+                            cloned_nodes[node] = p_node
+                            local_g_m_g[node] = node
+                            local_g_m_origin_m[node] = p_origin_m[p_node]
+                        else:
+                            new_name = g.clone_node(node)
+                            cloned_nodes[new_name] = p_node
+                            local_g_m_g[new_name] = node
+                            local_g_m_origin_m[new_name] = p_origin_m[p_node]
+            return cloned_nodes
 
         cloned_origin_nodes = {}
         for n in set(origin_m_origin.values()):
             clones = keys_by_value(origin_m_origin, n)
-            if (clones) > 1:
+            if len(clones) > 1:
                 cloned_origin_nodes[n] = clones
 
-        cloned_nodes = {}
-        for n, clones in cloned_origin_nodes.items():
-            nodes_to_clone = keys_by_value(origin_typing, n)
-            for node in nodes_to_clone:
-                cloned_nodes[node] = set()
-                if node in p_typing.keys():
-                    p_nodes = p_typing[node]
-                else:
-                    p_nodes = [
-                        keys_by_value(p_origin_m, c)[0] for c in clones
-                    ]
-                for i, p_node in enumerate(p_nodes):
-                    if i == 0:
-                        g_m_g[node] = node
-                        g_m_origin_m[node] = p_origin_m[p_node]
-                    else:
-                        new_name = graph.clone_node(node)
-                        g_m_g[new_name] = node
-                        g_m_origin_m[new_name] = p_origin_m[p_node]
+        if self.is_graph(node_id):
+            graph = self.get_graph(node_id)
+            origin_typing = self.get_typing(node_id, origin_id)
 
-        self._restrictive_update_incident_homs(graph_id, g_m_g)
-        self._restrictive_update_adjacent_rels(graph_id, g_m_g)
+            cloned_origin_nodes = {}
+            for n in set(origin_m_origin.values()):
+                clones = keys_by_value(origin_m_origin, n)
+                if len(clones) > 1:
+                    cloned_origin_nodes[n] = clones
+
+            produce_clones(cloned_origin_nodes, graph, origin_typing, p_typing,
+                           g_m_g, g_m_origin_m)
+        else:
+            rule = self.get_rule(node_id)
+            origin_typing = self.get_typing(node_id, origin_id)
+
+            lhs_m_lhs = g_m_g[0]
+            p_m_p = g_m_g[1]
+            rhs_m_rhs = g_m_g[2]
+            lhs_m_origin_m = g_m_origin_m[0]
+            rhs_m_origin_m = g_m_origin_m[1]
+
+            if p_typing:
+                warnings.warn(
+                    "Non-empty typing of the rule '{}' by ".format(
+                        node_id),
+                    "the interface: non-canonical propagation to rules is not "
+                    "implemented, typing is ignored",
+                    ReGraphWarning)
+
+            p_origin_typing = {
+                n: origin_typing[0][rule.p_lhs[n]]
+                for n in rule.p.nodes()
+            }
+            cloned_lhs_nodes = produce_clones(
+                cloned_origin_nodes, rule.lhs, origin_typing[0],
+                {}, lhs_m_lhs, lhs_m_origin_m)
+
+            cloned_p_nodes = produce_clones(
+                cloned_origin_nodes, rule.p,
+                p_origin_typing,
+                {}, p_m_p, {
+                    n: lhs_m_origin_m[rule.p_lhs[n]]
+                    for n in rule.p.nodes()
+                })
+
+            cloned_rhs_nodes = produce_clones(
+                cloned_origin_nodes, rule.rhs,
+                origin_typing[1], {},
+                rhs_m_rhs, rhs_m_origin_m)
+
+            # restore rule homomorphisms
+            for n, p_node in cloned_p_nodes.items():
+                original_p_node = p_m_p[n]
+                original_lhs_node = rule.p_lhs[original_p_node]
+                original_rhs_node = rule.p_rhs[original_p_node]
+                lhs_clones = keys_by_value(cloned_lhs_nodes, p_node)
+                rhs_clones = keys_by_value(cloned_rhs_nodes, p_node)
+                for lhs_clone in lhs_clones:
+                    if lhs_m_lhs[lhs_clone] == original_lhs_node:
+                        rule.p_lhs[n] = lhs_clone
+                        break
+                for rhs_clone in rhs_clones:
+                    if rhs_m_rhs[rhs_clone] == original_rhs_node:
+                        rule.p_rhs[n] = rhs_clone
+                        break
+
+            print("!!! ", rule.p_lhs, rule.p_rhs)
+
+        self._restrictive_update_incident_homs(node_id, g_m_g)
+        self._restrictive_update_adjacent_rels(node_id, g_m_g)
 
         return g_m_g, g_m_origin_m
 
-    def _propagate_node_removal(self, origin_id, graph_id, rule, instance,
+    def _propagate_node_removal(self, origin_id, node_id, rule, instance,
                                 g_m_g, g_m_origin_m):
         """Propagate node removal from 'origin_id' to 'graph_id'.
 
@@ -2282,23 +2459,49 @@ class NXHierarchy(NXGraph, Hierarchy):
         g_m_g : dict
             Map from the updated 'graph_id' to the 'graph_id'
         """
-        graph = self.get_graph(graph_id)
-        origin_typing = self.get_typing(graph_id, origin_id)
+        if self.is_graph(node_id):
+            graph = self.get_graph(node_id)
+            origin_typing = self.get_typing(node_id, origin_id)
+            for lhs_node in rule.removed_nodes():
+                origin_n = instance[lhs_node]
+                graph_nodes = keys_by_value(origin_typing, origin_n)
+                for node in graph_nodes:
+                    graph.remove_node(node)
+                    del g_m_g[node]
+                    del g_m_origin_m[node]
+        else:
+            object_rule = self.get_rule(node_id)
+            origin_typing = self.get_typing(node_id, origin_id)
+            for lhs_node in rule.removed_nodes():
+                origin_n = instance[lhs_node]
+                lhs_nodes = keys_by_value(origin_typing[0], origin_n)
+                p_nodes = [n for n in object_rule.p.nodes() if object_rule.p_lhs[n] in lhs_nodes]
+                rhs_nodes = keys_by_value(origin_typing[1], origin_n)
+                lhs_m_lhs = g_m_g[0]
+                p_m_p = g_m_g[1]
+                rhs_m_rhs = g_m_g[1]
+                lhs_m_origin_m = g_m_origin_m[0]
+                p_m_origin_m = g_m_origin_m[1]
+                rhs_m_origin_m = g_m_origin_m[1]
+                for node in lhs_nodes:
+                    object_rule.lhs.remove_node(node)
+                    del lhs_m_lhs[node]
+                    del lhs_m_origin_m[node]
+                for node in p_nodes:
+                    object_rule.p.remove_node(node)
+                    del p_m_p[node]
+                    del p_m_origin_m[node]
+                for node in rhs_nodes:
+                    object_rule.rhs.remove_node(node)
+                    del rhs_m_rhs[node]
+                    del rhs_m_origin_m[node]
 
-        for lhs_node in rule.removed_nodes():
-            origin_n = instance[lhs_node]
-            graph_nodes = keys_by_value(origin_typing, origin_n)
-            for node in graph_nodes:
-                graph.remove_node(node)
-                del g_m_g[node]
-                del g_m_origin_m[node]
-
-        self._restrictive_update_incident_homs(graph_id, g_m_g)
-        self._restrictive_update_adjacent_rels(graph_id, g_m_g)
+        self._restrictive_update_incident_homs(node_id, g_m_g)
+        self._restrictive_update_adjacent_rels(node_id, g_m_g)
 
         return g_m_g, g_m_origin_m
 
-    def _propagate_node_attrs_removal(self, origin_id, graph_id, rule, instance):
+    def _propagate_node_attrs_removal(self, origin_id, node_id, rule, instance):
         """Propagate node attrs removal from 'origin_id' to 'graph_id'.
 
         Parameters
@@ -2312,38 +2515,75 @@ class NXHierarchy(NXGraph, Hierarchy):
         instance : dict
             Original instance
         """
-        graph = self.get_graph(graph_id)
-        origin_typing = self.get_typing(graph_id, origin_id)
-        for lhs_node, attrs in rule.removed_node_attrs().items():
-            nodes_to_remove_attrs = keys_by_value(
-                origin_typing, instance[lhs_node])
-            for node in nodes_to_remove_attrs:
-                graph.remove_node_attrs(node, attrs)
+        if self.is_graph(node_id):
+            graph = self.get_graph(node_id)
+            origin_typing = self.get_typing(node_id, origin_id)
+            for lhs_node, attrs in rule.removed_node_attrs().items():
+                nodes_to_remove_attrs = keys_by_value(
+                    origin_typing, instance[lhs_node])
+                for node in nodes_to_remove_attrs:
+                    graph.remove_node_attrs(node, attrs)
+        else:
+            object_rule = self.get_rule(node_id)
+            origin_typing = self.get_typing(node_id, origin_id)
+            for lhs_node, attrs in rule.removed_node_attrs().items():
+                lhs_nodes_to_remove_attrs = keys_by_value(
+                    origin_typing[0], instance[lhs_node])
+                for node in lhs_nodes_to_remove_attrs:
+                    object_rule.lhs.remove_node_attrs(node, attrs)
+                p_nodes_to_remove_attrs = [
+                    n for n in object_rule.p.nodes()
+                    if object_rule.p_lhs[n] in lhs_nodes_to_remove_attrs]
+                for node in p_nodes_to_remove_attrs:
+                    object_rule.p.remove_node_attrs(node, attrs)
+                rhs_nodes_to_remove_attrs = keys_by_value(
+                    origin_typing[1], instance[lhs_node])
+                for node in rhs_nodes_to_remove_attrs:
+                    object_rule.rhs.remove_node_attrs(node, attrs)
 
-    def _propagate_edge_removal(self, origin_id, graph_id, g_m_origin_m):
+    def _propagate_edge_removal(self, origin_id, node_id, g_m_origin_m):
         """Propagate edge removal from 'origin_id' to 'graph_id'.
 
         Parameters
         ----------
         origin_id : hashable
             ID of the graph corresponding to the origin of rewriting
-        graph_id : hashable
-            ID of the graph where propagation is performed
+        node_id : hashable
+            ID of the node where propagation is performed
         p_origin_m : dict
             Instance of rule's interface inside the updated origin
         origin_m_origin : dict
             Map from the updated origin to the initial origin
         """
-        graph = self.get_graph(graph_id)
-        origin_graph = self.get_graph(origin_id)
+        if self.is_graph(node_id):
+            graph = self.get_graph(node_id)
+            origin_graph = self.get_graph(origin_id)
 
-        for s, t in graph.edges():
-            origin_s = g_m_origin_m[s]
-            origin_t = g_m_origin_m[t]
-            if (origin_s, origin_t) not in origin_graph.edges():
-                graph.remove_edge(s, t)
+            for s, t in graph.edges():
+                origin_s = g_m_origin_m[s]
+                origin_t = g_m_origin_m[t]
+                if (origin_s, origin_t) not in origin_graph.edges():
+                    graph.remove_edge(s, t)
+        else:
+            rule = self.get_rule(node_id)
+            origin_graph = self.get_graph(origin_id)
+            for s, t in rule.lhs.edges():
+                origin_s = g_m_origin_m[0][s]
+                origin_t = g_m_origin_m[0][t]
+                if (origin_s, origin_t) not in origin_graph.edges():
+                    rule.lhs.remove_edge(s, t)
+            for s, t in rule.p.edges():
+                origin_s = g_m_origin_m[0][rule.p_lhs[s]]
+                origin_t = g_m_origin_m[0][rule.p_lhs[t]]
+                if (origin_s, origin_t) not in origin_graph.edges():
+                    rule.p.remove_edge(s, t)
+            for s, t in rule.rhs.edges():
+                origin_s = g_m_origin_m[1][s]
+                origin_t = g_m_origin_m[1][t]
+                if (origin_s, origin_t) not in origin_graph.edges():
+                    rule.rhs.remove_edge(s, t)
 
-    def _propagate_edge_attrs_removal(self, origin_id, graph_id, rule, p_origin_m):
+    def _propagate_edge_attrs_removal(self, origin_id, node_id, rule, p_origin_m):
         """Propagate edge attrs removal from 'origin_id' to 'graph_id'.
 
         Parameters
@@ -2357,15 +2597,46 @@ class NXHierarchy(NXGraph, Hierarchy):
         p_origin_m : dict
             Instance of rule's interface inside the updated origin
         """
-        graph = self.get_graph(graph_id)
-        origin_typing = self.get_typing(graph_id, origin_id)
+        if self.is_graph(node_id):
+            graph = self.get_graph(node_id)
+            origin_typing = self.get_typing(node_id, origin_id)
 
-        for (p_u, p_v), attrs in rule.removed_edge_attrs().items():
-            us = keys_by_value(origin_typing, p_origin_m[p_u])
-            vs = keys_by_value(origin_typing, p_origin_m[p_v])
-            for u in us:
-                for v in vs:
-                    graph.removed_edge_attrs(u, v, attrs)
+            for (p_u, p_v), attrs in rule.removed_edge_attrs().items():
+                us = keys_by_value(origin_typing, p_origin_m[p_u])
+                vs = keys_by_value(origin_typing, p_origin_m[p_v])
+                for u in us:
+                    for v in vs:
+                        if (u, v) in graph.edges():
+                            graph.removed_edge_attrs(u, v, attrs)
+        else:
+            object_rule = self.get_rule(node_id)
+            origin_typing = self.get_typing(node_id, origin_id)
+
+            for (p_u, p_v), attrs in rule.removed_edge_attrs().items():
+                lhs_us = keys_by_value(origin_typing[0], p_origin_m[p_u])
+                lhs_vs = keys_by_value(origin_typing[0], p_origin_m[p_v])
+                for u in lhs_us:
+                    for v in lhs_vs:
+                        if (u, v) in object_rule.lhs.edges():
+                            object_rule.lhs.removed_edge_attrs(u, v, attrs)
+                p_us = [
+                    n
+                    for n in object_rule.p.nodes
+                    if object_rule.p_lhs[n] in lhs_us]
+                p_vs = [
+                    n
+                    for n in object_rule.p.nodes
+                    if object_rule.p_lhs[n] in lhs_vs]
+                for u in p_us:
+                    for v in p_vs:
+                        if (u, v) in object_rule.p.edges():
+                            object_rule.p.removed_edge_attrs(u, v, attrs)
+                rhs_us = keys_by_value(origin_typing[1], p_origin_m[p_u])
+                rhs_vs = keys_by_value(origin_typing[1], p_origin_m[p_v])
+                for u in rhs_us:
+                    for v in rhs_vs:
+                        if (u, v) in object_rule.rhs.edges():
+                            object_rule.rhs.removed_edge_attrs(u, v, attrs)
 
     def _propagate_merge(self, origin_id, graph_id, rule, p_origin_m,
                          rhs_origin_prime, g_g_prime, origin_prime_g_prime):
@@ -2472,7 +2743,7 @@ class NXHierarchy(NXGraph, Hierarchy):
         """
         graph = self.get_graph(graph_id)
 
-        for rhs_node, attrs in rule.added_node_attrs():
+        for rhs_node, attrs in rule.added_node_attrs().items():
             graph.add_node_attrs(
                 origin_prime_g_prime[rhs_origin_prime[rhs_node]],
                 attrs)
@@ -2519,7 +2790,7 @@ class NXHierarchy(NXGraph, Hierarchy):
             ID of the graph where propagation is performed
         """
         graph = self.get_graph(graph_id)
-        for (s, t), attrs in rule.added_edge_attrs():
+        for (s, t), attrs in rule.added_edge_attrs().items():
             origin_s = rhs_origin_prime[s]
             origin_t = rhs_origin_prime[t]
             g_s = origin_prime_g_prime[origin_s]
@@ -2727,8 +2998,7 @@ class NXHierarchy(NXGraph, Hierarchy):
         )
 
         # check if newly created path commutes with existing shortest paths
-        type_checking._check_rule_typing(
-            self, rule_id, graph_id, lhs_mapping, new_rhs_mapping)
+        self._check_rule_typing(rule_id, graph_id, lhs_mapping, new_rhs_mapping)
 
         self.add_edge(rule_id, graph_id)
         if attrs is not None:
@@ -2843,37 +3113,13 @@ class NXHierarchy(NXGraph, Hierarchy):
                             self.add_typing(
                                 source, target, mapping)
 
-        nx.DiGraph.remove_node(self, node_id)
+        nx.DiGraph.remove_node(self._graph, node_id)
 
         # Update dicts representing relations
         for u, v in self.relation_edges.keys():
             if u == node_id or v == node_id:
                 del self.relation_edges[u, v]
 
-        # Update graph/rule dict
-        if node_id in self.graph.keys():
-            del self.graph[node_id]
-        if node_id in self.rule.keys():
-            del self.rule[node_id]
-
-        # Update (rule) typing dict
-        if node_id in self.typing.keys():
-            del self.typing[node_id]
-        for k, v in self.typing.items():
-            if node_id in v.keys():
-                del self.typing[k][node_id]
-
-        if node_id in self.rule_lhs_typing.keys():
-            del self.rule_lhs_typing[node_id]
-        for k, v in self.rule_lhs_typing.items():
-            if node_id in v.keys():
-                del self.rule_lhs_typing[k][node_id]
-
-        if node_id in self.rule_rhs_typing.keys():
-            del self.rule_rhs_typing[node_id]
-        for k, v in self.rule_rhs_typing.items():
-            if node_id in v.keys():
-                del self.rule_rhs_typing[k][node_id]
         return
 
     def remove_rule(self, rule_id, reconnect=False):
@@ -2945,7 +3191,7 @@ class NXHierarchy(NXGraph, Hierarchy):
                 t = path[i]
                 homomorphism = compose(
                     homomorphism,
-                    self.typing[s][t]
+                    self.get_typing(s, t)
                 )
             return homomorphism
         else:
@@ -2955,15 +3201,15 @@ class NXHierarchy(NXGraph, Hierarchy):
                 t = path[i]
                 lhs_typing = compose(
                     lhs_typing,
-                    self.typing[s][t]
+                    self.get_typing(s, t)
                 )
                 p_typing = compose(
                     p_typing,
-                    self.typing[s][t]
+                    self.get_typing(s, t)
                 )
                 rhs_typing = compose(
                     rhs_typing,
-                    self.typing[s][t]
+                    self.get_typing(s, t)
                 )
 
             return (lhs_typing, p_typing, rhs_typing)
@@ -3006,9 +3252,9 @@ class NXHierarchy(NXGraph, Hierarchy):
             graph_id, {
                 "graph": graph_obj,
                 "attrs": self.node[graph_id]["attrs"]
-            }
+            },
+            normalize=False
         )
-        self.graph[graph_id] = self.node[graph_id]["graph"]
 
     def _update_mapping(self, source, target, mapping):
         """Update the mapping dictionary from source to target."""
@@ -3017,7 +3263,8 @@ class NXHierarchy(NXGraph, Hierarchy):
             {
                 "mapping": mapping,
                 "attrs": self.get_typing_attrs(source, target)
-            }
+            },
+            normalize=False
         )
 
     def _update_relation(self, left, right, relation):
@@ -3033,7 +3280,8 @@ class NXHierarchy(NXGraph, Hierarchy):
             {
                 "rule": rule_obj,
                 "attrs": self.node[rule_id]["attrs"]
-            }
+            },
+            normalize=False
         )
 
     def _update_rule_homomorphism(self, source, target, lhs_h, rhs_h):
@@ -3043,7 +3291,8 @@ class NXHierarchy(NXGraph, Hierarchy):
                 "lhs_mapping": lhs_h,
                 "rhs_mapping": rhs_h,
                 "attrs": self.get_typing_attrs(source, target)
-            }
+            },
+            normalize=False
         )
 
     def _update(self, graphs=None, homomorphisms=None, relations=None,
@@ -3075,22 +3324,29 @@ class NXHierarchy(NXGraph, Hierarchy):
         for (s, t), (lhs_h, rhs_h) in rule_homomorphisms.items():
             self._update_rule_homomorphism(s, t, lhs_h, rhs_h)
 
-    def _restrictive_update_incident_homs(self, graph_id, g_m_g):
-        for suc in self.successors(graph_id):
-            typing = self.get_typing(graph_id, suc)
-            self._update_mapping(graph_id, suc, compose(g_m_g, typing))
+    def _restrictive_update_incident_homs(self, node_id, g_m_g):
+        for suc in self.successors(node_id):
+            typing = self.get_typing(node_id, suc)
+            if self.is_graph(node_id):
+                self._update_mapping(node_id, suc, compose(g_m_g, typing))
+            else:
+                self._update_rule_homomorphism(
+                    node_id, suc,
+                    compose(g_m_g[0], typing[0]),
+                    compose(g_m_g[2], typing[1]))
 
     def _restrictive_update_adjacent_rels(self, graph_id, g_m_g):
-        for related_g in self.adjacent_relations(graph_id):
-            rel = self.get_relation(graph_id, related_g)
-            new_rel = dict()
+        if self.is_graph(graph_id):
+            for related_g in self.adjacent_relations(graph_id):
+                rel = self.get_relation(graph_id, related_g)
+                new_rel = dict()
 
-            for node in self.get_graph(graph_id).nodes():
-                old_node = g_m_g[node]
-                if old_node in rel.keys():
-                    new_rel[node] = rel[old_node]
+                for node in self.get_graph(graph_id).nodes():
+                    old_node = g_m_g[node]
+                    if old_node in rel.keys():
+                        new_rel[node] = rel[old_node]
 
-            self._update_relation(graph_id, related_g, new_rel)
+                self._update_relation(graph_id, related_g, new_rel)
 
     def _expansive_update_incident_homs(self, graph_id, g_m_g_prime):
         for pred in self.predecessors(graph_id):
@@ -3136,3 +3392,61 @@ class NXHierarchy(NXGraph, Hierarchy):
             rule,
             instance,
             rhs_typing=rhs_typing)
+
+    def to_json(self, rename_nodes=None):
+        return super().to_json(rename_nodes)
+
+    def _check_rule_typing(self, rule_id, graph_id, lhs_mapping, rhs_mapping):
+        all_paths = dict(nx.all_pairs_shortest_path(self._graph))
+
+        paths_from_target = {}
+        for s in self.nodes():
+            if s == graph_id:
+                for key in all_paths[graph_id].keys():
+                    paths_from_target[key] = all_paths[graph_id][key]
+
+        for t in paths_from_target.keys():
+            if t != graph_id:
+                new_lhs_h = compose(
+                    lhs_mapping,
+                    self.compose_path_typing(paths_from_target[t]))
+                new_rhs_h = compose(
+                    rhs_mapping,
+                    self.compose_path_typing(paths_from_target[t]))
+                try:
+                    # find homomorphisms from s to t via other paths
+                    s_t_paths = nx.all_shortest_paths(self._graph, rule_id, t)
+                    for path in s_t_paths:
+                        lhs_h, _, rhs_h = self.compose_path_typing(path)
+                        if lhs_h != new_lhs_h:
+                            raise HierarchyError(
+                                "Invalid lhs typing: homomorphism does not "
+                                "commute with an existing "
+                                "path from '{}' to '{}'!".format(s, t)
+                            )
+                        if rhs_h != new_rhs_h:
+                            raise HierarchyError(
+                                "Invalid rhs typing: homomorphism does not "
+                                "commute with an existing " +
+                                "path from '{}' to '{}'!".format(s, t)
+                            )
+                except(nx.NetworkXNoPath):
+                    pass
+        return
+
+    def _get_identity_map(self, node_id):
+        if self.is_graph(node_id):
+            return {
+                n: n for n in self.get_graph(node_id).nodes()
+            }
+        else:
+            lhs_map = {
+                n: n for n in self.get_rule(node_id).lhs.nodes()
+            }
+            p_map = {
+                n: n for n in self.get_rule(node_id).p.nodes()
+            }
+            rhs_map = {
+                n: n for n in self.get_rule(node_id).rhs.nodes()
+            }
+            return (lhs_map, p_map, rhs_map)
