@@ -232,7 +232,7 @@ class Graph(ABC):
     def in_edges(self, node_id):
         """Return the set of in-coming edges."""
         return [(p, node_id) for p in self.predecessors(node_id)]
-
+            
     def out_edges(self, node_id):
         """Return the set of out-going edges."""
         return [(node_id, s) for s in self.successors(node_id)]
@@ -1237,6 +1237,11 @@ class NXGraph(Graph):
 
     def predecessors(self, node_id):
         """Return the set of predecessors."""
+        if node_id not in self.nodes():
+            raise GraphError(
+                "Node '{}' does not exist in the graph".format(
+                    node_id))
+
         return self._graph.predecessors(node_id)
 
     def get_relabeled_graph(self, mapping):
@@ -1749,7 +1754,7 @@ class Neo4jGraph(Graph):
         result = self._execute(query)
         return result
 
-    def update_node_attrs(self, node_id, attrs):
+    def update_node_attrs(self, node_id, attrs, normalize=True):
         """Update attributes of a node.
 
         Parameters
@@ -1767,7 +1772,7 @@ class Neo4jGraph(Graph):
         result = self._execute(query)
         return result
 
-    def update_edge_attrs(self, s, t, attrs):
+    def update_edge_attrs(self, s, t, attrs, normalize=True):
         """Update attributes of a node.
 
         Parameters

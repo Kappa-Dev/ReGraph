@@ -829,6 +829,7 @@ class TestHierarchy(object):
 
         # assert(old_g3_nodes == h.get_graph("g3").nodes(True))
         assert(old_g2_nodes == h.get_graph("g2").nodes(True))
+    
         # print(h.get_graph("g3").nodes())
         # print(h.get_typing("g2", "g3"))
 

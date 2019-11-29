@@ -20,7 +20,6 @@ from regraph.networkx.category_utils import (identity,
                                              check_homomorphism,
                                              pullback_complement,
                                              get_unique_map_from_pushout,
-                                             get_unique_map_to_pullback_complement_full,
                                              get_unique_map_to_pullback,
                                              get_unique_map_to_pullback_complement,
                                              pushout,
@@ -1528,9 +1527,10 @@ def compose_rules(rule1, lhs_instance1, rhs_instance1,
         if v not in g1_m_g2.values():
             g1_m_g2[v] = v
 
+    # fixed to new implementation
     p1_p_instance = get_unique_map_to_pullback_complement(
-        rule1.p_rhs, rhs_instance1, p1_instance,
-        g1_m_g2, p1_p1_p, compose(p1_p_h, h_instance))
+        p1_instance, g1_m_g2, identity(rule1.p), p1_p1_p,
+        compose(p1_p_h, h_instance))
 
     # find p2_p instance
     g2_m_g2 = {
@@ -1542,8 +1542,8 @@ def compose_rules(rule1, lhs_instance1, rhs_instance1,
             g2_m_g2[v] = v
 
     p2_p_instance = get_unique_map_to_pullback_complement(
-        rule2.p_lhs, lhs_instance2, p2_instance,
-        g2_m_g2, p2_p2_p, compose(p2_p_h, h_instance))
+        p2_instance, g2_m_g2, identity(rule2.p),
+        p2_p2_p, compose(p2_p_h, h_instance))
 
     g1_m_g1 = {
         p1_instance[k]: compose(rule1.p_lhs, lhs_instance1)[k]
@@ -1790,13 +1790,13 @@ def compose_rule_hierarchies(rule_hierarchy1, lhs_instances1, rhs_instances1,
             compose(lhs_hom2, target_data["lhs2_h"])
         )
         # P*G_1 -> P*T_1
-        p1_p_hom = get_unique_map_to_pullback_complement_full(
+        p1_p_hom = get_unique_map_to_pullback_complement(
             target_data["p1_p1_p"], target_data["p1_p_h"],
             p_hom1, source_data["p1_p1_p"],
             compose(source_data["p1_p_h"], h_hom))
 
         # P*G_2 -> P*T_2
-        p2_p_hom = get_unique_map_to_pullback_complement_full(
+        p2_p_hom = get_unique_map_to_pullback_complement(
             target_data["p2_p2_p"], target_data["p2_p_h"],
             p_hom2, source_data["p2_p2_p"],
             compose(source_data["p2_p_h"], h_hom))

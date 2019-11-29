@@ -2289,9 +2289,10 @@ class NXHierarchy(Hierarchy, NXGraph):
         """
         g_m, p_g_m, g_m_g =\
             pullback_complement(rule.p, rule.lhs, self.get_graph(graph_id),
-                                rule.p_lhs, instance)
+                                rule.p_lhs, instance,
+                                inplace=True)
 
-        self._update_graph(graph_id, g_m)
+        # self._update_graph(graph_id, g_m)
         self._restrictive_update_incident_homs(graph_id, g_m_g)
         self._restrictive_update_adjacent_rels(graph_id, g_m_g)
 
@@ -2306,10 +2307,9 @@ class NXHierarchy(Hierarchy, NXGraph):
         """
         g_prime, g_m_g_prime, r_g_prime = pushout(
             rule.p, self.get_graph(graph_id), rule.rhs,
-            instance, rule.p_rhs)
+            instance, rule.p_rhs, inplace=True)
 
-        self._update_graph(graph_id, g_prime)
-
+        # self._update_graph(graph_id, g_prime)
         self._expansive_update_incident_homs(graph_id, g_m_g_prime)
         self._expansive_update_adjacent_rels(graph_id, g_m_g_prime)
 

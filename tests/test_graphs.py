@@ -2,6 +2,13 @@
 from regraph import Rule
 from regraph.graphs import Neo4jGraph, NXGraph
 
+import logging
+
+neo4j_log = logging.getLogger("neobolt")
+neo4j_log.setLevel(logging.WARNING)
+matplotlib_log = logging.getLogger("matplotlib")
+matplotlib_log.setLevel(logging.WARNING)
+
 
 class TestGraphClasses:
     """Main test class."""
@@ -93,15 +100,19 @@ class TestGraphClasses:
         instances2 = self.neo4j_graph.find_matching(pattern)
         assert(instances1 == instances2)
 
-        rule = Rule.from_transform(pattern._graph)
+        rule = Rule.from_transform(pattern)
         p_n, r_n = rule.inject_clone_node("y")
-        print(rule.p.edges())
         rule.inject_remove_edge(p_n, "y")
         rule.inject_remove_edge("y", "y")
         rule.inject_add_node("w", {"name": "Frank"})
         rule.inject_add_edge("w", r_n, {"type": "parent"})
         rhs_g1 = self.nx_graph.rewrite(rule, instances1[0])
         rhs_g2 = self.neo4j_graph.rewrite(rule, instances1[0])
+
+        self.nx_graph.relabel_node(rhs_g1[r_n], "b")
+        self.neo4j_graph.relabel_node(rhs_g2[r_n], "b")
+        self.nx_graph.relabel_node(rhs_g1["y"], "c")
+        self.neo4j_graph.relabel_node(rhs_g2["y"], "c")
 
         # Test the two obtained graphs are the same
         assert(self.nx_graph == self.neo4j_graph)
