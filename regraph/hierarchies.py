@@ -1326,7 +1326,7 @@ class Hierarchy(ABC):
                 # check p_typing for suc is composable
                 for graph_n, p_nodes in typing.items():
                     suc_n = suc_typing[graph_n]
-                    if suc_n in p_typing[suc]:
+                    if suc in p_typing and suc_n in p_typing[suc]:
                         suc_p_nodes = p_typing[suc][suc_n]
                         if not p_nodes.issubset(suc_p_nodes):
                             raise RewritingError(
@@ -2239,13 +2239,13 @@ class NXHierarchy(Hierarchy, NXGraph):
                                 raise HierarchyError(
                                     "Invalid lhs typing: homomorphism does "
                                     "not commute with an existing " +
-                                    "path from '%s' to '%s'!" % (s, t)
+                                    "path from '{}' to '{}'!".format(s, t)
                                 )
                             if rhs_h != new_rhs_h:
                                 raise HierarchyError(
                                     "Invalid rhs typing: homomorphism does "
                                     "not commute with an existing " +
-                                    "path from '%s' to '%s'!" % (s, t)
+                                    "path from '{}' to '{}'!".format(s, t)
                                 )
                     except(nx.NetworkXNoPath):
                         pass
@@ -2275,7 +2275,7 @@ class NXHierarchy(Hierarchy, NXGraph):
                             if path_homomorphism != new_homomorphism:
                                 raise HierarchyError(
                                     "Homomorphism does not commute with an " +
-                                    "existing path from '%s' to '%s'!" % (s, t)
+                                    "existing path from '{}' to '{}'!".format(s, t)
                                 )
                     except(nx.NetworkXNoPath):
                             pass

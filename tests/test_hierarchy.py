@@ -197,7 +197,7 @@ class TestHierarchy(object):
         h = copy.deepcopy(self.hierarchy)
         h.remove_node("g1", reconnect=True)
         # print(h)
-        # print(self.hierarchy)
+        # print(self.hierarchy.get_typing("g2", "g0"))
 
     def test_find_matching(self):
         pattern = NXGraph()
@@ -210,7 +210,10 @@ class TestHierarchy(object):
             (1, 2),
             (2, 3)
         ])
-        pattern_typing = {1: "circle", 2: "square", 3: "triangle"}
+        pattern_typing = {
+            1: "circle",
+            2: "square",
+            3: "triangle"}
 
         instances = self.hierarchy.find_matching(
             graph_id="g1",
@@ -284,14 +287,22 @@ class TestHierarchy(object):
             pattern,
             pattern_typing=lhs_typing
         )
-        print(instances[0])
+
+        old_g0_nodes = self.hierarchy.get_graph("g0").nodes(True)
+        old_g0_edges = self.hierarchy.get_graph("g0").edges(True)
+        old_g00_nodes = self.hierarchy.get_graph("g00").nodes(True)
+        old_g00_edges = self.hierarchy.get_graph("g00").edges(True)
         self.hierarchy.rewrite(
             "g1",
             rule,
             instances[0],
             rhs_typing=rhs_typing
         )
-        # add nice assertions here
+        # Test that no propagation forward happened
+        assert(old_g0_nodes == self.hierarchy.get_graph("g0").nodes(True))
+        assert(old_g0_edges == self.hierarchy.get_graph("g0").edges(True))
+        assert(old_g00_nodes == self.hierarchy.get_graph("g00").nodes(True))
+        assert(old_g00_edges == self.hierarchy.get_graph("g00").edges(True))
 
     def test_node_type(self):
         # print(self.hierarchy.node_type("g1", "white_circle"))
@@ -305,17 +316,6 @@ class TestHierarchy(object):
             {"g00": "black", "g0": "square"}
         )
 
-    # def test_add_partial_typing(self):
-    #     self.hierarchy.add_typing(
-    #         "g5",
-    #         "g1",
-    #         {"black_circle": "black_circle",
-    #          "black_square": "black_square",
-    #          "white_triangle": "white_triangle"})
-    #     return
-
-    def test_rewrite_ignore_attrs(self):
-        pass
 
     def test_to_json(self):
         res = self.hierarchy.to_json()
@@ -434,6 +434,7 @@ class TestHierarchy(object):
 
         self.hierarchy.rewrite(
             "g1", rule, instances[0], rhs_typing=rhs_typing)
+        # print(self.hierarchy.get_rule("r1"))
 
     def test_add_rule_multiple_typing(self):
 
@@ -551,13 +552,17 @@ class TestHierarchy(object):
         )
 
     def test_get_descendants(self):
-        anc = self.hierarchy.get_descendants("g2")
-        assert("g1" in anc.keys())
-        assert("g0" in anc.keys())
-        assert("g00" in anc.keys())
+        desc = self.hierarchy.get_descendants("g2")
+        assert("g1" in desc.keys())
+        assert("g0" in desc.keys())
+        assert("g00" in desc.keys())
 
     def test_get_ancestors(self):
         anc = self.hierarchy.get_ancestors("g0")
+        assert("g1" in anc.keys())
+        assert("g2" in anc.keys())
+        assert("g3" in anc.keys())
+        assert("g4" in anc.keys())
 
     @raises(HierarchyError)
     def test_add_typing_advanced(self):
@@ -707,7 +712,8 @@ class TestHierarchy(object):
                 "c_x_b": "b"
             })
 
-    def test_triangle_1(self):
+    @staticmethod
+    def _generate_triangle_hierarchy():
         h = NXHierarchy()
 
         g1 = NXGraph()
@@ -752,6 +758,10 @@ class TestHierarchy(object):
                 "2a": "2y",
                 "2b": "2x"
             })
+        return h
+
+    def test_triangle_1(self):
+        h = self._generate_triangle_hierarchy()
 
         pattern = NXGraph()
         pattern.add_nodes_from([
@@ -768,3 +778,63 @@ class TestHierarchy(object):
         # print_graph(new_h.node["g2"].graph)
         # print_graph(new_h.node["g3"].graph)
         # print(new_h.edge["g2"]["g3"].mapping)
+
+    def test_controlled_forward(self):
+        h = self._generate_triangle_hierarchy()
+        pattern = NXGraph()
+        pattern.add_nodes_from([
+            "1a"
+        ])
+        rule = Rule.from_transform(pattern)
+        rule.inject_add_node("1c")
+
+        rhs_typing = {
+            "g3": {"1c": "1x"}
+        }
+
+        old_g3_nodes = h.get_graph("g3").nodes(True)
+        old_g1_nodes = h.get_graph("g1").nodes(True)
+
+        h.rewrite("g2", rule, {"1a": "1a"}, rhs_typing=rhs_typing)
+
+        assert(old_g3_nodes == h.get_graph("g3").nodes(True))
+        assert(old_g1_nodes == h.get_graph("g1").nodes(True))
+
+        rhs_typing = {
+            "g1": {"1c": "1"}
+        }
+
+        h.rewrite("g2", rule, {"1a": "1a"}, rhs_typing=rhs_typing)
+        assert(old_g1_nodes == h.get_graph("g1").nodes(True))
+        assert(len(old_g3_nodes) + 1 == len(h.get_graph("g3").nodes()))
+
+
+    def test_controlled_backward(self):
+        h = self._generate_triangle_hierarchy()
+        pattern = NXGraph()
+        pattern.add_nodes_from([
+            "1"
+        ])
+        rule = Rule.from_transform(pattern)
+        rule.inject_clone_node("1", "11")
+
+        p_typing = {
+            "g2": {"1a": {"1"}, "1b": {"11"}},
+        }
+
+        old_g3_nodes = h.get_graph("g3").nodes(True)
+        old_g2_nodes = h.get_graph("g2").nodes(True)
+
+        h.rewrite("g1", rule, {"1": "1"}, p_typing=p_typing)
+
+        # assert(old_g3_nodes == h.get_graph("g3").nodes(True))
+        assert(old_g2_nodes == h.get_graph("g2").nodes(True))
+        # print(h.get_graph("g3").nodes())
+        # print(h.get_typing("g2", "g3"))
+
+
+
+
+
+
+

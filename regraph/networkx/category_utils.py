@@ -442,7 +442,7 @@ def pushout(a, b, c, a_b, a_c, inplace=False):
             if c_n not in d.nodes():
                 new_name = c_n
             else:
-                new_name = unique_node_id(d, c_n)
+                new_name = d.generate_new_node_id(c_n)
             add_node(d, new_name, c.node[c_n])
             c_d[c_n] = new_name
         # Keep nodes
