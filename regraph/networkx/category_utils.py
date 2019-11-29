@@ -1,6 +1,8 @@
 """Category operations used by graph rewriting tool."""
 import copy
 
+from regraph.graphs import NXGraph
+
 from regraph.utils import (keys_by_value,
                            merge_attributes,
                            restrict_mapping,
@@ -156,7 +158,7 @@ def pullback(b, c, d, b_d, c_d, inplace=False):
     if inplace is True:
         a = b
     else:
-        a = type(b)()
+        a = NXGraph()
         a.add_nodes_from(b.nodes(data=True))
         a.add_edges_from(b.edges(data=True))
 
@@ -220,7 +222,7 @@ def pushout(a, b, c, a_b, a_c, inplace=False):
     if inplace is True:
         d = b
     else:
-        d = type(b)()
+        d = NXGraph()
         d.add_nodes_from(b.nodes(data=True))
         d.add_edges_from(b.edges(data=True))
 
@@ -356,7 +358,7 @@ def pullback_complement(a, b, d, a_b, b_d, inplace=False):
     if inplace is True:
         c = d
     else:
-        c = type(d)()
+        c = NXGraph()
         c.add_nodes_from(d.nodes(data=True))
         c.add_edges_from(d.edges(data=True))
 
@@ -420,7 +422,7 @@ def pullback_complement(a, b, d, a_b, b_d, inplace=False):
 
 def image_factorization(a, b, a_b):
     """Compute the image factorization given A, B and A->B."""
-    c = type(a)()
+    c = NXGraph()
     c.add_nodes_from(a.nodes(data=True))
     c.add_edges_from(a.edges(data=True))
 
