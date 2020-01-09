@@ -14,6 +14,8 @@ from regraph.exceptions import (HierarchyError,
                                 ReGraphError)
 from regraph.hierarchies import Hierarchy
 from regraph.neo4j.graphs import Neo4jGraph
+from regraph.rules import Rule
+from regraph.category_utils import compose
 from .cypher_utils.generic import (constraint_query,
                                    get_nodes,
                                    get_edges,
@@ -29,10 +31,12 @@ from .cypher_utils.generic import (constraint_query,
                                    match_node,
                                    shortest_path_query,
                                    match_edge,
+                                   set_id,
                                    )
 from .cypher_utils.propagation import (set_intergraph_edge,
                                        check_homomorphism,
-                                       check_consistency)
+                                       check_consistency,
+                                       get_typing)
 from .cypher_utils.rewriting import (add_edge,
                                      remove_nodes,
                                      remove_edge)
@@ -107,19 +111,24 @@ class Neo4jHierarchy(Hierarchy):
 
     def get_typing(self, source_id, target_id):
         """Get a typing dict associated to the edge 'source_id->target_id'."""
-        query = get_edge_attrs(
-            source_id, target_id, self._typing_label,
-            "attributes")
+        query = get_typing(source_id, target_id, "typing")
         result = self.execute(query)
-        return properties_to_attributes(result, "attributes")
+        typing = {}
+        for record in result:
+            typing[record["node"]] = record["type"]
+        return typing
 
     def get_relation(self, left_id, right_id):
         """Get a relation dict associated to the rel 'left_id->target_id'."""
-        query = get_edge_attrs(
-            left_id, right_id, self._relation_label,
-            "attributes")
+        query = get_typing(left_id, right_id, "relation")
         result = self.execute(query)
-        return properties_to_attributes(result, "attributes")
+        relation = {}
+        for record in result:
+            if record["node"] in relation.keys():
+                relation[record["node"]].add(record["type"])
+            else:
+                relation[record["node"]] = {record["type"]}
+        return relation
 
     def get_graph_attrs(self, graph_id):
         """Get attributes of a graph in the hierarchy.
@@ -585,7 +594,7 @@ class Neo4jHierarchy(Hierarchy):
 
     def bfs_tree(self, graph, reverse=False):
         """BFS tree from the graph to all other reachable graphs."""
-        bfs_result = [graph]
+        bfs_result = []
         if reverse:
             current_level = self.predecessors(graph)
         else:
@@ -669,12 +678,11 @@ class Neo4jHierarchy(Hierarchy):
             if g in self.adjacent_relations(graph_id):
                 self.add_relation(g, new_graph_id, self.get_relation(g, graph_id))
 
-    @abstractmethod
     def relabel_graph_node(self, graph_id, node, new_name):
         """Rename a node in a graph of the hierarchy."""
-        pass
+        g = self.get_graph(graph_id)
+        g.relabel_node(node, new_name)
 
-    @abstractmethod
     def relabel_graph(self, graph_id, new_graph_id):
         """Relabel a graph in the hierarchy.
 
@@ -685,9 +693,22 @@ class Neo4jHierarchy(Hierarchy):
         new_graph_id : hashable
             New graph id to assign to this graph
         """
-        pass
+        if new_graph_id in self.graphs():
+            raise ReGraphError(
+                "Cannot relabel '{}' to '{}', '{}' ".format(
+                    graph_id, new_graph_id, new_graph_id) +
+                "already exists in the hierarchy")
+        # Change labels of data nodes
+        query = (
+            "MATCH (n:{})\n".format(graph_id) +
+            "SET n:{}\n".format(new_graph_id)
+        )
+        self.execute(query)
 
-    @abstractmethod
+        # Relabel node in the skeleton
+        skeleton = self._access_graph(self._graph_label)
+        skeleton.relabel_node(graph_id, new_graph_id)
+
     def relabel_graphs(self, mapping):
         """Relabel graphs in the hierarchy.
 
@@ -702,236 +723,134 @@ class Neo4jHierarchy(Hierarchy):
         ReGraphError
             If new id's do not define a set of distinct graph id's.
         """
-        pass
+        # Relabel nodes in the skeleton
+        skeleton = self._access_graph(self._graph_label)
+        skeleton.relabel_nodes(mapping)
 
-    @abstractmethod
-    def _restrictive_rewrite(self, graph_id, rule, instance):
-        """Perform a restrictive rewrite of the specified graph.
+        temp_names = {}
+        # Relabeling of the nodes: if at some point new ID conflicts
+        # with already existing ID - assign temp ID
+        for key, value in mapping.items():
+            if key != value:
+                if value not in self.graphs():
+                    new_name = value
+                else:
+                    new_name = self.generate_new_node_id(value)
+                    temp_names[new_name] = value
+                query = (
+                    "MATCH (n:{})\n".format(key) +
+                    "SET n:{}\n".format(value)
+                )
+                self.execute(query)
+        # Relabeling the nodes with the temp ID to their new IDs
+        for key, value in temp_names:
+            if key != value:
+                query = (
+                    "MATCH (n:{})\n".format(key) +
+                    "SET n:{}\n".format(value)
+                )
+                self.execute(query)
+        return
 
-        This method rewrites the graph and updates its typing by
-        the immediate successors. Note that as the result of this
-        update, some homomorphisms (from ancestors) are broken!
-        """
-        pass
+    def _update_mapping(self, source, target, mapping):
+        """Update the mapping dictionary from source to target."""
+        old_mapping = self.get_typing(source, target)
+        typing_to_update = {
+            k: mapping[k] for k, v in old_mapping.items() if mapping[k] != v
+        }
+        for k, v in typing_to_update.items():
+            query = (
+                "MATCH (s:{} {{id: '{}'}})-[r:{}]->(t:{} {{id: '{}'}}), ".format(
+                    source, k, self._graph_typing_label, target, old_mapping[k]) +
+                "(new_t:{} {{id: '{}'}})\n".format(target, v) +
+                "DELETE r" +
+                "MERGE (s)-[:{}]->(new_t)\n".format(self._graph_typing_label)
+            )
+            self.execute(query)
 
-    @abstractmethod
-    def _expansive_rewrite(self, graph_id, rule, instance):
-        """Perform an expansive rewrite of the specified graph.
+        new_typing = {
+            k: v for k, v in mapping.items() if k not in typing_to_update
+        }
+        for k, v in new_typing.items():
+            query = (
+                "MATCH (s:{} {{id: '{}'}}), (new_t:{} {{id: '{}'}})\n".format(
+                    source, k, target, v) +
+                "MERGE (s)-[:{}]->(new_t)\n".format(self._graph_typing_label)
+            )
+            self.execute(query)
 
-        This method rewrites the graph and updates its typing by
-        the immediate predecessors. Note that as the result of this
-        update, some homomorphisms (to descendants) are broken!
-        """
-        pass
+    def _update_relation(self, left, right, relation):
+        """Update the relation dictionaries (left and right)."""
+        old_relation = self.get_relation(left, right)
+        relations_to_add = dict([
+            (k, v.difference(old_relation[k]))
+            if k in old_relation
+            else (k, v)
+            for k, v in relation.items()
+        ])
 
-    @abstractmethod
-    def _propagate_clone(self, origin_id, graph_id, p_origin_m,
-                         origin_m_origin, p_typing,
-                         g_m_g, g_m_origin_m):
-        """Propagate clones from 'origin_id' to 'graph_id'.
+        relation_to_remove = dict([
+            (k, v.difference(relation[k]))
+            if k in relation
+            else (k, v)
+            for k, v in old_relation.items()
+        ])
+        for k, vs in relations_to_add.items():
+            for v in vs:
+                query = (
+                    "MATCH (s:{} {{id: '{}'}}), (t:{} {{id: '{}'}}) \n".format(
+                        left, k, right, v) +
+                    "MERGE (s)-[:{}]->(new_t)\n".format(
+                        self._graph_relation_label)
+                )
+            self.execute(query)
 
-        Perform a controlled propagation of clones to 'graph'
+        for k, vs in relation_to_remove.items():
+            for v in vs:
+                query = (
+                    "MATCH (s:{} {{id: '{}'}})-[r:{}]-(t:{} {{id: '{}'}})\n".format(
+                        left, k, self._graph_relation_label, right, v) +
+                    "DELETE r\n"
+                )
+            self.execute(query)
 
-        Parameters
-        ----------
-        origin_id : hashable
-            ID of the graph corresponding to the origin of rewriting
-        graph_id : hashable
-            ID of the graph where propagation is performed
-        p_origin_m : dict
-            Instance of rule's interface inside the updated origin
-        origin_m_origin : dict
-            Map from the updated origin to the initial origin
-        p_typing : dict
-            Controlling relation from the nodes of 'graph_id' to
-            the nodes of the interfaces
-        """
-        pass
+    def _restrictive_update_incident_homs(self, node_id, g_m_g):
+        for suc in self.successors(node_id):
+            typing = self.get_typing(node_id, suc)
+            self._update_mapping(node_id, suc, compose(g_m_g, typing))
 
-    @abstractmethod
-    def _propagate_node_removal(self, origin_id, graph_id, rule, instance,
-                                g_m_g, g_m_origin_m):
-        """Propagate node removal from 'origin_id' to 'graph_id'.
+    def _restrictive_update_incident_rels(self, graph_id, g_m_g):
+        for related_g in self.adjacent_relations(graph_id):
+            rel = self.get_relation(graph_id, related_g)
+            new_rel = dict()
+            for node in self.get_graph(graph_id).nodes():
+                old_node = g_m_g[node]
+                if old_node in rel.keys():
+                    new_rel[node] = rel[old_node]
 
-        Parameters
-        ----------
-        origin_id : hashable
-            ID of the graph corresponding to the origin of rewriting
-        graph_id : hashable
-            ID of the graph where propagation is performed
-        origin_m_origin : dict
-            Map from the updated origin to the initial origin
+            self._update_relation(graph_id, related_g, new_rel)
 
-        """
-        pass
+    def _expansive_update_incident_homs(self, graph_id, g_m_g_prime):
+        for pred in self.predecessors(graph_id):
+            typing = self.get_typing(pred, graph_id)
+            self._update_mapping(
+                pred, graph_id, compose(typing, g_m_g_prime))
 
-    @abstractmethod
-    def _propagate_node_attrs_removal(self, origin_id, graph_id, rule, instance):
-        """Propagate node attrs removal from 'origin_id' to 'graph_id'.
+    def _expansive_update_incident_rels(self, graph_id, g_m_g_prime):
+        for related_g in self.adjacent_relations(graph_id):
+            rel = self.get_relation(graph_id, related_g)
+            new_rel = dict()
 
-        Parameters
-        ----------
-        origin_id : hashable
-            ID of the graph corresponding to the origin of rewriting
-        graph_id : hashable
-            ID of the graph where propagation is performed
-        rule : regraph.Rule
-            Original rewriting rule
-        instance : dict
-            Original instance
-        """
-        pass
+            for node in self.get_graph(graph_id).nodes():
+                new_node = g_m_g_prime[node]
+                if node in rel.keys():
+                    new_rel[new_node] = rel[node]
 
-    @abstractmethod
-    def _propagate_edge_removal(self, origin_id, graph_id, g_m_origin_m):
-        """Propagate edge removal from 'origin_id' to 'graph_id'.
+            self._update_relation(graph_id, related_g, new_rel)
 
-        Parameters
-        ----------
-        origin_id : hashable
-            ID of the graph corresponding to the origin of rewriting
-        graph_id : hashable
-            ID of the graph where propagation is performed
-        p_origin_m : dict
-            Instance of rule's interface inside the updated origin
-        origin_m_origin : dict
-            Map from the updated origin to the initial origin
-        """
-        pass
-
-    @abstractmethod
-    def _propagate_edge_attrs_removal(self, origin_id, graph_id, rule, p_origin_m):
-        """Propagate edge attrs removal from 'origin_id' to 'graph_id'.
-
-        Parameters
-        ----------
-        origin_id : hashable
-            ID of the graph corresponding to the origin of rewriting
-        graph_id : hashable
-            ID of the graph where propagation is performed
-        rule : regraph.Rule
-            Original rewriting rule
-        p_origin_m : dict
-            Instance of rule's interface inside the updated origin
-        """
-        pass
-
-    @abstractmethod
-    def _propagate_merge(self, origin_id, graph_id, rule, p_origin_m,
-                         rhs_origin_prime, g_g_prime, origin_prime_g_prime):
-        """Propagate merges from 'origin_id' to 'graph_id'.
-
-        Perform a propagation of merges to 'graph'
-
-        Parameters
-        ----------
-        origin_id : hashable
-            ID of the graph corresponding to the origin of rewriting
-        graph_id : hashable
-            ID of the graph where propagation is performed
-        rule : regraph.Rule
-            Original rewriting rule
-        p_origin_m : dict
-            Instance of rule's interface inside the updated origin
-        rhs_origin_prime : dict
-            Instance of rule's rhs inside the updated origin
-        g_g_prime : dict
-            Map from the nodes of the graph 'graph_id' to the updated graph
-        origin_prime_g_prime : dict
-            Map from the updated origin to the updated graph with 'graph_id'
-        """
-        pass
-
-    @abstractmethod
-    def _propagate_node_addition(self, origin_id, graph_id, rule,
-                                 rhs_origin_prime, rhs_typing,
-                                 origin_prime_g_prime):
-        """Propagate node additions from 'origin_id' to 'graph_id'.
-
-        Perform a propagation of additions to 'graph'
-
-        Parameters
-        ----------
-        origin_id : hashable
-            ID of the graph corresponding to the origin of rewriting
-        graph_id : hashable
-            ID of the graph where propagation is performed
-        rule : regraph.Rule
-            Original rewriting rule
-        rhs_origin_prime : dict
-            Instance of rule's rhs inside the updated origin
-        rhs_typing : dict
-            Typing of the nodes from the rhs in 'graph_id'
-        origin_prime_g_prime : dict
-            Map from the updated origin to the updated graph with 'graph_id'
-        """
-        pass
-
-    @abstractmethod
-    def _propagate_node_attrs_addition(self, origin_id, graph_id, rule,
-                                       rhs_origin_prime, origin_prime_g_prime):
-        """Propagate node attrs additions from 'origin_id' to 'graph_id'.
-
-        Perform a propagation of additions to 'graph'
-
-        Parameters
-        ----------
-        origin_id : hashable
-            ID of the graph corresponding to the origin of rewriting
-        graph_id : hashable
-            ID of the graph where propagation is performed
-        rule : regraph.Rule
-            Original rewriting rule
-        rhs_origin_prime : dict
-            Instance of rule's rhs inside the updated origin
-        origin_prime_g_prime : dict
-            Map from the updated origin to the updated graph with 'graph_id'
-        """
-        pass
-
-    @abstractmethod
-    def _propagate_edge_addition(self, origin_id, graph_id, rule,
-                                 rhs_origin_prime, origin_prime_g_prime):
-        """Propagate edge additions from 'origin_id' to 'graph_id'.
-
-        Perform a propagation of additions to 'graph'
-
-        Parameters
-        ----------
-        origin_id : hashable
-            ID of the graph corresponding to the origin of rewriting
-        graph_id : hashable
-            ID of the graph where propagation is performed
-        rule : regraph.Rule
-            Original rewriting rule
-        rhs_origin_prime : dict
-            Instance of rule's rhs inside the updated origin
-        origin_prime_g_prime : dict
-            Map from the updated origin to the updated graph with 'graph_id'
-        """
-        pass
-
-    @abstractmethod
-    def _propagate_edge_attrs_addition(self, origin_id, graph_id, rule,
-                                       rhs_origin_prime, origin_prime_g_prime):
-        """Propagate edge attrs additions from 'origin_id' to 'graph_id'.
-
-        Perform a propagation of additions to 'graph'
-
-        Parameters
-        ----------
-        origin_id : hashable
-            ID of the graph corresponding to the origin of rewriting
-        graph_id : hashable
-            ID of the graph where propagation is performed
-        """
-        pass
-
-    @abstractmethod
     def _get_rule_liftings(self, graph_id, rule, instance, p_typing):
         pass
 
-    @abstractmethod
     def _get_rule_projections(self, graph_id, rule, instance, rhs_typing):
         pass
 
@@ -1011,7 +930,6 @@ class Neo4jHierarchy(Hierarchy):
         """Execute a Cypher query."""
         with self._driver.session() as session:
             if len(query) > 0:
-                # print(query)
                 result = session.run(query)
                 return result
 
