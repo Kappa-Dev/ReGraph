@@ -1020,11 +1020,11 @@ def get_node_attrs(node_id, node_label, attrs_var):
     return query
 
 
-def get_edge_attrs(source_id, targe_id, edge_label, attrs_var):
+def get_edge_attrs(source_id, targe_id, node_label, edge_label, attrs_var):
     """Query for retreiving edge's attributes."""
     query = (
-        "MATCH ({{ id: '{}' }})-[rel:{}]->({{ id: '{}' }}) \n".format(
-            source_id, edge_label, targe_id) +
+        "MATCH (n:{} {{ id: '{}' }})-[rel:{}]->(m:{} {{ id: '{}' }}) \n".format(
+            node_label, source_id, edge_label, node_label, targe_id) +
         "RETURN properties(rel) as {}\n".format(attrs_var)
     )
     return query

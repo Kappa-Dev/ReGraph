@@ -7,7 +7,7 @@ https://link.springer.com/chapter/10.1007/11841883_4).
 import copy
 import warnings
 
-from regraph.graphs import NXGraph
+from regraph.networkx.graphs import NXGraph
 
 from regraph.command_parser import parser
 from regraph.utils import (keys_by_value,
@@ -103,7 +103,7 @@ class Rule(object):
         if lhs is None:
             lhs = NXGraph.copy(p)
         if rhs is None:
-            rhs = NXGraph.copy(rhs)
+            rhs = NXGraph.copy(p)
 
         self.p = p
         self.lhs = lhs

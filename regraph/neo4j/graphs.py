@@ -193,7 +193,9 @@ class Neo4jGraph(Graph):
         t : hashable, target node id.
         """
         query = generic.get_edge_attrs(
-            s, t, self._edge_label,
+            s, t,
+            self._node_label,
+            self._edge_label,
             "attributes")
         result = self._execute(query)
         return generic.properties_to_attributes(

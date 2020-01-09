@@ -454,6 +454,7 @@ class Graph(ABC):
 
         edge_attrs = safe_deepcopy_dict(self.get_edge(s, t))
         remove_attrs(edge_attrs, attrs, normalize=True)
+        print("Here", edge_attrs)
         self.update_edge_attrs(s, t, edge_attrs)
 
     def clone_node(self, node_id, name=None):
@@ -509,6 +510,8 @@ class Graph(ABC):
 
         # Copy the attributes of the edges
         for s, t in self.in_edges(node_id):
+            print(
+                s, t, self.get_edge(s, t), safe_deepcopy_dict(self.get_edge(s, t)))
             self.set_edge(
                 s, new_node,
                 safe_deepcopy_dict(self.get_edge(s, t)))

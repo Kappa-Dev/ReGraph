@@ -1,7 +1,7 @@
 """Category operations used by graph rewriting tool."""
 import copy
 
-from regraph.graphs import NXGraph
+from regraph.networkx.graphs import NXGraph
 
 from regraph.utils import (keys_by_value,
                            merge_attributes,
@@ -89,7 +89,7 @@ def check_homomorphism(source, target, dictionary, total=True):
     for s, t in dictionary.items():
             # check sets of attributes of nodes (here homomorphism = set
             # inclusion)
-        if not valid_attributes(source.node[s], target.node[t]):
+        if not valid_attributes(source.get_node(s), target.get_node(t)):
             raise InvalidHomomorphism(
                 "Attributes of nodes source: '{}' {} and ".format(
                     s, source.get_node(s)) +
@@ -175,8 +175,8 @@ def pullback(b, c, d, b_d, c_d, inplace=False):
     for n1 in b.nodes():
         for n2 in c.nodes():
             if f[n1] == g[n2]:
-                new_attrs = merge_attributes(b.node[n1],
-                                             c.node[n2],
+                new_attrs = merge_attributes(b.get_node(n1),
+                                             c.get_node(n2),
                                              'intersection')
                 if n1 not in a.nodes():
                     a.add_node(n1, new_attrs)
@@ -239,7 +239,7 @@ def pushout(a, b, c, a_b, a_c, inplace=False):
                 new_name = c_n
             else:
                 new_name = d.generate_new_node_id(c_n)
-            d.add_node(new_name, c.node[c_n])
+            d.add_node(new_name, c.get_node(c_n))
             c_d[c_n] = new_name
         # Keep nodes
         elif len(a_keys) == 1:
@@ -311,8 +311,8 @@ def pushout(a, b, c, a_b, a_c, inplace=False):
         # Add attributes to the nodes which stayed invariant
         if len(a_keys) == 1:
             attrs_to_add = dict_sub(
-                c.node[c_n],
-                a.node[a_keys[0]]
+                c.get_node(c_n),
+                a.get_node(a_keys[0])
             )
             d.add_node_attrs(c_d[c_n], attrs_to_add)
         # Add attributes to the nodes which were merged
@@ -321,9 +321,9 @@ def pushout(a, b, c, a_b, a_c, inplace=False):
             for k in a_keys:
                 merged_attrs = merge_attributes(
                     merged_attrs,
-                    a.node[k]
+                    a.get_node(k)
                 )
-            attrs_to_add = dict_sub(c.node[c_n], merged_attrs)
+            attrs_to_add = dict_sub(c.get_node(c_n), merged_attrs)
             d.add_node_attrs(c_d[c_n], attrs_to_add)
 
     # Add edge attrs
@@ -402,8 +402,8 @@ def pullback_complement(a, b, d, a_b, b_d, inplace=False):
     # Remove node attrs
     for a_node in a.nodes():
         attrs_to_remove = dict_sub(
-            b.node[a_b[a_node]],
-            a.node[a_node]
+            b.get_node(a_b[a_node]),
+            a.get_node(a_node)
         )
         c.remove_node_attrs(a_c[a_node], attrs_to_remove)
         # removed_node_attrs[a_c[a_node]] = attrs_to_remove
@@ -553,8 +553,8 @@ def relation_to_span(g1, g2, relation, edges=False, attrs=False):
                 new_graph.add_node(new_node)
                 if attrs:
                     common_attrs = attrs_intersection(
-                        g1.node[a],
-                        g2.node[b]
+                        g1.get_node(a),
+                        g2.get_node(b)
                     )
                     new_graph.add_node_attrs(new_node, common_attrs)
                 left_h[new_node] = a
@@ -621,12 +621,12 @@ def pushout_from_relation(g1, g2, relation, inplace=False):
             node_id = node
             if node_id in g12.nodes():
                 node_id = g12.generate_new_node_id(g12, node)
-            g12.add_node(node_id, g2.node[node])
+            g12.add_node(node_id, g2.get_node(node))
             g2_g12[node] = node_id
         elif len(right_dict[node]) == 1:
             node_attrs_diff = dict_sub(
-                g2.node[node],
-                g1.node[list(right_dict[node])[0]])
+                g2.get_node(node),
+                g1.get_node(list(right_dict[node])[0]))
             g12.add_node_attrs(
                 list(right_dict[node])[0], node_attrs_diff)
         elif len(right_dict[node]) > 1:
@@ -635,8 +635,8 @@ def pushout_from_relation(g1, g2, relation, inplace=False):
                 g1_g12[g1_node] = new_name
             g2_g12[node] = new_name
             node_attrs_diff = dict_sub(
-                g2.node[node],
-                g12.node[new_name])
+                g2.get_node(node),
+                g12.get_node(new_name))
             g12.add_node_attrs(new_name, node_attrs_diff)
 
     for u, v in g2.edges():

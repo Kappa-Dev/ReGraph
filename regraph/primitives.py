@@ -13,7 +13,7 @@ import warnings
 
 from networkx.algorithms import isomorphism
 
-from regraph.graphs import NXGraph
+from regraph.networkx.graphs import NXGraph
 from regraph.utils import (merge_attributes,
                            normalize_attrs,
                            valid_attributes,
