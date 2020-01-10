@@ -13,10 +13,10 @@ from regraph.primitives import (add_nodes_from,
                                 get_node,
                                 print_graph,
                                 exists_edge)
-from regraph.networkx.category_utils import (pullback,
-                                             pushout,
-                                             image_factorization,
-                                             compose)
+from regraph.category_utils import (pullback,
+                                    pushout,
+                                    image_factorization,
+                                    compose)
 from regraph.rules import Rule
 
 from . import generic

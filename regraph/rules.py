@@ -7,7 +7,8 @@ https://link.springer.com/chapter/10.1007/11841883_4).
 import copy
 import warnings
 
-from regraph.networkx.graphs import NXGraph
+from regraph.backends.networkx.graphs import NXGraph
+from regraph.backends.networkx.plotting import plot_rule
 
 from regraph.command_parser import parser
 from regraph.utils import (keys_by_value,
@@ -16,16 +17,15 @@ from regraph.utils import (keys_by_value,
                            attrs_union,
                            remove_forbidden,
                            normalize_attrs)
-from regraph.networkx.category_utils import (identity,
-                                             check_homomorphism,
-                                             pullback_complement,
-                                             get_unique_map_from_pushout,
-                                             get_unique_map_to_pullback,
-                                             get_unique_map_to_pullback_complement,
-                                             pushout,
-                                             pullback,
-                                             compose)
-from regraph.networkx.plotting import plot_rule
+from regraph.category_utils import (identity,
+                                    check_homomorphism,
+                                    pullback_complement,
+                                    get_unique_map_from_pushout,
+                                    get_unique_map_to_pullback,
+                                    get_unique_map_to_pullback_complement,
+                                    pushout,
+                                    pullback,
+                                    compose)
 from regraph.exceptions import (ReGraphWarning, ParsingError,
                                 RuleError)
 

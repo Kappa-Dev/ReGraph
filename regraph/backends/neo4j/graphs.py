@@ -2,7 +2,8 @@
 import os
 import json
 import warnings
-from neo4j import GraphDatabase
+
+from neo4j.v1 import GraphDatabase
 
 from regraph.graphs import Graph
 from regraph.utils import (normalize_attrs,
@@ -353,14 +354,32 @@ class Neo4jGraph(Graph):
                 pred.add(record["pred"])
         return pred
 
-    def find_matching(self, pattern, nodes=None):
+    def find_matching(self, pattern, nodes=None,
+                      graph_typing=None, pattern_typing=None):
         """Find matching of a pattern in a graph."""
         if len(pattern.nodes()) != 0:
+
+            # filter nodes by typing
+            matching_nodes = set()
+            for pattern_node in pattern.nodes():
+                for node in self.nodes():
+                    type_matches = True
+                    if pattern_typing:
+                        # check types match
+                        for graph, pattern_mapping in pattern_typing.items():
+                            if node in graph_typing[graph].keys() and\
+                               pattern_node in pattern_mapping.keys():
+                                if graph_typing[graph][node] != pattern_mapping[
+                                        pattern_node]:
+                                    type_matches = False
+                    if type_matches and nodes and node in nodes:
+                        matching_nodes.add(node)
+
             query = rewriting.find_matching(
                 pattern,
                 node_label=self._node_label,
                 edge_label=self._edge_label,
-                nodes=nodes)
+                nodes=matching_nodes)
             result = self._execute(query)
             instances = list()
 
@@ -368,7 +387,28 @@ class Neo4jGraph(Graph):
                 instance = dict()
                 for k, v in record.items():
                     instance[k] = dict(v)["id"]
-                instances.append(instance)
+
+                new_instance = dict()
+                for pattern_node, v in instance.items():
+                    if pattern_node not in pattern.nodes():
+                        new_instance[int(pattern_node)] = v
+                    else:
+                        new_instance[pattern_node] = v
+                instance = new_instance
+
+                # filter instances to match the typing
+                type_matches = True
+                for pattern_node, node in instance.items():
+                    if pattern_typing:
+                        for g, pattern_mapping in pattern_typing.items():
+                            if node in graph_typing[g].keys() and\
+                               pattern_node in pattern_mapping.keys():
+
+                                if graph_typing[g][node] != pattern_mapping[pattern_node]:
+                                    type_matches = False
+                                    break
+                if type_matches:
+                    instances.append(instance)
         else:
             instances = []
         return instances

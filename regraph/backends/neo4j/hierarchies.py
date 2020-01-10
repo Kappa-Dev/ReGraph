@@ -5,7 +5,7 @@ graph hierarchy based on Neo4j graphs.
 
 * `Neo4jHierarchy` -- class for persistent graph hierarchies.
 """
-from neo4j import GraphDatabase
+from neo4j.v1 import GraphDatabase
 from neo4j.exceptions import ConstraintError
 
 from regraph.exceptions import (HierarchyError,
@@ -13,7 +13,7 @@ from regraph.exceptions import (HierarchyError,
                                 RewritingError,
                                 ReGraphError)
 from regraph.hierarchies import Hierarchy
-from regraph.neo4j.graphs import Neo4jGraph
+from regraph.backends.neo4j.graphs import Neo4jGraph
 from regraph.rules import Rule
 from regraph.category_utils import compose
 from .cypher_utils.generic import (constraint_query,
@@ -226,8 +226,7 @@ class Neo4jHierarchy(Hierarchy):
             "relation")
         self.execute(query)
 
-    def add_graph(self, graph_id, node_list=None, edge_list=None,
-                  attrs=None):
+    def add_graph(self, graph_id, graph, attrs=None):
         """Add a new graph to the hierarchy.
 
         Parameters
@@ -240,7 +239,8 @@ class Neo4jHierarchy(Hierarchy):
         graph_attrs : dict, optional
             Dictionary containing attributes of the new node
         """
-        self.add_graph_from_data(graph_id, node_list, edge_list, attrs)
+        self.add_graph_from_data(
+            graph_id, graph.nodes(data=True), graph.edges(data=True), attrs)
 
     def add_graph_from_data(self, graph_id, node_list, edge_list, attrs=None):
         """Add a new graph to the hierarchy from the input node/edge lists.
@@ -625,28 +625,6 @@ class Neo4jHierarchy(Hierarchy):
         result = self.execute(query)
         return result.single()["path"]
 
-    def find_matching(self, graph_id, pattern, pattern_typing=None,
-                      nodes=None):
-        """Find an instance of a pattern in a specified graph.
-
-        graph_id : hashable
-            Id of a graph in the hierarchy to search for matches
-        pattern : regraph.Graph or nx.DiGraph object
-            A pattern to match
-        pattern_typing : dict
-            A dictionary that specifies a typing of a pattern,
-            keys of the dictionary -- graph id that types a pattern, this graph
-            should be among parents of the `graph_id` graph; values are
-            mappings of nodes from pattern to the typing graph;
-        nodes : iterable
-            Subset of nodes where matching should be performed
-        """
-        graph = self._access_graph(graph_id)
-        instances = graph.find_matching(
-            pattern, pattern_typing=pattern_typing, nodes=nodes)
-
-        return instances
-
     def copy_graph(self, graph_id, new_graph_id, attach_graphs=[]):
         """Create a copy of a graph in a hierarchy."""
         if new_graph_id in self.graphs():
@@ -755,8 +733,11 @@ class Neo4jHierarchy(Hierarchy):
     def _update_mapping(self, source, target, mapping):
         """Update the mapping dictionary from source to target."""
         old_mapping = self.get_typing(source, target)
+
         typing_to_update = {
-            k: mapping[k] for k, v in old_mapping.items() if mapping[k] != v
+            k: mapping[k]
+            for k, v in old_mapping.items()
+            if k in mapping and mapping[k] != v
         }
         for k, v in typing_to_update.items():
             query = (
@@ -813,40 +794,6 @@ class Neo4jHierarchy(Hierarchy):
                     "DELETE r\n"
                 )
             self.execute(query)
-
-    def _restrictive_update_incident_homs(self, node_id, g_m_g):
-        for suc in self.successors(node_id):
-            typing = self.get_typing(node_id, suc)
-            self._update_mapping(node_id, suc, compose(g_m_g, typing))
-
-    def _restrictive_update_incident_rels(self, graph_id, g_m_g):
-        for related_g in self.adjacent_relations(graph_id):
-            rel = self.get_relation(graph_id, related_g)
-            new_rel = dict()
-            for node in self.get_graph(graph_id).nodes():
-                old_node = g_m_g[node]
-                if old_node in rel.keys():
-                    new_rel[node] = rel[old_node]
-
-            self._update_relation(graph_id, related_g, new_rel)
-
-    def _expansive_update_incident_homs(self, graph_id, g_m_g_prime):
-        for pred in self.predecessors(graph_id):
-            typing = self.get_typing(pred, graph_id)
-            self._update_mapping(
-                pred, graph_id, compose(typing, g_m_g_prime))
-
-    def _expansive_update_incident_rels(self, graph_id, g_m_g_prime):
-        for related_g in self.adjacent_relations(graph_id):
-            rel = self.get_relation(graph_id, related_g)
-            new_rel = dict()
-
-            for node in self.get_graph(graph_id).nodes():
-                new_node = g_m_g_prime[node]
-                if node in rel.keys():
-                    new_rel[new_node] = rel[node]
-
-            self._update_relation(graph_id, related_g, new_rel)
 
     def _get_rule_liftings(self, graph_id, rule, instance, p_typing):
         pass

@@ -411,6 +411,7 @@ class NXGraph(Graph):
                             g.node[node]):
                         matching_nodes.add(node)
 
+        # find all the isomorphic subgraphs
         reduced_graph = g.subgraph(matching_nodes)
         instances = []
         isomorphic_subgraphs = []

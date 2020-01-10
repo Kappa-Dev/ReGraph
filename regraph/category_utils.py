@@ -1,7 +1,7 @@
 """Category operations used by graph rewriting tool."""
 import copy
 
-from regraph.networkx.graphs import NXGraph
+from regraph.backends.networkx.graphs import NXGraph
 
 from regraph.utils import (keys_by_value,
                            merge_attributes,

@@ -15,7 +15,7 @@ from regraph.exceptions import (HierarchyError,
                                 RewritingError,
                                 ReGraphWarning)
 from regraph.hierarchies import Hierarchy
-from regraph.networkx.graphs import NXGraph
+from regraph.backends.networkx.graphs import NXGraph
 from regraph.category_utils import (compose,
                                     pushout,
                                     get_unique_map_to_pullback,
@@ -494,65 +494,6 @@ class NXHierarchy(Hierarchy, NXGraph):
     def shortest_path(self, source, target):
         """Shortest path from 'source' to 'target'."""
         return nx.shortest_path(self._graph, source, target)
-
-    def find_matching(self, graph_id, pattern,
-                      pattern_typing=None, nodes=None):
-        """Find an instance of a pattern in a specified graph.
-
-        graph_id : hashable
-            Id of a graph in the hierarchy to search for matches
-        pattern : regraph.Graph or nx.DiGraph object
-            A pattern to match
-        pattern_typing : dict
-            A dictionary that specifies a typing of a pattern,
-            keys of the dictionary -- graph id that types a pattern, this graph
-            should be among parents of the `graph_id` graph;
-            values are mappings of nodes from pattern to the typing graph;
-        nodes : iterable
-            Subset of nodes where matching should be performed
-        """
-        if pattern_typing is None:
-            pattern_typing = dict()
-
-        if self.is_rule(graph_id):
-            raise ReGraphError(
-                "Pattern matching in a rule is not implemented!")
-
-        # Check that 'typing_graph' and 'pattern_typing' are correctly
-        # specified
-        descendants = self.get_descendants(graph_id)
-        if pattern_typing is not None:
-            for typing_graph, _ in pattern_typing.items():
-                if typing_graph not in descendants.keys():
-                    raise HierarchyError(
-                        "Pattern typing graph '{}' is not in "
-                        "the (transitive) typing graphs of '{}'!".format(
-                            typing_graph, graph_id)
-                    )
-
-            # Check pattern typing is a valid homomorphism
-            for typing_graph, mapping in pattern_typing.items():
-                try:
-                    check_homomorphism(
-                        pattern,
-                        self.get_graph(typing_graph),
-                        mapping
-                    )
-                except InvalidHomomorphism as e:
-                    raise ReGraphError(
-                        "Specified pattern is not valid in the "
-                        "hierarchy (it produces the following error: "
-                        "{}) ".format(e)
-                    )
-
-        graph_typing = {
-            typing_graph: self.compose_path_typing(
-                nx.shortest_path(self._graph, graph_id, typing_graph))
-            for typing_graph in pattern_typing.keys()
-        }
-        instances = self.get_graph(graph_id).find_matching(
-            pattern, nodes, graph_typing, pattern_typing)
-        return instances
 
     def copy_graph(self, graph_id, new_graph_id, attach_graphs=None):
         """Create a copy of a graph in a hierarchy."""
@@ -1544,10 +1485,10 @@ class NXHierarchy(Hierarchy, NXGraph):
 
                 self._update_relation(graph_id, related_g, new_rel)
 
-    def _expansive_update_incident_homs(self, graph_id, g_m_g_prime):
+    def _expansive_update_incident_homs(self, graph_id, g_m_g_prime,
+                                        pred_typings):
         """Update incident homomorphisms after an expansive change."""
-        for pred in self.predecessors(graph_id):
-            typing = self.get_typing(pred, graph_id)
+        for pred, typing in pred_typings.items():
             if self.is_graph(pred):
                 self._update_mapping(
                     pred, graph_id, compose(typing, g_m_g_prime))
