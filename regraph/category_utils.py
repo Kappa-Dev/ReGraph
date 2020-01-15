@@ -149,25 +149,20 @@ def is_monic(f):
 
 # Categorical constructions on simple graphs
 
-def pullback(b, c, d, b_d, c_d, inplace=False):
+def pullback(b, c, d, b_d, c_d):
     """Find the pullback from b -> d <- c.
 
     Given h1 : B -> D; h2 : C -> D returns A, rh1, rh2
     with rh1 : A -> B; rh2 : A -> C and A the pullback.
     """
-    if inplace is True:
-        a = b
-    else:
-        a = NXGraph()
-        a.add_nodes_from(b.nodes(data=True))
-        a.add_edges_from(b.edges(data=True))
+    a = NXGraph()
 
     # Check homomorphisms
     check_homomorphism(b, d, b_d)
     check_homomorphism(c, d, c_d)
 
-    hom1 = {}
-    hom2 = {}
+    a_b = {}
+    a_c = {}
 
     f = b_d
     g = c_d
@@ -180,8 +175,8 @@ def pullback(b, c, d, b_d, c_d, inplace=False):
                                              'intersection')
                 if n1 not in a.nodes():
                     a.add_node(n1, new_attrs)
-                    hom1[n1] = n1
-                    hom2[n1] = n2
+                    a_b[n1] = n1
+                    a_c[n1] = n2
                 else:
                     i = 1
                     new_name = str(n1) + str(i)
@@ -190,25 +185,24 @@ def pullback(b, c, d, b_d, c_d, inplace=False):
                         new_name = str(n1) + str(i)
                     # if n2 not in a.nodes():
                     a.add_node(new_name, new_attrs)
-                    hom1[new_name] = n1
-                    hom2[new_name] = n2
+                    a_b[new_name] = n1
+                    a_c[new_name] = n2
 
     for n1 in a.nodes():
         for n2 in a.nodes():
-            if (hom1[n1], hom1[n2]) in b.edges():
-                if (hom2[n1], hom2[n2]) in c.edges():
+            if (a_b[n1], a_b[n2]) in b.edges():
+                if (a_c[n1], a_c[n2]) in c.edges():
                     a.add_edge(n1, n2)
                     a.set_edge(
-                        a,
                         n1,
                         n2,
                         merge_attributes(
-                            b.get_edge(hom1[n1], hom1[n2]),
-                            c.get_edge(hom2[n1], hom2[n2]),
+                            b.get_edge(a_b[n1], a_b[n2]),
+                            c.get_edge(a_c[n1], a_c[n2]),
                             'intersection'))
-    check_homomorphism(a, b, hom1)
-    check_homomorphism(a, c, hom2)
-    return (a, hom1, hom2)
+    check_homomorphism(a, b, a_b)
+    check_homomorphism(a, c, a_c)
+    return (a, a_b, a_c)
 
 
 def pushout(a, b, c, a_b, a_c, inplace=False):

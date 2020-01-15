@@ -1,7 +1,7 @@
 """Collection of tests for ReGraph_neo4j graphs."""
 
-from regraph.neo4j import Neo4jGraph
-from regraph.neo4j.cypher_utils import *
+from regraph import Neo4jGraph
+from regraph.backends.neo4j.cypher_utils import *
 
 
 class TestNeo4jGraph(object):

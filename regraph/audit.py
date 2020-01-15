@@ -17,7 +17,7 @@ from regraph.primitives import (relabel_nodes,
                                 graph_to_json,
                                 networkx_from_json)
 from regraph.utils import keys_by_value
-from regraph.networkx.hierarchy import NetworkXHierarchy
+from regraph.backends.networkx.hierarchies import NXHierarchy
 
 
 def _generate_new_commit_meta_data():
@@ -521,7 +521,7 @@ class VersionedGraph(Versioning):
                 for k, v in rhs_instance.items()
             }
 
-            relabel_nodes(self.graph, new_labels)
+            self.graph.relabel_nodes(new_labels)
             rhs_instance = {
                 k: new_labels[v]
                 for k, v in rhs_instance.items()

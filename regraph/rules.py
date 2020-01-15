@@ -1529,7 +1529,7 @@ def compose_rules(rule1, lhs_instance1, rhs_instance1,
 
     # fixed to new implementation
     p1_p_instance = get_unique_map_to_pullback_complement(
-        p1_instance, g1_m_g2, identity(rule1.p), p1_p1_p,
+        p1_instance, g1_m_g2, identity(rule1.p, rule1.p), p1_p1_p,
         compose(p1_p_h, h_instance))
 
     # find p2_p instance
@@ -1542,7 +1542,7 @@ def compose_rules(rule1, lhs_instance1, rhs_instance1,
             g2_m_g2[v] = v
 
     p2_p_instance = get_unique_map_to_pullback_complement(
-        p2_instance, g2_m_g2, identity(rule2.p),
+        p2_instance, g2_m_g2, identity(rule2.p, rule2.p),
         p2_p2_p, compose(p2_p_h, h_instance))
 
     g1_m_g1 = {

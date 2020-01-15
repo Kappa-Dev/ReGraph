@@ -1,7 +1,5 @@
 """Test of the hierarchy functionality with all typings being partial."""
-import networkx as nx
-
-from regraph import NetworkXHierarchy
+from regraph import NXHierarchy, NXGraph
 from regraph import Rule
 from regraph import RewritingError
 from regraph import primitives
@@ -10,9 +8,8 @@ from regraph import primitives
 class TestPropagation(object):
 
     def __init__(self):
-        hierarchy = NetworkXHierarchy()
-        hierarchy = NetworkXHierarchy()
-        colors = nx.DiGraph()
+        hierarchy = NXHierarchy()
+        colors = NXGraph()
         primitives.add_nodes_from(
             colors,
             [("red", {"r": 255, "g": 0, "b": 0}),
@@ -24,7 +21,7 @@ class TestPropagation(object):
         )
         hierarchy.add_graph("colors", colors)
 
-        mmm = nx.DiGraph()
+        mmm = NXGraph()
         primitives.add_nodes_from(
             mmm,
             ["component", "state", "action"]
@@ -40,7 +37,7 @@ class TestPropagation(object):
 
         hierarchy.add_graph("mmm", mmm)
 
-        mm = nx.DiGraph()
+        mm = NXGraph()
         primitives.add_nodes_from(
             mm,
             ["gene", "residue", "state", "mod"]
@@ -55,7 +52,7 @@ class TestPropagation(object):
         )
         hierarchy.add_graph("mm", mm)
 
-        action_graph = nx.DiGraph()
+        action_graph = NXGraph()
         primitives.add_nodes_from(
             action_graph,
             ["A", "A_res_1", "p_a", "B", "mod1",
@@ -75,7 +72,7 @@ class TestPropagation(object):
         )
         hierarchy.add_graph("ag", action_graph)
 
-        nugget_1 = nx.DiGraph()
+        nugget_1 = NXGraph()
         primitives.add_nodes_from(
             nugget_1,
             ["A", "A_res_1", "p", "B", "mod"]
@@ -89,7 +86,7 @@ class TestPropagation(object):
         )
         hierarchy.add_graph("n1", nugget_1)
 
-        nugget_2 = nx.DiGraph()
+        nugget_2 = NXGraph()
         primitives.add_nodes_from(
             nugget_2,
             ["B", "activity", "mod", "p", "C"])
@@ -160,17 +157,17 @@ class TestPropagation(object):
 
     def test_propagation_node_adds(self):
         """Test propagation down of additions."""
-        p = nx.DiGraph()
+        p = NXGraph()
         primitives.add_nodes_from(
             p, ["B"]
         )
 
-        l = nx.DiGraph()
+        l = NXGraph()
         primitives.add_nodes_from(
             l, ["B"]
         )
 
-        r = nx.DiGraph()
+        r = NXGraph()
         primitives.add_nodes_from(
             r, ["B", "B_res_1", "X", "Y"]
         )
@@ -192,48 +189,49 @@ class TestPropagation(object):
         except RewritingError:
             pass
 
-        new_hierarchy, _ = self.hierarchy.rewrite(
-            "n1", rule, instance, rhs_typing=rhs_typing,
-            inplace=False)
+        new_hierarchy = NXHierarchy.copy(self.hierarchy)
+
+        new_hierarchy.rewrite(
+            "n1", rule, instance, rhs_typing=rhs_typing)
 
         # test propagation of node adds
-        assert("B_res_1" in new_hierarchy.graph["n1"].nodes())
-        assert("B_res_1" in new_hierarchy.graph["ag"].nodes())
-        assert(new_hierarchy.typing["n1"]["ag"]["B_res_1"] == "B_res_1")
-        assert(new_hierarchy.typing["ag"]["mm"]["B_res_1"] == "residue")
-        assert(("B_res_1", "B") in new_hierarchy.graph["n1"].edges())
-        assert(("B_res_1", "B") in new_hierarchy.graph["ag"].edges())
+        assert("B_res_1" in new_hierarchy.get_graph("n1").nodes())
+        assert("B_res_1" in new_hierarchy.get_graph("ag").nodes())
+        assert(new_hierarchy.get_typing("n1", "ag")["B_res_1"] == "B_res_1")
+        assert(new_hierarchy.get_typing("ag", "mm")["B_res_1"] == "residue")
+        assert(("B_res_1", "B") in new_hierarchy.get_graph("n1").edges())
+        assert(("B_res_1", "B") in new_hierarchy.get_graph("ag").edges())
 
-        assert("X" in new_hierarchy.graph["n1"].nodes())
-        assert("X" in new_hierarchy.graph["ag"].nodes())
-        assert("X" in new_hierarchy.graph["mm"].nodes())
-        assert("X" in new_hierarchy.graph["colors"].nodes())
-        assert(new_hierarchy.typing["n1"]["ag"]["X"] == "X")
-        assert(new_hierarchy.typing["ag"]["mm"]["X"] == "X")
-        assert(new_hierarchy.typing["mm"]["mmm"]["X"] == "component")
-        assert(new_hierarchy.typing["mm"]["colors"]["X"] == "X")
+        assert("X" in new_hierarchy.get_graph("n1").nodes())
+        assert("X" in new_hierarchy.get_graph("ag").nodes())
+        assert("X" in new_hierarchy.get_graph("mm").nodes())
+        assert("X" in new_hierarchy.get_graph("colors").nodes())
+        assert(new_hierarchy.get_typing("n1", "ag")["X"] == "X")
+        assert(new_hierarchy.get_typing("ag", "mm")["X"] == "X")
+        assert(new_hierarchy.get_typing("mm", "mmm")["X"] == "component")
+        assert(new_hierarchy.get_typing("mm", "colors")["X"] == "X")
 
-        assert("Y" in new_hierarchy.graph["n1"].nodes())
-        assert("Y" in new_hierarchy.graph["ag"].nodes())
-        assert("Y" in new_hierarchy.graph["mm"].nodes())
-        assert("Y" in new_hierarchy.graph["mm"].nodes())
-        assert(new_hierarchy.typing["n1"]["ag"]["Y"] == "Y")
-        assert(new_hierarchy.typing["ag"]["mm"]["Y"] == "Y")
-        assert(new_hierarchy.typing["mm"]["mmm"]["Y"] == "Y")
-        assert(new_hierarchy.typing["mm"]["colors"]["Y"] == "red")
+        assert("Y" in new_hierarchy.get_graph("n1").nodes())
+        assert("Y" in new_hierarchy.get_graph("ag").nodes())
+        assert("Y" in new_hierarchy.get_graph("mm").nodes())
+        assert("Y" in new_hierarchy.get_graph("mm").nodes())
+        assert(new_hierarchy.get_typing("n1", "ag")["Y"] == "Y")
+        assert(new_hierarchy.get_typing("ag", "mm")["Y"] == "Y")
+        assert(new_hierarchy.get_typing("mm", "mmm")["Y"] == "Y")
+        assert(new_hierarchy.get_typing("mm", "colors")["Y"] == "red")
 
     def test_porpagation_node_attrs_adds(self):
-        p = nx.DiGraph()
+        p = NXGraph()
         primitives.add_nodes_from(
             p, [1, 2]
         )
 
-        lhs = nx.DiGraph()
+        lhs = NXGraph()
         primitives.add_nodes_from(
             lhs, [1, 2]
         )
 
-        rhs = nx.DiGraph()
+        rhs = NXGraph()
         primitives.add_nodes_from(
             rhs,
             [
@@ -255,26 +253,27 @@ class TestPropagation(object):
         except RewritingError:
             pass
 
-        new_hierarchy, _ = self.hierarchy.rewrite(
+        new_hierarchy = NXHierarchy.copy(self.hierarchy)
+
+        new_hierarchy.rewrite(
             "n1", rule, instance,
-            rhs_typing=rhs_typing,
-            inplace=False)
+            rhs_typing=rhs_typing)
 
         # test propagation of the node attribute adds
-        assert("a1" in new_hierarchy.graph["n1"].node["A"])
-        assert("a2" in new_hierarchy.graph["n1"].node["A_res_1"])
-        assert("a3" in new_hierarchy.graph["n1"].node[3])
+        assert("a1" in new_hierarchy.get_graph("n1").get_node("A"))
+        assert("a2" in new_hierarchy.get_graph("n1").get_node("A_res_1"))
+        assert("a3" in new_hierarchy.get_graph("n1").get_node(3))
 
-        assert("a1" in new_hierarchy.graph["ag"].node["A"])
-        assert("a2" in new_hierarchy.graph["ag"].node["A_res_1"])
-        assert("a3" in new_hierarchy.graph["ag"].node[3])
+        assert("a1" in new_hierarchy.get_graph("ag").get_node("A"))
+        assert("a2" in new_hierarchy.get_graph("ag").get_node("A_res_1"))
+        assert("a3" in new_hierarchy.get_graph("ag").get_node(3))
         # assert("a" in new_hierarchy.graph["ag"].node["B"])
         # assert("a" in new_hierarchy.graph["mm"].node["gene"])
         # assert("a" in new_hierarchy.graph["mmm"].node["component"])
         # assert("a" in new_hierarchy.graph["colors"].node["red"])
 
     def test_controlled_up_propagation(self):
-        pattern = nx.DiGraph()
+        pattern = NXGraph()
         pattern.add_nodes_from(["A"])
         rule = Rule.from_transform(pattern)
         p_clone, _ = rule.inject_clone_node("A")
@@ -282,7 +281,7 @@ class TestPropagation(object):
 
         p_typing = {
             "nn1": {
-                "A_bye": {},
+                "A_bye": set(),
                 "A_hello": {p_clone}
             },
             "n1": {
@@ -294,7 +293,7 @@ class TestPropagation(object):
             "A": "A"
         }
 
-        nugget_1 = nx.DiGraph()
+        nugget_1 = NXGraph()
         primitives.add_nodes_from(
             nugget_1,
             ["A_bye", "A_hello", "A_res_1", "p", "B", "mod"]
@@ -319,10 +318,10 @@ class TestPropagation(object):
                 "mod": "mod"
             })
 
-        new_hierarchy, _ = self.hierarchy.rewrite(
+        new_hierarchy = NXHierarchy.copy(self.hierarchy)
+        new_hierarchy.rewrite(
             "ag", rule, instance,
-            p_typing=p_typing,
-            inplace=False)
+            p_typing=p_typing)
 
-        primitives.print_graph(new_hierarchy.get_graph("nn1"))
-        print(new_hierarchy.typing["nn1"]["n1"])
+        # primitives.print_graph(new_hierarchy.get_graph("nn1"))
+        # print(new_hierarchy.get_typing("nn1", "n1"))

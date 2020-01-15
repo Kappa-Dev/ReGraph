@@ -281,6 +281,7 @@ class Graph(ABC):
         t : hashable
             Target node id.
         """
+        # print("\n\n\n\n\n\n\n\n\n\n", s, t, self.edges())
         return((s, t) in self.edges())
 
     def set_node_attrs(self, node_id, attrs, normalize=True, update=True):
@@ -454,7 +455,6 @@ class Graph(ABC):
 
         edge_attrs = safe_deepcopy_dict(self.get_edge(s, t))
         remove_attrs(edge_attrs, attrs, normalize=True)
-        print("Here", edge_attrs)
         self.update_edge_attrs(s, t, edge_attrs)
 
     def clone_node(self, node_id, name=None):
@@ -510,8 +510,6 @@ class Graph(ABC):
 
         # Copy the attributes of the edges
         for s, t in self.in_edges(node_id):
-            print(
-                s, t, self.get_edge(s, t), safe_deepcopy_dict(self.get_edge(s, t)))
             self.set_edge(
                 s, new_node,
                 safe_deepcopy_dict(self.get_edge(s, t)))
@@ -994,14 +992,15 @@ class Graph(ABC):
                     new_id = self.generate_new_node_id(n)
                 else:
                     new_id = n
-                self.add_node(new_id)
+                new_id = self.add_node(new_id)
                 rhs_g[n] = new_id
             elif n not in merged_nodes:
                 rhs_g[n] = p_g[keys_by_value(rule.p_rhs, n)[0]]
 
         # Add edges
         for u, v in rule.added_edges():
-            self.add_edge(rhs_g[u], rhs_g[v])
+            if (rhs_g[u], rhs_g[v]) not in self.edges():
+                self.add_edge(rhs_g[u], rhs_g[v])
 
         # Add node attributes
         for rhs_node, attrs in rule.added_node_attrs().items():

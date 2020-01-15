@@ -1,11 +1,9 @@
-import networkx as nx
-
-from regraph.graphs import NXGraph
+from regraph.backends.networkx.graphs import NXGraph
 from regraph import Rule
 from regraph.rules import compose_rules, _create_merging_rule
 from regraph import keys_by_value
 from regraph import RuleError
-from regraph.networkx.category_utils import check_homomorphism
+from regraph.category_utils import check_homomorphism
 import regraph.primitives as prim
 
 
@@ -540,5 +538,4 @@ class TestRule(object):
 
         rule1, rule2 = _create_merging_rule(
             rule, lhs_instance, rhs_instance)
-        print(rule1)
-        print(rule2)
+

@@ -44,17 +44,17 @@ class Hierarchy(ABC):
     """
 
     @abstractmethod
-    def graphs(self):
+    def graphs(self, data=False):
         """Return a list of graphs in the hierarchy."""
         pass
 
     @abstractmethod
-    def typings(self):
+    def typings(self, data=False):
         """Return a list of graph typing edges in the hierarchy."""
         pass
 
     @abstractmethod
-    def relations(self):
+    def relations(self, data=False):
         """Return a list of relations."""
         pass
 
@@ -782,8 +782,7 @@ class Hierarchy(ABC):
         descendants = self.get_descendants(origin_id)
 
         # Compute rule liftings
-        for ancestor, origin_typing in ancestors:
-
+        for ancestor, origin_typing in ancestors.items():
             # Compute L_G
             l_g, l_g_g, l_g_l = pullback(
                 self.get_graph(ancestor),
@@ -830,8 +829,9 @@ class Hierarchy(ABC):
         r_r_ts = {}  # Original rule RHS to the RHS of rule projections
 
         # Compute rule projections
-        for descendant, origin_typing in descendants:
+        for descendant, origin_typing in descendants.items():
             # Compute canonical P_T
+
             l_t, l_l_t, l_t_t = image_factorization(
                 rule.lhs, self.get_graph(descendant),
                 compose(instance, origin_typing))
@@ -839,7 +839,8 @@ class Hierarchy(ABC):
             # Compute canonical R_T
             r_t, l_t_r_t, r_r_t = pushout(
                 rule.p, l_t, rule.rhs,
-                l_l_t, rule.p_rhs)
+                compose(rule.p_lhs, l_l_t),
+                rule.p_rhs)
 
             # Modify P_T and R_T according to the controlling
             # relation rhs_typing
@@ -872,17 +873,17 @@ class Hierarchy(ABC):
 
             instances[descendant] = l_t_t
             l_l_ts[descendant] = l_l_t
-            p_p_ts[descendant] = {k: l_l_t[v] for k, v in rule.p_lhs.items()},
+            p_p_ts[descendant] = {k: l_l_t[v] for k, v in rule.p_lhs.items()}
             r_r_ts[descendant] = r_r_t
 
         # Compute homomorphisms between rules
-        for graph_id, graph_rule in rule_hierarchy["rules"]:
+        for graph_id, graph_rule in rule_hierarchy["rules"].items():
             if graph_id in ancestors:
                 for successor in self.successors(graph_id):
                     old_typing = self.get_typing(graph_id, successor)
                     if successor == origin_id:
                         graph_lhs_successor_lhs = l_g_ls[graph_id]
-                        graph_p_successor_p = p_g_p[graph_id]
+                        graph_p_successor_p = p_g_ps[graph_id]
                         rule_hierarchy["rule_homomorphisms"][
                             (graph_id, successor)] = (
                                 graph_lhs_successor_lhs,
@@ -945,7 +946,7 @@ class Hierarchy(ABC):
                     old_typing = self.get_typing(predecessor, graph_id)
                     if predecessor == origin_id:
                         predecessor_l_graph_l = l_l_ts[graph_id]
-                        predecessor_p_graph_p = p_p_t[graph_id]
+                        predecessor_p_graph_p = p_p_ts[graph_id]
                         predecessor_rhs_graph_rhs = r_r_ts[graph_id]
                         rule_hierarchy["rule_homomorphisms"][
                             (predecessor, graph_id)] = (
@@ -973,8 +974,8 @@ class Hierarchy(ABC):
                                     r_pred_node)
                                 for v in p_pred_nodes:
                                     p_graph_node = predecessor_l_graph_l[v]
-                                    r_graph_node = rule_hierarchy["rules"][graph_id][
-                                        "rule"].p_rhs[p_graph_node]
+                                    r_graph_node = rule_hierarchy["rules"][graph_id].p_rhs[
+                                        p_graph_node]
                                 if len(p_pred_nodes) == 0:
                                     r_graph_node = r_r_ts[graph_id][r_node]
                                 predecessor_rhs_graph_rhs[r_pred_node] = r_graph_node
@@ -1320,8 +1321,7 @@ class Hierarchy(ABC):
             self.get_graph(right),
             self.get_relation(left, right),
             edges,
-            attrs,
-            True)
+            attrs)
         return common, left_h, right_h
 
     def find_matching(self, graph_id, pattern,
@@ -1516,7 +1516,6 @@ class Hierarchy(ABC):
                 if successor in updated_graphs:
                     lhs_h, p_h, rhs_h = rule_hierarchy[
                         "rule_homomorphisms"][(graph, successor)]
-
                     graph_m_successor_m =\
                         get_unique_map_to_pullback_complement(
                             updated_graphs[successor]["p_g_m"],
@@ -1527,7 +1526,7 @@ class Hierarchy(ABC):
                                     old_typing))
                     new_typing =\
                         get_unique_map_from_pushout(
-                            updated_graphs[graph]["g_result"].nodes(),
+                            self.get_graph(graph).nodes(),
                             updated_graphs[graph]["g_m_g_prime"],
                             updated_graphs[graph]["r_g_prime"],
                             compose(
@@ -1770,7 +1769,7 @@ class Hierarchy(ABC):
         """
         # Extract the restrictive part of the rule
         restrictive_rule = Rule(p=rule.p, lhs=rule.lhs, p_lhs=rule.p_lhs)
-        g = self._access_graph(graph_id)
+        g = self.get_graph(graph_id)
         p_g_m = g.rewrite(
             restrictive_rule, instance)
         g_m_g = {
@@ -1794,7 +1793,7 @@ class Hierarchy(ABC):
         """
         # Extract the expansive part of the rule
         expansive_rule = Rule(p=rule.p, rhs=rule.rhs, p_rhs=rule.p_rhs)
-        g = self._access_graph(graph_id)
+        g = self.get_graph(graph_id)
 
         pred_typings = {
             p: self.get_typing(p, graph_id)
@@ -1805,9 +1804,9 @@ class Hierarchy(ABC):
             a: self.get_relation(graph_id, a)
             for a in self.adjacent_relations(graph_id)
         }
-
         r_g_prime = g.rewrite(
             expansive_rule, instance)
+
         g_m_g_prime = {
             v: r_g_prime[expansive_rule.p_rhs[k]] for k, v in instance.items()
         }
@@ -1833,7 +1832,6 @@ class Hierarchy(ABC):
         g_m_origin_ms = {}
 
         for graph_id in self.bfs_tree(origin_id, reverse=True):
-
             graph_p_typing = {}
             if graph_id in p_typing.keys():
                 graph_p_typing = p_typing[graph_id]
@@ -1843,7 +1841,6 @@ class Hierarchy(ABC):
             g_m_g = self._get_identity_map(graph_id)
 
             g_m_origin_m = copy.deepcopy(origin_typing)
-
             # Propagate node clones
             if len(rule.cloned_nodes()) > 0:
                 self._propagate_clone(
@@ -1891,8 +1888,8 @@ class Hierarchy(ABC):
                         g_m_origin_ms[pred])
                 else:
                     pred_graph = g_m_origin_ms[pred]
-                self.remove_typing(pred, graph_id)
-                self.add_typing(pred, graph_id, pred_graph)
+                # self.remove_typing(pred, graph_id)
+                self._update_mapping(pred, graph_id, pred_graph)
 
     def _expansive_rewrite_and_propagate_forward(self, origin_id, rule,
                                                  instance, p_origin_m,
@@ -1918,8 +1915,7 @@ class Hierarchy(ABC):
             # origin_prime_g_prime = {
             #     k: v for k, v in origin_typing.items()
             # }
-            rhs_g_prime = compose(instance, origin_typing)
-
+            rhs_g_prime = compose(p_origin_m, origin_typing)
             # Propagate node merges
             if len(rule.merged_nodes()) > 0:
                 self._propagate_merge(
@@ -1966,14 +1962,6 @@ class Hierarchy(ABC):
             graph_nodes = self.get_graph(graph_id).nodes()
             for suc in self.successors(graph_id):
                 suc_typing = self.get_typing(graph_id, suc)
-                # if graph_id != origin_id:
-                #     graph_suc = get_unique_map_from_pushout(
-                #         graph_nodes,
-                #         g_g_prime,
-                #         rhs_g_primes[graph_id],
-                #         suc_typing,
-                #         rhs_g_primes[suc])
-                # else:
                 for rhs_node in rule.rhs.nodes():
                     g_nodes = keys_by_value(
                         g_g_prime, rhs_g_primes[graph_id][rhs_node])
@@ -1988,9 +1976,8 @@ class Hierarchy(ABC):
                     g_g_prime,
                     rhs_g_primes[suc],
                     suc_typing)
-
-                self.remove_typing(graph_id, suc)
-                self.add_typing(graph_id, suc, graph_suc)
+                # self.remove_typing(graph_id, suc)
+                self._update_mapping(graph_id, suc, graph_suc)
         return rhs_origin_prime
 
     @staticmethod
@@ -2089,18 +2076,20 @@ class Hierarchy(ABC):
         """
         graph = self.get_graph(node_id)
         origin_typing = self.get_typing(node_id, origin_id)
+
+        for lhs_node in rule.removed_nodes():
+            origin_n = instance[lhs_node]
+            graph_nodes = keys_by_value(origin_typing, origin_n)
+            for node in graph_nodes:
+                graph.remove_node(node)
+                del g_m_g[node]
+                del g_m_origin_m[node]
+
         for node in graph.nodes():
             if node not in origin_typing.keys():
                 graph.remove_node(node)
                 del g_m_g[node]
-            else:
-                for lhs_node in rule.removed_nodes():
-                    origin_n = instance[lhs_node]
-                    graph_nodes = keys_by_value(origin_typing, origin_n)
-                    for node in graph_nodes:
-                        graph.remove_node(node)
-                        del g_m_g[node]
-                        del g_m_origin_m[node]
+                del g_m_origin_m[node]
 
         self._restrictive_update_incident_homs(node_id, g_m_g)
         self._restrictive_update_incident_rels(node_id, g_m_g)
@@ -2435,3 +2424,8 @@ class Hierarchy(ABC):
                                 "'{}' is not in the instances of ".format(s_node) +
                                 "the rule applied to '{}'".format(s)
                             )
+
+    def relabel_nodes(self, graph, mapping):
+        """Relabel nodes of a graph in the hierarchy."""
+        graph = self.get_graph(graph)
+        graph.relabel_nodes(mapping)

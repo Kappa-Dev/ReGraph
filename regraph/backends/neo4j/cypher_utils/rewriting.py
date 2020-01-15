@@ -803,7 +803,7 @@ def find_matching(pattern, node_label, edge_label,
                 query += " AND "
             query +=\
                 " AND ".join(
-                    "(`{}`)-[:typing]->(:{} {{id: '{}'}})".format(
+                    "(`{}`)-[:typing*..]->(:{} {{id: '{}'}})".format(
                         n, typing_graph, pattern_typing[typing_graph][n])
                     for n in pattern.nodes() if n in pattern_typing[typing_graph].keys()
                 ) + "\n "

@@ -1,6 +1,6 @@
 """Units tests for graph classes."""
 from regraph import Rule
-from regraph.graphs import Neo4jGraph, NXGraph
+from regraph import Neo4jGraph, NXGraph
 
 import logging
 

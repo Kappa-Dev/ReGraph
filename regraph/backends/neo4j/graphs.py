@@ -145,16 +145,17 @@ class Neo4jGraph(Graph):
         query = generic.get_nodes(node_label=self._node_label, data=data)
         result = self._execute(query)
 
-        if data:
-            node_list = []
-            for d in result:
-                node_id = d["node_id"]
+        node_list = []
+        for d in result:
+            node_id = d["node_id"]
+            if data:
                 attrs = d["attrs"]
                 del attrs["id"]
+                normalize_attrs(attrs)
                 node_list.append((node_id, attrs))
-            return node_list
-        else:
-            return [d["node_id"] for d in result]
+            else:
+                node_list.append(node_id)
+        return node_list
 
     def edges(self, data=False):
         """Return the list of edges of the graph."""
@@ -164,10 +165,24 @@ class Neo4jGraph(Graph):
             self._edge_label,
             data=data)
         result = self._execute(query)
-        if data:
-            return [(d["source_id"], d["target_id"], d["attrs"]) for d in result]
-        else:
-            return [(d["source_id"], d["target_id"]) for d in result]
+        edges = []
+
+        for d in result:
+            if d["source_id"] not in self.nodes():
+                s = int(d["source_id"])
+            else:
+                s = d["source_id"]
+            if d["target_id"] not in self.nodes():
+                t = int(d["target_id"])
+            else:
+                t = d["target_id"]
+            if data:
+                normalize_attrs(d["attrs"])
+                edges.append((s, t, d["attrs"]))
+            else:
+                edges.append((s, t))
+
+        return edges
 
     def get_node(self, node_id):
         """Get node attributes.
@@ -379,7 +394,9 @@ class Neo4jGraph(Graph):
                 pattern,
                 node_label=self._node_label,
                 edge_label=self._edge_label,
-                nodes=matching_nodes)
+                nodes=matching_nodes,
+                pattern_typing=pattern_typing)
+
             result = self._execute(query)
             instances = list()
 
@@ -394,21 +411,8 @@ class Neo4jGraph(Graph):
                         new_instance[int(pattern_node)] = v
                     else:
                         new_instance[pattern_node] = v
-                instance = new_instance
 
-                # filter instances to match the typing
-                type_matches = True
-                for pattern_node, node in instance.items():
-                    if pattern_typing:
-                        for g, pattern_mapping in pattern_typing.items():
-                            if node in graph_typing[g].keys() and\
-                               pattern_node in pattern_mapping.keys():
-
-                                if graph_typing[g][node] != pattern_mapping[pattern_node]:
-                                    type_matches = False
-                                    break
-                if type_matches:
-                    instances.append(instance)
+                instances.append(new_instance)
         else:
             instances = []
         return instances

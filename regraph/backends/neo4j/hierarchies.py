@@ -36,7 +36,8 @@ from .cypher_utils.generic import (constraint_query,
 from .cypher_utils.propagation import (set_intergraph_edge,
                                        check_homomorphism,
                                        check_consistency,
-                                       get_typing)
+                                       get_typing,
+                                       get_relation)
 from .cypher_utils.rewriting import (add_edge,
                                      remove_nodes,
                                      remove_edge)
@@ -59,29 +60,53 @@ class Neo4jHierarchy(Hierarchy):
 
     # Implementation of abstract methods
 
-    def graphs(self):
+    def graphs(self, data=False):
         """Return a list of graphs in the hierarchy."""
-        query = get_nodes(node_label=self._graph_label)
+        query = get_nodes(node_label=self._graph_label, data=data)
         result = self.execute(query)
-        return [list(d.values())[0] for d in result]
+        graphs = []
+        for d in result:
+            if data:
+                normalize_attrs(d["attrs"])
+                del d["attrs"]["id"]
+                graphs.append((d["node_id"], d["attrs"]))
+            else:
+                graphs.append(d["node_id"])
+        return graphs
 
-    def typings(self):
+    def typings(self, data=False):
         """Return a list of graph typing edges in the hierarchy."""
         query = get_edges(
             self._graph_label,
             self._graph_label,
-            self._typing_label)
+            self._typing_label,
+            data=data)
         result = self.execute(query)
-        return [(d["n.id"], d["m.id"]) for d in result]
+        typings = []
+        for d in result:
+            if data:
+                normalize_attrs(d["attrs"])
+                typings.append((d["source_id"], d["target_id"], d["attrs"]))
+            else:
+                typings.append((d["source_id"], d["target_id"]))
+        return typings
 
-    def relations(self):
+    def relations(self, data=False):
         """Return a list of relations."""
         query = get_edges(
             self._graph_label,
             self._graph_label,
-            self._relation_label)
+            self._relation_label,
+            data=data)
         result = self.execute(query)
-        return [(d["n.id"], d["m.id"]) for d in result]
+        relations = []
+        for d in result:
+            if data:
+                normalize_attrs(d["attrs"])
+                relations.append((d["source_id"], d["target_id"], d["attrs"]))
+            else:
+                relations.append((d["source_id"], d["target_id"]))
+        return relations
 
     def successors(self, node_id):
         """Return the set of successors."""
@@ -120,7 +145,7 @@ class Neo4jHierarchy(Hierarchy):
 
     def get_relation(self, left_id, right_id):
         """Get a relation dict associated to the rel 'left_id->target_id'."""
-        query = get_typing(left_id, right_id, "relation")
+        query = get_relation(left_id, right_id, "relation")
         result = self.execute(query)
         relation = {}
         for record in result:
@@ -290,7 +315,8 @@ class Neo4jHierarchy(Hierarchy):
         graph_attrs : dict, optional
             Dictionary containing attributes of the new node
         """
-        self.add_graph(graph_id, attrs=attrs)
+        self.add_graph_from_data(
+            graph_id, node_list=[], edge_list=[], attrs=attrs)
 
     def add_typing(self, source, target, mapping, attrs=None, check=True):
         """Add homomorphism to the hierarchy.
@@ -868,6 +894,107 @@ class Neo4jHierarchy(Hierarchy):
             self.execute(query)
         except:
             pass
+
+    @classmethod
+    def from_json(cls, uri=None, user=None, password=None,
+                  driver=None, json_data=None, ignore=None,
+                  clear=False):
+        """Create hierarchy object from JSON representation.
+
+        Parameters
+        ----------
+
+        uri : str, optional
+            Uri for Neo4j database connection
+        user : str, optional
+            Username for Neo4j database connection
+        password : str, optional
+            Password for Neo4j database connection
+        driver : neo4j.v1.direct.DirectDriver, optional
+            DB driver object
+        json_data : dict, optional
+            JSON-like dict containing representation of a hierarchy
+        ignore : dict, optional
+            Dictionary containing components to ignore in the process
+            of converting from JSON, dictionary should respect the
+            following format:
+            {
+                "graphs": <collection of ids of graphs to ignore>,
+                "rules": <collection of ids of rules to ignore>,
+                "typing": <collection of tuples containing typing
+                    edges to ignore>,
+                "rule_typing": <collection of tuples containing rule
+                    typing edges to ignore>>,
+                "relations": <collection of tuples containing
+                    relations to ignore>,
+            }
+        directed : bool, optional
+            True if graphs from JSON representation should be loaded as
+            directed graphs, False otherwise, default value -- True
+
+        Returns
+        -------
+        hierarchy : regraph.hierarchy.Hierarchy
+        """
+        hierarchy = cls(
+            uri=uri, user=user, password=password, driver=driver)
+
+        if clear is True:
+            hierarchy._clear()
+
+        # add graphs
+        for graph_data in json_data["graphs"]:
+            if ignore is not None and\
+               "graphs" in ignore.keys() and\
+               graph_data["id"] in ignore["graphs"]:
+                pass
+            else:
+                if "attrs" not in graph_data.keys():
+                    attrs = dict()
+                else:
+                    attrs = attrs_from_json(graph_data["attrs"])
+                hierarchy.add_graph_from_json(
+                    graph_data["id"], graph_data["graph"], attrs)
+
+        # add typing
+        for typing_data in json_data["typing"]:
+            if ignore is not None and\
+               "typing" in ignore.keys() and\
+               (typing_data["from"], typing_data["to"]) in ignore["typing"]:
+                pass
+            else:
+                if "attrs" not in typing_data.keys():
+                    attrs = dict()
+                else:
+                    attrs = attrs_from_json(typing_data["attrs"])
+                hierarchy.add_typing(
+                    typing_data["from"],
+                    typing_data["to"],
+                    typing_data["mapping"],
+                    attrs)
+
+        # add relations
+        for relation_data in json_data["relations"]:
+            from_g = relation_data["from"]
+            to_g = relation_data["to"]
+            if ignore is not None and\
+               "relations" in ignore.keys() and\
+               ((from_g, to_g) in ignore["relations"] or
+                    (to_g, from_g) in ignore["relations"]):
+                pass
+            else:
+                if "attrs" not in relation_data.keys():
+                    attrs = dict()
+                else:
+                    attrs = attrs_from_json(relation_data["attrs"])
+                if (from_g, to_g) not in hierarchy.relations():
+                    hierarchy.add_relation(
+                        relation_data["from"],
+                        relation_data["to"],
+                        {a: set(b) for a, b in relation_data["rel"].items()},
+                        attrs
+                    )
+        return hierarchy
 
     def close(self):
         """Close connection to the database."""

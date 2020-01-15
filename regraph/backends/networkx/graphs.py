@@ -88,7 +88,7 @@ class NXGraph(Graph):
             for k, v in new_attrs.items():
                 self._graph.node[node_id][k] = v
                 self.node[node_id][k] = v
-
+            return node_id
         else:
             raise GraphError("Node '{}' already exists!".format(node_id))
 

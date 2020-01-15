@@ -299,6 +299,7 @@ class TestHierarchy(object):
                 "g00": {1: "white", 2: "white", 3: "black"}
             }
         )
+
         assert(len(nxinstances) == 1)
         assert(n4instances == nxinstances)
 
@@ -365,22 +366,38 @@ class TestHierarchy(object):
             pattern_typing=lhs_typing
         )
 
-        old_g0_nodes = self.nx_hierarchy.get_graph("g0").nodes(True)
-        old_g0_edges = self.nx_hierarchy.get_graph("g0").edges(True)
-        old_g00_nodes = self.nx_hierarchy.get_graph("g00").nodes(True)
-        old_g00_edges = self.nx_hierarchy.get_graph("g00").edges(True)
+        old_g0_nodes = self.nx_hierarchy.get_graph("g0").nodes(data=True)
+        old_g0_edges = self.nx_hierarchy.get_graph("g0").edges(data=True)
+        old_g00_nodes = self.nx_hierarchy.get_graph("g00").nodes(data=True)
+        old_g00_edges = self.nx_hierarchy.get_graph("g00").edges(data=True)
 
-        self.neo4j_hierarchy.rewrite(
+        self.nx_hierarchy.rewrite(
             "g1",
             rule,
             instances[0],
             rhs_typing=rhs_typing
         )
-        # Test that no propagation forward happened
-        assert(old_g0_nodes == self.neo4j_hierarchy.get_graph("g0").nodes(True))
-        assert(old_g0_edges == self.neo4j_hierarchy.get_graph("g0").edges(True))
-        assert(old_g00_nodes == self.neo4j_hierarchy.get_graph("g00").nodes(True))
-        assert(old_g00_edges == self.neo4j_hierarchy.get_graph("g00").edges(True))
+
+        assert(set([n[0] for n in old_g0_nodes]) == set(
+            self.nx_hierarchy.get_graph("g0").nodes()))
+        assert(set([(n[0], n[1]) for n in old_g0_edges]) == set(
+            self.nx_hierarchy.get_graph("g0").edges()))
+        assert(set([n[0] for n in old_g00_nodes]) == set(
+            self.nx_hierarchy.get_graph("g00").nodes()))
+        assert(set([(n[0], n[1]) for n in old_g00_edges]) == set(
+            self.nx_hierarchy.get_graph("g00").edges()))
+
+        for n, attrs in old_g0_nodes:
+            assert(self.nx_hierarchy.get_graph("g0").get_node(n) == attrs)
+
+        for s, t, attrs in old_g0_edges:
+            assert(self.nx_hierarchy.get_graph("g0").get_edge(s, t) == attrs)
+
+        for n, attrs in old_g00_nodes:
+            assert(self.nx_hierarchy.get_graph("g00").get_node(n) == attrs)
+
+        for s, t, attrs in old_g00_edges:
+            assert(self.nx_hierarchy.get_graph("g00").get_edge(s, t) == attrs)
 
         instances = self.neo4j_hierarchy.find_matching(
             "g1",
@@ -388,39 +405,71 @@ class TestHierarchy(object):
             pattern_typing=lhs_typing
         )
 
-        old_g0_nodes = self.neo4j_hierarchy.get_graph("g0").nodes(True)
-        old_g0_edges = self.neo4j_hierarchy.get_graph("g0").edges(True)
-        old_g00_nodes = self.neo4j_hierarchy.get_graph("g00").nodes(True)
-        old_g00_edges = self.neo4j_hierarchy.get_graph("g00").edges(True)
+        old_g0_nodes = self.neo4j_hierarchy.get_graph("g0").nodes(data=True)
+        old_g0_edges = self.neo4j_hierarchy.get_graph("g0").edges(data=True)
+        old_g00_nodes = self.neo4j_hierarchy.get_graph("g00").nodes(data=True)
+        old_g00_edges = self.neo4j_hierarchy.get_graph("g00").edges(data=True)
+
         self.neo4j_hierarchy.rewrite(
             "g1",
             rule,
             instances[0],
             rhs_typing=rhs_typing
         )
-        # Test that no propagation forward happened
-        assert(old_g0_nodes == self.neo4j_hierarchy.get_graph("g0").nodes(True))
-        assert(old_g0_edges == self.neo4j_hierarchy.get_graph("g0").edges(True))
-        assert(old_g00_nodes == self.neo4j_hierarchy.get_graph("g00").nodes(True))
-        assert(old_g00_edges == self.neo4j_hierarchy.get_graph("g00").edges(True))
 
-    # def test_node_type(self):
-    #     # print(self.hierarchy.node_type("g1", "white_circle"))
-    #     assert(
-    #         self.hierarchy.node_type("g1", "white_circle") ==
-    #         {"g00": "white", "g0": "circle"}
-    #     )
-    #     # print(self.hierarchy.node_type("g1", "black_square"))
-    #     assert(
-    #         self.hierarchy.node_type("g1", "black_square") ==
-    #         {"g00": "black", "g0": "square"}
-    #     )
+        assert(set([n[0] for n in old_g0_nodes]) == set(
+            self.neo4j_hierarchy.get_graph("g0").nodes()))
+        assert(set([(n[0], n[1]) for n in old_g0_edges]) == set(
+            self.neo4j_hierarchy.get_graph("g0").edges()))
+        assert(set([n[0] for n in old_g00_nodes]) == set(
+            self.neo4j_hierarchy.get_graph("g00").nodes()))
+        assert(set([(n[0], n[1]) for n in old_g00_edges]) == set(
+            self.neo4j_hierarchy.get_graph("g00").edges()))
 
+        for n, attrs in old_g0_nodes:
+            assert(self.neo4j_hierarchy.get_graph("g0").get_node(n) == attrs)
 
-    # def test_to_json(self):
-    #     res = self.hierarchy.to_json()
-    #     new_h = NXHierarchy.from_json(res)
-    #     assert(self.hierarchy == new_h)
+        for s, t, attrs in old_g0_edges:
+            assert(self.neo4j_hierarchy.get_graph("g0").get_edge(s, t) == attrs)
+
+        for n, attrs in old_g00_nodes:
+            assert(self.neo4j_hierarchy.get_graph("g00").get_node(n) == attrs)
+
+        for s, t, attrs in old_g00_edges:
+            assert(self.neo4j_hierarchy.get_graph("g00").get_edge(s, t) == attrs)
+
+    def test_node_type(self):
+        assert(
+            self.nx_hierarchy.node_type("g1", "white_circle") ==
+            {"g00": "white", "g0": "circle"}
+        )
+        assert(
+            self.neo4j_hierarchy.node_type("g1", "white_circle") ==
+            {"g00": "white", "g0": "circle"}
+        )
+        assert(
+            self.nx_hierarchy.node_type("g1", "black_square") ==
+            {"g00": "black", "g0": "square"}
+        )
+        assert(
+            self.neo4j_hierarchy.node_type("g1", "black_square") ==
+            {"g00": "black", "g0": "square"}
+        )
+
+    def test_to_json(self):
+        res = self.nx_hierarchy.to_json()
+        new_h = NXHierarchy.from_json(res)
+        assert(self.nx_hierarchy == new_h)
+
+        res = self.neo4j_hierarchy.to_json()
+        self.neo4j_hierarchy = Neo4jHierarchy.from_json(
+            uri="bolt://localhost:7687",
+            user="neo4j",
+            password="admin",
+            json_data=res,
+            clear=True)
+
+        assert(self.neo4j_hierarchy == self.nx_hierarchy)
 
     # def test_add_rule(self):
     #     lhs = NXGraph()
@@ -471,8 +520,8 @@ class TestHierarchy(object):
     #         31: "white_square",
     #         4: "black_circle"
     #     }
-    #     self.hierarchy.add_rule("r1", rule, {"name": "First rule"})
-    #     self.hierarchy.add_rule_typing("r1", "g1", lhs_typing, rhs_typing)
+    #     self.nx_hierarchy.add_rule("r1", rule, {"name": "First rule"})
+    #     self.nx_hierarchy.add_rule_typing("r1", "g1", lhs_typing, rhs_typing)
 
     #     pattern = NXGraph()
     #     pattern.add_nodes_from([
@@ -529,10 +578,10 @@ class TestHierarchy(object):
     #         }
     #     }
 
-    #     instances = self.hierarchy.find_matching(
+    #     instances = self.nx_hierarchy.find_matching(
     #         "g1", pattern, lhs_typing)
 
-    #     self.hierarchy.rewrite(
+    #     self.nx_hierarchy.rewrite(
     #         "g1", rule, instances[0], rhs_typing=rhs_typing)
     #     # print(self.hierarchy.get_rule("r1"))
 
@@ -664,274 +713,273 @@ class TestHierarchy(object):
     #     assert("g3" in anc.keys())
     #     assert("g4" in anc.keys())
 
-    # @raises(HierarchyError)
-    # def test_add_typing_advanced(self):
-    #     hierarchy = NXHierarchy()
+    @raises(HierarchyError)
+    def test_add_typing_advanced(self):
+        hierarchy = NXHierarchy()
 
-    #     g9 = NXGraph()
-    #     g9.add_nodes_from(["a", "b"])
-    #     hierarchy.add_graph(9, g9)
+        g9 = NXGraph()
+        g9.add_nodes_from(["a", "b"])
+        hierarchy.add_graph(9, g9)
 
-    #     g8 = NXGraph()
-    #     g8.add_nodes_from(["1_a", "1_b", "2_a", "2_b"])
-    #     hierarchy.add_graph(8, g8)
+        g8 = NXGraph()
+        g8.add_nodes_from(["1_a", "1_b", "2_a", "2_b"])
+        hierarchy.add_graph(8, g8)
 
-    #     hierarchy.add_typing(
-    #         8, 9,
-    #         {"1_a": "a",
-    #          "1_b": "b",
-    #          "2_a": "a",
-    #          "2_b": "b"},
-    #     )
+        hierarchy.add_typing(
+            8, 9,
+            {"1_a": "a",
+             "1_b": "b",
+             "2_a": "a",
+             "2_b": "b"},
+        )
 
-    #     g7 = NXGraph()
-    #     g7.add_nodes_from(["x_a", "x_b", "y_a", "y_b"])
-    #     hierarchy.add_graph(7, g7)
+        g7 = NXGraph()
+        g7.add_nodes_from(["x_a", "x_b", "y_a", "y_b"])
+        hierarchy.add_graph(7, g7)
 
-    #     hierarchy.add_typing(
-    #         7, 9,
-    #         {
-    #             "x_a": "a",
-    #             "x_b": "b",
-    #             "y_a": "a",
-    #             "y_b": "b"
-    #         },
-    #     )
+        hierarchy.add_typing(
+            7, 9,
+            {
+                "x_a": "a",
+                "x_b": "b",
+                "y_a": "a",
+                "y_b": "b"
+            },
+        )
 
-    #     g2 = NXGraph()
-    #     g2.add_nodes_from(["s_1_a", "t_1_a", "s_1_b", "t_2_a"])
-    #     hierarchy.add_graph(2, g2)
+        g2 = NXGraph()
+        g2.add_nodes_from(["s_1_a", "t_1_a", "s_1_b", "t_2_a"])
+        hierarchy.add_graph(2, g2)
 
-    #     hierarchy.add_typing(
-    #         2, 8,
-    #         {
-    #             "s_1_a": "1_a",
-    #             "t_1_a": "1_a",
-    #             "s_1_b": "1_b",
-    #             "t_2_a": "2_a"
-    #         })
+        hierarchy.add_typing(
+            2, 8,
+            {
+                "s_1_a": "1_a",
+                "t_1_a": "1_a",
+                "s_1_b": "1_b",
+                "t_2_a": "2_a"
+            })
 
-    #     g3 = NXGraph()
-    #     g3.add_nodes_from(["s_x_a", "t_x_a", "g_y_b"])
-    #     hierarchy.add_graph(3, g3)
+        g3 = NXGraph()
+        g3.add_nodes_from(["s_x_a", "t_x_a", "g_y_b"])
+        hierarchy.add_graph(3, g3)
 
-    #     hierarchy.add_typing(
-    #         3, 7,
-    #         {
-    #             "s_x_a": "x_a",
-    #             "t_x_a": "x_a",
-    #             "g_y_b": "y_b"
-    #         })
+        hierarchy.add_typing(
+            3, 7,
+            {
+                "s_x_a": "x_a",
+                "t_x_a": "x_a",
+                "g_y_b": "y_b"
+            })
 
-    #     g4 = NXGraph()
-    #     g4.add_nodes_from(["a_x_a", "t_y_b"])
-    #     hierarchy.add_graph(4, g4)
+        g4 = NXGraph()
+        g4.add_nodes_from(["a_x_a", "t_y_b"])
+        hierarchy.add_graph(4, g4)
 
-    #     hierarchy.add_typing(
-    #         4, 3,
-    #         {
-    #             "a_x_a": "s_x_a",
-    #             "t_y_b": "g_y_b"
-    #         })
+        hierarchy.add_typing(
+            4, 3,
+            {
+                "a_x_a": "s_x_a",
+                "t_y_b": "g_y_b"
+            })
 
-    #     hierarchy.add_typing(
-    #         4, 7,
-    #         {
-    #             "a_x_a": "x_a",
-    #             "t_y_b": "y_b"
-    #         })
+        hierarchy.add_typing(
+            4, 7,
+            {
+                "a_x_a": "x_a",
+                "t_y_b": "y_b"
+            })
 
-    #     g6 = NXGraph()
-    #     g6.add_nodes_from(["a_x_a", "b_x_a", "a_y_b", "b_y_a", "c_x_b"])
-    #     hierarchy.add_graph(6, g6)
+        g6 = NXGraph()
+        g6.add_nodes_from(["a_x_a", "b_x_a", "a_y_b", "b_y_a", "c_x_b"])
+        hierarchy.add_graph(6, g6)
 
-    #     hierarchy.add_typing(
-    #         6, 7,
-    #         {
-    #             "a_x_a": "x_a",
-    #             "b_x_a": "x_a",
-    #             "a_y_b": "y_b",
-    #             "b_y_a": "y_a",
-    #             "c_x_b": "x_b"
-    #         })
+        hierarchy.add_typing(
+            6, 7,
+            {
+                "a_x_a": "x_a",
+                "b_x_a": "x_a",
+                "a_y_b": "y_b",
+                "b_y_a": "y_a",
+                "c_x_b": "x_b"
+            })
 
-    #     g5 = NXGraph()
-    #     g5.add_nodes_from(["1_a_x_a", "2_a_x_a", "1_a_y_b"])
-    #     hierarchy.add_graph(5, g5)
+        g5 = NXGraph()
+        g5.add_nodes_from(["1_a_x_a", "2_a_x_a", "1_a_y_b"])
+        hierarchy.add_graph(5, g5)
 
-    #     hierarchy.add_typing(
-    #         5, 6,
-    #         {
-    #             "1_a_x_a": "a_x_a",
-    #             "2_a_x_a": "a_x_a",
-    #             "1_a_y_b": "a_y_b"
-    #         })
+        hierarchy.add_typing(
+            5, 6,
+            {
+                "1_a_x_a": "a_x_a",
+                "2_a_x_a": "a_x_a",
+                "1_a_y_b": "a_y_b"
+            })
 
-    #     hierarchy.add_typing(
-    #         5, 4,
-    #         {
-    #             "1_a_x_a": "a_x_a",
-    #             "2_a_x_a": "a_x_a",
-    #             "1_a_y_b": "t_y_b"
-    #         })
+        hierarchy.add_typing(
+            5, 4,
+            {
+                "1_a_x_a": "a_x_a",
+                "2_a_x_a": "a_x_a",
+                "1_a_y_b": "t_y_b"
+            })
 
-    #     g1 = NXGraph()
-    #     g1.add_nodes_from(["1_s_1_a", "2_s_1_a", "1_s_1_b"])
-    #     hierarchy.add_graph(1, g1)
+        g1 = NXGraph()
+        g1.add_nodes_from(["1_s_1_a", "2_s_1_a", "1_s_1_b"])
+        hierarchy.add_graph(1, g1)
 
-    #     hierarchy.add_typing(
-    #         1, 2,
-    #         {
-    #             "1_s_1_a": "s_1_a",
-    #             "2_s_1_a": "s_1_a",
-    #             "1_s_1_b": "s_1_b"
-    #         })
+        hierarchy.add_typing(
+            1, 2,
+            {
+                "1_s_1_a": "s_1_a",
+                "2_s_1_a": "s_1_a",
+                "1_s_1_b": "s_1_b"
+            })
 
-    #     hierarchy.add_typing(
-    #         1, 3,
-    #         {
-    #             "1_s_1_a": "s_x_a",
-    #             "2_s_1_a": "t_x_a",
-    #             "1_s_1_b": "g_y_b"
-    #         })
-    #     # start testing
-    #     hierarchy.add_typing(
-    #         3, 8,
-    #         {
-    #             "s_x_a": "1_a",
-    #             "t_x_a": "1_a",
-    #             "g_y_b": "1_b"
-    #         })
-    #     hierarchy.add_typing(
-    #         6, 9,
-    #         {
-    #             "a_x_a": "a",
-    #             "b_x_a": "b",
-    #             "a_y_b": "b",
-    #             "b_y_a": "a",
-    #             "c_x_b": "b"
-    #         })
+        hierarchy.add_typing(
+            1, 3,
+            {
+                "1_s_1_a": "s_x_a",
+                "2_s_1_a": "t_x_a",
+                "1_s_1_b": "g_y_b"
+            })
+        # start testing
+        hierarchy.add_typing(
+            3, 8,
+            {
+                "s_x_a": "1_a",
+                "t_x_a": "1_a",
+                "g_y_b": "1_b"
+            })
+        hierarchy.add_typing(
+            6, 9,
+            {
+                "a_x_a": "a",
+                "b_x_a": "b",
+                "a_y_b": "b",
+                "b_y_a": "a",
+                "c_x_b": "b"
+            })
 
-    # @staticmethod
-    # def _generate_triangle_hierarchy():
-    #     h = NXHierarchy()
+    @staticmethod
+    def _generate_triangle_hierarchy():
+        h = NXHierarchy()
 
-    #     g1 = NXGraph()
-    #     g1.add_nodes_from([
-    #         "1", "2"
-    #     ])
+        g1 = NXGraph()
+        g1.add_nodes_from([
+            "1", "2"
+        ])
 
-    #     g2 = NXGraph()
-    #     g2.add_nodes_from([
-    #         "1a", "1b", "2a", "2b"
-    #     ])
+        g2 = NXGraph()
+        g2.add_nodes_from([
+            "1a", "1b", "2a", "2b"
+        ])
 
-    #     g3 = NXGraph()
-    #     g3.add_nodes_from([
-    #         "1x", "1y", "2x", "2y"
-    #     ])
+        g3 = NXGraph()
+        g3.add_nodes_from([
+            "1x", "1y", "2x", "2y"
+        ])
 
-    #     h.add_graph("g1", g1)
-    #     h.add_graph("g2", g2)
-    #     h.add_graph("g3", g3)
-    #     h.add_typing(
-    #         "g2", "g1",
-    #         {
-    #             "1a": "1",
-    #             "1b": "1",
-    #             "2a": "2",
-    #             "2b": "2"
-    #         })
-    #     h.add_typing(
-    #         "g3", "g1",
-    #         {
-    #             "1x": "1",
-    #             "1y": "1",
-    #             "2x": "2",
-    #             "2y": "2"
-    #         })
-    #     h.add_typing(
-    #         "g2", "g3",
-    #         {
-    #             "1a": "1x",
-    #             "1b": "1y",
-    #             "2a": "2y",
-    #             "2b": "2x"
-    #         })
-    #     return h
+        h.add_graph("g1", g1)
+        h.add_graph("g2", g2)
+        h.add_graph("g3", g3)
+        h.add_typing(
+            "g2", "g1",
+            {
+                "1a": "1",
+                "1b": "1",
+                "2a": "2",
+                "2b": "2"
+            })
+        h.add_typing(
+            "g3", "g1",
+            {
+                "1x": "1",
+                "1y": "1",
+                "2x": "2",
+                "2y": "2"
+            })
+        h.add_typing(
+            "g2", "g3",
+            {
+                "1a": "1x",
+                "1b": "1y",
+                "2a": "2y",
+                "2b": "2x"
+            })
+        return h
 
-    # def test_triangle_1(self):
-    #     h = self._generate_triangle_hierarchy()
+    def test_triangle_1(self):
+        h = self._generate_triangle_hierarchy()
 
-    #     pattern = NXGraph()
-    #     pattern.add_nodes_from([
-    #         1, 2
-    #     ])
-    #     rule = Rule.from_transform(pattern)
-    #     rule.inject_remove_node(1)
-    #     rule.inject_clone_node(2)
+        pattern = NXGraph()
+        pattern.add_nodes_from([
+            1, 2
+        ])
+        rule = Rule.from_transform(pattern)
+        rule.inject_remove_node(1)
+        rule.inject_clone_node(2)
 
-    #     instances = h.find_matching("g1", pattern)
-    #     h.rewrite("g1", rule, instances[0])
+        instances = h.find_matching("g1", pattern)
+        h.rewrite("g1", rule, instances[0])
 
-    #     # print(new_h)
-    #     # print_graph(new_h.node["g2"].graph)
-    #     # print_graph(new_h.node["g3"].graph)
-    #     # print(new_h.edge["g2"]["g3"].mapping)
+        # print(new_h)
+        # print_graph(new_h.node["g2"].graph)
+        # print_graph(new_h.node["g3"].graph)
+        # print(new_h.edge["g2"]["g3"].mapping)
 
-    # def test_controlled_forward(self):
-    #     h = self._generate_triangle_hierarchy()
-    #     pattern = NXGraph()
-    #     pattern.add_nodes_from([
-    #         "1a"
-    #     ])
-    #     rule = Rule.from_transform(pattern)
-    #     rule.inject_add_node("1c")
+    def test_controlled_forward(self):
+        h = self._generate_triangle_hierarchy()
+        pattern = NXGraph()
+        pattern.add_nodes_from([
+            "1a"
+        ])
+        rule = Rule.from_transform(pattern)
+        rule.inject_add_node("1c")
 
-    #     rhs_typing = {
-    #         "g3": {"1c": "1x"}
-    #     }
+        rhs_typing = {
+            "g3": {"1c": "1x"}
+        }
 
-    #     old_g3_nodes = h.get_graph("g3").nodes(True)
-    #     old_g1_nodes = h.get_graph("g1").nodes(True)
+        old_g3_nodes = h.get_graph("g3").nodes(True)
+        old_g1_nodes = h.get_graph("g1").nodes(True)
 
-    #     h.rewrite("g2", rule, {"1a": "1a"}, rhs_typing=rhs_typing)
+        h.rewrite("g2", rule, {"1a": "1a"}, rhs_typing=rhs_typing)
 
-    #     assert(old_g3_nodes == h.get_graph("g3").nodes(True))
-    #     assert(old_g1_nodes == h.get_graph("g1").nodes(True))
+        assert(old_g3_nodes == h.get_graph("g3").nodes(True))
+        assert(old_g1_nodes == h.get_graph("g1").nodes(True))
 
-    #     rhs_typing = {
-    #         "g1": {"1c": "1"}
-    #     }
+        rhs_typing = {
+            "g1": {"1c": "1"}
+        }
 
-    #     h.rewrite("g2", rule, {"1a": "1a"}, rhs_typing=rhs_typing)
-    #     assert(old_g1_nodes == h.get_graph("g1").nodes(True))
-    #     assert(len(old_g3_nodes) + 1 == len(h.get_graph("g3").nodes()))
+        h.rewrite("g2", rule, {"1a": "1a"}, rhs_typing=rhs_typing)
+        assert(old_g1_nodes == h.get_graph("g1").nodes(True))
+        assert(len(old_g3_nodes) + 1 == len(h.get_graph("g3").nodes()))
 
+    def test_controlled_backward(self):
+        h = self._generate_triangle_hierarchy()
+        pattern = NXGraph()
+        pattern.add_nodes_from([
+            "1"
+        ])
+        rule = Rule.from_transform(pattern)
+        rule.inject_clone_node("1", "11")
 
-    # def test_controlled_backward(self):
-    #     h = self._generate_triangle_hierarchy()
-    #     pattern = NXGraph()
-    #     pattern.add_nodes_from([
-    #         "1"
-    #     ])
-    #     rule = Rule.from_transform(pattern)
-    #     rule.inject_clone_node("1", "11")
+        p_typing = {
+            "g2": {"1a": {"1"}, "1b": {"11"}},
+        }
 
-    #     p_typing = {
-    #         "g2": {"1a": {"1"}, "1b": {"11"}},
-    #     }
+        old_g3_nodes = h.get_graph("g3").nodes(True)
+        old_g2_nodes = h.get_graph("g2").nodes(True)
 
-    #     old_g3_nodes = h.get_graph("g3").nodes(True)
-    #     old_g2_nodes = h.get_graph("g2").nodes(True)
+        h.rewrite("g1", rule, {"1": "1"}, p_typing=p_typing)
 
-    #     h.rewrite("g1", rule, {"1": "1"}, p_typing=p_typing)
-
-    #     # assert(old_g3_nodes == h.get_graph("g3").nodes(True))
-    #     assert(old_g2_nodes == h.get_graph("g2").nodes(True))
+        # assert(old_g3_nodes == h.get_graph("g3").nodes(True))
+        assert(old_g2_nodes == h.get_graph("g2").nodes(True))
     
-    #     # print(h.get_graph("g3").nodes())
-    #     # print(h.get_typing("g2", "g3"))
+        # print(h.get_graph("g3").nodes())
+        # print(h.get_typing("g2", "g3"))
 
 
 

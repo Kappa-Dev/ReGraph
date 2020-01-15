@@ -27,6 +27,15 @@ from . import rewriting
 
 def get_typing(domain, codomain, typing_label, attrs=None):
     query = (
+        "MATCH (n:{})-[:{}*1..]->(m:{})\n".format(
+            domain, typing_label, codomain) +
+        "RETURN n.id as node, m.id as type"
+    )
+    return query
+
+
+def get_relation(domain, codomain, typing_label, attrs=None):
+    query = (
         "MATCH (n:{})-[:{}]-(m:{})\n".format(
             domain, typing_label, codomain) +
         "RETURN n.id as node, m.id as type"

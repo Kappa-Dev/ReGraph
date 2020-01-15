@@ -109,7 +109,7 @@ class NXHierarchy(Hierarchy, NXGraph):
 
     def get_relation(self, left, right):
         """Get a relation dict associated to the rel 'left-right'."""
-        return self.relation[left][right]
+        return self.relation_edges[(left, right)]["rel"]
 
     def get_graph_attrs(self, graph_id):
         """Get attributes of a graph in the hierarchy.
@@ -816,7 +816,8 @@ class NXHierarchy(Hierarchy, NXGraph):
 
         return g_m_g, g_m_origin_m
 
-    def _propagate_node_attrs_removal(self, origin_id, node_id, rule, instance):
+    def _propagate_node_attrs_removal(self, origin_id, node_id, rule,
+                                      p_origin_m, g_m_origin_m):
         """Propagate node attrs removal from 'origin_id' to 'graph_id'.
 
         Parameters
@@ -831,25 +832,28 @@ class NXHierarchy(Hierarchy, NXGraph):
             Original instance
         """
         if self.is_graph(node_id):
-            super._propagate_node_attrs_removal(
-                origin_id, node_id, rule, instance)
+            super()._propagate_node_attrs_removal(
+                origin_id, node_id, rule,
+                p_origin_m, g_m_origin_m)
         else:
-            object_rule = self.get_rule(node_id)
-            origin_typing = self.get_typing(node_id, origin_id)
-            for lhs_node, attrs in rule.removed_node_attrs().items():
-                lhs_nodes_to_remove_attrs = keys_by_value(
-                    origin_typing[0], instance[lhs_node])
-                for node in lhs_nodes_to_remove_attrs:
-                    object_rule.lhs.remove_node_attrs(node, attrs)
-                p_nodes_to_remove_attrs = [
-                    n for n in object_rule.p.nodes()
-                    if object_rule.p_lhs[n] in lhs_nodes_to_remove_attrs]
-                for node in p_nodes_to_remove_attrs:
-                    object_rule.p.remove_node_attrs(node, attrs)
-                rhs_nodes_to_remove_attrs = keys_by_value(
-                    origin_typing[1], instance[lhs_node])
-                for node in rhs_nodes_to_remove_attrs:
-                    object_rule.rhs.remove_node_attrs(node, attrs)
+            pass
+            # object_rule = self.get_rule(node_id)
+            # origin_typing = self.get_typing(node_id, origin_id)
+
+            # for lhs_node, attrs in rule.removed_node_attrs().items():
+            #     lhs_nodes_to_remove_attrs = keys_by_value(
+            #         origin_typing[0], instance[lhs_node])
+            #     for node in lhs_nodes_to_remove_attrs:
+            #         object_rule.lhs.remove_node_attrs(node, attrs)
+            #     p_nodes_to_remove_attrs = [
+            #         n for n in object_rule.p.nodes()
+            #         if object_rule.p_lhs[n] in lhs_nodes_to_remove_attrs]
+            #     for node in p_nodes_to_remove_attrs:
+            #         object_rule.p.remove_node_attrs(node, attrs)
+            #     rhs_nodes_to_remove_attrs = keys_by_value(
+            #         origin_typing[1], instance[lhs_node])
+            #     for node in rhs_nodes_to_remove_attrs:
+            #         object_rule.rhs.remove_node_attrs(node, attrs)
 
     def _propagate_edge_removal(self, origin_id, node_id, g_m_origin_m):
         """Propagate edge removal from 'origin_id' to 'graph_id'.
@@ -1498,18 +1502,15 @@ class NXHierarchy(Hierarchy, NXGraph):
                     compose(typing[0], g_m_g_prime),
                     compose(typing[1], g_m_g_prime))
 
-    def _expansive_update_incident_rels(self, graph_id, g_m_g_prime):
+    def _expansive_update_incident_rels(self, graph_id, g_m_g_prime,
+                                        adj_relations):
         """Update incident relations after an expansive change."""
-        for related_g in self.adjacent_relations(graph_id):
-            rel = self.get_relation(graph_id, related_g)
-            new_rel = dict()
-
-            for node in self.get_graph(graph_id).nodes():
-                new_node = g_m_g_prime[node]
-                if node in rel.keys():
-                    new_rel[new_node] = rel[node]
-
-            self._update_relation(graph_id, related_g, new_rel)
+        for related_g, rel in self.adjacent_relations(graph_id):
+            if self.is_graph(related_g):
+                super()._expansive_update_incident_rels(
+                    graph_id, g_m_g_prime, adj_relations)
+            else:
+                pass
 
     def apply_rule(self, graph_id, rule_id, instance):
         """Apply rule from the hierarchy."""

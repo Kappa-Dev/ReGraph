@@ -1,7 +1,7 @@
 import networkx as nx
 from neobolt.exceptions import ServiceUnavailable
 
-from regraph import NetworkXHierarchy, Neo4jHierarchy
+from regraph import NXHierarchy, Neo4jHierarchy
 
 from regraph.audit import VersionedGraph, VersionedHierarchy
 from regraph.rules import Rule

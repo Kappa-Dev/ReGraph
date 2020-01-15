@@ -2,7 +2,7 @@
 import networkx as nx
 
 from regraph import Rule
-from regraph import NetworkXHierarchy
+from regraph import NXHierarchy, NXGraph
 # from regraph import print_graph
 # from regraph import (HierarchyError)
 import regraph.primitives as prim
@@ -11,9 +11,9 @@ import regraph.primitives as prim
 class TestRelations(object):
 
     def __init__(self):
-        hierarchy = NetworkXHierarchy()
+        hierarchy = NXHierarchy()
 
-        base = nx.DiGraph()
+        base = NXGraph()
         prim.add_nodes_from(base, [
             ("circle", {"a": {1, 2, 3}}),
             ("square", {"b": {1, 2, 3}})
@@ -27,7 +27,7 @@ class TestRelations(object):
 
         hierarchy.add_graph("base", base)
 
-        a1 = nx.DiGraph()
+        a1 = NXGraph()
         prim.add_nodes_from(a1, [
             ("black_circle", {"a": {1}}),
             ("white_circle", {"a": {2}}),
@@ -54,7 +54,7 @@ class TestRelations(object):
             }
         )
 
-        a2 = nx.DiGraph()
+        a2 = NXGraph()
         prim.add_nodes_from(a2, [
             ("right_circle", {"a": {1, 2}}),
             ("middle_square", {"b": {1}}),
@@ -97,7 +97,7 @@ class TestRelations(object):
         # self.hierarchy.remove_graph("a1")
         # print(self.hierarchy.relation)
 
-        lhs = nx.DiGraph()
+        lhs = NXGraph()
         lhs.add_nodes_from(["s", "c"])
 
         rule = Rule.from_transform(lhs)
@@ -108,8 +108,8 @@ class TestRelations(object):
         #     rule.lhs
         # )
 
-        new_hierarchy, _ = self.hierarchy.rewrite(
-            "base", rule, {"s": "square", "c": "circle"}, inplace=False)
+        self.hierarchy.rewrite(
+            "base", rule, {"s": "square", "c": "circle"})
 
         # g, l, r = new_hierarchy.relation_to_span("a1", "a2")
         # print_graph(g)
