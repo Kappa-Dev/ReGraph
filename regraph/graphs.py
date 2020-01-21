@@ -1,4 +1,4 @@
-"""This module contains data structes for abstract graphs."""
+"""This module contains data structures for abstract graphs."""
 import json
 import os
 

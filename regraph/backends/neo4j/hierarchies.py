@@ -14,7 +14,6 @@ from regraph.exceptions import (HierarchyError,
                                 ReGraphError)
 from regraph.hierarchies import Hierarchy
 from regraph.backends.neo4j.graphs import Neo4jGraph
-from regraph.rules import Rule
 from regraph.category_utils import compose
 from .cypher_utils.generic import (constraint_query,
                                    get_nodes,
