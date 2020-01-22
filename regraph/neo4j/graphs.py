@@ -83,7 +83,7 @@ class Neo4jGraph(object):
         """Execute a Cypher query."""
         with self._driver.session() as session:
             if len(query) > 0:
-                print(query)
+                # print(query)
                 result = session.run(query)
                 return result
 
