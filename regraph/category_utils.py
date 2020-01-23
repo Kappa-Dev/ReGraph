@@ -502,13 +502,39 @@ def get_unique_map_to_pullback_complement(a_p, p_c,
             if len(p_elements2) == 1:
                 z_p[z_element] = list(p_elements2)[0]
             else:
-                raise ValueError("Something is wrong")
+                raise ValueError(
+                    "Cannot apply the universal property, " +
+                    "check if the conditions to apply it are satisfied, " +
+                    "problem: element '{}' from Z ".format(z_element) +
+                    "corresponds to more than one element " +
+                    "from P (i.e. corresponds to {}) and A'->A->P doesn't ".format(p_elements2) +
+                    "resolve the conflict"
+                )
         else:
             intersection = p_elements1.intersection(p_elements2)
             if len(intersection) == 1:
                 z_p[z_element] = list(intersection)[0]
+            elif len(intersection) == 0:
+                raise ValueError(
+                    "Cannot apply the universal property, " +
+                    "check if the conditions to apply it are satisfied, " +
+                    "problem: element '{}' from Z ".format(z_element) +
+                    "corresponds to '{}' ".format(p_elements1) +
+                    "from P following A'->A->P ".format(
+                        intersection) +
+                    "to '{}' following (P->C)^{{-1}} composed with (Z -> C)".format(
+                        p_elements2)
+                )
             else:
-                raise ValueError("Something is wrong")
+                raise ValueError(
+                    "Cannot apply the universal property, " +
+                    "check if the conditions to apply it are satisfied, " +
+                    "problem: element '{}' from Z ".format(z_element) +
+                    "doesn't corresponds to exactly one element " +
+                    "from P (i.e. corresponds to {}) in both A'->A->P ".format(
+                        intersection) +
+                    "and (P->C)^{{-1}} composed with (Z -> C)"
+                )
     return z_p
 
 # def get_unique_map(a, b, c, d, a_b, b_d, c_d):

@@ -1,14 +1,35 @@
 import networkx as nx
 
-from regraph import Rule, compose_rule_hierarchies
+from regraph import Rule
 from regraph import NXHierarchy, NXGraph
 from regraph import primitives
 
+from regraph.category_utils import check_homomorphism
 
-class TestRuleProjections(object):
+
+def valid_hierarchy(rule_hierarchy):
+    """Test if the hierarchy is valid."""
+    for (s, t), (lhs_h, p_h, rhs_h) in rule_hierarchy[
+            "rule_homomorphisms"].items():
+        check_homomorphism(
+            rule_hierarchy["rules"][s].lhs,
+            rule_hierarchy["rules"][t].lhs,
+            lhs_h)
+        check_homomorphism(
+            rule_hierarchy["rules"][s].p,
+            rule_hierarchy["rules"][t].p,
+            p_h)
+        check_homomorphism(
+            rule_hierarchy["rules"][s].rhs,
+            rule_hierarchy["rules"][t].rhs,
+            rhs_h)
+
+
+class TestRuleHierarchies(object):
     """Test class for testing rule projections."""
 
     def __init__(self):
+        """Init test hierarchy."""
         self.hierarchy = NXHierarchy()
 
         a = NXGraph()
@@ -82,6 +103,7 @@ class TestRuleProjections(object):
         }
         self.hierarchy.add_graph("c", c)
         self.hierarchy.add_typing("c", "b", c_b)
+        # self.hierarchy.add_typing("c", "bb", c_b)
 
     def test_lifting(self):
         pattern = NXGraph()
@@ -106,8 +128,10 @@ class TestRuleProjections(object):
 
         # Test non-canonical rule lifting
 
-        rule_hierarchy1, lhs_instances1 = self.hierarchy.get_rule_propagations(
+        rule_hierarchy1, lhs_instances1 = self.hierarchy.get_rule_hierarchy(
             "b", rule, p_typing={"c": {"Alice": {"girl", "generic"}, "Bob": "boy"}})
+
+        valid_hierarchy(rule_hierarchy1)
 
         new_hierarchy = NXHierarchy.copy(self.hierarchy)
 
@@ -123,8 +147,9 @@ class TestRuleProjections(object):
         rule.inject_add_node("phd")
         rule.inject_add_edge("phd", "institute", {"type": "internship"})
 
-        rule_hierarchy2, lhs_instances2 = self.hierarchy.get_rule_propagations(
+        rule_hierarchy2, lhs_instances2 = self.hierarchy.get_rule_hierarchy(
             "b", rule, rhs_typing={"a": {"phd": "red"}})
+        valid_hierarchy(rule_hierarchy2)
 
         new_hierarchy = NXHierarchy.copy(self.hierarchy)
 
@@ -139,3 +164,28 @@ class TestRuleProjections(object):
         # for k, v in h["rules"].items():
         #     print("Rule for ", k)
         #     print(v)
+
+    def test_refinement(self):
+
+        pattern = NXGraph()
+        pattern.add_nodes_from(["prof", "student", "institute"])
+        rule = Rule.from_transform(pattern)
+        rule.inject_merge_nodes(["prof", "student"])
+        rule.inject_clone_node("institute")
+
+        instance = {
+            "prof": "prof",
+            "student": "student",
+            "institute": "institute"
+        }
+
+        rule_hierarchy, lhs_instances = self.hierarchy.get_rule_hierarchy(
+            "bb", rule, instance)
+        valid_hierarchy(rule_hierarchy)
+
+        new_instances = self.hierarchy.refine_rule_hierarchy(
+            rule_hierarchy, lhs_instances)
+        valid_hierarchy(rule_hierarchy)
+        rhs_instances = self.hierarchy.apply_rule_hierarchy(
+            rule_hierarchy, new_instances)
+

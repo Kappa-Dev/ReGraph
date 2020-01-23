@@ -746,7 +746,7 @@ class Graph(ABC):
                     temp_names[new_name] = value
                 self.relabel_node(key, new_name)
         # Relabeling the nodes with the temp ID to their new IDs
-        for key, value in temp_names:
+        for key, value in temp_names.items():
             if key != value:
                 self.relabel_node(key, value)
         return

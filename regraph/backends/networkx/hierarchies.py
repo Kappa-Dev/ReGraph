@@ -576,7 +576,27 @@ class NXHierarchy(Hierarchy, NXGraph):
         ReGraphError
             If new id's do not define a set of distinct graph id's.
         """
-        self.relabel_nodes(mapping)
+        unique_names = set(mapping.values())
+        if len(unique_names) != len(self.nodes()):
+            raise ReGraphError(
+                "Attempt to relabel nodes failed: the IDs are not unique!")
+
+        temp_names = {}
+        # Relabeling of the nodes: if at some point new ID conflicts
+        # with already existing ID - assign temp ID
+        for key, value in mapping.items():
+            if key != value:
+                if value not in self.nodes():
+                    new_name = value
+                else:
+                    new_name = self.generate_new_node_id(value)
+                    temp_names[new_name] = value
+                self.relabel_node(key, new_name)
+        # Relabeling the nodes with the temp ID to their new IDs
+        for key, value in temp_names.items():
+            if key != value:
+                self.relabel_node(key, value)
+        return
 
     def _check_consistency(self, source, target, mapping=None):
         all_paths = dict(nx.all_pairs_shortest_path(self._graph))
@@ -1630,3 +1650,33 @@ class NXHierarchy(Hierarchy, NXGraph):
                     self.remove_typing(pred, target_id)
                     self.add_rule_typing(
                         pred, target_id, lhs_pred_graph, rhs_pred_graph)
+
+    def relabel_nodes(self, graph, mapping):
+        """Relabel nodes of a graph in the hierarchy."""
+        graph_obj = self.get_graph(graph)
+        graph_obj.relabel_nodes(mapping)
+
+        # update homomorphisms
+        for predecessor in self.predecessors(graph):
+            old_typing = self.get_typing(predecessor, graph)
+            self._update_mapping(
+                predecessor, graph, compose(old_typing, mapping))
+        for successor in self.successors(graph):
+            old_typing = self.get_typing(graph, successor)
+            self._update_mapping(
+                graph, successor,
+                {
+                    mapping[k]: v
+                    for k, v in old_typing.items()
+                }
+            )
+        # update relations
+        for adj in self.adjacent_relations(graph):
+            old_rel = self.get_relation(graph, adj)
+            self._update_relation(
+                graph, adj,
+                {
+                    mapping[k]: v
+                    for k, v in old_rel.items()
+                }
+            )

@@ -101,28 +101,25 @@ class Rule(object):
         if p is None:
             p = NXGraph()
         if lhs is None:
-            lhs = NXGraph.copy(p)
+            lhs = p
         if rhs is None:
-            rhs = NXGraph.copy(p)
+            rhs = p
 
-        self.p = p
-        self.lhs = lhs
-        self.rhs = rhs
+        self.p = NXGraph.copy(p)
+        self.lhs = NXGraph.copy(lhs)
+        self.rhs = NXGraph.copy(rhs)
 
         if not p_lhs:
             self.p_lhs = identity(p, lhs)
         else:
             check_homomorphism(p, lhs, p_lhs)
-            self.p_lhs = p_lhs
-
-        if not rhs:
-            rhs = p
+            self.p_lhs = copy.deepcopy(p_lhs)
 
         if not p_rhs:
             self.p_rhs = identity(p, rhs)
         else:
             check_homomorphism(p, rhs, p_rhs)
-            self.p_rhs = p_rhs
+            self.p_rhs = copy.deepcopy(p_rhs)
 
         return
 
@@ -1109,6 +1106,7 @@ class Rule(object):
                     new_rhs_node_id)
             self.rhs.add_node(new_rhs_node_id, attrs)
             self.p_rhs[new_p_node_id] = new_rhs_node_id
+            return new_p_node_id, new_rhs_node_id
         else:
             raise RuleError(
                 "Node '%s' already exists in the left-hand side "
@@ -1134,6 +1132,19 @@ class Rule(object):
         else:
             raise RuleError(
                 "Edge '{}'->'{}' already exists in the left-hand side "
+                "of the rule".format(source, target))
+
+    def _add_edge_attrs_lhs(self, source, target, attrs=None):
+        if (source, target) in self.lhs.edges():
+            self.lhs.add_edge_attrs(source, target, attrs)
+            for s_p_node in keys_by_value(self.p_lhs, source):
+                for t_p_node in keys_by_value(self.p_lhs, target):
+                    self.p.add_edge_attrs(s_p_node, t_p_node, attrs)
+                    self.rhs.add_edge_attrs(
+                        self.p_rhs[s_p_node], self.p_rhs[t_p_node], attrs)
+        else:
+            raise RuleError(
+                "Edge '{}'->'{}' does not exists in the left-hand side "
                 "of the rule".format(source, target))
 
     def _remove_node_rhs(self, node_id):
@@ -1247,6 +1258,7 @@ class Rule(object):
         p_nodes = keys_by_value(self.p_rhs, n)
         for p_node in p_nodes:
             self.p.add_node_attrs(p_node, attrs)
+            self.rhs.add_node_attrs(self.p_rhs[p_node], attrs)
 
     def _remove_attrs(self):
         for n in self.lhs.nodes():
@@ -1312,7 +1324,7 @@ class Rule(object):
         removed_attrs = self.removed_node_attrs()
         removed_edge_attrs = self.removed_edge_attrs()
 
-        added_nodes = {}
+        added_nodes = set()
 
         def add_neighbors_to_rule(n, removed_edges):
 
@@ -1342,44 +1354,44 @@ class Rule(object):
             for s in graph.successors(instance[n]):
                 if s not in visited:
                     visited.add(s)
-                    if s not in instance.values():
-                        new_lhs_node = self.lhs.generate_new_node_id(s)
-                        if s not in added_nodes:
-                            self._add_node_lhs(new_lhs_node)
-                            added_nodes[s] = new_lhs_node
-                        else:
-                            new_lhs_node = keys_by_value(added_nodes, s)[0]
-                        new_instance[new_lhs_node] = s
+                    if s in new_instance.values():
+                        # node 's' has already been added
+                        lhs_s_node = keys_by_value(new_instance, s)[0]
                     else:
-                        new_lhs_node = keys_by_value(instance, s)[0]
+                        # we need to add 's'
+                        lhs_s_node = self.lhs.generate_new_node_id(s)
+                        self._add_node_lhs(lhs_s_node)
+                        added_nodes.add(s)
+                        new_instance[lhs_s_node] = s
+
                     edge_attrs = graph.get_edge(instance[n], s)
-                    if not self.lhs.exists_edge(n, new_lhs_node):
-                        self.lhs.add_edge(n, new_lhs_node, edge_attrs)
+                    if not self.lhs.exists_edge(n, lhs_s_node):
+                        self.lhs.add_edge(n, lhs_s_node, edge_attrs)
                     else:
-                        self.lhs.add_edge_attrs(n, new_lhs_node, edge_attrs)
-                    add_preserved_edges(n, new_lhs_node, edge_attrs, removed_edges)
+                        self.lhs.add_edge_attrs(n, lhs_s_node, edge_attrs)
+                    add_preserved_edges(n, lhs_s_node, edge_attrs, removed_edges)
 
             visited = set()
             # add predecessors
             for p in graph.predecessors(instance[n]):
                 if p not in visited:
                     visited.add(p)
-                    if p not in instance.values():
-                        new_lhs_node = self.lhs.generate_new_node_id(p)
-                        if p not in added_nodes:
-                            self._add_node_lhs(new_lhs_node)
-                            added_nodes[p] = new_lhs_node
-                        else:
-                            new_lhs_node = keys_by_value(added_nodes, p)[0]
-                        new_instance[new_lhs_node] = p
+                    if p in new_instance.values():
+                        # node 'p' has already been added
+                        lhs_p_node = keys_by_value(new_instance, p)[0]
                     else:
-                        new_lhs_node = keys_by_value(instance, p)[0]
+                        # we need to add 'p'
+                        lhs_p_node = self.lhs.generate_new_node_id(p)
+                        self._add_node_lhs(lhs_p_node)
+                        added_nodes.add(p)
+                        new_instance[lhs_p_node] = p
+
                     edge_attrs = graph.get_edge(p, instance[n])
-                    if not self.lhs.exists_edge(new_lhs_node, n):
-                        self.lhs.add_edge(new_lhs_node, n, edge_attrs)
+                    if not self.lhs.exists_edge(lhs_p_node, n):
+                        self.lhs.add_edge(lhs_p_node, n, edge_attrs)
                     else:
-                        self.lhs.add_edge_attrs(new_lhs_node, n, edge_attrs)
-                    add_preserved_edges(new_lhs_node, n, edge_attrs, removed_edges)
+                        self.lhs.add_edge_attrs(lhs_p_node, n, edge_attrs)
+                    add_preserved_edges(lhs_p_node, n, edge_attrs, removed_edges)
 
         # Remove side-effects of node removal
         for n in self.removed_nodes():
@@ -1419,7 +1431,6 @@ class Rule(object):
 
                 # Add nodes adjacent to removed nodes
                 add_neighbors_to_rule(self.p_lhs[p_node], self.removed_edges())
-
         return new_instance
 
     def get_inverted_rule(self):
@@ -1463,9 +1474,9 @@ def compose_rules(rule1, lhs_instance1, rhs_instance1,
                   return_all=False):
     """Compose two rules respecting instances."""
     if rule1.is_identity() and not return_all:
-        return rule2, lhs_instance2, rhs_instance2
+        return rule2, copy.deepcopy(lhs_instance2), copy.deepcopy(rhs_instance2)
     if rule2.is_identity() and not return_all:
-        return rule1, lhs_instance1, lhs_instance1
+        return rule1, copy.deepcopy(lhs_instance1), copy.deepcopy(rhs_instance1)
 
     p1_instance = _generate_p_instance(
         rule1, lhs_instance1, rhs_instance1)
@@ -1532,7 +1543,6 @@ def compose_rules(rule1, lhs_instance1, rhs_instance1,
         p1_instance, g1_m_g2, identity(rule1.p, rule1.p), p1_p1_p,
         compose(p1_p_h, h_instance))
 
-    # find p2_p instance
     g2_m_g2 = {
         p2_instance[k]: compose(rule2.p_lhs, lhs_instance2)[k]
         for k in rule2.p_lhs.keys()
@@ -1579,6 +1589,9 @@ def compose_rules(rule1, lhs_instance1, rhs_instance1,
                 del rule.p_rhs[n]
             rule.p_lhs[new_p_node] = lhs_node
             rule.p_rhs[new_p_node] = list(rhs_nodes)[0]
+
+    assert(set(lhs_instance.keys()) == set(rule.lhs.nodes()))
+    assert(set(rhs_instance.keys()) == set(rule.rhs.nodes()))
 
     if return_all:
         return rule, lhs_instance, rhs_instance, {

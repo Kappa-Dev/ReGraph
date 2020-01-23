@@ -1,6 +1,7 @@
 """Collection of utils for audit trails."""
 from abc import ABC, abstractmethod
 
+import copy
 import datetime
 import uuid
 import warnings
@@ -83,6 +84,14 @@ class Versioning(ABC):
             self._heads = heads
             self._revision_graph = revision_graph
 
+    def initial_commit(self):
+        """Return the id of the initial commit."""
+        for n in self._revision_graph.nodes():
+            if len(self._revision_graph.predecessors(n)) == 0:
+                commit = n
+                break
+        return commit
+
     @abstractmethod
     def _compose_deltas(self, delta1, delta2):
         """Abstract method for composing deltas."""
@@ -115,6 +124,8 @@ class Versioning(ABC):
                     result_delta,
                     self._revision_graph.adj[
                         previous_commit][current_commit]["delta"])
+
+                d = self._revision_graph.adj[previous_commit][current_commit]["delta"]
                 previous_commit = current_commit
             return result_delta
         else:
@@ -150,15 +161,18 @@ class Versioning(ABC):
             branch=self._current_branch,
             time=time,
             message=message if message is not None else "")
+
         self._revision_graph.add_edge(
             previous_commit, commit_id, delta=delta)
+
+        d = self._revision_graph.adj[previous_commit][commit_id]["delta"]
 
         # Update deltas
         for branch, branch_delta in self._deltas.items():
             self._deltas[branch] = self._compose_deltas(
                 self._invert_delta(delta), branch_delta)
-            self._refine_delta(self._deltas[branch])
 
+            self._refine_delta(self._deltas[branch])
         return commit_id
 
     def switch_branch(self, branch):
@@ -185,6 +199,7 @@ class Versioning(ABC):
                     self._deltas[previous_branch],
                     another_delta
                 )
+
         del self._deltas[self._current_branch]
 
     def branch(self, new_branch, message=None):
@@ -351,10 +366,14 @@ class Versioning(ABC):
                         branching_to_rollback = nx.shortest_path(
                             self._revision_graph,
                             head_branching_point, rollback_commit)
+
+                        delta_branching_to_rollback = self._compose_delta_path(
+                            branching_to_rollback)
+                        delta_branching_to_head = self._compose_delta_path(
+                            branching_to_head)
                         self._deltas[head] = self._compose_deltas(
-                            self._invert_delta(
-                                self._compose_delta_path(branching_to_rollback)),
-                            self._compose_delta_path(branching_to_head)
+                            self._invert_delta(delta_branching_to_rollback),
+                            delta_branching_to_head
                         )
 
                 if head in self._deltas:
@@ -461,17 +480,23 @@ class VersionedGraph(Versioning):
                  deltas=None, heads=None, revision_graph=None):
         """Initialize versioned graph object."""
         self.graph = graph
-        super().__init__(init_branch=init_branch, current_branch=current_branch,
+        super().__init__(init_branch=init_branch,
+                         current_branch=current_branch,
                          deltas=deltas, heads=heads,
                          revision_graph=revision_graph)
 
     def _refine_delta(self, delta):
         lhs = delta["rule"].refine(self.graph, delta["lhs_instance"])
         delta["lhs_instance"] = lhs
+
+        new_rhs = dict()
         for n in delta["rule"].rhs.nodes():
             if n not in delta["rhs_instance"].keys():
-                delta["rhs_instance"][n] = lhs[
-                    delta["rule"].p_lhs[keys_by_value(delta["rule"].p_rhs, n)[0]]]
+                new_rhs[n] = lhs[delta["rule"].p_lhs[
+                    keys_by_value(delta["rule"].p_rhs, n)[0]]]
+            else:
+                new_rhs[n] = delta["rhs_instance"][n]
+        delta["rhs_instance"] = new_rhs
 
     def _compose_deltas(self, delta1, delta2):
         """Computing composition of two deltas."""
@@ -494,8 +519,8 @@ class VersionedGraph(Versioning):
         """Reverse the direction of delta."""
         return {
             "rule": delta["rule"].get_inverted_rule(),
-            "lhs_instance": delta["rhs_instance"],
-            "rhs_instance": delta["lhs_instance"]
+            "lhs_instance": copy.deepcopy(delta["rhs_instance"]),
+            "rhs_instance": copy.deepcopy(delta["lhs_instance"])
         }
 
     @staticmethod
@@ -511,8 +536,11 @@ class VersionedGraph(Versioning):
 
     def _apply_delta(self, delta, relabel=True):
         """Apply delta to the current graph version."""
-        _, rhs_instance = delta["rule"].apply_to(
-            self.graph, delta["lhs_instance"], inplace=True)
+
+
+
+        rhs_instance = self.graph.rewrite(
+            delta["rule"], delta["lhs_instance"])
 
         if relabel:
             # Relabel nodes to correspond to the stored rhs
@@ -534,8 +562,8 @@ class VersionedGraph(Versioning):
             _create_merging_rule(
                 delta["rule"], delta["lhs_instance"], delta["rhs_instance"])
 
-        _, rhs_instance = current_to_merged_rule.apply_to(
-            self.graph, delta["lhs_instance"], inplace=True)
+        rhs_instance = self.graph.rewrite(
+            current_to_merged_rule, delta["lhs_instance"])
 
         current_to_merged_delta = {
             "rule": current_to_merged_rule,
@@ -555,9 +583,8 @@ class VersionedGraph(Versioning):
         """Rewrite the versioned graph and commit."""
         # Refine a rule to be side-effect free
         refined_instance = rule.refine(self.graph, instance)
-        _, rhs_instance = rule.apply_to(
-            self.graph, refined_instance, inplace=True)
-
+        rhs_instance = self.graph.rewrite(
+            rule, refined_instance)
         commit_id = self.commit({
             "rule": rule,
             "lhs_instance": refined_instance,
@@ -659,12 +686,10 @@ class VersionedHierarchy(Versioning):
 
     def _apply_delta(self, delta, relabel=True):
         """Apply delta to the current hierarchy version."""
-        if isinstance(self.hierarchy, NetworkXHierarchy):
-            _, rhs_instances = self.hierarchy.apply_rule_hierarchy(
-                delta["rule_hierarchy"], delta["lhs_instances"], inplace=True)
-        else:
-            _, rhs_instances = self.hierarchy.apply_rule_hierarchy(
-                delta["rule_hierarchy"], delta["lhs_instances"])
+
+        rhs_instances = self.hierarchy.apply_rule_hierarchy(
+            delta["rule_hierarchy"], delta["lhs_instances"])
+
         if relabel:
             # Relabel nodes to correspond to the stored rhs
             for graph, rhs_instance in delta["rhs_instances"].items():
@@ -673,13 +698,12 @@ class VersionedHierarchy(Versioning):
                 new_labels = {
                     v: old_rhs[k]
                     for k, v in new_rhs.items()
+                    if v != old_rhs[k]
                 }
-                changed_labels = False
-                for k, v in new_labels.items():
-                    if k != v:
-                        changed_labels = True
-                        break
-                if changed_labels:
+                if len(new_labels) > 0:
+                    for n in self.hierarchy.get_graph(graph).nodes():
+                        if n not in new_labels.keys():
+                            new_labels[n] = n
                     self.hierarchy.relabel_nodes(graph, new_labels)
                     rhs_instances[graph] = old_rhs
 
@@ -693,14 +717,9 @@ class VersionedHierarchy(Versioning):
                 delta["lhs_instances"],
                 delta["rhs_instances"])
 
-        if isinstance(self.hierarchy, NetworkXHierarchy):
-            _, rhs_instances = self.hierarchy.apply_rule_hierarchy(
-                current_to_merged,
-                delta["lhs_instances"], inplace=True)
-        else:
-            _, rhs_instances = self.hierarchy.apply_rule_hierarchy(
-                current_to_merged,
-                delta["lhs_instances"])
+        rhs_instances = self.hierarchy.apply_rule_hierarchy(
+            current_to_merged,
+            delta["lhs_instances"])
 
         current_to_merged_delta = {
             "rule_hierarchy": current_to_merged,
@@ -720,19 +739,14 @@ class VersionedHierarchy(Versioning):
                 p_typing=None, rhs_typing=None,
                 strict=False, message=""):
         """Rewrite the versioned hierarchy and commit."""
-        rule_hierarchy, lhs_instances = self.hierarchy.get_rule_propagations(
+        rule_hierarchy, lhs_instances = self.hierarchy.get_rule_hierarchy(
             graph_id, rule, instance, p_typing, rhs_typing)
 
         lhs_instances = self.hierarchy.refine_rule_hierarchy(
             rule_hierarchy, lhs_instances)
 
-        if isinstance(self.hierarchy, NetworkXHierarchy):
-            new_hierarchy, rhs_instances = self.hierarchy.apply_rule_hierarchy(
-                rule_hierarchy, lhs_instances,
-                inplace=True)
-        else:
-            new_hierarchy, rhs_instances = self.hierarchy.apply_rule_hierarchy(
-                rule_hierarchy, lhs_instances)
+        rhs_instances = self.hierarchy.apply_rule_hierarchy(
+            rule_hierarchy, lhs_instances)
 
         commit_id = self.commit({
             "rule_hierarchy": rule_hierarchy,
