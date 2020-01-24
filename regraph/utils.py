@@ -2,7 +2,7 @@
 import copy
 
 from regraph.command_parser import parser
-from regraph.exceptions import ReGraphError, ParsingError
+from regraph.exceptions import ReGraphError, ParsingError, RewritingError
 from regraph.attribute_sets import AttributeSet, FiniteSet
 
 
@@ -344,6 +344,7 @@ def simplify_commands(commands, di=False):
     actions = []
     for command in command_strings:
         try:
+            print(command)
             parsed = parser.parseString(command).asDict()
             actions.append(parsed)
         except:
@@ -1124,3 +1125,235 @@ def remove_forbidden(string):
             return string.replace(" ", "_").replace(
                 "-", "_").replace(",", "_").replace(
                 "/", "_").replace(".", "_")
+
+
+def test_strictness(hierarchy, origin_id, rule, instance, p_typing, rhs_typing):
+    """Test strictness of rewriting in a hierarchy."""
+    ancestors = hierarchy.get_ancestors(origin_id).keys()
+    for anc in ancestors:
+        typing = hierarchy.get_typing(anc, origin_id)
+
+        for lhs_n in rule.removed_nodes():
+            graph_node = instance[lhs_n]
+            anc_nodes = keys_by_value(typing, graph_node)
+            if len(anc_nodes) > 0:
+                raise RewritingError(
+                    "Rewriting is strict (no propagation of removals is "
+                    "allowed), the removed node '{}' from '{}' ".format(
+                        graph_node, origin_id) +
+                    "has instances '{}' in '{}'".format(
+                        anc_nodes, anc))
+
+        if len(rule.cloned_nodes()) > 0:
+            for lhs_node, p_nodes in rule.cloned_nodes().items():
+                graph_node = instance[lhs_node]
+                anc_nodes = keys_by_value(typing, graph_node)
+                if len(anc_nodes) > 0:
+                    if anc not in p_typing:
+                        raise RewritingError(
+                            "Rewriting is strict (no propagation of clones is "
+                            "allowed), the cloned node '{}' in '{}' ".format(
+                                graph_node, origin_id) +
+                            "has instances '{}' in '{}' and ".format(
+                                anc_nodes, anc) +
+                            "their typing by P is not specified")
+                    else:
+                        for anc_node in anc_nodes:
+                            if anc_node not in p_typing[anc] or\
+                                    len(p_typing[anc][anc_node]) != 1:
+                                raise RewritingError(
+                                    "Rewriting is strict (no propagation of clones is "
+                                    "allowed), typing by a clone in P of the "
+                                    "node '{}' in '{}' is required".format(
+                                        anc_nodes, anc))
+
+        anc_graph = hierarchy.get_graph(anc)
+
+        for p_s, p_t in rule.removed_edges():
+            graph_s = instance[rule.p_lhs[p_s]]
+            graph_t = instance[rule.p_rhs[p_t]]
+            anc_ss = keys_by_value(typing, graph_s)
+            anc_ts = keys_by_value(typing, graph_t)
+            for anc_s in anc_ss:
+                for anc_t in anc_ts:
+                    if anc_graph.exists_edge(anc_s, anc_t):
+                        raise RewritingError(
+                            "Rewriting is strict (no propagation of removals is "
+                            "allowed), the removed edge '{}->{}' from '{}' ".format(
+                                graph_s, graph_t, origin_id) +
+                            "has an instance ('{}->{}') in '{}'".format(
+                                anc_s, anc_t, anc))
+
+        for lhs_node, attrs in rule.removed_node_attrs().items():
+            graph_node = instance[lhs_node]
+            anc_nodes = keys_by_value(typing, graph_node)
+            for anc_node in anc_nodes:
+                if valid_attributes(attrs, anc_graph.get_node(anc_node)):
+                    raise RewritingError(
+                        "Rewriting is strict (no propagation of removals is "
+                        "allowed), the removed attributes '{}' from '{}' in '{}' ".format(
+                            attrs, graph_node, origin_id) +
+                        "have instances in '{}' from '{}'".format(
+                            anc_node, anc))
+
+        for p_s, p_t, attrs in rule.removed_edge_attrs():
+            graph_s = instance[rule.p_lhs[p_s]]
+            graph_t = instance[rule.p_rhs[p_t]]
+            anc_ss = keys_by_value(typing, graph_s)
+            anc_ts = keys_by_value(typing, graph_t)
+            for anc_s in anc_ss:
+                for anc_t in anc_ts:
+                    if anc_graph.exists_edge(anc_s, anc_t):
+                        if valid_attributes(
+                                attrs, anc_graph.get_edge(anc_s, anc_t)):
+                            raise RewritingError(
+                                "Rewriting is strict (no propagation of removals is "
+                                "allowed), the removed edge attributes '{}' ".format(
+                                    attrs) +
+                                "from '{}->{}' in '{}' ".format(
+                                    graph_s, graph_t, origin_id) +
+                                "have instances in '{}->{}' from '{}'".format(
+                                    anc_s, anc_t, anc))
+
+    descendants = hierarchy.get_descendants(origin_id).keys()
+    for desc in descendants:
+        typing = hierarchy.get_typing(origin_id, desc)
+
+        for rhs_node, p_nodes in rule.merged_nodes().items():
+            lhs_nodes = [rule.p_lhs[n] for n in p_nodes]
+            graph_nodes = [instance[n] for n in lhs_nodes]
+            types = set([
+                typing[n]
+                for n in graph_nodes
+            ])
+            if len(types) > 1:
+                raise RewritingError(
+                    "Rewriting is strict (no merging of types is "
+                    "allowed), merged nodes '{}' from '{}' ".format(
+                        graph_nodes, origin_id) +
+                    "induces merging of '{}' from '{}'".format(
+                        types, desc))
+
+        if len(rule.added_nodes()) > 0:
+            if desc not in rhs_typing:
+                raise RewritingError(
+                    "Rewriting is strict (no propagation of types is "
+                    "allowed), typing of the added nodes '{}' ".format(
+                        rule.added_nodes()) +
+                    "by '{}' is required".format(desc))
+            else:
+                for rhs_n in rule.added_nodes():
+                    if rhs_n not in rhs_typing[desc] or\
+                            len(rhs_typing[desc][rhs_n]) != 1:
+                        raise RewritingError(
+                            "Rewriting is strict (no propagation of "
+                            "types is allowed), typing of the added "
+                            "node '{}' by '{}' is required".format(
+                                rhs_n, desc))
+
+        desc_graph = hierarchy.get_graph(desc)
+
+        for rhs_node, attrs in rule.added_node_attrs().items():
+            if rhs_node in rule.added_nodes():
+                desc_node = rhs_typing[desc][rhs_node]
+                if not valid_attributes(attrs, desc_graph.get_node(desc_node)):
+                    raise RewritingError(
+                        "Rewriting is strict (no propagation of attribute "
+                        "addition allowed), rule adds new attributes '{}' ".format(
+                            attrs) +
+                        "to the node '{}' from '{}'".format(desc_node, desc))
+            else:
+                lhs_nodes = [
+                    rule.p_lhs[n]
+                    for n in keys_by_value(rule.p_rhs, rhs_node)
+                ]
+                graph_nodes = [instance[n] for n in lhs_nodes]
+                # There is only one type, otherwise it would fail before
+                desc_node = [
+                    typing[n]
+                    for n in graph_nodes
+                ][0]
+
+                if not valid_attributes(attrs, desc_graph.get_node(desc_node)):
+                    raise RewritingError(
+                        "Rewriting is strict (no propagation of attribute "
+                        "addition is allowed), rule adds new attributes "
+                        "'{}' ".format(attrs) +
+                        "to the node '{}' from '{}'".format(desc_node, desc))
+
+        for rhs_s, rhs_t in rule.added_edges():
+
+            if rhs_s in rule.added_nodes():
+                desc_s = list(rhs_typing[desc][rhs_s])[0]
+            else:
+                lhs_nodes = [
+                    rule.p_lhs[n]
+                    for n in keys_by_value(rule.p_rhs, rhs_s)
+                ]
+                graph_nodes = [instance[n] for n in lhs_nodes]
+
+                # There is only one type, otherwise it would fail before
+                desc_s = [
+                    typing[n]
+                    for n in graph_nodes
+                ][0]
+
+            if rhs_t in rule.added_nodes():
+                desc_t = list(rhs_typing[desc][rhs_t])[0]
+            else:
+                lhs_nodes = [
+                    rule.p_lhs[n]
+                    for n in keys_by_value(rule.p_rhs, rhs_t)
+                ]
+                graph_nodes = [instance[n] for n in lhs_nodes]
+
+                # There is only one type, otherwise it would fail before
+                desc_t = [
+                    typing[n]
+                    for n in graph_nodes
+                ][0]
+
+            if not desc_graph.exists_edge(desc_s, desc_t):
+                raise RewritingError(
+                    "Rewriting is strict (no propagation of edge "
+                    "addition is allowed), rule adds new edge "
+                    "'{}->{}' ".format(desc_s, desc_t) +
+                    "in '{}'".format(desc))
+
+        for rhs_s, rhs_t, attrs in rule.added_edge_attrs().items():
+            if rhs_s in rule.added_nodes():
+                desc_s = list(rhs_typing[desc][rhs_s])[0]
+            else:
+                lhs_nodes = [
+                    rule.p_lhs[n]
+                    for n in keys_by_value(rule.p_rhs, rhs_s)
+                ]
+                graph_nodes = [instance[n] for n in lhs_nodes]
+
+                # There is only one type, otherwise it would fail before
+                desc_s = [
+                    typing[n]
+                    for n in graph_nodes
+                ][0]
+
+            if rhs_t in rule.added_nodes():
+                desc_t = list(rhs_typing[desc][rhs_t])[0]
+            else:
+                lhs_nodes = [
+                    rule.p_lhs[n]
+                    for n in keys_by_value(rule.p_rhs, rhs_t)
+                ]
+                graph_nodes = [instance[n] for n in lhs_nodes]
+
+                # There is only one type, otherwise it would fail before
+                desc_t = [
+                    typing[n]
+                    for n in graph_nodes
+                ][0]
+            desc_attrs = desc_graph.get_edge(desc_s, desc_t)
+            if not valid_attributes(attrs, desc_attrs):
+                raise RewritingError(
+                    "Rewriting is strict (no propagation of attribute "
+                    "addition is allowed), rule adds new attributes "
+                    "'{}' ".format(attrs) +
+                    "to the edge '{}->{}' from '{}'".format(desc_s, desc_t, desc))

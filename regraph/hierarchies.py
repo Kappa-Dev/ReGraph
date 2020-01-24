@@ -33,7 +33,8 @@ from regraph.rules import Rule
 from regraph.utils import (attrs_from_json,
                            attrs_to_json,
                            keys_by_value,
-                           normalize_typing_relation)
+                           normalize_typing_relation,
+                           test_strictness)
 
 
 class Hierarchy(ABC):
@@ -1784,26 +1785,12 @@ class Hierarchy(ABC):
                             "in the origin of rewriting, while it is "
                             "typed by {} in the typing.".format(v))
 
-        # If rewriting is strict, check rhs typing types all new nodes
+        # If rewriting is strict, check p_typing types all clones,
+        # there are no instances of removed elements and
+        # and rhs typing types all new nodes and no different
+        # types are merged
         if strict is True:
-            if len(rule.added_nodes()) > 0:
-                descendants = self.get_descendants(origin_id).keys()
-                for desc in descendants:
-                    if desc not in rhs_typing:
-                        raise RewritingError(
-                            "Rewriting is strict (no propagation of types is "
-                            "allowed), typing of the added nodes '{}' ".format(
-                                rule.added_nodes()) +
-                            "by '{}' is required".format(desc))
-                    else:
-                        for rhs_n in rule.added_nodes():
-                            if rhs_n not in rhs_typing[desc] or\
-                                    len(rhs_typing[desc][rhs_n]) != 1:
-                                raise RewritingError(
-                                    "Rewriting is strict (no propagation of "
-                                    "types is allowed), typing of the added "
-                                    "nodee '{}' by '{}' is required".format(
-                                        rhs_n, desc))
+            test_strictness(self, origin_id, rule, instance, p_typing, rhs_typing)
 
         return instance, p_typing, rhs_typing
 
@@ -1865,6 +1852,16 @@ class Hierarchy(ABC):
         self._expansive_update_incident_rels(graph_id, g_m_g_prime, adj_relations)
         return r_g_prime, g_m_g_prime
 
+    def _compose_backward(self, pred_id, graph_id, g_m_g, graph_m_origin_m,
+                          pred_m_origin_m, pred_typing):
+        graph_nodes = self.get_graph(graph_id).nodes()
+        return get_unique_map_to_pullback(
+            graph_nodes,
+            g_m_g,
+            graph_m_origin_m,
+            pred_typing,
+            pred_m_origin_m)
+
     def _propagate_backward(self, origin_id, rule, instance, p_origin_m,
                             origin_m_origin, p_typing):
         """Peform backward propagation of the original rewriting.
@@ -1923,19 +1920,19 @@ class Hierarchy(ABC):
 
         # Reconnect broken homomorphisms by composability
         for graph_id, g_m_g in g_m_gs.items():
-            graph_nodes = self.get_graph(graph_id).nodes()
             for pred in self.predecessors(graph_id):
                 pred_typing = self.get_typing(pred, graph_id)
                 if graph_id != origin_id:
-                    pred_graph = get_unique_map_to_pullback(
-                        graph_nodes,
+                    pred_graph = self._compose_backward(
+                        pred,
+                        graph_id,
                         g_m_g,
                         g_m_origin_ms[graph_id],
-                        pred_typing,
-                        g_m_origin_ms[pred])
+                        g_m_origin_ms[pred],
+                        pred_typing)
                 else:
                     pred_graph = g_m_origin_ms[pred]
-                # self.remove_typing(pred, graph_id)
+
                 self._update_mapping(pred, graph_id, pred_graph)
 
     def _expansive_rewrite_and_propagate_forward(self, origin_id, rule,
@@ -2183,11 +2180,15 @@ class Hierarchy(ABC):
         graph = self.get_graph(node_id)
         origin_graph = self.get_graph(origin_id)
 
+        edges_to_remove = set()
         for s, t in graph.edges():
             origin_s = g_m_origin_m[s]
             origin_t = g_m_origin_m[t]
             if (origin_s, origin_t) not in origin_graph.edges():
-                graph.remove_edge(s, t)
+                edges_to_remove.add((s, t))
+
+        for s, t in edges_to_remove:
+            graph.remove_edge(s, t)
 
     def _propagate_edge_attrs_removal(self, origin_id, node_id, rule, p_origin_m,
                                       g_m_origin_m):
@@ -2265,6 +2266,11 @@ class Hierarchy(ABC):
                         map_to_merge_node.add(rhs_n)
                 for n in map_to_merge_node:
                     rhs_g_prime[n] = merged_node_id
+            else:
+                for p_node in p_nodes:
+                    if p_node in rhs_g_prime:
+                        del rhs_g_prime[p_node]
+                rhs_g_prime[rhs_node] = list(graph_nodes)[0]
 
         self._expansive_update_incident_homs(graph_id, g_g_prime, pred_typings)
         self._expansive_update_incident_rels(graph_id, g_g_prime, adj_relations)

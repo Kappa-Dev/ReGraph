@@ -537,8 +537,6 @@ class VersionedGraph(Versioning):
     def _apply_delta(self, delta, relabel=True):
         """Apply delta to the current graph version."""
 
-
-
         rhs_instance = self.graph.rewrite(
             delta["rule"], delta["lhs_instance"])
 
@@ -548,6 +546,10 @@ class VersionedGraph(Versioning):
                 v: delta["rhs_instance"][k]
                 for k, v in rhs_instance.items()
             }
+
+            for n in self.graph.nodes():
+                if n not in new_labels.keys():
+                    new_labels[n] = n
 
             self.graph.relabel_nodes(new_labels)
             rhs_instance = {

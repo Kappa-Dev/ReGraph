@@ -93,11 +93,11 @@ def plot_graph(graph, filename=None, parent_pos=None, title=None):
         iterations = 10
 
     pos = nx.spring_layout(
-        graph, k=k, pos=pos, fixed=fixed, iterations=iterations)
+        graph._graph, k=k, pos=pos, fixed=fixed, iterations=iterations)
     nx.draw_networkx_nodes(
-        graph, pos, node_color=[[0.6, 0.8, 0.047]] * len(graph.nodes()),
+        graph._graph, pos, node_color=[[0.6, 0.8, 0.047]] * len(graph.nodes()),
         node_size=200, scale=1.0)
-    nx.draw_networkx_edges(graph, pos, alpha=0.4, width=2.0, node_size=200)
+    nx.draw_networkx_edges(graph._graph, pos, alpha=0.4, width=2.0, node_size=200)
 
     labels = {}
     for node in graph.nodes():
@@ -114,7 +114,7 @@ def plot_graph(graph, filename=None, parent_pos=None, title=None):
     labels_pos = copy.deepcopy(pos)
     for p in pos:  # raise text positions
         labels_pos[p][1] += offset_factor * normalized_node_size
-    nx.draw_networkx_labels(graph, labels_pos, labels, font_size=11)
+    nx.draw_networkx_labels(graph._graph, labels_pos, labels, font_size=11)
 
     _ticks_off()
     _set_limits(pos, labels_pos)
@@ -191,17 +191,17 @@ def plot_instance(graph, pattern, instance, filename=None,
         iterations = 10
 
     pos = nx.spring_layout(
-        graph, k=k, pos=pos, fixed=fixed, iterations=iterations)
+        graph._graph, k=k, pos=pos, fixed=fixed, iterations=iterations)
     nx.draw_networkx_nodes(
-        graph, pos, node_color=new_colors, node_size=200)
+        graph._graph, pos, node_color=new_colors, node_size=200)
     nx.draw_networkx_edges(
-        graph, pos, alpha=0.4, width=2.0, node_size=200, scale=1.0)
+        graph._graph, pos, alpha=0.4, width=2.0, node_size=200, scale=1.0)
 
     # Draw pattern edges highlighted
     edgelist = [(instance[edge[0]], instance[edge[1]])
                 for edge in pattern.edges()]
     nx.draw_networkx_edges(
-        graph, pos,
+        graph._graph, pos,
         edgelist=edgelist,
         width=3, alpha=0.3, edge_color=[instance_color] * len(edgelist), node_size=200)
 
@@ -218,7 +218,7 @@ def plot_instance(graph, pattern, instance, filename=None,
     labels_pos = copy.deepcopy(pos)
     for p in pos:  # raise text positions
         labels_pos[p][1] += offset_factor * normalized_node_size
-    nx.draw_networkx_labels(graph, labels_pos, labels, font_size=11)
+    nx.draw_networkx_labels(graph._graph, labels_pos, labels, font_size=11)
 
     # color the instances
 
@@ -296,7 +296,7 @@ def plot_rule(rule, filename=None, title=None):
             rhs_colors.append(np.random.rand(3,))
 
     # generate positions
-    p_pos = nx.spring_layout(rule.p, k=0.8, scale=1.0)
+    p_pos = nx.spring_layout(rule.p._graph, k=0.8, scale=1.0)
 
     lhs_pos = dict()
     lhs_fixed = []
@@ -309,7 +309,7 @@ def plot_rule(rule, filename=None, title=None):
         lhs_fixed = None
         lhs_pos = None
     lhs_pos = nx.spring_layout(
-        rule.lhs, pos=lhs_pos, fixed=lhs_fixed, k=0.05, scale=1.0, iterations=10)
+        rule.lhs._graph, pos=lhs_pos, fixed=lhs_fixed, k=0.05, scale=1.0, iterations=10)
 
     rhs_pos = dict()
     rhs_fixed = []
@@ -322,7 +322,7 @@ def plot_rule(rule, filename=None, title=None):
         rhs_fixed = None
         rhs_pos = None
     rhs_pos = nx.spring_layout(
-        rule.rhs, pos=rhs_pos, fixed=rhs_fixed, k=0.05, scale=1.0, iterations=10)
+        rule.rhs._graph, pos=rhs_pos, fixed=rhs_fixed, k=0.05, scale=1.0, iterations=10)
 
     all_pos = {
         **lhs_pos,
@@ -371,31 +371,31 @@ def plot_rule(rule, filename=None, title=None):
     plt.title("LHS")
     _ticks_off()
     _set_limits(all_pos, all_label_pos)
-    nx.draw_networkx_nodes(rule.lhs, lhs_pos,
+    nx.draw_networkx_nodes(rule.lhs._graph, lhs_pos,
                            node_color=lhs_colors,
                            node_size=100, arrows=True)
-    nx.draw_networkx_edges(rule.lhs, lhs_pos, alpha=0.4, node_size=100)
-    nx.draw_networkx_labels(rule.lhs, lhs_label_pos, lhs_labels, font_size=11)
+    nx.draw_networkx_edges(rule.lhs._graph, lhs_pos, alpha=0.4, node_size=100)
+    nx.draw_networkx_labels(rule.lhs._graph, lhs_label_pos, lhs_labels, font_size=11)
 
     plt.subplot(1, 3, 2)
     plt.title("P")
     _ticks_off()
     _set_limits(all_pos, all_label_pos)
-    nx.draw_networkx_nodes(rule.p, p_pos,
+    nx.draw_networkx_nodes(rule.p._graph, p_pos,
                            node_color=p_colors,
                            node_size=100, arrows=True)
-    nx.draw_networkx_edges(rule.p, p_pos, alpha=0.4, node_size=100)
-    nx.draw_networkx_labels(rule.p, p_label_pos, p_labels, font_size=11)
+    nx.draw_networkx_edges(rule.p._graph, p_pos, alpha=0.4, node_size=100)
+    nx.draw_networkx_labels(rule.p._graph, p_label_pos, p_labels, font_size=11)
 
     plt.subplot(1, 3, 3)
     plt.title("RHS")
     _ticks_off()
     _set_limits(all_pos, all_label_pos)
-    nx.draw_networkx_nodes(rule.rhs, rhs_pos,
+    nx.draw_networkx_nodes(rule.rhs._graph, rhs_pos,
                            node_color=rhs_colors,
                            node_size=100, arrows=True)
-    nx.draw_networkx_edges(rule.rhs, rhs_pos, alpha=0.4, node_size=100)
-    nx.draw_networkx_labels(rule.rhs, rhs_label_pos, rhs_labels, font_size=11)
+    nx.draw_networkx_edges(rule.rhs._graph, rhs_pos, alpha=0.4, node_size=100)
+    nx.draw_networkx_labels(rule.rhs._graph, rhs_label_pos, rhs_labels, font_size=11)
 
     if title is not None:
         st.set_y(0.95)

@@ -171,6 +171,7 @@ class Rule(object):
             actions = []
             for command in command_strings:
                 try:
+                    print(command)
                     parsed = parser.parseString(command).asDict()
                     actions.append(parsed)
                 except:
@@ -298,26 +299,11 @@ class Rule(object):
             some_p_node = p_nodes[0]
             p_new_node_id = self.p.clone_node(some_p_node, new_node_id)
             self.p_lhs[p_new_node_id] = n
+
             # add it to the rhs
             # generate a new id for rhs
-            rhs_new_node_id = p_new_node_id
-            if rhs_new_node_id in self.rhs.nodes():
-                rhs_new_node_id = self.rhs.generate_new_node_id(
-                    rhs_new_node_id)
-            self.rhs.add_node(
-                rhs_new_node_id, self.p.node[p_new_node_id])
+            rhs_new_node_id = self.rhs.clone_node(self.p_rhs[some_p_node])
             self.p_rhs[p_new_node_id] = rhs_new_node_id
-            # reconnect the new rhs node with necessary edges
-            for pred in self.p.predecessors(p_new_node_id):
-                if (self.p_rhs[pred], rhs_new_node_id) not in self.rhs.edges():
-                    self.rhs.add_edge(
-                        self.p_rhs[pred], rhs_new_node_id,
-                        self.p.adj[pred][p_new_node_id])
-            for suc in self.p.successors(p_new_node_id):
-                if (rhs_new_node_id, self.p_rhs[suc]) not in self.rhs.edges():
-                    self.rhs.add_edge(
-                        rhs_new_node_id, self.p_rhs[suc],
-                        self.p.adj[p_new_node_id][suc])
 
         return (p_new_node_id, rhs_new_node_id)
 

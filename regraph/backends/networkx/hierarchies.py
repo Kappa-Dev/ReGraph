@@ -252,7 +252,7 @@ class NXHierarchy(Hierarchy, NXGraph):
         if edge_list is not None:
             g.add_edges_from(edge_list)
 
-    def add_typing(self, source, target, mapping, attrs=None):
+    def add_typing(self, source, target, mapping=None, attrs=None):
         """Add homomorphism to the hierarchy.
 
         Parameters
@@ -291,6 +291,9 @@ class NXHierarchy(Hierarchy, NXGraph):
             raise HierarchyError(
                 "Node '{}' is not defined in the hierarchy!".format(target))
 
+        if mapping is None:
+            mapping = dict()
+
         if (source, target) in self.edges():
             raise HierarchyError(
                 "Edge '{}->{}' already exists in the hierarchy: "
@@ -320,6 +323,7 @@ class NXHierarchy(Hierarchy, NXGraph):
             )
         self.remove_edge(source, target)
 
+        print(source, target, mapping)
         # check if the homomorphism is valid
         check_homomorphism(
             self.get_graph(source),
@@ -1417,14 +1421,19 @@ class NXHierarchy(Hierarchy, NXGraph):
 
     def _update_mapping(self, source, target, mapping):
         """Update the mapping dictionary from source to target."""
-        self.update_edge_attrs(
-            source, target,
-            {
-                "mapping": mapping,
-                "attrs": self.get_typing_attrs(source, target)
-            },
-            normalize=False
-        )
+        if self.is_graph(source):
+            self.update_edge_attrs(
+                source, target,
+                {
+                    "mapping": mapping,
+                    "attrs": self.get_typing_attrs(source, target)
+                },
+                normalize=False
+            )
+        else:
+            lhs, rhs = mapping
+            self._update_rule_homomorphism(
+                source, target, lhs, rhs)
 
     def _update_relation(self, left, right, relation):
         """Update the relation dictionaries (left and right)."""
@@ -1680,3 +1689,43 @@ class NXHierarchy(Hierarchy, NXGraph):
                     for k, v in old_rel.items()
                 }
             )
+
+    # def _compose_backward(self, pred_id, graph_id, g_m_g, graph_m_origin_m,
+    #                       pred_m_origin_m, pred_typing):
+    #     graph_nodes = self.get_graph(graph_id).nodes()
+    #     return get_unique_map_to_pullback(
+    #         graph_nodes,
+    #         g_m_g,
+    #         graph_m_origin_m,
+    #         pred_typing,
+    #         pred_m_origin_m)
+
+    def _compose_backward(self, pred_id, graph_id, g_m_g, graph_m_origin_m,
+                          pred_m_origin_m, pred_typing):
+        if self.is_graph(pred_id):
+            return super()._compose_backward(
+                pred_id, graph_id, g_m_g, graph_m_origin_m,
+                pred_m_origin_m, pred_typing)
+        else:
+            # rule = self.get_rule(graph_id)
+            # lhs_nodes = rule.lhs.nodes()
+            # rhs_nodes = rule.rhs.nodes()
+            graph_nodes = self.get_graph(graph_id).nodes()
+
+            lhs_typing, rhs_typing = pred_typing
+            pred_m_origin_m_lhs, _, pred_m_origin_m_rhs = pred_m_origin_m
+
+            lhs_hom = get_unique_map_to_pullback(
+                graph_nodes,
+                g_m_g,
+                graph_m_origin_m,
+                lhs_typing,
+                pred_m_origin_m_lhs)
+
+            rhs_hom = get_unique_map_to_pullback(
+                graph_nodes,
+                g_m_g,
+                graph_m_origin_m,
+                rhs_typing,
+                pred_m_origin_m_lhs)
+            return (lhs_hom, rhs_hom)

@@ -293,7 +293,8 @@ class NXGraph(Graph):
 
         g.add_edges_from(new_edges)
         for s, t in g.edges():
-            g.adj[s][t] = attributes[(s, t)]
+            for k, v in attributes[(s, t)].items():
+                g.adj[s][t][k] = v
         return g
 
     def subgraph(self, nodes):
@@ -434,6 +435,7 @@ class NXGraph(Graph):
                     isomorphic_subgraphs.append((subg, isom))
 
         for subgraph, mapping in isomorphic_subgraphs:
+            # print(subgraph.nodes(), mapping)
             # check node matches
             # exclude subgraphs which nodes information does not
             # correspond to pattern
