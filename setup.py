@@ -10,9 +10,9 @@ setup(
     license='MIT License',
     packages=[
         'regraph',
-        'regraph.neo4j',
-        'regraph.neo4j.cypher_utils',
-        'regraph.networkx'],
+        'regraph.backends.neo4j',
+        'regraph.backends.neo4j.cypher_utils',
+        'regraph.backends.networkx'],
     package_dir={"regraph": "regraph"},
     zip_safe=False,
     install_requires=[
