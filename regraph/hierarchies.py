@@ -1956,10 +1956,17 @@ class Hierarchy(ABC):
                 n: n for n in self.get_graph(graph).nodes()
             }
 
-            # origin_prime_g_prime = {
-            #     k: v for k, v in origin_typing.items()
-            # }
             rhs_g_prime = compose(p_origin_m, origin_typing)
+
+            pred_typings = {
+                p: self.get_typing(p, graph)
+                for p in self.predecessors(graph)
+            }
+            adj_relations = {
+                a: self.get_relation(graph, a)
+                for a in self.adjacent_relations(graph)
+            }
+
             # Propagate node merges
             if len(rule.merged_nodes()) > 0:
                 self._propagate_merge(
@@ -1972,6 +1979,11 @@ class Hierarchy(ABC):
                     origin_id, graph, rule,
                     rhs_graph_typing,
                     g_g_prime, rhs_g_prime)
+
+            self._expansive_update_incident_homs(
+                graph, g_g_prime, pred_typings)
+            self._expansive_update_incident_rels(
+                graph, g_g_prime, adj_relations)
 
             # Propagate node attrs additions
             if len(rule.added_node_attrs()) > 0:
@@ -2020,7 +2032,6 @@ class Hierarchy(ABC):
                     g_g_prime,
                     rhs_g_primes[suc],
                     suc_typing)
-                # self.remove_typing(graph_id, suc)
                 self._update_mapping(graph_id, suc, graph_suc)
         return rhs_origin_prime
 
@@ -2239,14 +2250,7 @@ class Hierarchy(ABC):
             Map from the RHS to the updated graph with 'graph_id'
         """
         graph = self.get_graph(graph_id)
-        pred_typings = {
-            p: self.get_typing(p, graph_id)
-            for p in self.predecessors(graph_id)
-        }
-        adj_relations = {
-            a: self.get_relation(graph_id, a)
-            for a in self.adjacent_relations(graph_id)
-        }
+
         for rhs_node, p_nodes in rule.merged_nodes().items():
             graph_nodes = set([
                 rhs_g_prime[p_node]
@@ -2272,9 +2276,6 @@ class Hierarchy(ABC):
                         del rhs_g_prime[p_node]
                 rhs_g_prime[rhs_node] = list(graph_nodes)[0]
 
-        self._expansive_update_incident_homs(graph_id, g_g_prime, pred_typings)
-        self._expansive_update_incident_rels(graph_id, g_g_prime, adj_relations)
-
     def _propagate_node_addition(self, origin_id, graph_id, rule,
                                  rhs_typing, g_g_prime, rhs_g_prime):
         """Propagate node additions from 'origin_id' to 'graph_id'.
@@ -2297,14 +2298,7 @@ class Hierarchy(ABC):
             Map from the RHS to the updated graph with 'graph_id'
         """
         graph = self.get_graph(graph_id)
-        pred_typings = {
-            p: self.get_typing(p, graph_id)
-            for p in self.predecessors(graph_id)
-        }
-        adj_relations = {
-            a: self.get_relation(graph_id, a)
-            for a in self.adjacent_relations(graph_id)
-        }
+
         for rhs_node in rule.added_nodes():
             if rhs_node in rhs_typing:
                 if len(rhs_typing[rhs_node]) == 1:
@@ -2330,9 +2324,6 @@ class Hierarchy(ABC):
                 new_node_id = graph.generate_new_node_id(rhs_node)
                 graph.add_node(new_node_id)
                 rhs_g_prime[rhs_node] = new_node_id
-
-        self._expansive_update_incident_homs(graph_id, g_g_prime, pred_typings)
-        self._expansive_update_incident_rels(graph_id, g_g_prime, adj_relations)
 
     def _propagate_node_attrs_addition(self, origin_id, graph_id, rule,
                                        rhs_g_prime):

@@ -323,7 +323,6 @@ class NXHierarchy(Hierarchy, NXGraph):
             )
         self.remove_edge(source, target)
 
-        print(source, target, mapping)
         # check if the homomorphism is valid
         check_homomorphism(
             self.get_graph(source),
