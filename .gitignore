@@ -31,3 +31,5 @@ examples/.ipynb_checkpoints/
 regraph/bin/*
 examples/benchmark/scale_free/*
 examples/benchmark/pickles/logspaced_cliques.pickle
+examples/*/.ipynb_checkpoints/
+.ipynb_checkpoints/

@@ -662,7 +662,7 @@ class Hierarchy(ABC):
     def get_ancestors(self, graph_id):
         """Return ancestors of a graph with the typing morphisms."""
         ancestors = dict()
-        for pred, _ in self.in_edges(graph_id):
+        for pred in self.predecessors(graph_id):
             typing = self.get_typing(pred, graph_id)
             pred_ancestors = self.get_ancestors(pred)
             if pred in ancestors.keys():

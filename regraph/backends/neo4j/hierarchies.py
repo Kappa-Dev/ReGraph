@@ -5,16 +5,17 @@ graph hierarchy based on Neo4j graphs.
 
 * `Neo4jHierarchy` -- class for persistent graph hierarchies.
 """
+import warnings
+
 from neo4j.v1 import GraphDatabase
 from neo4j.exceptions import ConstraintError
 
 from regraph.exceptions import (HierarchyError,
                                 InvalidHomomorphism,
-                                RewritingError,
-                                ReGraphError)
+                                ReGraphError,
+                                ReGraphWarning)
 from regraph.hierarchies import Hierarchy
 from regraph.backends.neo4j.graphs import Neo4jGraph
-from regraph.category_utils import compose
 from .cypher_utils.generic import (constraint_query,
                                    get_nodes,
                                    get_edges,
@@ -30,7 +31,6 @@ from .cypher_utils.generic import (constraint_query,
                                    match_node,
                                    shortest_path_query,
                                    match_edge,
-                                   set_id,
                                    )
 from .cypher_utils.propagation import (set_intergraph_edge,
                                        check_homomorphism,
@@ -41,10 +41,7 @@ from .cypher_utils.rewriting import (add_edge,
                                      remove_nodes,
                                      remove_edge)
 from regraph.utils import (normalize_attrs,
-                           keys_by_value,
-                           normalize_typing_relation,
                            attrs_from_json,
-                           attrs_to_json,
                            normalize_relation)
 
 
@@ -138,8 +135,22 @@ class Neo4jHierarchy(Hierarchy):
         query = get_typing(source_id, target_id, "typing")
         result = self.execute(query)
         typing = {}
+        source_nodes = self.get_graph(source_id).nodes()
+        target_nodes = self.get_graph(target_id).nodes()
         for record in result:
-            typing[record["node"]] = record["type"]
+            node_id = record["node"]
+            if node_id not in source_nodes:
+                try:
+                    node_id = int(node_id)
+                except:
+                    pass
+            type_id = record["type"]
+            if type_id not in target_nodes:
+                try:
+                    type_id = int(type_id)
+                except:
+                    pass
+            typing[node_id] = type_id
         return typing
 
     def get_relation(self, left_id, right_id):
@@ -769,7 +780,7 @@ class Neo4jHierarchy(Hierarchy):
                 "MATCH (s:{} {{id: '{}'}})-[r:{}]->(t:{} {{id: '{}'}}), ".format(
                     source, k, self._graph_typing_label, target, old_mapping[k]) +
                 "(new_t:{} {{id: '{}'}})\n".format(target, v) +
-                "DELETE r" +
+                "DELETE r\n" +
                 "MERGE (s)-[:{}]->(new_t)\n".format(self._graph_typing_label)
             )
             self.execute(query)
@@ -1031,3 +1042,313 @@ class Neo4jHierarchy(Hierarchy):
             self._driver,
             node_label=graph_id, edge_label=edge_label)
         return g
+
+
+class TypedNeo4jGraph(Neo4jHierarchy):
+    """Class implementing two level hiearchy.
+
+    This class encapsulates neo4j.v1.GraphDatabase object.
+    It provides an interface for accessing typed graphs
+    accommodated in the Neo4j DB. Our system is assumed to
+    consist of two graphs (the data graph) and (the schema graph)
+    connected with a graph homomorphisms (defining typing of
+    the data graph by the schema graph).
+
+    Attributes
+    ----------
+    _driver :  neo4j.v1.GraphDatabase
+        Driver providing connection to a Neo4j database
+    _graph_label : str
+    _typing_label : str
+    _graph_edge_label : str
+    _graph_typing_label : str
+    _schema_node_label : str
+        Label of nodes inducing the schema graph.
+    _data_node_label : str
+
+    Top level represents a data instance, while bottom level represents
+    a graphical schema.
+    """
+
+    def __init__(self,
+                 uri=None, user=None, password=None,
+                 driver=None,
+                 schema_graph=None, data_graph=None,
+                 typing=None, clear=False,
+                 graph_label="graph",
+                 typing_label="homomorphism",
+                 graph_edge_label="edge",
+                 graph_typing_label="typing",
+                 schema_node_label="type", data_node_label="node"):
+        """Initialize driver.
+
+        Parameters:
+        ----------
+        uri : str, optional
+            Uri of bolt listener, for example 'bolt://127.0.0.1:7687'
+        user : str, optional
+            Neo4j database user id
+        password : str, optional
+            Neo4j database password
+        driver : neo4j.v1.direct.DirectDriver, optional
+        graph_label : str, optional
+            Label to use for skeleton nodes representing graphs.
+        typing_label : str, optional
+            Relation type to use for skeleton edges
+            representing homomorphisms.
+        graph_edge_label : str, optional
+            Relation type to use for all graph edges.
+        graph_typing_label : str, optional
+            Relation type to use for edges encoding homomorphisms.
+        schema_graph : dict, optional
+            Schema graph to initialize the TypedGraph in JSON representation:
+            {"nodes": <networkx_like_nodes>, "edges": <networkx_like_edges>}.
+            By default is empty.
+        data_graph : dict, optional
+            Data graph to initialize the TypedGraph in JSON representation:
+            {"nodes": <networkx_like_nodes>, "edges": <networkx_like_edges>}.
+            By default is empty.
+        typing : dict, optional
+            Dictionary contaning typing of data nodes by schema nodes.
+            By default is empty.
+        """
+        if data_graph is None:
+            data_graph = {"nodes": [], "edges": []}
+
+        if schema_graph is None:
+            schema_graph = {"nodes": [], "edges": []}
+        if typing is None:
+            typing = dict()
+
+        if clear is True:
+            self._clear()
+
+        self._driver = GraphDatabase.driver(
+            uri, auth=(user, password))
+
+        self._graph_label = "graph"
+        self._typing_label = "homomorphism"
+        self._relation_label = None
+
+        self._graph_edge_label = "edge"
+        self._graph_typing_label = "typing"
+        self._graph_relation_label = "relation"
+
+        self._schema_node_label = "type"
+        self._data_node_label = "node"
+
+        # create data/schema nodes
+        if self._schema_node_label not in self.graphs():
+            self.add_graph_from_data(
+                self._schema_node_label,
+                schema_graph["nodes"],
+                schema_graph["edges"])
+        else:
+            warnings.warn(
+                "",
+                ReGraphWarning
+            )
+
+        if self._data_node_label not in self.graphs():
+            self.add_graph_from_data(
+                self._data_node_label,
+                data_graph["nodes"],
+                data_graph["edges"])
+        else:
+            warnings.warn(
+                "",
+                ReGraphWarning
+            )
+
+        if (self._data_node_label,
+                self._schema_node_label) not in self.typings():
+            self.add_typing(
+                self._data_node_label,
+                self._schema_node_label, typing)
+        else:
+            warnings.warn(
+                "",
+                ReGraphWarning
+            )
+
+    def find_data_matching(self, pattern, pattern_typing=None, nodes=None):
+        schema_typing = None
+        if pattern_typing is not None:
+            schema_typing = {
+                self._schema_node_label: pattern_typing
+            }
+        return self.find_matching(
+            self._data_node_label,
+            pattern,
+            pattern_typing=schema_typing,
+            nodes=nodes)
+
+    def find_schema_matching(self, pattern, nodes=None):
+        return self.find_matching(
+            self._schema_node_label,
+            pattern,
+            nodes=nodes)
+
+    def rewrite_data(self, rule, instance,
+                     rhs_typing=None, strict=False):
+        if rhs_typing is None:
+            rhs_typing = dict()
+
+        res = self.rewrite(
+            self._data_node_label,
+            rule=rule,
+            instance=instance,
+            rhs_typing={
+                self._schema_node_label: rhs_typing
+            },
+            strict=strict)
+        return res
+
+    def rewrite_schema(self, rule, instance,
+                       data_typing=None, strict=False):
+        return self.rewrite(
+            self._schema_node_label,
+            rule=rule,
+            instance=instance,
+            p_typing={
+                self._data_node_label: data_typing
+            },
+            strict=strict)
+
+    def relabel_schema_node(self, node_id, new_node_id):
+        self.relabel_graph_node(self._schema_node_label, node_id, new_node_id)
+
+    def relabel_data_node(self, node_id, new_node_id):
+        self.relabel_graph_node(self._data_node_label, node_id, new_node_id)
+
+    def get_data(self):
+        return self.get_graph(self._data_node_label)
+
+    def get_schema(self):
+        return self.get_graph(self._schema_node_label)
+
+    def get_data_nodes(self):
+        data = self.get_data()
+        return data.nodes()
+
+    def get_data_edges(self):
+        data = self.get_data()
+        return data.edges()
+
+    def get_schema_nodes(self):
+        schema = self.get_schema()
+        return schema.nodes()
+
+    def get_schema_edges(self):
+        schema = self.get_schema()
+        return schema.edges()
+
+    def get_data_typing(self):
+        return self.get_typing(
+            self._data_node_label, self._schema_node_label)
+
+    def get_node_type(self, node_id):
+        t = self.node_type(self._data_node_label, node_id)
+        return t[self._schema_node_label]
+
+    def remove_data_node_attrs(self, node_id, attrs):
+        g = self._access_graph(self._data_node_label)
+        g.remove_node_attrs(node_id, attrs)
+
+    def remove_schema_node_attrs(self, node_id, attrs):
+        g = self._access_graph(self._schema_node_label)
+        g.remove_node_attrs(node_id, attrs)
+
+    def add_data_node_attrs(self, node_id, attrs):
+        g = self._access_graph(self._data_node_label)
+        g.add_node_attrs(node_id, attrs)
+
+    def add_schema_node_attrs(self, node_id, attrs):
+        g = self._access_graph(self._schema_node_label)
+        g.add_node_attrs(node_id, attrs)
+
+    def get_data_node(self, node_id):
+        g = self._access_graph(self._data_node_label)
+        return g.get_node(node_id)
+
+    def get_schema_node(self, node_id):
+        g = self._access_graph(self._schema_node_label)
+        return g.get_node(node_id)
+
+    # @classmethod
+    # def from_json(cls, uri=None, user=None, password=None,
+    #               driver=None, json_data=None, ignore=None, clear=False):
+    #     """Create hierarchy object from JSON representation.
+
+    #     Parameters
+    #     ----------
+
+    #     uri : str, optional
+    #         Uri for Neo4j database connection
+    #     user : str, optional
+    #         Username for Neo4j database connection
+    #     password : str, optional
+    #         Password for Neo4j database connection
+    #     driver : neo4j.v1.direct.DirectDriver, optional
+    #         DB driver object
+    #     json_data : dict, optional
+    #         JSON-like dict containing representation of a hierarchy
+    #     ignore : dict, optional
+    #         Dictionary containing components to ignore in the process
+    #         of converting from JSON, dictionary should respect the
+    #         following format:
+    #         {
+    #             "graphs": <collection of ids of graphs to ignore>,
+    #             "rules": <collection of ids of rules to ignore>,
+    #             "typing": <collection of tuples containing typing
+    #                 edges to ignore>,
+    #             "rule_typing": <collection of tuples containing rule
+    #                 typing edges to ignore>>,
+    #             "relations": <collection of tuples containing
+    #                 relations to ignore>,
+    #         }
+    #     directed : bool, optional
+    #         True if graphs from JSON representation should be loaded as
+    #         directed graphs, False otherwise, default value -- True
+
+    #     Returns
+    #     -------
+    #     hierarchy : regraph.neo4j.TypedGraph
+    #     """
+    #     print("Started creating object")
+    #     g = cls(
+    #         uri=uri, user=user, password=password, driver=driver)
+    #     print("Finished creating object")
+
+    #     if clear is True:
+    #         g._clear()
+
+    #     print("Started filling up graphs")
+    #     # add graphs
+    #     for graph_data in json_data["graphs"]:
+    #         if graph_data["id"] in ["node", "type"]:
+    #             if "attrs" not in graph_data.keys():
+    #                 attrs = dict()
+    #             else:
+    #                 attrs = attrs_from_json(graph_data["attrs"])
+    #             g.add_graph(
+    #                 graph_data["id"],)
+    #     print("Finished filling up graphs")
+
+    #     print("Started additng typing")
+    #     # add typing
+    #     for typing_data in json_data["typing"]:
+    #         if typing_data["from"] == "node" and\
+    #            typing_data["to"] == "type":
+    #             if "attrs" not in typing_data.keys():
+    #                 attrs = dict()
+    #             else:
+    #                 attrs = attrs_from_json(typing_data["attrs"])
+    #             g.remove_typing("node", "type")
+    #             g.add_typing(
+    #                 typing_data["from"],
+    #                 typing_data["to"],
+    #                 typing_data["mapping"],
+    #                 attrs)
+    #     print("Finished addiing typing")
+    #     return g
