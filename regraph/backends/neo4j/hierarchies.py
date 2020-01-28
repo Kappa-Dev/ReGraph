@@ -5,6 +5,8 @@ graph hierarchy based on Neo4j graphs.
 
 * `Neo4jHierarchy` -- class for persistent graph hierarchies.
 """
+import os
+import json
 import warnings
 
 from neo4j.v1 import GraphDatabase
@@ -911,6 +913,22 @@ class Neo4jHierarchy(Hierarchy):
             pass
 
     @classmethod
+    def load(cls, uri=None, user=None, password=None,
+             driver=None, filename=None, ignore=None,
+             clear=False):
+        """Load the hierarchy."""
+        if os.path.isfile(filename):
+            with open(filename, "r+") as f:
+                json_data = json.loads(f.read())
+                hierarchy = cls.from_json(
+                    uri=uri, user=user, password=password,
+                    driver=driver, json_data=json_data, ignore=ignore,
+                    clear=clear)
+            return hierarchy
+        else:
+            raise ReGraphError("File '{}' does not exist!".format(filename))
+
+    @classmethod
     def from_json(cls, uri=None, user=None, password=None,
                   driver=None, json_data=None, ignore=None,
                   clear=False):
@@ -951,7 +969,6 @@ class Neo4jHierarchy(Hierarchy):
         -------
         hierarchy : regraph.hierarchy.Hierarchy
         """
-
         hierarchy = cls(
             uri=uri, user=user, password=password, driver=driver)
 
@@ -1329,13 +1346,13 @@ class TypedNeo4jGraph(Neo4jHierarchy):
 
     def get_data_nodes(self, data=False):
         """Get to nodes of the data."""
-        data = self.get_data()
-        return data.nodes(data=data)
+        data_g = self.get_data()
+        return data_g.nodes(data=data)
 
     def get_data_edges(self, data=False):
         """Get the edges of the data."""
-        data = self.get_data()
-        return data.edges(data=data)
+        data_g = self.get_data()
+        return data_g.edges(data=data)
 
     def get_schema_nodes(self, data=False):
         """Get the nodes of the schema."""

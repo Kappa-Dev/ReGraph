@@ -732,11 +732,11 @@ class Rule(object):
         return json_data
 
     @classmethod
-    def from_json(cls, json_data, directed=True):
+    def from_json(cls, json_data):
         """Create a rule obj from JSON repr."""
-        lhs = NXGraph.from_json(json_data["lhs"], directed)
-        p = NXGraph.from_json(json_data["p"], directed)
-        rhs = NXGraph.from_json(json_data["rhs"], directed)
+        lhs = NXGraph.from_json(json_data["lhs"])
+        p = NXGraph.from_json(json_data["p"])
+        rhs = NXGraph.from_json(json_data["rhs"])
         p_lhs = json_data["p_lhs"]
         p_rhs = json_data["p_rhs"]
         rule = cls(p, lhs, rhs, p_lhs, p_rhs)

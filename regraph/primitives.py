@@ -626,8 +626,7 @@ def append_to_node_names(graph, token):
 
 def networkx_from_json(j_data):
     """Create a NetworkX graph from a json-like dictionary."""
-    graph = NXGraph()
-    graph.from_json(j_data)
+    graph = NXGraph.from_json(j_data)
     return graph
 
 

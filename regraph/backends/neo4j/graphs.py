@@ -196,8 +196,9 @@ class Neo4jGraph(Graph):
             node_id, self._node_label,
             "attributes")
         result = self._execute(query)
-        return generic.properties_to_attributes(
+        attrs = generic.properties_to_attributes(
             result, "attributes")
+        return attrs
 
     def get_edge(self, s, t):
         """Get edge attributes.
