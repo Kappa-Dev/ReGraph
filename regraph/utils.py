@@ -1255,7 +1255,7 @@ def test_strictness(hierarchy, origin_id, rule, instance, p_typing, rhs_typing):
 
         for rhs_node, attrs in rule.added_node_attrs().items():
             if rhs_node in rule.added_nodes():
-                desc_node = rhs_typing[desc][rhs_node]
+                desc_node = list(rhs_typing[desc][rhs_node])[0]
                 if not valid_attributes(attrs, desc_graph.get_node(desc_node)):
                     raise RewritingError(
                         "Rewriting is strict (no propagation of attribute "

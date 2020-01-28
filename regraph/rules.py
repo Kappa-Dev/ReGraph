@@ -966,20 +966,16 @@ class Rule(object):
         for s, t in self.lhs.edges():
             s_p_nodes = keys_by_value(self.p_lhs, s)
             t_p_nodes = keys_by_value(self.p_lhs, t)
-            new_attrs = {}
             for s_p_node in s_p_nodes:
                 for t_p_node in t_p_nodes:
                     if (s_p_node, t_p_node) in self.p.edges():
-                        new_attrs = attrs_union(
-                            new_attrs,
-                            dict_sub(
-                                self.lhs.adj[s][t],
-                                self.p.adj[s_p_node][t_p_node]
-                            )
+                        new_attrs = dict_sub(
+                            self.lhs.adj[s][t],
+                            self.p.adj[s_p_node][t_p_node]
                         )
-            if len(new_attrs) > 0:
-                normalize_attrs(new_attrs)
-                attrs[(s, t)] = new_attrs
+                        if len(new_attrs) > 0:
+                            normalize_attrs(new_attrs)
+                            attrs[(s_p_node, t_p_node)] = new_attrs
         return attrs
 
     def cloned_nodes(self):

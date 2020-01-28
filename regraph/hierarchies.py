@@ -1378,9 +1378,11 @@ class Hierarchy(ABC):
                       pattern_typing=None, nodes=None):
         """Find an instance of a pattern in a specified graph.
 
+        Parameters
+        ----------
         graph_id : hashable
             Id of a graph in the hierarchy to search for matches
-        pattern : regraph.Graph or nx.DiGraph object
+        pattern : Graph object
             A pattern to match
         pattern_typing : dict
             A dictionary that specifies a typing of a pattern,
@@ -1389,6 +1391,11 @@ class Hierarchy(ABC):
             values are mappings of nodes from pattern to the typing graph;
         nodes : iterable
             Subset of nodes where matching should be performed
+
+        Returns
+        -------
+        instances : list of dict
+            List of matched instances
         """
         if pattern_typing is None:
             pattern_typing = dict()
@@ -1466,7 +1473,7 @@ class Hierarchy(ABC):
         rhs_typing : dict, optional
             Dictionary containing typing of the rhs by graphs of the hierarchy,
             keys are ids of hierarchy graphs, values are dictionaries
-            containing the mapping of nodes from the lhs to the nodes of
+            containing the mapping of nodes from the rhs to the nodes of
             the typing graph given by the respective key of the value
             (note that a node from the rhs can be typed by a set of nodes of
             some graph, e.g. if we want to perform merging of some types, etc).
@@ -1477,8 +1484,8 @@ class Hierarchy(ABC):
         ------
         HierarchyError
             If the graph is not in the database
-        TypingWarning
-            If the rhs typing is inconsistent
+        RewritingError
+            If the provided p and rhs typing are inconsistent
         """
         # Type check the input rule, its instance and typing
         instance, p_typing, rhs_typing = self._check_rule_instance_typing(

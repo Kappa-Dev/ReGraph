@@ -10,10 +10,13 @@ import warnings
 from neo4j.v1 import GraphDatabase
 from neo4j.exceptions import ConstraintError
 
+from regraph.rules import Rule
+from regraph.backends.networkx.graphs import NXGraph
 from regraph.exceptions import (HierarchyError,
                                 InvalidHomomorphism,
                                 ReGraphError,
-                                ReGraphWarning)
+                                ReGraphWarning,
+                                RewritingError)
 from regraph.hierarchies import Hierarchy
 from regraph.backends.neo4j.graphs import Neo4jGraph
 from .cypher_utils.generic import (constraint_query,
@@ -42,7 +45,9 @@ from .cypher_utils.rewriting import (add_edge,
                                      remove_edge)
 from regraph.utils import (normalize_attrs,
                            attrs_from_json,
-                           normalize_relation)
+                           normalize_relation,
+                           valid_attributes,
+                           keys_by_value)
 
 
 class Neo4jHierarchy(Hierarchy):
@@ -946,6 +951,7 @@ class Neo4jHierarchy(Hierarchy):
         -------
         hierarchy : regraph.hierarchy.Hierarchy
         """
+
         hierarchy = cls(
             uri=uri, user=user, password=password, driver=driver)
 
@@ -1112,19 +1118,11 @@ class TypedNeo4jGraph(Neo4jHierarchy):
             Dictionary contaning typing of data nodes by schema nodes.
             By default is empty.
         """
-        if data_graph is None:
-            data_graph = {"nodes": [], "edges": []}
-
-        if schema_graph is None:
-            schema_graph = {"nodes": [], "edges": []}
-        if typing is None:
-            typing = dict()
+        self._driver = GraphDatabase.driver(
+            uri, auth=(user, password))
 
         if clear is True:
             self._clear()
-
-        self._driver = GraphDatabase.driver(
-            uri, auth=(user, password))
 
         self._graph_label = "graph"
         self._typing_label = "homomorphism"
@@ -1138,40 +1136,69 @@ class TypedNeo4jGraph(Neo4jHierarchy):
         self._data_node_label = "node"
 
         # create data/schema nodes
-        if self._schema_node_label not in self.graphs():
-            self.add_graph_from_data(
-                self._schema_node_label,
-                schema_graph["nodes"],
-                schema_graph["edges"])
-        else:
-            warnings.warn(
-                "",
-                ReGraphWarning
-            )
+        if schema_graph is not None:
+            if self._schema_node_label not in self.graphs():
+                self.add_graph_from_data(
+                    self._schema_node_label,
+                    schema_graph["nodes"],
+                    schema_graph["edges"])
+            else:
+                warnings.warn(
+                    "The database already contains an instance of the "
+                    "schema graph, ignoring provided node and edge list",
+                    ReGraphWarning
+                )
 
-        if self._data_node_label not in self.graphs():
-            self.add_graph_from_data(
-                self._data_node_label,
-                data_graph["nodes"],
-                data_graph["edges"])
-        else:
-            warnings.warn(
-                "",
-                ReGraphWarning
-            )
+        if data_graph is not None:
+            if self._data_node_label not in self.graphs():
+                self.add_graph_from_data(
+                    self._data_node_label,
+                    data_graph["nodes"],
+                    data_graph["edges"])
+            else:
+                warnings.warn(
+                    "The database already contains an instance of the "
+                    "data graph, ignoring provided node and edge list",
+                    ReGraphWarning
+                )
 
-        if (self._data_node_label,
-                self._schema_node_label) not in self.typings():
-            self.add_typing(
-                self._data_node_label,
-                self._schema_node_label, typing)
-        else:
-            warnings.warn(
-                "",
-                ReGraphWarning
-            )
+        if typing is not None:
+            if (self._data_node_label,
+                    self._schema_node_label) not in self.typings():
+                self.add_typing(
+                    self._data_node_label,
+                    self._schema_node_label, typing)
+            else:
+                warnings.warn(
+                    "The database already contains a typing of the "
+                    "data by the schema, ignoring provided typing",
+                    ReGraphWarning
+                )
+
+    def get_instances(self, schema_node):
+        """Get all the instances of the schema node."""
+        return keys_by_value(self.get_data_typing(), schema_node)
 
     def find_data_matching(self, pattern, pattern_typing=None, nodes=None):
+        """Find matching of a pattern in the data graph.
+
+        Parameters
+        ----------
+        pattern : Graph object
+            A pattern to match
+        pattern_typing : dict
+            A dictionary that specifies a typing of a pattern,
+            keys of the dictionary -- graph id that types a pattern, this graph
+            should be among parents of the `graph_id` graph;
+            values are mappings of nodes from pattern to the typing graph;
+        nodes : iterable
+            Subset of nodes where matching should be performed
+
+        Returns
+        -------
+        instances : list of dict
+            List of matched instances
+        """
         schema_typing = None
         if pattern_typing is not None:
             schema_typing = {
@@ -1184,6 +1211,25 @@ class TypedNeo4jGraph(Neo4jHierarchy):
             nodes=nodes)
 
     def find_schema_matching(self, pattern, nodes=None):
+        """Find matching of a pattern in the schema graph.
+
+        Parameters
+        ----------
+        pattern : Graph object
+            A pattern to match
+        pattern_typing : dict
+            A dictionary that specifies a typing of a pattern,
+            keys of the dictionary -- graph id that types a pattern, this graph
+            should be among parents of the `graph_id` graph;
+            values are mappings of nodes from pattern to the typing graph;
+        nodes : iterable
+            Subset of nodes where matching should be performed
+
+        Returns
+        -------
+        instances : list of dict
+            List of matched instances
+        """
         return self.find_matching(
             self._schema_node_label,
             pattern,
@@ -1191,6 +1237,28 @@ class TypedNeo4jGraph(Neo4jHierarchy):
 
     def rewrite_data(self, rule, instance,
                      rhs_typing=None, strict=False):
+        """Rewrite the data graph.
+
+         Parameters
+        ----------
+        rule : regraph.rule.Rule
+            Rule object to apply
+        instance : dict, optional
+            Dictionary containing an instance of the lhs of the rule in
+            the data graph, by default, tries to construct the
+            identity morphism of the nodes of the pattern
+        rhs_typing : dict, optional
+            Dictionary containing typing of the rhs by the schema.
+        strict : bool, optional
+            Rewriting is strict when propagation down is not allowed
+
+        Raises
+        ------
+        HierarchyError
+            If the graph is not in the database
+        RewritingError
+            If the provided p and rhs typing are inconsistent
+        """
         if rhs_typing is None:
             rhs_typing = dict()
 
@@ -1204,151 +1272,303 @@ class TypedNeo4jGraph(Neo4jHierarchy):
             strict=strict)
         return res
 
-    def rewrite_schema(self, rule, instance,
+    def rewrite_schema(self, rule, instance=None,
                        data_typing=None, strict=False):
+        """Rewrite the schema graph.
+
+         Parameters
+        ----------
+        rule : regraph.rule.Rule
+            Rule object to apply
+        instance : dict, optional
+            Dictionary containing an instance of the lhs of the rule in
+            the schema graph, by default, tries to construct the
+            identity morphism of the nodes of the pattern
+        data_typing : dict, optional
+            Dictionary containing typing of data by the
+            interface of the rule.
+        strict : bool, optional
+            Rewriting is strict when propagation down is not allowed
+
+        Raises
+        ------
+        HierarchyError
+            If the graph is not in the database
+        RewritingError
+            If the provided p and rhs typing are inconsistent
+        """
+        p_typing = None
+        if data_typing is not None:
+            p_typing = {
+                self._data_node_label: data_typing
+            }
+
         return self.rewrite(
             self._schema_node_label,
             rule=rule,
             instance=instance,
-            p_typing={
-                self._data_node_label: data_typing
-            },
+            p_typing=p_typing,
             strict=strict)
 
     def relabel_schema_node(self, node_id, new_node_id):
-        self.relabel_graph_node(self._schema_node_label, node_id, new_node_id)
+        """Relabel a node in the schema."""
+        self.relabel_graph_node(
+            self._schema_node_label, node_id, new_node_id)
 
     def relabel_data_node(self, node_id, new_node_id):
+        """Relabel a node in the data."""
         self.relabel_graph_node(self._data_node_label, node_id, new_node_id)
 
     def get_data(self):
+        """Get the data graph object."""
         return self.get_graph(self._data_node_label)
 
     def get_schema(self):
+        """Get the schema graph object."""
         return self.get_graph(self._schema_node_label)
 
-    def get_data_nodes(self):
+    def get_data_nodes(self, data=False):
+        """Get to nodes of the data."""
         data = self.get_data()
-        return data.nodes()
+        return data.nodes(data=data)
 
-    def get_data_edges(self):
+    def get_data_edges(self, data=False):
+        """Get the edges of the data."""
         data = self.get_data()
-        return data.edges()
+        return data.edges(data=data)
 
-    def get_schema_nodes(self):
+    def get_schema_nodes(self, data=False):
+        """Get the nodes of the schema."""
         schema = self.get_schema()
-        return schema.nodes()
+        return schema.nodes(data=data)
 
-    def get_schema_edges(self):
+    def get_schema_edges(self, data=False):
+        """Get the edges of the schema."""
         schema = self.get_schema()
-        return schema.edges()
+        return schema.edges(data=data)
 
     def get_data_typing(self):
+        """Get the typing of the data."""
         return self.get_typing(
             self._data_node_label, self._schema_node_label)
 
     def get_node_type(self, node_id):
+        """Get the type of a node in the data."""
         t = self.node_type(self._data_node_label, node_id)
         return t[self._schema_node_label]
 
-    def remove_data_node_attrs(self, node_id, attrs):
-        g = self._access_graph(self._data_node_label)
-        g.remove_node_attrs(node_id, attrs)
-
-    def remove_schema_node_attrs(self, node_id, attrs):
-        g = self._access_graph(self._schema_node_label)
-        g.remove_node_attrs(node_id, attrs)
-
-    def add_data_node_attrs(self, node_id, attrs):
-        g = self._access_graph(self._data_node_label)
-        g.add_node_attrs(node_id, attrs)
-
-    def add_schema_node_attrs(self, node_id, attrs):
-        g = self._access_graph(self._schema_node_label)
-        g.add_node_attrs(node_id, attrs)
-
     def get_data_node(self, node_id):
-        g = self._access_graph(self._data_node_label)
+        """Get the attributes of a data node."""
+        g = self.get_graph(self._data_node_label)
         return g.get_node(node_id)
 
     def get_schema_node(self, node_id):
-        g = self._access_graph(self._schema_node_label)
+        """Get the attributes of a schema node."""
+        g = self.get_graph(self._schema_node_label)
         return g.get_node(node_id)
 
-    # @classmethod
-    # def from_json(cls, uri=None, user=None, password=None,
-    #               driver=None, json_data=None, ignore=None, clear=False):
-    #     """Create hierarchy object from JSON representation.
+    # Set of utils for type-respecting transformations
 
-    #     Parameters
-    #     ----------
+    def remove_data_node(self, node_id):
+        """Remove a data node."""
+        g = self.get_graph(self._data_node_label)
+        g.remove_node(node_id)
 
-    #     uri : str, optional
-    #         Uri for Neo4j database connection
-    #     user : str, optional
-    #         Username for Neo4j database connection
-    #     password : str, optional
-    #         Password for Neo4j database connection
-    #     driver : neo4j.v1.direct.DirectDriver, optional
-    #         DB driver object
-    #     json_data : dict, optional
-    #         JSON-like dict containing representation of a hierarchy
-    #     ignore : dict, optional
-    #         Dictionary containing components to ignore in the process
-    #         of converting from JSON, dictionary should respect the
-    #         following format:
-    #         {
-    #             "graphs": <collection of ids of graphs to ignore>,
-    #             "rules": <collection of ids of rules to ignore>,
-    #             "typing": <collection of tuples containing typing
-    #                 edges to ignore>,
-    #             "rule_typing": <collection of tuples containing rule
-    #                 typing edges to ignore>>,
-    #             "relations": <collection of tuples containing
-    #                 relations to ignore>,
-    #         }
-    #     directed : bool, optional
-    #         True if graphs from JSON representation should be loaded as
-    #         directed graphs, False otherwise, default value -- True
+    def remove_data_edge(self, source, target):
+        """Remove a data edge."""
+        g = self.get_graph(self._data_node_label)
+        g.remove_edge(source, target)
 
-    #     Returns
-    #     -------
-    #     hierarchy : regraph.neo4j.TypedGraph
-    #     """
-    #     print("Started creating object")
-    #     g = cls(
-    #         uri=uri, user=user, password=password, driver=driver)
-    #     print("Finished creating object")
+    def remove_data_node_attrs(self, node_id, attrs):
+        """Remove the attributes of a data node."""
+        g = self.get_data()
+        g.remove_node_attrs(node_id, attrs)
 
-    #     if clear is True:
-    #         g._clear()
+    def add_data_node(self, node_id, typing, attrs=None):
+        """Add a data node typed by the specified schema node."""
+        rule = Rule.from_transform(NXGraph())
+        rule.inject_add_node(node_id, attrs)
+        rhs_typing = {node_id: typing}
+        rhs_instance = self.rewrite_data(
+            rule, {}, rhs_typing=rhs_typing, strict=True)
+        return rhs_instance[node_id]
 
-    #     print("Started filling up graphs")
-    #     # add graphs
-    #     for graph_data in json_data["graphs"]:
-    #         if graph_data["id"] in ["node", "type"]:
-    #             if "attrs" not in graph_data.keys():
-    #                 attrs = dict()
-    #             else:
-    #                 attrs = attrs_from_json(graph_data["attrs"])
-    #             g.add_graph(
-    #                 graph_data["id"],)
-    #     print("Finished filling up graphs")
+    def add_data_edge(self, source, target, attrs=None):
+        """Add a data edge."""
+        schema_s = self.get_node_type(source)
+        schema_t = self.get_node_type(target)
+        schema = self.get_schema()
 
-    #     print("Started additng typing")
-    #     # add typing
-    #     for typing_data in json_data["typing"]:
-    #         if typing_data["from"] == "node" and\
-    #            typing_data["to"] == "type":
-    #             if "attrs" not in typing_data.keys():
-    #                 attrs = dict()
-    #             else:
-    #                 attrs = attrs_from_json(typing_data["attrs"])
-    #             g.remove_typing("node", "type")
-    #             g.add_typing(
-    #                 typing_data["from"],
-    #                 typing_data["to"],
-    #                 typing_data["mapping"],
-    #                 attrs)
-    #     print("Finished addiing typing")
-    #     return g
+        if (schema_s, schema_t) not in schema.edges():
+            raise RewritingError(
+                "Cannot add an edge '{}->{}': ".format(
+                    source, target) +
+                "edge '{}->{}' is not allowed by the schema".format(
+                    schema_s, schema_t))
+        else:
+            normalize_attrs(attrs)
+            schema_attrs = schema.get_edge(schema_s, schema_t)
+            if not valid_attributes(attrs, schema_attrs):
+                raise RewritingError(
+                    "Cannot add attributes {} to '{}->{}': ".format(
+                        attrs, source, target) +
+                    "the typing schema edge '{}->{}' does not allow ".format(
+                        schema_s, schema_t) +
+                    "these attributes (allowed {})".format(schema_attrs))
+        data = self.get_data()
+        data.add_edge(source, target, attrs)
+        return
+
+    def add_data_node_attrs(self, node_id, attrs):
+        """Add the attributes to a data node."""
+        normalize_attrs(attrs)
+        schema_node = self.get_node_type(node_id)
+        schema_attrs = self.get_schema_node(schema_node)
+
+        if not valid_attributes(attrs, schema_attrs):
+            raise RewritingError(
+                "Cannot add attributes {} to '{}': ".format(
+                    attrs, node_id) +
+                "the typing schema node '{}' does not allow ".format(
+                    schema_node) +
+                "these attributes (allowed {})".format(schema_attrs))
+        else:
+            g = self.get_data()
+            g.add_node_attrs(node_id, attrs)
+
+    def add_data_edge_attrs(self, source, target, attrs):
+        """Add a data edge."""
+        schema_s = self.get_node_type(source)
+        schema_t = self.get_node_type(target)
+        schema = self.get_schema()
+
+        normalize_attrs(attrs)
+        schema_attrs = schema.get_edge(schema_s, schema_t)
+        if not valid_attributes(attrs, schema_attrs):
+            raise RewritingError(
+                "Cannot add attributes {} to '{}->{}': ".format(
+                    attrs, source, target) +
+                "the typing schema edge '{}->{}' does not allow ".format(
+                    schema_s, schema_t) +
+                "these attributes (allowed {})".format(schema_attrs))
+        else:
+            data = self.get_data()
+            data.add_edge_attrs(source, target, attrs)
+        return
+
+    def merge_data_nodes(self, node_list):
+        """Merge data nodes."""
+        data_typing = self.get_data_typing()
+        schema_nodes = set([
+            data_typing[n] for n in node_list
+        ])
+        if len(schema_nodes) > 1:
+            raise RewritingError(
+                "Cannot merge the data nodes {} ".format(node_list) +
+                "of different types (i.e. {})".format(schema_nodes)
+            )
+
+        pattern = NXGraph()
+        pattern.add_nodes_from(node_list)
+        rule = Rule.from_transform(pattern)
+        merged_node = rule.inject_merge_nodes(node_list)
+        rhs_instance = self.rewrite_data(rule, instance=None, strict=True)
+        return rhs_instance[merged_node]
+
+    def add_schema_node(self, node_id, attrs=None):
+        """Add a schema node."""
+        g = self.get_graph(self._schema_node_label)
+        g.add_node(node_id, attrs)
+
+    def add_schema_edge(self, source, target, attrs=None):
+        """Add a schema node."""
+        g = self.get_graph(self._schema_node_label)
+        g.add_edge(source, target, attrs)
+
+    def add_schema_node_attrs(self, node_id, attrs):
+        """Add the attributes of a schema node."""
+        g = self.get_graph(self._schema_node_label)
+        g.add_node_attrs(node_id, attrs)
+
+    def remove_schema_node(self, node_id):
+        """Remove a schema node."""
+        data_typing = self.get_data_typing()
+        instances = keys_by_value(data_typing, node_id)
+
+        if len(instances) > 0:
+            raise RewritingError(
+                "Cannot remove '{}' from the schema: ".format(
+                    node_id) +
+                "'{}' has instances in the data ({})".format(
+                    node_id, instances))
+        else:
+            g = self.get_schema()
+            g.remove_node(node_id)
+
+    def remove_schema_node_attrs(self, node_id, attrs):
+        """Remove a schema node."""
+        data_typing = self.get_data_typing()
+        instances = keys_by_value(data_typing, node_id)
+
+        if len(instances) > 0:
+            for instance in instances:
+                instance_attrs = self.get_data_node(instance)
+                if valid_attributes(attrs, instance_attrs):
+                    raise RewritingError(
+                        "Cannot remove attributes {} from '{}' in the schema: ".format(
+                            attrs, node_id) +
+                        "the instance '{}' in the data has attributes {}".format(
+                            instance, instance_attrs))
+
+        normalize_attrs(attrs)
+        g = self.get_schema()
+        g.remove_node_attrs(node_id, attrs)
+
+    def remove_schema_edge(self, source, target):
+        """Remove a schema node."""
+        data_typing = self.get_data_typing()
+        instances_s = keys_by_value(data_typing, source)
+        instances_t = keys_by_value(data_typing, target)
+        data = self.get_data()
+        for s in instances_s:
+            for t in instances_t:
+                if (s, t) in data.edges():
+                    raise RewritingError(
+                        "Cannot remove '{}->{}' from the schema: ".format(
+                            source, target) +
+                        "'{}->{}' has an instance in the data ('{}->{}'')".format(
+                            source, target, s, t))
+        g = self.get_schema()
+        g.remove_edge(source, target)
+
+    def remove_schema_edge_attrs(self, source, target, attrs):
+        """Remove a schema node."""
+        data_typing = self.get_data_typing()
+        instances_s = keys_by_value(data_typing, source)
+        instances_t = keys_by_value(data_typing, target)
+        data = self.get_data()
+        normalize_attrs(attrs)
+        for s in instances_s:
+            for t in instances_t:
+                if (s, t) in data.edges():
+                    data_attrs = data.get_edge(source, target)
+                    if valid_attributes(attrs, data_attrs):
+                        raise RewritingError(
+                            "Cannot remove attributes {} from '{}->{}' ".format(
+                                attrs, source, target) +
+                            "in the schema: the instance '{}->{}' ".format(
+                                s, t) +
+                            "in the data has attributes {}".format(
+                                data_attrs))
+        g = self.get_schema()
+        g.remove_edge_attrs(source, target, attrs)
+
+    def clone_schema_node(self, node, data_typing):
+        """Clone a schema node."""
+        pattern = NXGraph()
+        pattern.add_nodes_from(node)
+        rule = Rule.from_transform(pattern)
+        _, rhs_clone = rule.inject_clone_node(node)
+        rhs_instance = self.rewrite_schema(
+            rule, instance=None, data_typing=data_typing, strict=True)
+        return rhs_instance[rhs_clone]

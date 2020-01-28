@@ -753,6 +753,7 @@ def find_matching(pattern, node_label, edge_label,
     """
     # normalize pattern typing
     pattern_nodes = list(pattern.nodes())
+    pattern_edges = list(pattern.edges(data=True))
 
     query =\
         "MATCH {}".format(
@@ -761,9 +762,9 @@ def find_matching(pattern, node_label, edge_label,
                 for n in pattern_nodes))
     if len(pattern.edges()) > 0:
         query += ", {}".format(
-            ", ".join("(`{}`)-[:{}]->(`{}`)".format(
-                u, edge_label, v)
-                for u, v in pattern.edges())) + "\n"
+            ", ".join("(`{}`)-[`{}_to_{}`:{}]->(`{}`)".format(
+                u, u, v, edge_label, v)
+                for u, v, _ in pattern_edges)) + "\n"
     else:
         query += "\n"
 
@@ -809,6 +810,7 @@ def find_matching(pattern, node_label, edge_label,
                 ) + "\n "
 
     nodes_with_attrs = []
+    edges_with_attrs = []
     for n, attrs in pattern.nodes(data=True):
         if len(attrs) != 0:
             for k in attrs.keys():
@@ -817,6 +819,18 @@ def find_matching(pattern, node_label, edge_label,
                         nodes_with_attrs.append((n, k, "'{}'".format(el)))
                     else:
                         nodes_with_attrs.append((n, k, "{}".format(el)))
+
+    for s, t, attrs in pattern_edges:
+        if len(attrs) != 0:
+            for k in attrs.keys():
+                for el in attrs[k]:
+                    if type(el) == str:
+                        edges_with_attrs.append(
+                            ("{}_to_{}".format(s, t), k, "'{}'".format(el)))
+                    else:
+                        edges_with_attrs.append(
+                            ("{}_to_{}".format(s, t), k, "{}".format(el)))
+
     if len(nodes_with_attrs) != 0:
         if where_appeared is True:
             query += " AND "
@@ -826,6 +840,16 @@ def find_matching(pattern, node_label, edge_label,
         query += (
             " AND ".join(["{} IN `{}`.{}".format(
                 v, n, k) for n, k, v in nodes_with_attrs]) + "\n"
+        )
+    if len(edges_with_attrs) != 0:
+        if where_appeared is True:
+            query += " AND "
+        else:
+            query += " WHERE "
+            where_appeared = True
+        query += (
+            " AND ".join(["{} IN `{}`.{}".format(
+                v, e_var, k) for e_var, k, v in edges_with_attrs]) + "\n"
         )
 
     query += "RETURN {}".format(", ".join(["`{}`".format(n) for n in pattern.nodes()]))
