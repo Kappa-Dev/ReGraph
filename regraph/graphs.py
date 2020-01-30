@@ -1,4 +1,9 @@
-"""This module contains data structures for abstract graphs."""
+"""Abstract graphs in ReGraph.
+
+This module contains abstract classes for graph objects in ReGraph. Such
+graph objects represent simple graphs with dictionary-like attributes
+on nodes and edges.
+"""
 import json
 import os
 

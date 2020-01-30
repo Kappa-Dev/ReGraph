@@ -1,4 +1,12 @@
-"""Collection of utils for audit trails."""
+"""Audit trails for graphs and graph hierarchies.
+
+This module containes a collection of utils for audit trails that
+provide version control for transformations of graphs and graph hierarchies:
+
+* `Versioning`, abstract class for in-memory versioning of objects;
+* `VersionedGraph`, wrapper around graph objects in ReGraph that allows to track their audit trail;
+* `VersionedHierarchy`, wrapper around hierarchy objects in ReGraph that allows to track their audit trail;
+"""
 from abc import ABC, abstractmethod
 
 import copy
@@ -14,11 +22,7 @@ from regraph.rules import (compose_rules, Rule,
                            _create_merging_rule_hierarchy,
                            compose_rule_hierarchies,
                            invert_rule_hierarchy)
-from regraph.primitives import (relabel_nodes,
-                                graph_to_json,
-                                networkx_from_json)
 from regraph.utils import keys_by_value
-from regraph.backends.networkx.hierarchies import NXHierarchy
 
 
 def _generate_new_commit_meta_data():

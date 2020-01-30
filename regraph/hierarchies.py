@@ -1,4 +1,4 @@
-"""Graph hierarchy related abstract data structures.
+"""Abstract hierarchies of graphs in ReGraph.
 
 This module contains abstact data structures for
 graph hierarchies. A graph hierarchy is a DAG, whose nodes

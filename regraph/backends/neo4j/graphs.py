@@ -1,4 +1,8 @@
-"""This module contains data structures for persistent graphs."""
+"""Neo4j-based persisent graph objects.
+
+This module implements data structures that allow working with persistent
+graphs stored in an instance of the Neo4j database.
+"""
 import os
 import json
 import warnings

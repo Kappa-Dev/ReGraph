@@ -1,7 +1,7 @@
-"""In-memory graph hierarchy related data structures.
+"""NetworkX-based in-memory graph hierarchy objects.
 
 This module contains a data structure implementing
-graph hierarchy based on NetworkX graphs.
+graph hierarchies based on NetworkX graphs.
 
 * `NXHierarchy` -- class for in-memort graph hierarchies.
 """

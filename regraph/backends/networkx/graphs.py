@@ -1,4 +1,7 @@
-"""This module implements data structes for in-memory NetworkX-based graphs."""
+"""NetworkX-based in-memory graph objects.
+
+This module implements data structures wrapping the `networkx.DiGraph` class.
+"""
 import itertools
 import networkx as nx
 from networkx.algorithms import isomorphism

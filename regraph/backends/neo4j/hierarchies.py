@@ -1,9 +1,10 @@
-"""Persistent graph hierarchy related data structures.
+"""Neo4j-based persisent graph hierarchies.
 
-This module contains a data structure implementing
-graph hierarchy based on Neo4j graphs.
+This module implements data structures that allow working with persistent
+graph hierarchies stored in an instance of the Neo4j database:
 
 * `Neo4jHierarchy` -- class for persistent graph hierarchies.
+* `TypedNeo4jGraph` -- class for schema-aware property graph.
 """
 import os
 import json
