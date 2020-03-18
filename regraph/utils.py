@@ -32,7 +32,7 @@ def add_attrs(old_attrs, attrs, normalize=True):
             old_attrs[key] = attrs[key]
 
 
-def remove_attrs(old_attrs, attrs, normalize=True): 
+def remove_attrs(old_attrs, attrs, normalize=True):
     if normalize:
         normalize_attrs(attrs)
     for key, value in attrs.items():
@@ -694,16 +694,21 @@ def simplify_commands(commands, di=False):
             ad_type.append("node")
 
     return "\n".join(
-        [command_strings[i] for i in range(len(actions)) if i not in elements_to_remove])
+        [command_strings[i]
+         for i in range(len(actions))
+         if i not in elements_to_remove])
 
 
 def make_canonical_commands(g, commands, di=False):
-    """ Takes commands and the graph it refers to and returns a list of
-        canonical transformations that have the same behaviour.
-        The canonical form of a transformation follows this pattern :
-            DELETIONS (DELETE_NODE, DELETE_NODE_ATTRS, DELETE_EDGE, DELETE_EDGE_ATTRS)
-            CLONING (CLONE)
-            ADDING and MERGING (ADD_NODE, ADD_NODE_ATTRS, ADD_EDGE, ADD_EDGE_ATTRS, MERGE)
+    """Convert commands to the canonical form.
+
+    Takes commands and the graph it refers to and returns a list of
+    canonical transformations that have the same behaviour.
+    The canonical form of a transformation follows this pattern :
+    DELETIONS (DELETE_NODE, DELETE_NODE_ATTRS, DELETE_EDGE,
+    DELETE_EDGE_ATTRS) CLONING (CLONE)
+    ADDING and MERGING (ADD_NODE, ADD_NODE_ATTRS, ADD_EDGE,
+    ADD_EDGE_ATTRS, MERGE)
     """
     res = []
 
@@ -968,15 +973,15 @@ def make_canonical_commands(g, commands, di=False):
                     for e in env_edges:
                         if e[0] in action["nodes"] and\
                            e[1] in action["nodes"]:
-                            if not e in rem_el:
+                            if e not in rem_el:
                                 rem_el.append(e)
                         if e[0] in action["nodes"]:
-                            if not e in rem_el:
+                            if e not in rem_el:
                                 rem_el.append(e)
                             if e[1] not in action["nodes"]:
                                 added.append((node_name, e[1]))
                         elif e[1] in action["nodes"]:
-                            if not e in rem_el:
+                            if e not in rem_el:
                                 rem_el.append(e)
                             if e[0] not in action["nodes"]:
                                 added.append((e[0], node_name))
@@ -1017,10 +1022,10 @@ def make_canonical_commands(g, commands, di=False):
             else:
                 env_nodes.append(el)
 
-        if del_step + clone_step + add_step == '':
+        if len(next_step) != 0 and len(del_step + clone_step + add_step) == 0:
             raise ReGraphError(
-                "Can't find any new transformations and actions is non-empty :\n%s" %
-                next_step
+                "Cannot find any new transformations and" +
+                "the sequence of actions is non-empty : {}".format(next_step)
             )
 
         res.append(del_step + clone_step + add_step)
@@ -1037,6 +1042,7 @@ def assert_nx_graph_eq(g1, g2):
     for e1, e2 in g1.edges():
         assert(g1.adj[e1][e2] == g2.adj[e1][e2])
     return
+
 
 def format_typing(typing):
     if typing is None:

@@ -91,7 +91,7 @@ class Versioning(ABC):
     def initial_commit(self):
         """Return the id of the initial commit."""
         for n in self._revision_graph.nodes():
-            if len(self._revision_graph.predecessors(n)) == 0:
+            if len(list(self._revision_graph.predecessors(n))) == 0:
                 commit = n
                 break
         return commit

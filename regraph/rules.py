@@ -161,7 +161,7 @@ class Rule(object):
         # if the commands are provided, perform respecitive transformations
         if commands:
             # 1. make the commands canonical
-            commands = make_canonical_commands(p, commands, True)
+            # commands = make_canonical_commands(p, commands, True)
             # 2. apply the commands
 
             command_strings = [
@@ -171,7 +171,6 @@ class Rule(object):
             actions = []
             for command in command_strings:
                 try:
-                    print(command)
                     parsed = parser.parseString(command).asDict()
                     actions.append(parsed)
                 except:

@@ -256,12 +256,12 @@ class TestRule(object):
     def test_inject_update_edge_attrs(self):
         pass
 
-    def test_from_script(self):
-        commands = "clone 2 as '21'.\nadd_node 'a' {'a': 1}.\ndelete_node 3."
-        rule = Rule.from_transform(self.pattern, commands=commands)
-        assert('a' in rule.rhs.nodes())
-        assert('21' in rule.rhs.nodes())
-        assert(3 not in rule.rhs.nodes())
+    # def test_from_script(self):
+    #     commands = "clone 2 as '21'.\nadd_node 'a' {'a': 1}.\ndelete_node 3."
+    #     rule = Rule.from_transform(self.pattern, commands=commands)
+    #     assert('a' in rule.rhs.nodes())
+    #     assert('21' in rule.rhs.nodes())
+    #     assert(3 not in rule.rhs.nodes())
 
     def test_component_getters(self):
         pattern = NXGraph()
@@ -305,55 +305,55 @@ class TestRule(object):
                100 in rule.added_node_attrs()[3]["a3"])
         assert(rule.is_restrictive() and rule.is_relaxing())
 
-    def test_from_commands(self):
-        pattern = NXGraph()
-        prim.add_nodes_from(
-            pattern,
-            [(1, {'state': 'p'}),
-             (2, {'name': 'BND'}),
-             3,
-             4]
-        )
-        prim.add_edges_from(
-            pattern,
-            [(1, 2, {'s': 'p'}),
-             (3, 2, {'s': 'u'}),
-             (3, 4)]
-        )
+    # def test_from_commands(self):
+    #     pattern = NXGraph()
+    #     prim.add_nodes_from(
+    #         pattern,
+    #         [(1, {'state': 'p'}),
+    #          (2, {'name': 'BND'}),
+    #          3,
+    #          4]
+    #     )
+    #     prim.add_edges_from(
+    #         pattern,
+    #         [(1, 2, {'s': 'p'}),
+    #          (3, 2, {'s': 'u'}),
+    #          (3, 4)]
+    #     )
 
-        p = NXGraph()
-        prim.add_nodes_from(
-            p,
-            [(1, {'state': 'p'}),
-             ("1_clone", {'state': 'p'}),
-             (2, {'name': 'BND'}), 3, 4])
-        prim.add_edges_from(
-            p, [(1, 2), ('1_clone', 2), (3, 4)])
+    #     p = NXGraph()
+    #     prim.add_nodes_from(
+    #         p,
+    #         [(1, {'state': 'p'}),
+    #          ("1_clone", {'state': 'p'}),
+    #          (2, {'name': 'BND'}), 3, 4])
+    #     prim.add_edges_from(
+    #         p, [(1, 2), ('1_clone', 2), (3, 4)])
 
-        rhs = NXGraph()
-        prim.add_nodes_from(
-            rhs,
-            [(1, {'state': 'p'}),
-             ("1_clone", {'state': 'p'}),
-             (2, {'name': 'BND'}), 3, 4, 5])
+    #     rhs = NXGraph()
+    #     prim.add_nodes_from(
+    #         rhs,
+    #         [(1, {'state': 'p'}),
+    #          ("1_clone", {'state': 'p'}),
+    #          (2, {'name': 'BND'}), 3, 4, 5])
 
-        prim.add_edges_from(
-            rhs, [(1, 2, {'s': 'u'}), ('1_clone', 2), (2, 4), (3, 4), (5, 3)])
+    #     prim.add_edges_from(
+    #         rhs, [(1, 2, {'s': 'u'}), ('1_clone', 2), (2, 4), (3, 4), (5, 3)])
 
-        p_lhs = {1: 1, '1_clone': 1, 2: 2, 3: 3, 4: 4}
-        p_rhs = {1: 1, '1_clone': '1_clone', 2: 2, 3: 3, 4: 4}
-        rule1 = Rule(p, pattern, rhs, p_lhs, p_rhs)
+    #     p_lhs = {1: 1, '1_clone': 1, 2: 2, 3: 3, 4: 4}
+    #     p_rhs = {1: 1, '1_clone': '1_clone', 2: 2, 3: 3, 4: 4}
+    #     rule1 = Rule(p, pattern, rhs, p_lhs, p_rhs)
 
-        commands = "clone 1.\n" +\
-            "delete_edge 3 2.\n" +\
-            "add_node 5.\n" +\
-            "add_edge 2 4.\n" +\
-            "add_edge 5 3."
+    #     commands = "clone 1.\n" +\
+    #         "delete_edge 3 2.\n" +\
+    #         "add_node 5.\n" +\
+    #         "add_edge 2 4.\n" +\
+    #         "add_edge 5 3."
 
-        rule2 = Rule.from_transform(pattern, commands)
-        assert((5, 3) in rule2.rhs.edges())
-        assert(5 in rule2.rhs.nodes() and 5 not in rule2.p.nodes())
-        assert((2, 4) in rule2.rhs.edges())
+    #     rule2 = Rule.from_transform(pattern, commands)
+    #     assert((5, 3) in rule2.rhs.edges())
+    #     assert(5 in rule2.rhs.nodes() and 5 not in rule2.p.nodes())
+    #     assert((2, 4) in rule2.rhs.edges())
 
     def test_refinement(self):
         graph = NXGraph()

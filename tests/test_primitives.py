@@ -1,3 +1,5 @@
+import copy
+
 from regraph import Rule, NXGraph
 from regraph.utils import (valid_attributes,
                            normalize_attrs)
