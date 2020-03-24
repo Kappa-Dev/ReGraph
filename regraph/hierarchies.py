@@ -1992,6 +1992,18 @@ class Hierarchy(ABC):
             self._expansive_update_incident_rels(
                 graph, g_g_prime, adj_relations)
 
+            keys_to_remove = set()
+            keys_to_add = dict()
+            for k, v in rhs_g_prime.items():
+                if k not in rule.rhs.nodes():
+                    if k in rule.p.nodes():
+                        keys_to_add[rule.p_rhs[k]] = v
+                        keys_to_remove.add(k)
+            for k in keys_to_remove:
+                del rhs_g_prime[k]
+            for k, v in keys_to_add.items():
+                rhs_g_prime[k] = v
+
             # Propagate node attrs additions
             if len(rule.added_node_attrs()) > 0:
                 self._propagate_node_attrs_addition(
@@ -2436,9 +2448,10 @@ class Hierarchy(ABC):
             new_rel = dict()
 
             for node in self.get_graph(graph_id).nodes():
-                new_node = g_m_g_prime[node]
-                if node in rel.keys():
-                    new_rel[new_node] = rel[node]
+                if node in g_m_g_prime:
+                    new_node = g_m_g_prime[node]
+                    if node in rel.keys():
+                        new_rel[new_node] = rel[node]
 
             self._update_relation(graph_id, related_g, new_rel)
 
@@ -2501,3 +2514,12 @@ class Hierarchy(ABC):
         """Relabel nodes of a graph in the hierarchy."""
         graph = self.get_graph(graph)
         graph.relabel_nodes(mapping)
+
+    def graphs_typed_by_node(self, graph_id, node_id):
+        """Get graphs typed by 'node_id' in 'graph_id'."""
+        graphs = []
+        for p in self.predecessors(graph_id):
+            p_typing = self.get_typing(p, graph_id)
+            if node_id in p_typing.values():
+                graphs.append(p)
+        return graphs

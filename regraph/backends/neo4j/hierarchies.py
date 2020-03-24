@@ -675,7 +675,7 @@ class Neo4jHierarchy(Hierarchy):
             raise HierarchyError(
                 "Graph with id '{}' already exists in the hierarchy".format(
                     new_graph_id))
-        self.add_graph(new_graph_id, attrs=self.get_graph_attrs(graph_id))
+        self.add_empty_graph(new_graph_id, attrs=self.get_graph_attrs(graph_id))
         copy_nodes_q = (
             "MATCH (n:{}) CREATE (n1:{}) SET n1=n\n ".format(
                 graph_id, new_graph_id)
@@ -828,7 +828,7 @@ class Neo4jHierarchy(Hierarchy):
                     "MERGE (s)-[:{}]->(new_t)\n".format(
                         self._graph_relation_label)
                 )
-            self.execute(query)
+                self.execute(query)
 
         for k, vs in relation_to_remove.items():
             for v in vs:
@@ -837,7 +837,7 @@ class Neo4jHierarchy(Hierarchy):
                         left, k, self._graph_relation_label, right, v) +
                     "DELETE r\n"
                 )
-            self.execute(query)
+                self.execute(query)
 
     def _get_rule_liftings(self, graph_id, rule, instance, p_typing):
         pass
