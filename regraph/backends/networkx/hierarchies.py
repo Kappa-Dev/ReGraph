@@ -1,4 +1,4 @@
-_expansive_update_incident_rels"""NetworkX-based in-memory graph hierarchy objects.
+"""NetworkX-based in-memory graph hierarchy objects.
 
 This module contains a data structure implementing
 graph hierarchies based on NetworkX graphs.
@@ -12,7 +12,7 @@ import warnings
 from regraph.exceptions import (HierarchyError,
                                 ReGraphError,
                                 InvalidHomomorphism,
-                                RewritingError,_expansive_update_incident_rels
+                                RewritingError,
                                 ReGraphWarning)
 from regraph.hierarchies import Hierarchy
 from regraph.backends.networkx.graphs import NXGraph

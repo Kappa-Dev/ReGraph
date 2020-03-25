@@ -639,6 +639,10 @@ class Hierarchy(ABC):
             r
             for l, r in self.relations()
             if l == g
+        ] + [
+            l
+            for l, r in self.relations()
+            if r == g
         ]
 
     def node_type(self, graph_id, node_id):
