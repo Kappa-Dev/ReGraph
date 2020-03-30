@@ -18,17 +18,21 @@ ReGraph supports two graph backends: in-memory `NetworkX  <https://networkx.gith
    :caption: Contents:
 
 
-Tutorial
-========
+Tutorials
+=========
 * :ref:`network_tutorial1`
     * :ref:`nx_tutorial_part1`
     * :ref:`nx_tutorial_part2`
 * :ref:`neo4j_tutorial1`
     * :ref:`n4_tutorial_part1`
     * :ref:`n4_tutorial_part2`
+* :ref:`tutorial_rules`
+    * :ref:`tutorial_rules1`
+    * :ref:`tutorial_rules2`
 * :ref:`advanced_attributes`
 * :ref:`audit_tutorial`
-
+* :ref:`audit_tutorial_hierarchies`
+* :ref:`tutorial_typedneo4j`
 
 
 :ref:`modules`
