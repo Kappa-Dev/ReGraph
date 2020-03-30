@@ -1,15 +1,21 @@
-.. _network_tutorial:
+.. _neo4j_tutorial1:
 
-Tutorial (NetworkX backend)
-===========================
-* :ref:`nx_tutorial_part1`
-    * :ref:`graph_objects`
-    * :ref:`graph_patterns`
-    * :ref:`rewriting_graphs`
+Tutorial for the Neo4j backend 
+===============================
+* :ref:`n4_tutorial_part1`
+    * :ref:`n4_graph_objects`
+    * :ref:`n4_graph_patterns`
+    * :ref:`n4_rewriting_graphs`
+* :ref:`n4_tutorial_part2`
+    * :ref:`n4_create_hierarchy`
+    * :ref:`n4_rewrite_hierarchy`
+        * :ref:`n4_strict_hierarchy`
+        * :ref:`n4_propagation_hierarchy`
+    * :ref:`n4_serialize_hierarchy`
 
 
+.. _n4_tutorial_part1:
 
-.. _nx_tutorial_part1:
 
 ==============================================
 Part 1: Rewriting simple graph with attributes
@@ -20,38 +26,48 @@ Let us start by importing the necessary data structures and functions:
 
 ::
 
-    from regraph import NXGraph, Rule
-    from regraph import plot_graph, plot_instance, plot_rule
+  from regraph import NXGraph, Neo4jGraph, Rule
+  from regraph import plot_graph, plot_instance, plot_rule
 
-.. _graph_objects:
+.. _n4_graph_objects:
 
 -------------------------------------
 Creating and modifying a graph object
 -------------------------------------
 
-ReGraph implements a wrapper around NetworkX's directed graph objects (`nx.DiGraph`) through the `NXGraph` class. The following snippet illustrates how a directed graph object can be created:
+ReGraph implements a wrapper around the Neo4j driver, the `Neo4jGraph` class, that provides an API for accessing the underlying graph database as a graph object.
+
+Before you can initialize a `Neo4jGraph` object, you need to start your Neo4j database. Then, you need to provide the credentials necessary to establish a connection to the instance of the Neo4j database to the constructor of `Neo4jGraph`, namely:
+
+- URI for the *bolt* port ('bolt://localhost:7687' in the example below)
+- username ('neo4j' in the example below),
+- password ('admin' in the example below).
+
 
 ::
 
-    # Create an empty graph object
-    graph = NXGraph()
+  # Create a graph objects that connects to the Neo4j database
+  graph = Neo4jGraph(
+      uri="bolt://localhost:7687",
+      user="neo4j",
+      password="neo4j")
 
-    # Add a list of nodes, optionally with attributes
-    graph.add_nodes_from(
-        [
-            'Alice',
-            ('Bob', {'age': 15, 'gender': 'male'}),
-            ('Jane', {'age': 40, 'gender': 'female'}),
-            ('Eric', {'age': 55, 'gender': 'male'})
-    ])
+  # Add a list of nodes, optionally with attributes
+  graph.add_nodes_from(
+      [
+          'Alice',
+          ('Bob', {'age': 15, 'gender': 'male'}),
+          ('Jane', {'age': 40, 'gender': 'female'}),
+          ('Eric', {'age': 55, 'gender': 'male'})
+  ])
 
-    # Add a list of edges, optionally with attributes
-    graph.add_edges_from([
-        ("Alice", "Bob"),
-        ("Jane", "Bob", {"type": "parent", "since": 1993}),
-        ("Eric", "Jane", {"type": "friend", "since": 1985}),
-        ("Eric", "Alice", {"type": "parent", "since": 1992}),
-    ])
+  # Add a list of edges, optionally with attributes
+  graph.add_edges_from([
+      ("Alice", "Bob"),
+      ("Jane", "Bob", {"type": "parent", "since": 1993}),
+      ("Eric", "Jane", {"type": "friend", "since": 1985}),
+      ("Eric", "Alice", {"type": "parent", "since": 1992}),
+  ])
 
 
 We can print the list of nodes and edges of the created graph objects with data attached to them:
@@ -78,14 +94,13 @@ We can add individual nodes and edges as follows:
 
 We can also add and access node and edge attributes:
 
-::
+>>> graph.add_node_attrs("Alice", {"age": 18, "gender": "female"})
+>>> graph.add_edge_attrs("Alice", "Bob", {"type": "friend", "since": 2004})
+>>> print("New Alice attibutes: ", graph.get_node("Alice"))
+>>> print("New Alice->Bob attributes: ", graph.get_edge("Alice", "Bob"))
+New Alice attibutes:  {'gender': {'female'}, 'age': {18}}
+New Alice->Bob attributes:  {'type': {'friend'}, 'since': {2004}}
 
-    graph.add_node_attrs("Alice", {"age": 18, "gender": "female"})
-    graph.add_edge_attrs("Alice", "Bob", {"type": "friend", "since": 2004})
-
-    # Get attributes of nodes and edges 
-    print("New Alice attibutes: ", graph.get_node("Alice"))
-    print("New Alice->Bob attributes: ", graph.get_edge("Alice", "Bob"))
 
 Note that the attributes of the nodes/edges are converted to `regraph.attribute_sets.FiniteSet` objects. See the tutorial on advanced attribute values (see :ref:`advanced_attributes`) for more details on the underlying data structures.
 
@@ -94,62 +109,13 @@ Note that the attributes of the nodes/edges are converted to `regraph.attribute_
 age :  {18} , type:  <class 'regraph.attribute_sets.FiniteSet'>
 gender :  {'female'} , type:  <class 'regraph.attribute_sets.FiniteSet'>
 
-ReGraph provides some utils for plotting NetworkX-based graphs 
-
->>> positioning = plot_graph(graph)
-
-
-.. image:: _static/graph1.png
 
 Graph objects can me dumped to dictionaries following the JSON format (note how the attribute values are encoded).
 
 >>> graph.to_json()
-{'edges': [{'from': 'Alice',
-   'to': 'Bob',
-   'attrs': {'type': {'type': 'FiniteSet', 'data': ['friend']},
-    'since': {'type': 'FiniteSet', 'data': [2004]}}},
-  {'from': 'Jane',
-   'to': 'Bob',
-   'attrs': {'type': {'type': 'FiniteSet', 'data': ['parent']},
-    'since': {'type': 'FiniteSet', 'data': [1993]}}},
-  {'from': 'Eric',
-   'to': 'Jane',
-   'attrs': {'type': {'type': 'FiniteSet', 'data': ['friend']},
-    'since': {'type': 'FiniteSet', 'data': [1985]}}},
-  {'from': 'Eric',
-   'to': 'Alice',
-   'attrs': {'type': {'type': 'FiniteSet', 'data': ['parent']},
-    'since': {'type': 'FiniteSet', 'data': [1992]}}},
-  {'from': 'Eric',
-   'to': 'Sandra',
-   'attrs': {'type': {'type': 'FiniteSet', 'data': ['spouse']},
-    'since': {'type': 'FiniteSet', 'data': [1990]}}},
-  {'from': 'Sandra',
-   'to': 'Eric',
-   'attrs': {'type': {'type': 'FiniteSet', 'data': ['spouse']},
-    'since': {'type': 'FiniteSet', 'data': [1990]}}},
-  {'from': 'Sandra',
-   'to': 'Alice',
-   'attrs': {'type': {'type': 'FiniteSet', 'data': ['parent']},
-    'since': {'type': 'FiniteSet', 'data': [1992]}}}],
- 'nodes': [{'id': 'Alice',
-   'attrs': {'age': {'type': 'FiniteSet', 'data': [18]},
-    'gender': {'type': 'FiniteSet', 'data': ['female']}}},
-  {'id': 'Bob',
-   'attrs': {'age': {'type': 'FiniteSet', 'data': [15]},
-    'gender': {'type': 'FiniteSet', 'data': ['male']}}},
-  {'id': 'Jane',
-   'attrs': {'age': {'type': 'FiniteSet', 'data': [40]},
-    'gender': {'type': 'FiniteSet', 'data': ['female']}}},
-  {'id': 'Eric',
-   'attrs': {'age': {'type': 'FiniteSet', 'data': [55]},
-    'gender': {'type': 'FiniteSet', 'data': ['male']}}},
-  {'id': 'Sandra',
-   'attrs': {'age': {'type': 'FiniteSet', 'data': [45]},
-    'gender': {'type': 'FiniteSet', 'data': ['female']}}}]}
 
 
-.. _graph_patterns:
+.. _n4_graph_patterns:
 
 ----------------------
 Finding graph patterns
@@ -180,15 +146,8 @@ We can equip pattern nodes and edges with attributes, then ReGraph will look for
 >>> print(instances)
 [{'x': 'Sandra', 'y': 'Alice', 'z': 'Eric'}, {'z': 'Sandra', 'y': 'Alice', 'x': 'Eric'}]
 
-We can plot matchings inside the graph using `plot_instance`.
 
->>> print(instances[0])
->>> plot_instance(graph, pattern, instances[0], parent_pos=positioning)
-
-
-.. image:: _static/graph2.png
-
-.. _rewriting_graphs:
+.. _n4_rewriting_graphs:
 
 -----------------------
 Rewriting graph objects
@@ -220,25 +179,13 @@ Let us create a rule:
 .. image:: _static/rule_1.png
 
 
-Graph rewriting can be performed with the `rewrite` method of `NXGraph`. It takes as input a rule and an instance of this rule. Rewriting is performed in-place, the provided graph object is modified and a dictionary corresponding to the `RHS` matching in the rewritten graph is returned.
+Graph rewriting can be performed with the `rewrite` method of `Neo4jGraph`. It takes as input a rule and an instance of this rule. Rewriting is performed in-place, the provided graph object is modified and a dictionary corresponding to the `RHS` matching in the rewritten graph is returned.
 
-Let us first back-up the original graph and, then, rewrite it using the first instance we found:
+Let us rewrite the graph using the first instance we found:
 
->>> graph_backup = NXGraph.copy(graph)
 >>> rhs_graph = graph.rewrite(rule, instances[0])
-
-First, we plot the selected pattern instance in the backed-up graph:
-
->>> plot_instance(graph_backup, rule.lhs, instances[0], parent_pos=positioning)
-
-.. image:: _static/instance_1.png
-
-
-Then, we plot the RHS instance in the transformed graph:
-
->>> new_pos = plot_instance(graph, rule.rhs, rhs_graph, parent_pos=positioning)
-
-.. image:: _static/instance_2.png
+>>> print(rhs_graph)
+{'x': 'Sandra', 'y': 'Alice', 'z': 'Eric'}
 
 
 Let us consider another example of a rewriting rule:
@@ -264,11 +211,16 @@ Let us consider another example of a rewriting rule:
 Let us fix an instace of the rule:
 
 >>> instance = {'x': 'Jane', 'y': 'Bob'}
->>> new_pos = plot_instance(graph, rule.lhs, instance, parent_pos=new_pos)
-
-.. image:: _static/instance_21.png
-
 >>> rhs_graph = graph.rewrite(rule, instance)
->>> new_pos = plot_instance(graph, rule.rhs, rhs_graph, parent_pos=new_pos)
+>>> print(rhs_graph)
+{'x': 'Jane', 'y': 'Bob', 'x1': 'Jane1'}
 
-.. image:: _static/instance_22.png
+
+Continue to :ref:`n4_tutorial_part2` to learn about graph hierarchies and their rewriting.
+
+
+
+See more
+--------
+
+Module reference: :ref:`neo4jgraphs`
