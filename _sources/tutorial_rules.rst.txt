@@ -4,7 +4,7 @@
 Rewriting rules tutorial
 ========================
 
-In the context of ReGraph, by rewriting rules we mean the rules of *sesqui-pushout rewriting* (see more details 'here <https://ncatlab.org/nlab/show/span+rewriting#sesquipushout_rewriting/>`_). A rewriting rule consists of the three graphs: `P` – preserved part, `LHS` – left hand side, `RHS` – right hand side, and two mappings: from `P` to `LHS` and from `P` to `RHS`.
+In the context of ReGraph, by rewriting rules we mean the rules of *sesqui-pushout rewriting* (see more details `here <https://ncatlab.org/nlab/show/span+rewriting#sesquipushout_rewriting/>`_). A rewriting rule consists of the three graphs: `P` – preserved part, `LHS` – left hand side, `RHS` – right hand side, and two mappings: from `P` to `LHS` and from `P` to `RHS`.
 
 Informally, `LHS` represents a pattern to match in a graph, subject to rewriting. `P` together with the mapping `P -> LHS` specifies a part of the pattern which stays preseved during rewriting, i.e. all the nodes/edges/attributes present in `LHS` but not `P` will be removed. `RHS` and `P -> RHS` specify nodes/edges/attributes to add to the `P`. In addition, rules defined is such a way allow to clone and merge nodes. If two nodes from `P` map to the same node in `LHS`, the node corresponding to this node of the pattern will be cloned. Symmetrically, if two nodes from `P` map to the same node in $rhs$, the corresponding two nodes will be merged.
 
