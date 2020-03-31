@@ -1,7 +1,26 @@
+.. _neo4j_tutorial3:
+
+Tutorial for the Neo4j backend 
+===============================
+* :ref:`n4_tutorial_part1`
+    * :ref:`n4_graph_objects`
+    * :ref:`n4_graph_patterns`
+    * :ref:`n4_rewriting_graphs`
+* :ref:`n4_tutorial_part2`
+    * :ref:`n4_create_hierarchy`
+    * :ref:`n4_rewrite_hierarchy`
+        * :ref:`n4_strict_hierarchy`
+        * :ref:`n4_propagation_hierarchy`
+    * :ref:`n4_serialize_hierarchy`
+* :ref:`tutorial_typedneo4j`
+    * :ref:`create_tn4`
+    * :ref:`rewrite_tn4`
+
+
 .. _tutorial_typedneo4j:
 
 ==================================================
-Rewriting schema-aware PGs through TypedNeo4jGraph
+Part 3: Rewriting schema-aware PGs through TypedNeo4jGraph
 ==================================================
 
 Let us start by importing the necessary data structures and functions:
@@ -387,3 +406,10 @@ Observe that we have cloned the node `Bob` into two nodes `Bob` and `Bob1`, one 
   "Bob": "Adult",
   "Sandra": "Adult"
 }
+
+
+--------
+See more
+--------
+
+Module reference: :ref:`neo4jhierarchies`

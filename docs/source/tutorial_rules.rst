@@ -4,7 +4,7 @@
 Rewriting rules tutorial
 ========================
 
-In the context of ReGraph, by rewriting rules we mean the rules of *sesqui-pushout rewriting* (see more details 'here <https://ncatlab.org/nlab/show/span+rewriting#sesquipushout_rewriting/>`_). A rewriting rule consists of the three graphs: `P` – preserved part, `LHS` – left hand side, `RHS` – right hand side, and two mappings: from `P` to `LHS` and from `P` to `RHS`.
+In the context of ReGraph, by rewriting rules we mean the rules of *sesqui-pushout rewriting* (see more details `here <https://ncatlab.org/nlab/show/span+rewriting#sesquipushout_rewriting/>`_). A rewriting rule consists of the three graphs: `P` – preserved part, `LHS` – left hand side, `RHS` – right hand side, and two mappings: from `P` to `LHS` and from `P` to `RHS`.
 
 Informally, `LHS` represents a pattern to match in a graph, subject to rewriting. `P` together with the mapping `P -> LHS` specifies a part of the pattern which stays preseved during rewriting, i.e. all the nodes/edges/attributes present in `LHS` but not `P` will be removed. `RHS` and `P -> RHS` specify nodes/edges/attributes to add to the `P`. In addition, rules defined is such a way allow to clone and merge nodes. If two nodes from `P` map to the same node in `LHS`, the node corresponding to this node of the pattern will be cloned. Symmetrically, if two nodes from `P` map to the same node in $rhs$, the corresponding two nodes will be merged.
 
@@ -41,7 +41,7 @@ Now, let us plot the rule
 
 >>> plot_rule(rule1)
 
-..image:: _static/rules/r1.png
+.. image:: _static/rules/r1.png
 
 Every rule can be converted to a sequence of human-readable commands:
 
@@ -74,7 +74,7 @@ By default, `Rule` objects in ReGraph are initialized with three graph objects (
 
 >>> plot_rule(rule2)
 
-..image:: _static/rules/r2.png
+.. image:: _static/rules/r2.png
 
 
 >>> print("New node corresponding to the clone: ", p_clone)
@@ -95,7 +95,7 @@ rule2.inject_remove_edge(1, 3)
 [(1, 2), (1, '11'), (2, 3), ('11', 3)]
 >>> plot_rule(rule2)
 
-..image:: _static/rules/r3.png
+.. image:: _static/rules/r3.png
 
 Instead of initializing our rule from the pattern and injecting a lot of edge removals, we could directly initialize three objects for `P`, `LHS` and `RHS`, where `P` contains only the desired edges. In the following example, because the rule does not specify any merges or additions (so `RHS` is isomorphic to `P`), we can omit the parameter `RHS` in the constructor of `Rule`.
 
@@ -123,14 +123,14 @@ Instead of initializing our rule from the pattern and injecting a lot of edge re
 
 >>> plot_rule(rule3)
 
-..image:: _static/rules/r3.png
+.. image:: _static/rules/r3.png
 
 
 >>> print(rule3.p.edges())
 [(1, 2), (1, '1_clone'), ('1_clone', 3), (2, 3)]
 
 
-
+--------
 See more
 --------
 

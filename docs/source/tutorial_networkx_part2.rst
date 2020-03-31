@@ -612,8 +612,10 @@ Because NetworkX graphs are in-memory objects, they are destroyed as soon as the
     new_hierarchy == hierarchy
 
 
+--------
 See more
 --------
 
-Module reference: :ref:`nxhierarchies`
+
+Module reference: :ref:`nxhierarchies`.
 

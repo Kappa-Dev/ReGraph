@@ -194,7 +194,7 @@ Created the new head for 'master'
 We can see that the revision history came back to the previous state (right after the clone commit), and we still have two branches `master` and `test1`.
 
 
-
+--------
 See more
 --------
 

@@ -12,6 +12,9 @@ Tutorial for the Neo4j backend
         * :ref:`n4_strict_hierarchy`
         * :ref:`n4_propagation_hierarchy`
     * :ref:`n4_serialize_hierarchy`
+* :ref:`tutorial_typedneo4j`
+    * :ref:`create_tn4`
+    * :ref:`rewrite_tn4`
 
 
 .. _n4_tutorial_part1:
@@ -216,10 +219,15 @@ Let us fix an instace of the rule:
 {'x': 'Jane', 'y': 'Bob', 'x1': 'Jane1'}
 
 
+----
+Next
+----
+
 Continue to :ref:`n4_tutorial_part2` to learn about graph hierarchies and their rewriting.
 
 
 
+--------
 See more
 --------
 
