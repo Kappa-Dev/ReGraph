@@ -280,8 +280,14 @@ Let us fix an instace of the rule:
 .. image:: _static/instance_22.png
 
 
+----
+Next
+----
+
 Continue to :ref:`nx_tutorial_part2` to learn about graph hierarchies and their rewriting.
 
+
+--------
 See more
 --------
 

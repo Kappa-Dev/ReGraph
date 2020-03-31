@@ -12,6 +12,10 @@ Tutorial for the Neo4j backend
         * :ref:`n4_strict_hierarchy`
         * :ref:`n4_propagation_hierarchy`
     * :ref:`n4_serialize_hierarchy`
+* :ref:`tutorial_typedneo4j`
+    * :ref:`create_tn4`
+    * :ref:`rewrite_tn4`
+
 
 
 .. _n4_tutorial_part2:
@@ -555,11 +559,19 @@ ReGraph provides some utils for serialization of `Neo4jHierarchy` objects and im
         uri="bolt://localhost:7687", user="neo4j",
         password="neo4j", json_data=hierarchy_json)
 
+The presented snippet creates a new hierarchy object by loading the JSON-serialized data into the provided Neo4j database.
 
 
-Continue to :ref:`tutorial_typedneo4j` rewriting schema-aware PGs through the `TypedNeo4jGraph`interface.
+
+-------
+Next
+-------
 
 
+Continue to :ref:`tutorial_typedneo4j` rewriting schema-aware PGs.
+
+
+--------
 See more
 --------
 

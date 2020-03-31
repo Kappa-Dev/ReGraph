@@ -13,8 +13,8 @@ Tutorial for the Neo4j backend
         * :ref:`n4_propagation_hierarchy`
     * :ref:`n4_serialize_hierarchy`
 * :ref:`tutorial_typedneo4j`
-    * :ref: `create_tn4`
-    * :ref: `rewrite_tn4`
+    * :ref:`create_tn4`
+    * :ref:`rewrite_tn4`
 
 
 .. _tutorial_typedneo4j:
@@ -406,3 +406,10 @@ Observe that we have cloned the node `Bob` into two nodes `Bob` and `Bob1`, one 
   "Bob": "Adult",
   "Sandra": "Adult"
 }
+
+
+--------
+See more
+--------
+
+Module reference: :ref:`neo4jhierarchies`

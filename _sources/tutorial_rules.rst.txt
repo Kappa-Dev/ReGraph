@@ -130,7 +130,7 @@ Instead of initializing our rule from the pattern and injecting a lot of edge re
 [(1, 2), (1, '1_clone'), ('1_clone', 3), (2, 3)]
 
 
-
+--------
 See more
 --------
 

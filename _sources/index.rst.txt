@@ -20,6 +20,7 @@ ReGraph supports two graph backends: in-memory `NetworkX  <https://networkx.gith
 
 Tutorials
 =========
+* :ref:`installation`
 * :ref:`network_tutorial1`
     * :ref:`nx_tutorial_part1`
     * :ref:`nx_tutorial_part2`
