@@ -1,0 +1,348 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>Tutorial for the NetworkX backend &#8212; ReGraph 3.0 documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="tutorial-for-the-networkx-backend">
+<span id="network-tutorial1"></span><h1>Tutorial for the NetworkX backend<a class="headerlink" href="#tutorial-for-the-networkx-backend" title="Permalink to this headline">¶</a></h1>
+<ul class="simple">
+<li><dl class="simple">
+<dt><a class="reference internal" href="#nx-tutorial-part1"><span class="std std-ref">Part 1: Rewriting simple graph with attributes</span></a></dt><dd><ul>
+<li><p><a class="reference internal" href="#nx-graph-objects"><span class="std std-ref">Creating and modifying a graph object</span></a></p></li>
+<li><p><a class="reference internal" href="#nx-graph-patterns"><span class="std std-ref">Finding graph patterns</span></a></p></li>
+<li><p><a class="reference internal" href="#nx-rewriting-graphs"><span class="std std-ref">Rewriting graph objects</span></a></p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><a class="reference internal" href="tutorial_networkx_part2.html#nx-tutorial-part2"><span class="std std-ref">Part 2: Rewriting hierarchies of graphs</span></a></dt><dd><ul>
+<li><p><a class="reference internal" href="tutorial_networkx_part2.html#nx-create-hierarchy"><span class="std std-ref">Creating and modifying hierarchies</span></a></p></li>
+<li><dl class="simple">
+<dt><a class="reference internal" href="tutorial_networkx_part2.html#nx-rewrite-hierarchy"><span class="std std-ref">Rewriting of objects in a hierarchy</span></a></dt><dd><ul>
+<li><p><a class="reference internal" href="tutorial_networkx_part2.html#nx-strict-hierarchy"><span class="std std-ref">Strict rewriting</span></a></p></li>
+<li><p><a class="reference internal" href="tutorial_networkx_part2.html#nx-propagation-hierarchy"><span class="std std-ref">Rewriting and propagation</span></a></p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><p><a class="reference internal" href="tutorial_networkx_part2.html#nx-serialize-hierarchy"><span class="std std-ref">Serializing hierarchy objects</span></a></p></li>
+</ul>
+</dd>
+</dl>
+</li>
+</ul>
+<div class="section" id="part-1-rewriting-simple-graph-with-attributes">
+<span id="nx-tutorial-part1"></span><h2>Part 1: Rewriting simple graph with attributes<a class="headerlink" href="#part-1-rewriting-simple-graph-with-attributes" title="Permalink to this headline">¶</a></h2>
+<p>Let us start by importing the necessary data structures and functions:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">regraph</span> <span class="k">import</span> <span class="n">NXGraph</span><span class="p">,</span> <span class="n">Rule</span>
+<span class="kn">from</span> <span class="nn">regraph</span> <span class="k">import</span> <span class="n">plot_graph</span><span class="p">,</span> <span class="n">plot_instance</span><span class="p">,</span> <span class="n">plot_rule</span>
+</pre></div>
+</div>
+<div class="section" id="creating-and-modifying-a-graph-object">
+<span id="nx-graph-objects"></span><h3>Creating and modifying a graph object<a class="headerlink" href="#creating-and-modifying-a-graph-object" title="Permalink to this headline">¶</a></h3>
+<p>ReGraph implements a wrapper around NetworkX’s directed graph objects (<cite>nx.DiGraph</cite>) through the <cite>NXGraph</cite> class. The following snippet illustrates how a directed graph object can be created:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1"># Create an empty graph object</span>
+<span class="n">graph</span> <span class="o">=</span> <span class="n">NXGraph</span><span class="p">()</span>
+
+<span class="c1"># Add a list of nodes, optionally with attributes</span>
+<span class="n">graph</span><span class="o">.</span><span class="n">add_nodes_from</span><span class="p">(</span>
+    <span class="p">[</span>
+        <span class="s1">&#39;Alice&#39;</span><span class="p">,</span>
+        <span class="p">(</span><span class="s1">&#39;Bob&#39;</span><span class="p">,</span> <span class="p">{</span><span class="s1">&#39;age&#39;</span><span class="p">:</span> <span class="mi">15</span><span class="p">,</span> <span class="s1">&#39;gender&#39;</span><span class="p">:</span> <span class="s1">&#39;male&#39;</span><span class="p">}),</span>
+        <span class="p">(</span><span class="s1">&#39;Jane&#39;</span><span class="p">,</span> <span class="p">{</span><span class="s1">&#39;age&#39;</span><span class="p">:</span> <span class="mi">40</span><span class="p">,</span> <span class="s1">&#39;gender&#39;</span><span class="p">:</span> <span class="s1">&#39;female&#39;</span><span class="p">}),</span>
+        <span class="p">(</span><span class="s1">&#39;Eric&#39;</span><span class="p">,</span> <span class="p">{</span><span class="s1">&#39;age&#39;</span><span class="p">:</span> <span class="mi">55</span><span class="p">,</span> <span class="s1">&#39;gender&#39;</span><span class="p">:</span> <span class="s1">&#39;male&#39;</span><span class="p">})</span>
+<span class="p">])</span>
+
+<span class="c1"># Add a list of edges, optionally with attributes</span>
+<span class="n">graph</span><span class="o">.</span><span class="n">add_edges_from</span><span class="p">([</span>
+    <span class="p">(</span><span class="s2">&quot;Alice&quot;</span><span class="p">,</span> <span class="s2">&quot;Bob&quot;</span><span class="p">),</span>
+    <span class="p">(</span><span class="s2">&quot;Jane&quot;</span><span class="p">,</span> <span class="s2">&quot;Bob&quot;</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;parent&quot;</span><span class="p">,</span> <span class="s2">&quot;since&quot;</span><span class="p">:</span> <span class="mi">1993</span><span class="p">}),</span>
+    <span class="p">(</span><span class="s2">&quot;Eric&quot;</span><span class="p">,</span> <span class="s2">&quot;Jane&quot;</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;friend&quot;</span><span class="p">,</span> <span class="s2">&quot;since&quot;</span><span class="p">:</span> <span class="mi">1985</span><span class="p">}),</span>
+    <span class="p">(</span><span class="s2">&quot;Eric&quot;</span><span class="p">,</span> <span class="s2">&quot;Alice&quot;</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;parent&quot;</span><span class="p">,</span> <span class="s2">&quot;since&quot;</span><span class="p">:</span> <span class="mi">1992</span><span class="p">}),</span>
+<span class="p">])</span>
+</pre></div>
+</div>
+<p>We can print the list of nodes and edges of the created graph objects with data attached to them:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="s2">&quot;List of nodes: &quot;</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">n</span><span class="p">,</span> <span class="n">attrs</span> <span class="ow">in</span> <span class="n">graph</span><span class="o">.</span><span class="n">nodes</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\t</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="n">attrs</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;List of edges: &quot;</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">s</span><span class="p">,</span> <span class="n">t</span><span class="p">,</span> <span class="n">attrs</span> <span class="ow">in</span> <span class="n">graph</span><span class="o">.</span><span class="n">edges</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\t</span><span class="si">{}</span><span class="s2">-&gt;</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">t</span><span class="p">),</span> <span class="n">attrs</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>We can add individual nodes and edges as follows:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">graph</span><span class="o">.</span><span class="n">add_node</span><span class="p">(</span><span class="s1">&#39;Sandra&#39;</span><span class="p">,</span> <span class="p">{</span><span class="s1">&#39;age&#39;</span><span class="p">:</span> <span class="mi">45</span><span class="p">,</span> <span class="s1">&#39;gender&#39;</span><span class="p">:</span> <span class="s1">&#39;female&#39;</span><span class="p">})</span>
+<span class="n">graph</span><span class="o">.</span><span class="n">add_edge</span><span class="p">(</span><span class="s2">&quot;Sandra&quot;</span><span class="p">,</span> <span class="s2">&quot;Eric&quot;</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;spouse&quot;</span><span class="p">,</span> <span class="s2">&quot;since&quot;</span><span class="p">:</span> <span class="mi">1990</span><span class="p">})</span>
+<span class="n">graph</span><span class="o">.</span><span class="n">add_edge</span><span class="p">(</span><span class="s2">&quot;Eric&quot;</span><span class="p">,</span> <span class="s2">&quot;Sandra&quot;</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;spouse&quot;</span><span class="p">,</span> <span class="s2">&quot;since&quot;</span><span class="p">:</span> <span class="mi">1990</span><span class="p">})</span>
+<span class="n">graph</span><span class="o">.</span><span class="n">add_edge</span><span class="p">(</span><span class="s2">&quot;Sandra&quot;</span><span class="p">,</span> <span class="s2">&quot;Alice&quot;</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;parent&quot;</span><span class="p">,</span> <span class="s2">&quot;since&quot;</span><span class="p">:</span> <span class="mi">1992</span><span class="p">})</span>
+</pre></div>
+</div>
+<p>We can also add and access node and edge attributes:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">graph</span><span class="o">.</span><span class="n">add_node_attrs</span><span class="p">(</span><span class="s2">&quot;Alice&quot;</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;age&quot;</span><span class="p">:</span> <span class="mi">18</span><span class="p">,</span> <span class="s2">&quot;gender&quot;</span><span class="p">:</span> <span class="s2">&quot;female&quot;</span><span class="p">})</span>
+<span class="n">graph</span><span class="o">.</span><span class="n">add_edge_attrs</span><span class="p">(</span><span class="s2">&quot;Alice&quot;</span><span class="p">,</span> <span class="s2">&quot;Bob&quot;</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;friend&quot;</span><span class="p">,</span> <span class="s2">&quot;since&quot;</span><span class="p">:</span> <span class="mi">2004</span><span class="p">})</span>
+
+<span class="c1"># Get attributes of nodes and edges</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;New Alice attibutes: &quot;</span><span class="p">,</span> <span class="n">graph</span><span class="o">.</span><span class="n">get_node</span><span class="p">(</span><span class="s2">&quot;Alice&quot;</span><span class="p">))</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;New Alice-&gt;Bob attributes: &quot;</span><span class="p">,</span> <span class="n">graph</span><span class="o">.</span><span class="n">get_edge</span><span class="p">(</span><span class="s2">&quot;Alice&quot;</span><span class="p">,</span> <span class="s2">&quot;Bob&quot;</span><span class="p">))</span>
+</pre></div>
+</div>
+<p>Note that the attributes of the nodes/edges are converted to <cite>regraph.attribute_sets.FiniteSet</cite> objects. See the tutorial on advanced attribute values (see <a class="reference internal" href="tutorial_attrs.html#advanced-attributes"><span class="std std-ref">Advanced node and edge attributes</span></a>) for more details on the underlying data structures.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">graph</span><span class="o">.</span><span class="n">get_node</span><span class="p">(</span><span class="s2">&quot;Alice&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+<span class="gp">&gt;&gt;&gt; </span>   <span class="nb">print</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="s2">&quot;: &quot;</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="s2">&quot;, type: &quot;</span><span class="p">,</span> <span class="nb">type</span><span class="p">(</span><span class="n">v</span><span class="p">))</span>
+<span class="go">age :  {18} , type:  &lt;class &#39;regraph.attribute_sets.FiniteSet&#39;&gt;</span>
+<span class="go">gender :  {&#39;female&#39;} , type:  &lt;class &#39;regraph.attribute_sets.FiniteSet&#39;&gt;</span>
+</pre></div>
+</div>
+<p>ReGraph provides some utils for plotting NetworkX-based graphs</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">positioning</span> <span class="o">=</span> <span class="n">plot_graph</span><span class="p">(</span><span class="n">graph</span><span class="p">)</span>
+</pre></div>
+</div>
+<img alt="_images/graph1.png" src="_images/graph1.png" />
+<p>Graph objects can me dumped to dictionaries following the JSON format (note how the attribute values are encoded).</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">graph</span><span class="o">.</span><span class="n">to_json</span><span class="p">()</span>
+<span class="go">{&#39;edges&#39;: [{&#39;from&#39;: &#39;Alice&#39;,</span>
+<span class="go">   &#39;to&#39;: &#39;Bob&#39;,</span>
+<span class="go">   &#39;attrs&#39;: {&#39;type&#39;: {&#39;type&#39;: &#39;FiniteSet&#39;, &#39;data&#39;: [&#39;friend&#39;]},</span>
+<span class="go">    &#39;since&#39;: {&#39;type&#39;: &#39;FiniteSet&#39;, &#39;data&#39;: [2004]}}},</span>
+<span class="go">  {&#39;from&#39;: &#39;Jane&#39;,</span>
+<span class="go">   &#39;to&#39;: &#39;Bob&#39;,</span>
+<span class="go">   &#39;attrs&#39;: {&#39;type&#39;: {&#39;type&#39;: &#39;FiniteSet&#39;, &#39;data&#39;: [&#39;parent&#39;]},</span>
+<span class="go">    &#39;since&#39;: {&#39;type&#39;: &#39;FiniteSet&#39;, &#39;data&#39;: [1993]}}},</span>
+<span class="go">  {&#39;from&#39;: &#39;Eric&#39;,</span>
+<span class="go">   &#39;to&#39;: &#39;Jane&#39;,</span>
+<span class="go">   &#39;attrs&#39;: {&#39;type&#39;: {&#39;type&#39;: &#39;FiniteSet&#39;, &#39;data&#39;: [&#39;friend&#39;]},</span>
+<span class="go">    &#39;since&#39;: {&#39;type&#39;: &#39;FiniteSet&#39;, &#39;data&#39;: [1985]}}},</span>
+<span class="go">  {&#39;from&#39;: &#39;Eric&#39;,</span>
+<span class="go">   &#39;to&#39;: &#39;Alice&#39;,</span>
+<span class="go">   &#39;attrs&#39;: {&#39;type&#39;: {&#39;type&#39;: &#39;FiniteSet&#39;, &#39;data&#39;: [&#39;parent&#39;]},</span>
+<span class="go">    &#39;since&#39;: {&#39;type&#39;: &#39;FiniteSet&#39;, &#39;data&#39;: [1992]}}},</span>
+<span class="go">  {&#39;from&#39;: &#39;Eric&#39;,</span>
+<span class="go">   &#39;to&#39;: &#39;Sandra&#39;,</span>
+<span class="go">   &#39;attrs&#39;: {&#39;type&#39;: {&#39;type&#39;: &#39;FiniteSet&#39;, &#39;data&#39;: [&#39;spouse&#39;]},</span>
+<span class="go">    &#39;since&#39;: {&#39;type&#39;: &#39;FiniteSet&#39;, &#39;data&#39;: [1990]}}},</span>
+<span class="go">  {&#39;from&#39;: &#39;Sandra&#39;,</span>
+<span class="go">   &#39;to&#39;: &#39;Eric&#39;,</span>
+<span class="go">   &#39;attrs&#39;: {&#39;type&#39;: {&#39;type&#39;: &#39;FiniteSet&#39;, &#39;data&#39;: [&#39;spouse&#39;]},</span>
+<span class="go">    &#39;since&#39;: {&#39;type&#39;: &#39;FiniteSet&#39;, &#39;data&#39;: [1990]}}},</span>
+<span class="go">  {&#39;from&#39;: &#39;Sandra&#39;,</span>
+<span class="go">   &#39;to&#39;: &#39;Alice&#39;,</span>
+<span class="go">   &#39;attrs&#39;: {&#39;type&#39;: {&#39;type&#39;: &#39;FiniteSet&#39;, &#39;data&#39;: [&#39;parent&#39;]},</span>
+<span class="go">    &#39;since&#39;: {&#39;type&#39;: &#39;FiniteSet&#39;, &#39;data&#39;: [1992]}}}],</span>
+<span class="go"> &#39;nodes&#39;: [{&#39;id&#39;: &#39;Alice&#39;,</span>
+<span class="go">   &#39;attrs&#39;: {&#39;age&#39;: {&#39;type&#39;: &#39;FiniteSet&#39;, &#39;data&#39;: [18]},</span>
+<span class="go">    &#39;gender&#39;: {&#39;type&#39;: &#39;FiniteSet&#39;, &#39;data&#39;: [&#39;female&#39;]}}},</span>
+<span class="go">  {&#39;id&#39;: &#39;Bob&#39;,</span>
+<span class="go">   &#39;attrs&#39;: {&#39;age&#39;: {&#39;type&#39;: &#39;FiniteSet&#39;, &#39;data&#39;: [15]},</span>
+<span class="go">    &#39;gender&#39;: {&#39;type&#39;: &#39;FiniteSet&#39;, &#39;data&#39;: [&#39;male&#39;]}}},</span>
+<span class="go">  {&#39;id&#39;: &#39;Jane&#39;,</span>
+<span class="go">   &#39;attrs&#39;: {&#39;age&#39;: {&#39;type&#39;: &#39;FiniteSet&#39;, &#39;data&#39;: [40]},</span>
+<span class="go">    &#39;gender&#39;: {&#39;type&#39;: &#39;FiniteSet&#39;, &#39;data&#39;: [&#39;female&#39;]}}},</span>
+<span class="go">  {&#39;id&#39;: &#39;Eric&#39;,</span>
+<span class="go">   &#39;attrs&#39;: {&#39;age&#39;: {&#39;type&#39;: &#39;FiniteSet&#39;, &#39;data&#39;: [55]},</span>
+<span class="go">    &#39;gender&#39;: {&#39;type&#39;: &#39;FiniteSet&#39;, &#39;data&#39;: [&#39;male&#39;]}}},</span>
+<span class="go">  {&#39;id&#39;: &#39;Sandra&#39;,</span>
+<span class="go">   &#39;attrs&#39;: {&#39;age&#39;: {&#39;type&#39;: &#39;FiniteSet&#39;, &#39;data&#39;: [45]},</span>
+<span class="go">    &#39;gender&#39;: {&#39;type&#39;: &#39;FiniteSet&#39;, &#39;data&#39;: [&#39;female&#39;]}}}]}</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="finding-graph-patterns">
+<span id="nx-graph-patterns"></span><h3>Finding graph patterns<a class="headerlink" href="#finding-graph-patterns" title="Permalink to this headline">¶</a></h3>
+<p>Let us first initialize a pattern graph:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">pattern</span> <span class="o">=</span> <span class="n">NXGraph</span><span class="p">()</span>
+<span class="n">pattern</span><span class="o">.</span><span class="n">add_nodes_from</span><span class="p">([</span><span class="s2">&quot;x&quot;</span><span class="p">,</span> <span class="s2">&quot;y&quot;</span><span class="p">,</span> <span class="s2">&quot;z&quot;</span><span class="p">])</span>
+<span class="n">pattern</span><span class="o">.</span><span class="n">add_edges_from</span><span class="p">([</span>
+    <span class="p">(</span><span class="s2">&quot;x&quot;</span><span class="p">,</span> <span class="s2">&quot;y&quot;</span><span class="p">),</span>
+    <span class="p">(</span><span class="s2">&quot;z&quot;</span><span class="p">,</span> <span class="s2">&quot;y&quot;</span><span class="p">)</span>
+<span class="p">])</span>
+</pre></div>
+</div>
+<p>Matches of the pattern in the previously created graph can be found as follows:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">instances</span> <span class="o">=</span> <span class="n">graph</span><span class="o">.</span><span class="n">find_matching</span><span class="p">(</span><span class="n">pattern</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">instances</span><span class="p">)</span>
+<span class="go">[{&#39;x&#39;: &#39;Sandra&#39;, &#39;y&#39;: &#39;Alice&#39;, &#39;z&#39;: &#39;Eric&#39;}, {&#39;z&#39;: &#39;Sandra&#39;, &#39;y&#39;: &#39;Alice&#39;, &#39;x&#39;: &#39;Eric&#39;}, {&#39;x&#39;: &#39;Alice&#39;, &#39;y&#39;: &#39;Bob&#39;, &#39;z&#39;: &#39;Jane&#39;}, {&#39;z&#39;: &#39;Alice&#39;, &#39;y&#39;: &#39;Bob&#39;, &#39;x&#39;: &#39;Jane&#39;}]</span>
+</pre></div>
+</div>
+<p>We can equip pattern nodes and edges with attributes, then ReGraph will look for all subgraphs matching to the structure of the pattern and whose elements contain respective attributes.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">pattern</span><span class="o">.</span><span class="n">add_edge_attrs</span><span class="p">(</span><span class="s2">&quot;x&quot;</span><span class="p">,</span> <span class="s2">&quot;y&quot;</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;parent&quot;</span><span class="p">})</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">pattern</span><span class="o">.</span><span class="n">add_edge_attrs</span><span class="p">(</span><span class="s2">&quot;z&quot;</span><span class="p">,</span> <span class="s2">&quot;y&quot;</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;parent&quot;</span><span class="p">})</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">instances</span> <span class="o">=</span> <span class="n">graph</span><span class="o">.</span><span class="n">find_matching</span><span class="p">(</span><span class="n">pattern</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">instances</span><span class="p">)</span>
+<span class="go">[{&#39;x&#39;: &#39;Sandra&#39;, &#39;y&#39;: &#39;Alice&#39;, &#39;z&#39;: &#39;Eric&#39;}, {&#39;z&#39;: &#39;Sandra&#39;, &#39;y&#39;: &#39;Alice&#39;, &#39;x&#39;: &#39;Eric&#39;}]</span>
+</pre></div>
+</div>
+<p>We can plot matchings inside the graph using <cite>plot_instance</cite>.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">instances</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">plot_instance</span><span class="p">(</span><span class="n">graph</span><span class="p">,</span> <span class="n">pattern</span><span class="p">,</span> <span class="n">instances</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">parent_pos</span><span class="o">=</span><span class="n">positioning</span><span class="p">)</span>
+</pre></div>
+</div>
+<img alt="_images/graph2.png" src="_images/graph2.png" />
+</div>
+<div class="section" id="rewriting-graph-objects">
+<span id="nx-rewriting-graphs"></span><h3>Rewriting graph objects<a class="headerlink" href="#rewriting-graph-objects" title="Permalink to this headline">¶</a></h3>
+<p>ReGraph implements the rewriting technique called Sesqui-pushout rewriting that allows to transform graphs by applying rules through their instances (matchings). It allows to express the following graph transformations:</p>
+<ul class="simple">
+<li><p>node cloning,</p></li>
+<li><p>node/edge removal,</p></li>
+<li><p>node/edge attributes removal,</p></li>
+<li><p>node merging,</p></li>
+<li><p>node/edge addition,</p></li>
+<li><p>node/edge attribute addition.</p></li>
+</ul>
+<p>A rewriting rule is a span <cite>LHS</cite> &lt;- P -&gt; RHS`, where <cite>LHS</cite> is a graph that represents a left-hand side of the rule, a pattern that is going to be matched inside of the input graph, <cite>P</cite> is a graph that represents the interfaces of the rule, together with a homomorphism <cite>LHS &lt;- P</cite> it specifies nodes and edges that are going to be preserved in the course of application of the rule. <cite>RHS</cite> and a homomorphism <cite>P -&gt; RHS</cite>, on the other hand, specify nodes and edges that are going to be added. In addition, if two nodes in <cite>P</cite> map to the same node in <cite>LHS</cite>, this node is going to be cloned during graph rewriting. Symmetrically, if two nodes in <cite>P</cite> match to the same node in <cite>RHS</cite>, these nodes are merged.</p>
+<p>To rewrite the graph, we first create a rewriting rule (see <span class="xref std std-ref">rules_tutorial</span> for more examples of rules and means for their creation provided by ReGraph). A data structure for rewriting rules is implemeted in the class <cite>regraph.rules.Rule</cite>. Here, we will use the created pattern to initialize a rule. ReGraph implements the util <cite>plot_rule</cite> ror rule visualization.</p>
+<p>Let us create a rule:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">rule</span> <span class="o">=</span> <span class="n">Rule</span><span class="o">.</span><span class="n">from_transform</span><span class="p">(</span><span class="n">pattern</span><span class="p">)</span>
+<span class="n">rule</span><span class="o">.</span><span class="n">inject_add_edge</span><span class="p">(</span><span class="s2">&quot;y&quot;</span><span class="p">,</span> <span class="s2">&quot;x&quot;</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;child_of&quot;</span><span class="p">})</span>
+<span class="n">rule</span><span class="o">.</span><span class="n">inject_add_edge</span><span class="p">(</span><span class="s2">&quot;y&quot;</span><span class="p">,</span> <span class="s2">&quot;z&quot;</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;child_of&quot;</span><span class="p">})</span>
+
+<span class="n">plot_rule</span><span class="p">(</span><span class="n">rule</span><span class="p">)</span>
+</pre></div>
+</div>
+<img alt="_images/rule_1.png" src="_images/rule_1.png" />
+<p>Graph rewriting can be performed with the <cite>rewrite</cite> method of <cite>NXGraph</cite>. It takes as input a rule and an instance of this rule. Rewriting is performed in-place, the provided graph object is modified and a dictionary corresponding to the <cite>RHS</cite> matching in the rewritten graph is returned.</p>
+<p>Let us first back-up the original graph and, then, rewrite it using the first instance we found:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">graph_backup</span> <span class="o">=</span> <span class="n">NXGraph</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">graph</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">rhs_graph</span> <span class="o">=</span> <span class="n">graph</span><span class="o">.</span><span class="n">rewrite</span><span class="p">(</span><span class="n">rule</span><span class="p">,</span> <span class="n">instances</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+</pre></div>
+</div>
+<p>First, we plot the selected pattern instance in the backed-up graph:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">plot_instance</span><span class="p">(</span><span class="n">graph_backup</span><span class="p">,</span> <span class="n">rule</span><span class="o">.</span><span class="n">lhs</span><span class="p">,</span> <span class="n">instances</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">parent_pos</span><span class="o">=</span><span class="n">positioning</span><span class="p">)</span>
+</pre></div>
+</div>
+<img alt="_images/instance_1.png" src="_images/instance_1.png" />
+<p>Then, we plot the RHS instance in the transformed graph:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">new_pos</span> <span class="o">=</span> <span class="n">plot_instance</span><span class="p">(</span><span class="n">graph</span><span class="p">,</span> <span class="n">rule</span><span class="o">.</span><span class="n">rhs</span><span class="p">,</span> <span class="n">rhs_graph</span><span class="p">,</span> <span class="n">parent_pos</span><span class="o">=</span><span class="n">positioning</span><span class="p">)</span>
+</pre></div>
+</div>
+<img alt="_images/instance_2.png" src="_images/instance_2.png" />
+<p>Let us consider another example of a rewriting rule:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">pattern</span> <span class="o">=</span> <span class="n">NXGraph</span><span class="p">()</span>
+<span class="n">pattern</span><span class="o">.</span><span class="n">add_nodes_from</span><span class="p">([</span><span class="s2">&quot;x&quot;</span><span class="p">,</span> <span class="s2">&quot;y&quot;</span><span class="p">])</span>
+<span class="n">pattern</span><span class="o">.</span><span class="n">add_edge</span><span class="p">(</span><span class="s2">&quot;x&quot;</span><span class="p">,</span> <span class="s2">&quot;y&quot;</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;parent&quot;</span><span class="p">})</span>
+
+<span class="c1"># Initialize a rule that clones `x`, note that tha variable `rhs_clone_id`</span>
+<span class="c1"># corresponds to the ID of the newly produced clone in the RHS of the rule</span>
+<span class="n">rule</span> <span class="o">=</span> <span class="n">Rule</span><span class="o">.</span><span class="n">from_transform</span><span class="p">(</span><span class="n">pattern</span><span class="p">)</span>
+<span class="n">_</span><span class="p">,</span> <span class="n">rhs_clone_id</span> <span class="o">=</span> <span class="n">rule</span><span class="o">.</span><span class="n">inject_clone_node</span><span class="p">(</span><span class="s2">&quot;x&quot;</span><span class="p">)</span>
+<span class="n">rule</span><span class="o">.</span><span class="n">inject_add_edge</span><span class="p">(</span><span class="s2">&quot;x&quot;</span><span class="p">,</span> <span class="n">rhs_clone_id</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;spouse&quot;</span><span class="p">})</span>
+<span class="n">rule</span><span class="o">.</span><span class="n">inject_add_edge</span><span class="p">(</span><span class="n">rhs_clone_id</span><span class="p">,</span> <span class="s2">&quot;x&quot;</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;spouse&quot;</span><span class="p">})</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">plot_rule</span><span class="p">(</span><span class="n">rule</span><span class="p">)</span>
+</pre></div>
+</div>
+<img alt="_images/rule_2.png" src="_images/rule_2.png" />
+<p>Let us fix an instace of the rule:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">instance</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;x&#39;</span><span class="p">:</span> <span class="s1">&#39;Jane&#39;</span><span class="p">,</span> <span class="s1">&#39;y&#39;</span><span class="p">:</span> <span class="s1">&#39;Bob&#39;</span><span class="p">}</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">new_pos</span> <span class="o">=</span> <span class="n">plot_instance</span><span class="p">(</span><span class="n">graph</span><span class="p">,</span> <span class="n">rule</span><span class="o">.</span><span class="n">lhs</span><span class="p">,</span> <span class="n">instance</span><span class="p">,</span> <span class="n">parent_pos</span><span class="o">=</span><span class="n">new_pos</span><span class="p">)</span>
+</pre></div>
+</div>
+<img alt="_images/instance_21.png" src="_images/instance_21.png" />
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">rhs_graph</span> <span class="o">=</span> <span class="n">graph</span><span class="o">.</span><span class="n">rewrite</span><span class="p">(</span><span class="n">rule</span><span class="p">,</span> <span class="n">instance</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">new_pos</span> <span class="o">=</span> <span class="n">plot_instance</span><span class="p">(</span><span class="n">graph</span><span class="p">,</span> <span class="n">rule</span><span class="o">.</span><span class="n">rhs</span><span class="p">,</span> <span class="n">rhs_graph</span><span class="p">,</span> <span class="n">parent_pos</span><span class="o">=</span><span class="n">new_pos</span><span class="p">)</span>
+</pre></div>
+</div>
+<img alt="_images/instance_22.png" src="_images/instance_22.png" />
+<p>Continue to <a class="reference internal" href="tutorial_networkx_part2.html#nx-tutorial-part2"><span class="std std-ref">Part 2: Rewriting hierarchies of graphs</span></a> to learn about graph hierarchies and their rewriting.</p>
+<div class="section" id="see-more">
+<h4>See more<a class="headerlink" href="#see-more" title="Permalink to this headline">¶</a></h4>
+<p>Module reference: <a class="reference internal" href="nxgraphs.html#nxgraphs"><span class="std std-ref">NetworkX-based graphs</span></a></p>
+</div>
+</div>
+</div>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">ReGraph</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2018, Eugenia Oshurko.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.2.0</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="_sources/tutorial_networkx_part1.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

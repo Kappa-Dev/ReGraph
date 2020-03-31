@@ -1,0 +1,434 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>Rewriting schema-aware PGs through TypedNeo4jGraph &#8212; ReGraph 3.0 documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="rewriting-schema-aware-pgs-through-typedneo4jgraph">
+<span id="tutorial-typedneo4j"></span><h1>Rewriting schema-aware PGs through TypedNeo4jGraph<a class="headerlink" href="#rewriting-schema-aware-pgs-through-typedneo4jgraph" title="Permalink to this headline">¶</a></h1>
+<p>Let us start by importing the necessary data structures and functions:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">regraph</span> <span class="k">import</span> <span class="n">NXGraph</span><span class="p">,</span> <span class="n">TypedNeo4jGraph</span><span class="p">,</span> <span class="n">Rule</span>
+<span class="kn">from</span> <span class="nn">regraph.attribute_sets</span> <span class="k">import</span> <span class="n">IntegerSet</span><span class="p">,</span> <span class="n">RegexSet</span>
+<span class="kn">from</span> <span class="nn">regraph</span> <span class="k">import</span> <span class="n">plot_rule</span>
+</pre></div>
+</div>
+<div class="section" id="creating-and-modifying-a-schema-aware-graph-object">
+<span id="create-tn4"></span><h2>Creating and modifying a schema-aware graph object<a class="headerlink" href="#creating-and-modifying-a-schema-aware-graph-object" title="Permalink to this headline">¶</a></h2>
+<p>Let us start by defining elements for the data and the schema graph:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1"># Define schema graph elements</span>
+<span class="n">schema_nodes</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="p">(</span><span class="s2">&quot;Person&quot;</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;age&quot;</span><span class="p">:</span> <span class="n">IntegerSet</span><span class="o">.</span><span class="n">universal</span><span class="p">()}),</span>
+    <span class="p">(</span><span class="s2">&quot;Organization&quot;</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;location&quot;</span><span class="p">:</span> <span class="n">RegexSet</span><span class="o">.</span><span class="n">universal</span><span class="p">()})]</span>
+<span class="n">schema_edges</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="p">(</span><span class="s2">&quot;Person&quot;</span><span class="p">,</span> <span class="s2">&quot;Person&quot;</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;friend&quot;</span><span class="p">,</span> <span class="s2">&quot;parent&quot;</span><span class="p">,</span> <span class="s2">&quot;colleague&quot;</span><span class="p">}}),</span>
+    <span class="p">(</span><span class="s2">&quot;Organization&quot;</span><span class="p">,</span> <span class="s2">&quot;Organization&quot;</span><span class="p">),</span>
+    <span class="p">(</span><span class="s2">&quot;Person&quot;</span><span class="p">,</span> <span class="s2">&quot;Organization&quot;</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;works_in&quot;</span><span class="p">,</span> <span class="s2">&quot;studies_in&quot;</span><span class="p">}})</span>
+<span class="p">]</span>
+
+<span class="c1"># Define data graph elements</span>
+<span class="n">data_nodes</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="p">(</span><span class="s2">&quot;Alice&quot;</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;age&quot;</span><span class="p">:</span> <span class="mi">15</span><span class="p">}),</span>
+    <span class="p">(</span><span class="s2">&quot;Bob&quot;</span><span class="p">),</span>
+    <span class="p">(</span><span class="s2">&quot;Eric&quot;</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;age&quot;</span><span class="p">:</span> <span class="mi">45</span><span class="p">}),</span>
+    <span class="p">(</span><span class="s2">&quot;Sandra&quot;</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;age&quot;</span><span class="p">:</span> <span class="mi">47</span><span class="p">}),</span>
+    <span class="p">(</span><span class="s2">&quot;ENS Lyon&quot;</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;location&quot;</span><span class="p">:</span> <span class="s2">&quot;Lyon&quot;</span><span class="p">}),</span>
+    <span class="p">(</span><span class="s2">&quot;UN&quot;</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;location&quot;</span><span class="p">:</span> <span class="s2">&quot;Geneva&quot;</span><span class="p">}),</span>
+    <span class="p">(</span><span class="s2">&quot;INTERPOL&quot;</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;location&quot;</span><span class="p">:</span> <span class="s2">&quot;Lyon&quot;</span><span class="p">})</span>
+<span class="p">]</span>
+<span class="n">data_edges</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="p">(</span><span class="s2">&quot;Alice&quot;</span><span class="p">,</span> <span class="s2">&quot;Bob&quot;</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;friend&quot;</span><span class="p">}),</span>
+    <span class="p">(</span><span class="s2">&quot;Bob&quot;</span><span class="p">,</span> <span class="s2">&quot;Alice&quot;</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;friend&quot;</span><span class="p">}),</span>
+    <span class="p">(</span><span class="s2">&quot;Sandra&quot;</span><span class="p">,</span> <span class="s2">&quot;Eric&quot;</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;friend&quot;</span><span class="p">}),</span>
+    <span class="p">(</span><span class="s2">&quot;Sandra&quot;</span><span class="p">,</span> <span class="s2">&quot;Bob&quot;</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;parent&quot;</span><span class="p">}),</span>
+    <span class="p">(</span><span class="s2">&quot;Eric&quot;</span><span class="p">,</span> <span class="s2">&quot;Alice&quot;</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;parent&quot;</span><span class="p">}),</span>
+    <span class="p">(</span><span class="s2">&quot;Eric&quot;</span><span class="p">,</span> <span class="s2">&quot;UN&quot;</span><span class="p">),</span>
+    <span class="p">(</span><span class="s2">&quot;Eric&quot;</span><span class="p">,</span> <span class="s2">&quot;Sandra&quot;</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;colleague&quot;</span><span class="p">})</span>
+<span class="p">]</span>
+
+<span class="c1"># Provide typing of the data by the schema</span>
+<span class="n">data_typing</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;Alice&quot;</span><span class="p">:</span> <span class="s2">&quot;Person&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;Bob&quot;</span><span class="p">:</span> <span class="s2">&quot;Person&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;Eric&quot;</span><span class="p">:</span> <span class="s2">&quot;Person&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;Sandra&quot;</span><span class="p">:</span> <span class="s2">&quot;Person&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;ENS Lyon&quot;</span><span class="p">:</span> <span class="s2">&quot;Organization&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;UN&quot;</span><span class="p">:</span> <span class="s2">&quot;Organization&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;INTERPOL&quot;</span><span class="p">:</span> <span class="s2">&quot;Organization&quot;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>Now, let us create a schema-aware PG:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">graph</span> <span class="o">=</span> <span class="n">TypedNeo4jGraph</span><span class="p">(</span>
+    <span class="n">uri</span><span class="o">=</span><span class="s2">&quot;bolt://localhost:7687&quot;</span><span class="p">,</span>
+    <span class="n">user</span><span class="o">=</span><span class="s2">&quot;neo4j&quot;</span><span class="p">,</span>
+    <span class="n">password</span><span class="o">=</span><span class="s2">&quot;admin&quot;</span><span class="p">,</span>
+    <span class="n">data_graph</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;nodes&quot;</span><span class="p">:</span> <span class="n">data_nodes</span><span class="p">,</span> <span class="s2">&quot;edges&quot;</span><span class="p">:</span> <span class="n">data_edges</span><span class="p">},</span>
+    <span class="n">schema_graph</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;nodes&quot;</span><span class="p">:</span> <span class="n">schema_nodes</span><span class="p">,</span> <span class="s2">&quot;edges&quot;</span><span class="p">:</span> <span class="n">schema_edges</span><span class="p">},</span>
+    <span class="n">typing</span><span class="o">=</span><span class="n">data_typing</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>The following snippet illustrates how different graph objects can be accessed:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Schema object: &quot;</span><span class="p">,</span> <span class="nb">type</span><span class="p">(</span><span class="n">graph</span><span class="o">.</span><span class="n">get_schema</span><span class="p">()))</span>
+<span class="go">Schema object:  &lt;class &#39;regraph.backends.neo4j.graphs.Neo4jGraph&#39;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Schema nodes: &quot;</span><span class="p">,</span> <span class="n">graph</span><span class="o">.</span><span class="n">get_schema_nodes</span><span class="p">())</span>
+<span class="go">Schema nodes:  [&#39;Person&#39;, &#39;Organization&#39;]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Schema edges: &quot;</span><span class="p">,</span> <span class="n">graph</span><span class="o">.</span><span class="n">get_schema_edges</span><span class="p">())</span>
+<span class="go">Schema edges:  [(&#39;Person&#39;, &#39;Organization&#39;), (&#39;Person&#39;, &#39;Person&#39;), (&#39;Organization&#39;, &#39;Organization&#39;)]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Data object: &quot;</span><span class="p">,</span> <span class="nb">type</span><span class="p">(</span><span class="n">graph</span><span class="o">.</span><span class="n">get_data</span><span class="p">()))</span>
+<span class="go">Data object:  &lt;class &#39;regraph.backends.neo4j.graphs.Neo4jGraph&#39;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Data nodes: &quot;</span><span class="p">,</span> <span class="n">graph</span><span class="o">.</span><span class="n">get_data_nodes</span><span class="p">())</span>
+<span class="go">Data nodes:  [&#39;Alice&#39;, &#39;Bob&#39;, &#39;Eric&#39;, &#39;Sandra&#39;, &#39;ENS Lyon&#39;, &#39;UN&#39;, &#39;INTERPOL&#39;]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Data edges: &quot;</span><span class="p">,</span> <span class="n">graph</span><span class="o">.</span><span class="n">get_data_edges</span><span class="p">())</span>
+<span class="go">Data edges:  [(&#39;Alice&#39;, &#39;Bob&#39;), (&#39;Bob&#39;, &#39;Alice&#39;), (&#39;Eric&#39;, &#39;Sandra&#39;), (&#39;Eric&#39;, &#39;UN&#39;), (&#39;Eric&#39;, &#39;Alice&#39;), (&#39;Sandra&#39;, &#39;Bob&#39;), (&#39;Sandra&#39;, &#39;Eric&#39;)]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Data typing:&quot;</span><span class="p">,</span> <span class="n">graph</span><span class="o">.</span><span class="n">get_data_typing</span><span class="p">())</span>
+<span class="go">Data typing: {</span>
+<span class="go">   &quot;Sandra&quot;: &quot;Person&quot;,</span>
+<span class="go">   &quot;Eric&quot;: &quot;Person&quot;,</span>
+<span class="go">   &quot;Alice&quot;: &quot;Person&quot;,</span>
+<span class="go">   &quot;Bob&quot;: &quot;Person&quot;,</span>
+<span class="go">   &quot;UN&quot;: &quot;Organization&quot;,</span>
+<span class="go">   &quot;ENS Lyon&quot;: &quot;Organization&quot;,</span>
+<span class="go">   &quot;INTERPOL&quot;: &quot;Organization&quot;</span>
+<span class="go">}</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="rewriting-schema-aware-graphs">
+<span id="rewrite-tn4"></span><h2>Rewriting schema-aware graphs<a class="headerlink" href="#rewriting-schema-aware-graphs" title="Permalink to this headline">¶</a></h2>
+<p>ReGraph implements the rewriting technique called <cite>sesqui-pushout rewriting</cite> that allows to transform graphs by applying rules through their instances (matchings). Rewriting of the data or the schema may require an update to the other graph, such updates are called <em>propagation</em> and are distinguished into two types: <em>backward</em> and <em>forward</em> propagation.</p>
+<p><em>Backward propagation briefly</em>:
+- If some graph elements (nodes/edges or attributes) are removed from the schema, then all the respective elements that are typed by them in the data <strong>should</strong> be removed.
+- If a graph node is cloned in the schema, then for every instance of this node in the data we either: (a) specify to which clone it corresponds or (b) clone it.</p>
+<p><em>Forward propagation briefly</em>:
+- If some data nodes are merged and these nodes are typed by different nodes in the schema, the corresponding schema nodes <strong>should</strong> be merged.
+- If a new graph element (node/edge or attribute) is added to the data, then we either (a) select an existing element to type the added element by the schema or (b) add a new element to the schema to type the added element.</p>
+<p>ReGraph allows to rewrite schema-aware PGs and their schemas using the methods <cite>rewrite_data</cite> and <cite>rewrite_schema</cite> of <cite>TypedNeo4jGraph</cite>. The rewriting can be done in two modes:</p>
+<ol class="arabic simple">
+<li><p><em>Strict rewriting</em> rewriting that does not allow propagation.</p></li>
+<li><p><em>Not strict rewriting</em> that allows propagation.</p></li>
+</ol>
+<div class="section" id="strict-rewriting">
+<h3>Strict rewriting<a class="headerlink" href="#strict-rewriting" title="Permalink to this headline">¶</a></h3>
+<p><cite>TypedNeo4jGraph</cite> implements a set of methods that perform transformations of both data and schema that do not require propagation. Conider the following examples.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">graph</span><span class="o">.</span><span class="n">add_schema_node</span><span class="p">(</span><span class="s2">&quot;Country&quot;</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;location&quot;</span><span class="p">:</span> <span class="n">RegexSet</span><span class="o">.</span><span class="n">universal</span><span class="p">()})</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">graph</span><span class="o">.</span><span class="n">add_schema_edge</span><span class="p">(</span><span class="s2">&quot;Organization&quot;</span><span class="p">,</span> <span class="s2">&quot;Country&quot;</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;located_in&quot;</span><span class="p">}})</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Schema nodes: &quot;</span><span class="p">,</span> <span class="n">graph</span><span class="o">.</span><span class="n">get_schema_nodes</span><span class="p">())</span>
+<span class="go">Schema nodes:  [&#39;Person&#39;, &#39;Organization&#39;, &#39;Country&#39;]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Schema edges: &quot;</span><span class="p">,</span> <span class="n">graph</span><span class="o">.</span><span class="n">get_schema_edges</span><span class="p">())</span>
+<span class="go">Schema edges:  [(&#39;Person&#39;, &#39;Organization&#39;), (&#39;Person&#39;, &#39;Person&#39;), (&#39;Organization&#39;, &#39;Country&#39;), (&#39;Organization&#39;, &#39;Organization&#39;)]</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">graph</span><span class="o">.</span><span class="n">add_data_node</span><span class="p">(</span><span class="s2">&quot;France&quot;</span><span class="p">,</span> <span class="n">typing</span><span class="o">=</span><span class="s2">&quot;Country&quot;</span><span class="p">,</span> <span class="n">attrs</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;location&quot;</span><span class="p">:</span> <span class="s2">&quot;Europe&quot;</span><span class="p">})</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">graph</span><span class="o">.</span><span class="n">add_data_edge</span><span class="p">(</span><span class="s2">&quot;INTERPOL&quot;</span><span class="p">,</span> <span class="s2">&quot;France&quot;</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;located_in&quot;</span><span class="p">})</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Data nodes: &quot;</span><span class="p">,</span> <span class="n">graph</span><span class="o">.</span><span class="n">get_data_nodes</span><span class="p">())</span>
+<span class="go">Data nodes:  [&#39;Alice&#39;, &#39;Bob&#39;, &#39;Eric&#39;, &#39;Sandra&#39;, &#39;ENS Lyon&#39;, &#39;UN&#39;, &#39;INTERPOL&#39;, &#39;France&#39;]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Data edges: &quot;</span><span class="p">,</span> <span class="n">graph</span><span class="o">.</span><span class="n">get_data_edges</span><span class="p">())</span>
+<span class="go">Data edges:  [(&#39;Alice&#39;, &#39;Bob&#39;), (&#39;Bob&#39;, &#39;Alice&#39;), (&#39;Eric&#39;, &#39;Sandra&#39;), (&#39;Eric&#39;, &#39;UN&#39;), (&#39;Eric&#39;, &#39;Alice&#39;), (&#39;Sandra&#39;, &#39;Bob&#39;), (&#39;Sandra&#39;, &#39;Eric&#39;), (&#39;INTERPOL&#39;, &#39;France&#39;)]</span>
+</pre></div>
+</div>
+<p>We will now create a rule that applied to the schema and that clones the node <cite>Organization</cite> into two nodes.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">lhs</span> <span class="o">=</span> <span class="n">NXGraph</span><span class="p">()</span>
+<span class="n">lhs</span><span class="o">.</span><span class="n">add_nodes_from</span><span class="p">([</span><span class="s2">&quot;Organization&quot;</span><span class="p">])</span>
+
+<span class="n">rule</span> <span class="o">=</span> <span class="n">Rule</span><span class="o">.</span><span class="n">from_transform</span><span class="p">(</span><span class="n">lhs</span><span class="p">)</span>
+<span class="n">_</span><span class="p">,</span> <span class="n">rhs_clone</span> <span class="o">=</span> <span class="n">rule</span><span class="o">.</span><span class="n">inject_clone_node</span><span class="p">(</span><span class="s2">&quot;Organization&quot;</span><span class="p">)</span>
+
+<span class="n">instance</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;Organization&quot;</span><span class="p">:</span> <span class="s2">&quot;Organization&quot;</span>
+<span class="p">}</span>
+
+<span class="n">plot_rule</span><span class="p">(</span><span class="n">rule</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>..image:: _static/typedn4/r1.png</p>
+<p>We try to apply the created rule to the graph <cite>T</cite> in the strict mode. The following snippet:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="k">try</span><span class="p">:</span>
+    <span class="n">rhs_instance</span> <span class="o">=</span> <span class="n">graph</span><span class="o">.</span><span class="n">rewrite_schema</span><span class="p">(</span><span class="n">rule</span><span class="p">,</span> <span class="n">strict</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Error message: &quot;</span><span class="p">,</span> <span class="n">e</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Type: &quot;</span><span class="p">,</span> <span class="nb">type</span><span class="p">(</span><span class="n">e</span><span class="p">))</span>
+</pre></div>
+</div>
+<p>outputs</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>Error message:  Rewriting is strict (no propagation of clones is allowed), the cloned node &#39;Organization&#39; in &#39;type&#39; has instances &#39;[&#39;UN&#39;, &#39;ENS Lyon&#39;, &#39;INTERPOL&#39;]&#39; in &#39;node&#39; and their typing by P is not specified
+Type:  &lt;class &#39;regraph.exceptions.RewritingError&#39;&gt;
+</pre></div>
+</div>
+<p>We have failed to rewrite the schema, because we have not specified typing for instances of <cite>Organization</cite> in the rule’s interface. Let us try again, but this time we will prove such typing.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">data_typing</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s1">&#39;ENS Lyon&#39;</span><span class="p">:</span> <span class="n">rhs_clone</span><span class="p">,</span>
+    <span class="s1">&#39;UN&#39;</span><span class="p">:</span> <span class="s2">&quot;Organization&quot;</span><span class="p">,</span>
+    <span class="s1">&#39;INTERPOL&#39;</span><span class="p">:</span> <span class="s1">&#39;Organization&#39;</span>
+<span class="p">}</span>
+<span class="n">rhs_instance</span> <span class="o">=</span> <span class="n">graph</span><span class="o">.</span><span class="n">rewrite_schema</span><span class="p">(</span>
+    <span class="n">rule</span><span class="p">,</span> <span class="n">data_typing</span><span class="o">=</span><span class="n">data_typing</span><span class="p">,</span> <span class="n">strict</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Instance of the RHS in G&quot;</span><span class="p">,</span> <span class="n">rhs_instance</span><span class="p">)</span>
+<span class="go">Instance of the RHS in G {&#39;Organization&#39;: &#39;Organization&#39;, &#39;Organization1&#39;: &#39;Organization1&#39;}</span>
+</pre></div>
+</div>
+<p>Let us relabel nodes in <cite>T</cite>.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">graph</span><span class="o">.</span><span class="n">relabel_schema_node</span><span class="p">(</span><span class="n">rhs_instance</span><span class="p">[</span><span class="n">rhs_clone</span><span class="p">],</span> <span class="s1">&#39;University&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">graph</span><span class="o">.</span><span class="n">relabel_schema_node</span><span class="p">(</span><span class="n">rhs_instance</span><span class="p">[</span><span class="s2">&quot;Organization&quot;</span><span class="p">],</span> <span class="s2">&quot;International_Organization&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">graph</span><span class="o">.</span><span class="n">get_data_typing</span><span class="p">(),</span> <span class="n">indent</span><span class="o">=</span><span class="s2">&quot;   &quot;</span><span class="p">))</span>
+<span class="go">{</span>
+<span class="go">   &quot;Sandra&quot;: &quot;Person&quot;,</span>
+<span class="go">   &quot;Eric&quot;: &quot;Person&quot;,</span>
+<span class="go">   &quot;Alice&quot;: &quot;Person&quot;,</span>
+<span class="go">   &quot;Bob&quot;: &quot;Person&quot;,</span>
+<span class="go">   &quot;UN&quot;: &quot;International_Organization&quot;,</span>
+<span class="go">   &quot;INTERPOL&quot;: &quot;International_Organization&quot;,</span>
+<span class="go">   &quot;France&quot;: &quot;Country&quot;,</span>
+<span class="go">   &quot;ENS Lyon&quot;: &quot;University&quot;</span>
+<span class="go">}</span>
+</pre></div>
+</div>
+<p>We now show how graph rewriting that requires propagation can be performed in such schema-aware PG. Let us first consider a small example of <em>forward propagation</em>. We will create a rule that performs some additions of new nodes not typed  by schema.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">pattern</span> <span class="o">=</span> <span class="n">NXGraph</span><span class="p">()</span>
+<span class="n">pattern</span><span class="o">.</span><span class="n">add_nodes_from</span><span class="p">([</span><span class="s2">&quot;a&quot;</span><span class="p">,</span> <span class="s2">&quot;b&quot;</span><span class="p">,</span> <span class="s2">&quot;c&quot;</span><span class="p">])</span>
+<span class="n">pattern</span><span class="o">.</span><span class="n">add_edges_from</span><span class="p">([</span>
+        <span class="p">(</span><span class="s2">&quot;a&quot;</span><span class="p">,</span> <span class="s2">&quot;b&quot;</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;colleague&quot;</span><span class="p">}),</span>
+        <span class="p">(</span><span class="s2">&quot;a&quot;</span><span class="p">,</span> <span class="s2">&quot;c&quot;</span><span class="p">)</span>
+    <span class="p">])</span>
+
+<span class="n">rule</span> <span class="o">=</span> <span class="n">Rule</span><span class="o">.</span><span class="n">from_transform</span><span class="p">(</span><span class="n">pattern</span><span class="p">)</span>
+<span class="n">rule</span><span class="o">.</span><span class="n">inject_remove_edge</span><span class="p">(</span><span class="s2">&quot;a&quot;</span><span class="p">,</span> <span class="s2">&quot;c&quot;</span><span class="p">)</span>
+<span class="n">rule</span><span class="o">.</span><span class="n">inject_add_node</span><span class="p">(</span><span class="s2">&quot;Crime_Division&quot;</span><span class="p">)</span>
+<span class="n">rule</span><span class="o">.</span><span class="n">inject_add_edge</span><span class="p">(</span><span class="s2">&quot;Crime_Division&quot;</span><span class="p">,</span> <span class="s2">&quot;c&quot;</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;part_of&quot;</span><span class="p">})</span>
+<span class="n">rule</span><span class="o">.</span><span class="n">inject_add_edge</span><span class="p">(</span><span class="s2">&quot;a&quot;</span><span class="p">,</span> <span class="s2">&quot;Crime_Division&quot;</span><span class="p">)</span>
+<span class="n">rule</span><span class="o">.</span><span class="n">inject_add_edge</span><span class="p">(</span><span class="s2">&quot;b&quot;</span><span class="p">,</span> <span class="s2">&quot;Crime_Division&quot;</span><span class="p">)</span>
+
+<span class="n">plot_rule</span><span class="p">(</span><span class="n">rule</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>..image:: _static/typedn4/r2.png</p>
+<p>We have created a rule that clones the node <cite>a</cite> and reconnects the edges between <cite>a</cite> and <cite>b</cite>.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">pattern_typing</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;a&quot;</span><span class="p">:</span> <span class="s2">&quot;Person&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;b&quot;</span><span class="p">:</span>  <span class="s2">&quot;Person&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;c&quot;</span><span class="p">:</span> <span class="s2">&quot;International_Organization&quot;</span>
+<span class="p">}</span>
+<span class="n">instances</span> <span class="o">=</span> <span class="n">graph</span><span class="o">.</span><span class="n">find_data_matching</span><span class="p">(</span><span class="n">pattern</span><span class="p">,</span> <span class="n">pattern_typing</span><span class="o">=</span><span class="n">pattern_typing</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>We obtain the following instances:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">instances</span><span class="p">)</span>
+<span class="go">{&#39;a&#39;: &#39;Eric&#39;, &#39;b&#39;: &#39;Sandra&#39;, &#39;c&#39;: &#39;UN&#39;}</span>
+</pre></div>
+</div>
+<p>We rewrite the graph <cite>shapes</cite> with the fixed instances (so, the node <cite>circle</cite> is cloned).</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">rhs_instance</span> <span class="o">=</span> <span class="n">graph</span><span class="o">.</span><span class="n">rewrite_data</span><span class="p">(</span><span class="n">rule</span><span class="p">,</span> <span class="n">instance</span><span class="o">=</span><span class="n">instances</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">rhs_instance</span><span class="p">)</span>
+<span class="go">{&#39;a&#39;: &#39;Eric&#39;, &#39;b&#39;: &#39;Sandra&#39;, &#39;c&#39;: &#39;UN&#39;, &#39;Crime_Division&#39;: &#39;Crime_Division&#39;}</span>
+</pre></div>
+</div>
+<p>To type the new node ‘Crime_Division’, we have created a new node in the schema.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">schema_node</span> <span class="o">=</span> <span class="n">graph</span><span class="o">.</span><span class="n">get_node_type</span><span class="p">(</span><span class="n">rhs_instance</span><span class="p">[</span><span class="s2">&quot;Crime_Division&quot;</span><span class="p">])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">graph</span><span class="o">.</span><span class="n">relabel_schema_node</span><span class="p">(</span><span class="n">schema_node</span><span class="p">,</span> <span class="s2">&quot;Division&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Schema nodes: &quot;</span><span class="p">,</span> <span class="n">graph</span><span class="o">.</span><span class="n">get_schema_nodes</span><span class="p">())</span>
+<span class="go">Schema nodes:  [&#39;Division&#39;, &#39;Person&#39;, &#39;International_Organization&#39;, &#39;Country&#39;, &#39;University&#39;]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Schema edges: &quot;</span><span class="p">,</span> <span class="n">graph</span><span class="o">.</span><span class="n">get_schema_edges</span><span class="p">())</span>
+<span class="go">Schema edges:  [(&#39;Division&#39;, &#39;International_Organization&#39;), (&#39;Person&#39;, &#39;Division&#39;), (&#39;Person&#39;, &#39;University&#39;), (&#39;Person&#39;, &#39;International_Organization&#39;), (&#39;Person&#39;, &#39;Person&#39;), (&#39;International_Organization&#39;, &#39;University&#39;), (&#39;International_Organization&#39;, &#39;Country&#39;), (&#39;International_Organization&#39;, &#39;International_Organization&#39;), (&#39;University&#39;, &#39;University&#39;), (&#39;University&#39;, &#39;International_Organization&#39;), (&#39;University&#39;, &#39;Country&#39;)]</span>
+</pre></div>
+</div>
+<p>Now, let us consider an example of <em>backward propagation</em>. We will clone the node <cite>Person</cite> in the schema into a <cite>Child</cite> and <cite>Adult</cite>. We will determine which instances of <cite>Person</cite> are typed by <cite>Child</cite> or <cite>Adult</cite> by looking a the age attribute.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">pattern</span> <span class="o">=</span> <span class="n">NXGraph</span><span class="p">()</span>
+<span class="n">pattern</span><span class="o">.</span><span class="n">add_nodes_from</span><span class="p">([</span><span class="s2">&quot;Person&quot;</span><span class="p">])</span>
+<span class="n">pattern</span><span class="o">.</span><span class="n">add_edges_from</span><span class="p">([(</span><span class="s2">&quot;Person&quot;</span><span class="p">,</span> <span class="s2">&quot;Person&quot;</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;friend&quot;</span><span class="p">,</span> <span class="s2">&quot;parent&quot;</span><span class="p">,</span> <span class="s2">&quot;colleague&quot;</span><span class="p">}})])</span>
+
+<span class="n">interface</span> <span class="o">=</span>  <span class="n">NXGraph</span><span class="p">()</span>
+<span class="n">interface</span><span class="o">.</span><span class="n">add_nodes_from</span><span class="p">([</span><span class="s2">&quot;Adult&quot;</span><span class="p">,</span> <span class="s2">&quot;Child&quot;</span><span class="p">])</span>
+<span class="n">interface</span><span class="o">.</span><span class="n">add_edges_from</span><span class="p">([</span>
+    <span class="p">(</span><span class="s2">&quot;Adult&quot;</span><span class="p">,</span> <span class="s2">&quot;Adult&quot;</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;friend&quot;</span><span class="p">,</span> <span class="s2">&quot;parent&quot;</span><span class="p">,</span> <span class="s2">&quot;colleague&quot;</span><span class="p">}}),</span>
+    <span class="p">(</span><span class="s2">&quot;Child&quot;</span><span class="p">,</span> <span class="s2">&quot;Child&quot;</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;friend&quot;</span><span class="p">}}),</span>
+    <span class="p">(</span><span class="s2">&quot;Adult&quot;</span><span class="p">,</span> <span class="s2">&quot;Child&quot;</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;friend&quot;</span><span class="p">,</span> <span class="s2">&quot;parent&quot;</span><span class="p">}}),</span>
+    <span class="p">(</span><span class="s2">&quot;Child&quot;</span><span class="p">,</span> <span class="s2">&quot;Adult&quot;</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;friend&quot;</span><span class="p">}}),</span>
+<span class="p">])</span>
+
+<span class="n">rule</span> <span class="o">=</span> <span class="n">Rule</span><span class="p">(</span><span class="n">p</span><span class="o">=</span><span class="n">interface</span><span class="p">,</span> <span class="n">lhs</span><span class="o">=</span><span class="n">pattern</span><span class="p">,</span> <span class="n">p_lhs</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;Adult&quot;</span><span class="p">:</span> <span class="s2">&quot;Person&quot;</span><span class="p">,</span> <span class="s2">&quot;Child&quot;</span><span class="p">:</span> <span class="s2">&quot;Person&quot;</span><span class="p">})</span>
+</pre></div>
+</div>
+<p>Let us determine which instances of <cite>Person</cite> are typed by <cite>Child</cite> or <cite>Adult</cite> as follows.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">data_typing</span> <span class="o">=</span> <span class="p">{}</span>
+
+<span class="n">persons</span> <span class="o">=</span> <span class="n">graph</span><span class="o">.</span><span class="n">get_instances</span><span class="p">(</span><span class="s2">&quot;Person&quot;</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">persons</span><span class="p">:</span>
+    <span class="n">p_attrs</span> <span class="o">=</span> <span class="n">graph</span><span class="o">.</span><span class="n">get_data_node</span><span class="p">(</span><span class="n">p</span><span class="p">)</span>
+    <span class="k">if</span> <span class="s2">&quot;age&quot;</span> <span class="ow">in</span> <span class="n">p_attrs</span><span class="p">:</span>
+        <span class="n">age</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">p_attrs</span><span class="p">[</span><span class="s2">&quot;age&quot;</span><span class="p">])[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">age</span> <span class="o">&gt;</span> <span class="mi">18</span><span class="p">:</span>
+            <span class="n">data_typing</span><span class="p">[</span><span class="n">p</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;Adult&quot;</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">data_typing</span><span class="p">[</span><span class="n">p</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;Child&quot;</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Data typing: &quot;</span><span class="p">,</span> <span class="n">data_typing</span><span class="p">)</span>
+<span class="go">Data typing:  {&#39;Sandra&#39;: &#39;Adult&#39;, &#39;Eric&#39;: &#39;Adult&#39;, &#39;Alice&#39;: &#39;Child&#39;}</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">rhs_instance</span> <span class="o">=</span> <span class="n">graph</span><span class="o">.</span><span class="n">rewrite_schema</span><span class="p">(</span><span class="n">rule</span><span class="p">,</span> <span class="n">data_typing</span><span class="o">=</span><span class="n">data_typing</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">rhs_instance</span><span class="p">)</span>
+<span class="go">{&#39;Adult&#39;: &#39;Person1&#39;, &#39;Child&#39;: &#39;Person&#39;}</span>
+</pre></div>
+</div>
+<p>Let us relabel nodes appropriately:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">graph</span><span class="o">.</span><span class="n">relabel_schema_node</span><span class="p">(</span><span class="n">rhs_instance</span><span class="p">[</span><span class="s2">&quot;Adult&quot;</span><span class="p">],</span> <span class="s2">&quot;Adult&quot;</span><span class="p">)</span>
+<span class="n">graph</span><span class="o">.</span><span class="n">relabel_schema_node</span><span class="p">(</span><span class="n">rhs_instance</span><span class="p">[</span><span class="s2">&quot;Child&quot;</span><span class="p">],</span> <span class="s2">&quot;Child&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Schema nodes: &quot;</span><span class="p">,</span> <span class="n">graph</span><span class="o">.</span><span class="n">get_schema_nodes</span><span class="p">())</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Schema edges: &quot;</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">s</span><span class="p">,</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">graph</span><span class="o">.</span><span class="n">get_schema_edges</span><span class="p">():</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\t</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">s</span><span class="p">,</span> <span class="s2">&quot;-&gt;&quot;</span><span class="p">,</span> <span class="n">t</span><span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Data nodes: &quot;</span><span class="p">,</span> <span class="n">graph</span><span class="o">.</span><span class="n">get_data_nodes</span><span class="p">())</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Data edges: &quot;</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">s</span><span class="p">,</span> <span class="n">t</span><span class="p">,</span> <span class="n">attrs</span> <span class="ow">in</span> <span class="n">graph</span><span class="o">.</span><span class="n">get_data_edges</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\t</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">s</span><span class="p">,</span> <span class="s2">&quot;-&gt;&quot;</span><span class="p">,</span> <span class="n">t</span><span class="p">,</span> <span class="n">attrs</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>We obtain the following output:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Schema</span> <span class="n">nodes</span><span class="p">:</span>  <span class="p">[</span><span class="s1">&#39;Child&#39;</span><span class="p">,</span> <span class="s1">&#39;University&#39;</span><span class="p">,</span> <span class="s1">&#39;Country&#39;</span><span class="p">,</span> <span class="s1">&#39;International_Organization&#39;</span><span class="p">,</span> <span class="s1">&#39;Division&#39;</span><span class="p">,</span>  <span class="s1">&#39;Adult&#39;</span><span class="p">]</span>
+<span class="n">Schema</span> <span class="n">edges</span><span class="p">:</span>
+     <span class="n">Child</span> <span class="o">-&gt;</span> <span class="n">Adult</span>
+     <span class="n">Child</span> <span class="o">-&gt;</span> <span class="n">Division</span>
+     <span class="n">Child</span> <span class="o">-&gt;</span> <span class="n">International_Organization</span>
+     <span class="n">Child</span> <span class="o">-&gt;</span> <span class="n">University</span>
+     <span class="n">Child</span> <span class="o">-&gt;</span> <span class="n">Child</span>
+     <span class="n">University</span> <span class="o">-&gt;</span> <span class="n">International_Organization</span>
+     <span class="n">University</span> <span class="o">-&gt;</span> <span class="n">Country</span>
+     <span class="n">University</span> <span class="o">-&gt;</span> <span class="n">University</span>
+     <span class="n">International_Organization</span> <span class="o">-&gt;</span> <span class="n">University</span>
+     <span class="n">International_Organization</span> <span class="o">-&gt;</span> <span class="n">International_Organization</span>
+     <span class="n">International_Organization</span> <span class="o">-&gt;</span> <span class="n">Country</span>
+     <span class="n">Division</span> <span class="o">-&gt;</span> <span class="n">International_Organization</span>
+     <span class="n">Adult</span> <span class="o">-&gt;</span> <span class="n">Child</span>
+     <span class="n">Adult</span> <span class="o">-&gt;</span> <span class="n">Division</span>
+     <span class="n">Adult</span> <span class="o">-&gt;</span> <span class="n">Adult</span>
+     <span class="n">Adult</span> <span class="o">-&gt;</span> <span class="n">University</span>
+     <span class="n">Adult</span> <span class="o">-&gt;</span> <span class="n">International_Organization</span>
+
+<span class="n">Data</span> <span class="n">nodes</span><span class="p">:</span>  <span class="p">[</span><span class="s1">&#39;Alice&#39;</span><span class="p">,</span> <span class="s1">&#39;Bob&#39;</span><span class="p">,</span> <span class="s1">&#39;Eric&#39;</span><span class="p">,</span> <span class="s1">&#39;Sandra&#39;</span><span class="p">,</span> <span class="s1">&#39;ENS Lyon&#39;</span><span class="p">,</span> <span class="s1">&#39;UN&#39;</span><span class="p">,</span> <span class="s1">&#39;INTERPOL&#39;</span><span class="p">,</span> <span class="s1">&#39;France&#39;</span><span class="p">,</span> <span class="s1">&#39;Crime_Division&#39;</span><span class="p">,</span> <span class="s1">&#39;Bob1&#39;</span><span class="p">]</span>
+<span class="n">Data</span> <span class="n">edges</span><span class="p">:</span>
+     <span class="n">Alice</span> <span class="o">-&gt;</span> <span class="n">Bob1</span> <span class="p">{</span><span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;friend&#39;</span><span class="p">}}</span>
+     <span class="n">Alice</span> <span class="o">-&gt;</span> <span class="n">Bob</span> <span class="p">{</span><span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;friend&#39;</span><span class="p">}}</span>
+     <span class="n">Bob</span> <span class="o">-&gt;</span> <span class="n">Alice</span> <span class="p">{</span><span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;friend&#39;</span><span class="p">}}</span>
+     <span class="n">Eric</span> <span class="o">-&gt;</span> <span class="n">Crime_Division</span> <span class="p">{}</span>
+     <span class="n">Eric</span> <span class="o">-&gt;</span> <span class="n">Sandra</span> <span class="p">{</span><span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;colleague&#39;</span><span class="p">}}</span>
+     <span class="n">Eric</span> <span class="o">-&gt;</span> <span class="n">Alice</span> <span class="p">{</span><span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;parent&#39;</span><span class="p">}}</span>
+     <span class="n">Sandra</span> <span class="o">-&gt;</span> <span class="n">Bob1</span> <span class="p">{</span><span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;parent&#39;</span><span class="p">}}</span>
+     <span class="n">Sandra</span> <span class="o">-&gt;</span> <span class="n">Crime_Division</span> <span class="p">{}</span>
+     <span class="n">Sandra</span> <span class="o">-&gt;</span> <span class="n">Bob</span> <span class="p">{</span><span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;parent&#39;</span><span class="p">}}</span>
+     <span class="n">Sandra</span> <span class="o">-&gt;</span> <span class="n">Eric</span> <span class="p">{</span><span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;friend&#39;</span><span class="p">}}</span>
+     <span class="n">INTERPOL</span> <span class="o">-&gt;</span> <span class="n">France</span> <span class="p">{</span><span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;located_in&#39;</span><span class="p">}}</span>
+     <span class="n">Crime_Division</span> <span class="o">-&gt;</span> <span class="n">UN</span> <span class="p">{</span><span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;part_of&#39;</span><span class="p">}}</span>
+     <span class="n">Bob1</span> <span class="o">-&gt;</span> <span class="n">Alice</span> <span class="p">{</span><span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;friend&#39;</span><span class="p">}}</span>
+</pre></div>
+</div>
+<p>Observe that we have cloned the node <cite>Bob</cite> into two nodes <cite>Bob</cite> and <cite>Bob1</cite>, one being an instance of <cite>Adult</cite> and another of <cite>Child</cite>.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">graph</span><span class="o">.</span><span class="n">get_data_typing</span><span class="p">(),</span> <span class="n">indent</span><span class="o">=</span><span class="s2">&quot;  &quot;</span><span class="p">))</span>
+<span class="go">{</span>
+<span class="go">  &quot;Alice&quot;: &quot;Child&quot;,</span>
+<span class="go">  &quot;Bob1&quot;: &quot;Child&quot;,</span>
+<span class="go">  &quot;ENS Lyon&quot;: &quot;University&quot;,</span>
+<span class="go">  &quot;France&quot;: &quot;Country&quot;,</span>
+<span class="go">  &quot;UN&quot;: &quot;International_Organization&quot;,</span>
+<span class="go">  &quot;INTERPOL&quot;: &quot;International_Organization&quot;,</span>
+<span class="go">  &quot;Crime_Division&quot;: &quot;Division&quot;,</span>
+<span class="go">  &quot;Eric&quot;: &quot;Adult&quot;,</span>
+<span class="go">  &quot;Bob&quot;: &quot;Adult&quot;,</span>
+<span class="go">  &quot;Sandra&quot;: &quot;Adult&quot;</span>
+<span class="go">}</span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">ReGraph</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2018, Eugenia Oshurko.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.2.0</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="_sources/tutorial_typedneo4j.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

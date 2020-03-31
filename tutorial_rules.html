@@ -1,0 +1,204 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>Rewriting rules tutorial &#8212; ReGraph 3.0 documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="rewriting-rules-tutorial">
+<span id="tutorial-rules"></span><h1>Rewriting rules tutorial<a class="headerlink" href="#rewriting-rules-tutorial" title="Permalink to this headline">¶</a></h1>
+<p>In the context of ReGraph, by rewriting rules we mean the rules of <em>sesqui-pushout rewriting</em> (see more details ‘here &lt;<a class="reference external" href="https://ncatlab.org/nlab/show/span+rewriting#sesquipushout_rewriting/">https://ncatlab.org/nlab/show/span+rewriting#sesquipushout_rewriting/</a>&gt;`_). A rewriting rule consists of the three graphs: <cite>P</cite> – preserved part, <cite>LHS</cite> – left hand side, <cite>RHS</cite> – right hand side, and two mappings: from <cite>P</cite> to <cite>LHS</cite> and from <cite>P</cite> to <cite>RHS</cite>.</p>
+<p>Informally, <cite>LHS</cite> represents a pattern to match in a graph, subject to rewriting. <cite>P</cite> together with the mapping <cite>P -&gt; LHS</cite> specifies a part of the pattern which stays preseved during rewriting, i.e. all the nodes/edges/attributes present in <cite>LHS</cite> but not <cite>P</cite> will be removed. <cite>RHS</cite> and <cite>P -&gt; RHS</cite> specify nodes/edges/attributes to add to the <cite>P</cite>. In addition, rules defined is such a way allow to clone and merge nodes. If two nodes from <cite>P</cite> map to the same node in <cite>LHS</cite>, the node corresponding to this node of the pattern will be cloned. Symmetrically, if two nodes from <cite>P</cite> map to the same node in $rhs$, the corresponding two nodes will be merged.</p>
+<p>This tutorial will illustrate the idea behind the sesqui-pushout rewriting rules in more detail.</p>
+<p>Let us start by importing the necessary data structures and functions:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">regraph</span> <span class="k">import</span> <span class="n">NXGraph</span><span class="p">,</span> <span class="n">Rule</span><span class="p">,</span> <span class="n">plot_rule</span>
+</pre></div>
+</div>
+<div class="section" id="creating-a-rewriting-rule-from-a-pattern">
+<span id="tutorial-rules1"></span><h2>Creating a rewriting rule from a pattern<a class="headerlink" href="#creating-a-rewriting-rule-from-a-pattern" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1"># Define the left-hand side of the rule</span>
+<span class="n">pattern</span> <span class="o">=</span> <span class="n">NXGraph</span><span class="p">()</span>
+<span class="n">pattern</span><span class="o">.</span><span class="n">add_nodes_from</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">])</span>
+<span class="n">pattern</span><span class="o">.</span><span class="n">add_edges_from</span><span class="p">([(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span> <span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">)])</span>
+
+<span class="n">rule1</span> <span class="o">=</span> <span class="n">Rule</span><span class="o">.</span><span class="n">from_transform</span><span class="p">(</span><span class="n">pattern</span><span class="p">)</span>
+<span class="c1"># `inject_clone_node` returns the IDs of the newly created</span>
+<span class="c1"># clone in P and RHS</span>
+<span class="n">p_clone</span><span class="p">,</span> <span class="n">rhs_clone</span> <span class="o">=</span> <span class="n">rule1</span><span class="o">.</span><span class="n">inject_clone_node</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">rule1</span><span class="o">.</span><span class="n">inject_add_node</span><span class="p">(</span><span class="s2">&quot;new_node&quot;</span><span class="p">)</span>
+<span class="n">rule1</span><span class="o">.</span><span class="n">inject_add_edge</span><span class="p">(</span><span class="s2">&quot;new_node&quot;</span><span class="p">,</span> <span class="n">rhs_clone</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Now, let us plot the rule</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">plot_rule</span><span class="p">(</span><span class="n">rule1</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>..image:: _static/rules/r1.png</p>
+<p>Every rule can be converted to a sequence of human-readable commands:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">rule1</span><span class="o">.</span><span class="n">to_commands</span><span class="p">())</span>
+<span class="go">CLONE 1 AS 11.</span>
+<span class="go">ADD_NODE new_node {}.</span>
+<span class="go">ADD_EDGE new_node 11 {}.</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="creating-a-rewriting-rule-from-a-span">
+<span id="tutorial-rules2"></span><h2>Creating a rewriting rule from a span<a class="headerlink" href="#creating-a-rewriting-rule-from-a-span" title="Permalink to this headline">¶</a></h2>
+<p>By default, <cite>Rule</cite> objects in ReGraph are initialized with three graph objects (<cite>NXGraph</cite>) corresponding to <cite>P</cite>, <cite>LHS</cite> and <cite>RHS</cite>, together with two Python dictionaries encoding the homomorphisms <cite>P -&gt; LHS</cite> and <cite>P -&gt; RHS</cite>. This may be useful in a lot of different scenarios. For instance, as in the following example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1"># Define the left-hand side of the rule</span>
+<span class="n">pattern</span> <span class="o">=</span> <span class="n">NXGraph</span><span class="p">()</span>
+<span class="n">pattern</span><span class="o">.</span><span class="n">add_nodes_from</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">])</span>
+<span class="n">pattern</span><span class="o">.</span><span class="n">add_edges_from</span><span class="p">([(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">)])</span>
+
+<span class="c1"># Define the preserved part of the rule</span>
+<span class="n">rule2</span> <span class="o">=</span> <span class="n">Rule</span><span class="o">.</span><span class="n">from_transform</span><span class="p">(</span><span class="n">pattern</span><span class="p">)</span>
+<span class="n">p_clone</span><span class="p">,</span> <span class="n">rhs_clone</span> <span class="o">=</span> <span class="n">rule2</span><span class="o">.</span><span class="n">inject_clone_node</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">plot_rule</span><span class="p">(</span><span class="n">rule2</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>..image:: _static/rules/r2.png</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="s2">&quot;New node corresponding to the clone: &quot;</span><span class="p">,</span> <span class="n">p_clone</span><span class="p">)</span>
+<span class="go">New node corresponding to the clone:  11</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">rule2</span><span class="o">.</span><span class="n">p</span><span class="o">.</span><span class="n">edges</span><span class="p">())</span>
+<span class="go">[(1, 2), (1, 3), (1, 1), (1, &#39;11&#39;), (2, 3), (&#39;11&#39;, 1), (&#39;11&#39;, 3), (&#39;11&#39;, &#39;11&#39;), (&#39;11&#39;, 2)]</span>
+</pre></div>
+</div>
+<p>As the result of cloning of the node <cite>1</cite>, all its incident edges are copied to the newly created clone node (variable <cite>p_clone</cite>). However, in our rule we would like to keep only some of the edges and remove the rest as follows.</p>
+<p>rule2.inject_remove_edge(1, 1)
+rule2.inject_remove_edge(p_clone, p_clone)
+rule2.inject_remove_edge(p_clone, 1)
+rule2.inject_remove_edge(p_clone, 2)
+rule2.inject_remove_edge(1, 3)</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">rule2</span><span class="o">.</span><span class="n">p</span><span class="o">.</span><span class="n">edges</span><span class="p">())</span>
+<span class="go">[(1, 2), (1, &#39;11&#39;), (2, 3), (&#39;11&#39;, 3)]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">plot_rule</span><span class="p">(</span><span class="n">rule2</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>..image:: _static/rules/r3.png</p>
+<p>Instead of initializing our rule from the pattern and injecting a lot of edge removals, we could directly initialize three objects for <cite>P</cite>, <cite>LHS</cite> and <cite>RHS</cite>, where <cite>P</cite> contains only the desired edges. In the following example, because the rule does not specify any merges or additions (so <cite>RHS</cite> is isomorphic to <cite>P</cite>), we can omit the parameter <cite>RHS</cite> in the constructor of <cite>Rule</cite>.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1"># Define the left-hand side of the rule</span>
+<span class="n">lhs</span> <span class="o">=</span> <span class="n">NXGraph</span><span class="p">()</span>
+<span class="n">lhs</span><span class="o">.</span><span class="n">add_nodes_from</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">])</span>
+<span class="n">lhs</span><span class="o">.</span><span class="n">add_edges_from</span><span class="p">([(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">)])</span>
+
+<span class="c1"># Define the preserved part of the rule</span>
+<span class="n">p</span> <span class="o">=</span> <span class="n">NXGraph</span><span class="p">()</span>
+<span class="n">p</span><span class="o">.</span><span class="n">add_nodes_from</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="s2">&quot;1_clone&quot;</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">])</span>
+<span class="n">p</span><span class="o">.</span><span class="n">add_edges_from</span><span class="p">([</span>
+    <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span>
+    <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="s2">&quot;1_clone&quot;</span><span class="p">),</span>
+    <span class="p">(</span><span class="s2">&quot;1_clone&quot;</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span>
+    <span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">)])</span>
+
+<span class="n">p_lhs</span> <span class="o">=</span> <span class="p">{</span><span class="mi">1</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s2">&quot;1_clone&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">:</span> <span class="mi">3</span><span class="p">}</span>
+
+<span class="c1"># Initialize a rule object</span>
+<span class="n">rule3</span> <span class="o">=</span> <span class="n">Rule</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">lhs</span><span class="p">,</span> <span class="n">p_lhs</span><span class="o">=</span><span class="n">p_lhs</span><span class="p">)</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">plot_rule</span><span class="p">(</span><span class="n">rule3</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>..image:: _static/rules/r3.png</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">rule3</span><span class="o">.</span><span class="n">p</span><span class="o">.</span><span class="n">edges</span><span class="p">())</span>
+<span class="go">[(1, 2), (1, &#39;1_clone&#39;), (&#39;1_clone&#39;, 3), (2, 3)]</span>
+</pre></div>
+</div>
+<div class="section" id="see-more">
+<h3>See more<a class="headerlink" href="#see-more" title="Permalink to this headline">¶</a></h3>
+<p>Module reference: <a class="reference internal" href="rules.html#rules"><span class="std std-ref">Rules</span></a></p>
+</div>
+</div>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">ReGraph</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2018, Eugenia Oshurko.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.2.0</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="_sources/tutorial_rules.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

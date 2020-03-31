@@ -1,0 +1,279 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>Audit trails for hierarchy objects &#8212; ReGraph 3.0 documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="audit-trails-for-hierarchy-objects">
+<span id="audit-tutorial-hierarchies"></span><h1>Audit trails for hierarchy objects<a class="headerlink" href="#audit-trails-for-hierarchy-objects" title="Permalink to this headline">¶</a></h1>
+<p>ReGraph implements a framework for the version control (VC) of graph transformations in hierarchies.</p>
+<p>The data structure <cite>VersionedHierarchy</cite> allows to store the history of transformations of a hierarchy and perform the following VC operations:</p>
+<ul class="simple">
+<li><p><strong>Rewrite</strong>: perform a rewriting of the hierarchy with a commit to the revision history</p></li>
+<li><p><strong>Branch</strong>: create a new branch (with a diverged version of the graph object)</p></li>
+<li><p><strong>Merge branches</strong>: merge branches</p></li>
+<li><p><strong>Rollback</strong>: rollback to a point in the history of transformations</p></li>
+</ul>
+<p>Let us start this tutorial by performing necessary imports:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">regraph</span> <span class="k">import</span> <span class="n">NXGraph</span><span class="p">,</span> <span class="n">NXHierarchy</span>
+<span class="kn">from</span> <span class="nn">regraph.audit</span> <span class="k">import</span> <span class="n">VersionedHierarchy</span>
+<span class="kn">from</span> <span class="nn">regraph.rules</span> <span class="k">import</span> <span class="n">Rule</span>
+<span class="kn">from</span> <span class="nn">regraph</span> <span class="k">import</span> <span class="n">print_graph</span><span class="p">,</span> <span class="n">plot_rule</span><span class="p">,</span> <span class="n">plot_graph</span>
+</pre></div>
+</div>
+<p>Let us now create a small hierarchy.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">hierarchy</span> <span class="o">=</span> <span class="n">NXHierarchy</span><span class="p">()</span>
+
+<span class="n">shapes</span> <span class="o">=</span> <span class="n">NXGraph</span><span class="p">()</span>
+<span class="n">shapes</span><span class="o">.</span><span class="n">add_nodes_from</span><span class="p">([</span><span class="s2">&quot;circle&quot;</span><span class="p">,</span> <span class="s2">&quot;square&quot;</span><span class="p">])</span>
+<span class="n">hierarchy</span><span class="o">.</span><span class="n">add_graph</span><span class="p">(</span><span class="s2">&quot;shapes&quot;</span><span class="p">,</span> <span class="n">shapes</span><span class="p">)</span>
+
+<span class="n">colors</span> <span class="o">=</span> <span class="n">NXGraph</span><span class="p">()</span>
+<span class="n">colors</span><span class="o">.</span><span class="n">add_nodes_from</span><span class="p">([</span><span class="s2">&quot;white&quot;</span><span class="p">,</span> <span class="s2">&quot;black&quot;</span><span class="p">])</span>
+<span class="n">hierarchy</span><span class="o">.</span><span class="n">add_graph</span><span class="p">(</span><span class="s2">&quot;colors&quot;</span><span class="p">,</span> <span class="n">colors</span><span class="p">)</span>
+
+<span class="n">ag</span> <span class="o">=</span> <span class="n">NXGraph</span><span class="p">()</span>
+<span class="n">ag</span><span class="o">.</span><span class="n">add_nodes_from</span><span class="p">(</span>
+    <span class="p">[</span><span class="s2">&quot;wc&quot;</span><span class="p">,</span> <span class="s2">&quot;bc&quot;</span><span class="p">,</span> <span class="s2">&quot;ws&quot;</span><span class="p">,</span> <span class="s2">&quot;bs&quot;</span><span class="p">])</span>
+<span class="n">hierarchy</span><span class="o">.</span><span class="n">add_graph</span><span class="p">(</span><span class="s2">&quot;metamodel&quot;</span><span class="p">,</span> <span class="n">ag</span><span class="p">)</span>
+
+<span class="n">nugget</span> <span class="o">=</span> <span class="n">NXGraph</span><span class="p">()</span>
+<span class="n">nugget</span><span class="o">.</span><span class="n">add_nodes_from</span><span class="p">(</span>
+    <span class="p">[</span><span class="s2">&quot;wc1&quot;</span><span class="p">,</span> <span class="s2">&quot;wc2&quot;</span><span class="p">,</span> <span class="s2">&quot;bc1&quot;</span><span class="p">,</span> <span class="s2">&quot;ws1&quot;</span><span class="p">,</span> <span class="s2">&quot;bs2&quot;</span><span class="p">])</span>
+<span class="n">hierarchy</span><span class="o">.</span><span class="n">add_graph</span><span class="p">(</span><span class="s2">&quot;data&quot;</span><span class="p">,</span> <span class="n">nugget</span><span class="p">)</span>
+
+<span class="n">hierarchy</span><span class="o">.</span><span class="n">add_typing</span><span class="p">(</span>
+    <span class="s2">&quot;metamodel&quot;</span><span class="p">,</span> <span class="s2">&quot;shapes&quot;</span><span class="p">,</span> <span class="p">{</span>
+        <span class="s2">&quot;wc&quot;</span><span class="p">:</span> <span class="s2">&quot;circle&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;bc&quot;</span><span class="p">:</span> <span class="s2">&quot;circle&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;ws&quot;</span><span class="p">:</span> <span class="s2">&quot;square&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;bs&quot;</span><span class="p">:</span> <span class="s2">&quot;square&quot;</span>
+    <span class="p">})</span>
+<span class="n">hierarchy</span><span class="o">.</span><span class="n">add_typing</span><span class="p">(</span>
+    <span class="s2">&quot;metamodel&quot;</span><span class="p">,</span> <span class="s2">&quot;colors&quot;</span><span class="p">,</span> <span class="p">{</span>
+        <span class="s2">&quot;wc&quot;</span><span class="p">:</span> <span class="s2">&quot;white&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;bc&quot;</span><span class="p">:</span> <span class="s2">&quot;black&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;ws&quot;</span><span class="p">:</span> <span class="s2">&quot;white&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;bs&quot;</span><span class="p">:</span> <span class="s2">&quot;black&quot;</span>
+    <span class="p">})</span>
+<span class="n">hierarchy</span><span class="o">.</span><span class="n">add_typing</span><span class="p">(</span>
+    <span class="s2">&quot;data&quot;</span><span class="p">,</span> <span class="s2">&quot;metamodel&quot;</span><span class="p">,</span> <span class="p">{</span>
+        <span class="s2">&quot;wc1&quot;</span><span class="p">:</span> <span class="s2">&quot;wc&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;wc2&quot;</span><span class="p">:</span> <span class="s2">&quot;wc&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;bc1&quot;</span><span class="p">:</span> <span class="s2">&quot;bc&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;ws1&quot;</span><span class="p">:</span> <span class="s2">&quot;ws&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;bs2&quot;</span><span class="p">:</span> <span class="s2">&quot;bs&quot;</span>
+    <span class="p">})</span>
+<span class="n">hierarchy</span><span class="o">.</span><span class="n">add_typing</span><span class="p">(</span>
+    <span class="s2">&quot;data&quot;</span><span class="p">,</span> <span class="s2">&quot;colors&quot;</span><span class="p">,</span> <span class="p">{</span>
+        <span class="s2">&quot;wc1&quot;</span><span class="p">:</span> <span class="s2">&quot;white&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;wc2&quot;</span><span class="p">:</span> <span class="s2">&quot;white&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;bc1&quot;</span><span class="p">:</span> <span class="s2">&quot;black&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;ws1&quot;</span><span class="p">:</span> <span class="s2">&quot;white&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;bs2&quot;</span><span class="p">:</span> <span class="s2">&quot;black&quot;</span>
+    <span class="p">})</span>
+
+<span class="n">base</span> <span class="o">=</span> <span class="n">NXGraph</span><span class="p">()</span>
+<span class="n">base</span><span class="o">.</span><span class="n">add_nodes_from</span><span class="p">([</span><span class="s2">&quot;node&quot;</span><span class="p">])</span>
+<span class="n">hierarchy</span><span class="o">.</span><span class="n">add_graph</span><span class="p">(</span><span class="s2">&quot;base&quot;</span><span class="p">,</span> <span class="n">base</span><span class="p">)</span>
+<span class="n">hierarchy</span><span class="o">.</span><span class="n">add_typing</span><span class="p">(</span>
+    <span class="s2">&quot;colors&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;base&quot;</span><span class="p">,</span> <span class="p">{</span>
+        <span class="s2">&quot;white&quot;</span><span class="p">:</span> <span class="s2">&quot;node&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;black&quot;</span><span class="p">:</span> <span class="s2">&quot;node&quot;</span>
+    <span class="p">})</span>
+</pre></div>
+</div>
+<p>We pass the hierarchy to the <cite>VersionedHierarchy</cite> wrapper that will take care of the version control:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">h</span> <span class="o">=</span> <span class="n">VersionedHierarchy</span><span class="p">(</span><span class="n">hierarchy</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Branches: &quot;</span><span class="p">,</span> <span class="n">h</span><span class="o">.</span><span class="n">branches</span><span class="p">())</span>
+<span class="go">Branches:  [&#39;master&#39;]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Current branch: &quot;</span><span class="p">,</span> <span class="n">h</span><span class="o">.</span><span class="n">current_branch</span><span class="p">())</span>
+<span class="go">Current branch:  master</span>
+</pre></div>
+</div>
+<p>Let us create a new branch <cite>test1</cite>:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">h</span><span class="o">.</span><span class="n">branch</span><span class="p">(</span><span class="s2">&quot;test1&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>We will now rewrite our hierarchy at the current branch of the audit trail.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">pattern</span> <span class="o">=</span> <span class="n">NXGraph</span><span class="p">()</span>
+<span class="n">pattern</span><span class="o">.</span><span class="n">add_nodes_from</span><span class="p">([</span><span class="s2">&quot;s&quot;</span><span class="p">])</span>
+<span class="n">rule</span> <span class="o">=</span> <span class="n">Rule</span><span class="o">.</span><span class="n">from_transform</span><span class="p">(</span><span class="n">pattern</span><span class="p">)</span>
+<span class="n">rule</span><span class="o">.</span><span class="n">inject_remove_node</span><span class="p">(</span><span class="s2">&quot;s&quot;</span><span class="p">)</span>
+
+<span class="n">rhs_instances</span><span class="p">,</span> <span class="n">commit_id</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">rewrite</span><span class="p">(</span>
+    <span class="s2">&quot;shapes&quot;</span><span class="p">,</span>
+    <span class="n">rule</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;s&quot;</span><span class="p">:</span> <span class="s2">&quot;square&quot;</span><span class="p">},</span>
+    <span class="n">message</span><span class="o">=</span><span class="s2">&quot;Remove square in shapes&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>The <cite>rewrite</cite> method of <cite>VersionedHierarchy</cite> returns the instances of the RHS of the applied rule in different graphs and the id of the newly created commit corresponding to this rewrite.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">rhs_instances</span><span class="p">)</span>
+<span class="go">{&#39;shapes&#39;: {}, &#39;metamodel&#39;: {}, &#39;data&#39;: {}, &#39;colors&#39;: {&#39;ws&#39;: &#39;white&#39;, &#39;bs&#39;: &#39;black&#39;}, &#39;base&#39;: {&#39;bs_ws&#39;: &#39;node&#39;}}</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">commit_id</span><span class="p">)</span>
+<span class="go">5ebdb406-eee6-44b9-a2a0-005e4b5ef94f</span>
+</pre></div>
+</div>
+<p>We switch back to the <cite>master</cite> branch.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">h</span><span class="o">.</span><span class="n">switch_branch</span><span class="p">(</span><span class="s2">&quot;master&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>We will now rewrite the hierarchy corresponding to the current branch.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">pattern</span> <span class="o">=</span> <span class="n">NXGraph</span><span class="p">()</span>
+<span class="n">pattern</span><span class="o">.</span><span class="n">add_nodes_from</span><span class="p">([</span><span class="s2">&quot;wc&quot;</span><span class="p">])</span>
+
+<span class="n">rule</span> <span class="o">=</span> <span class="n">Rule</span><span class="o">.</span><span class="n">from_transform</span><span class="p">(</span><span class="n">pattern</span><span class="p">)</span>
+<span class="n">rule</span><span class="o">.</span><span class="n">inject_clone_node</span><span class="p">(</span><span class="s2">&quot;wc&quot;</span><span class="p">)</span>
+
+<span class="n">_</span><span class="p">,</span> <span class="n">clone_commit</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">rewrite</span><span class="p">(</span>
+    <span class="s2">&quot;metamodel&quot;</span><span class="p">,</span>
+    <span class="n">rule</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;wc&quot;</span><span class="p">:</span> <span class="s2">&quot;wc&quot;</span><span class="p">},</span>
+    <span class="n">message</span><span class="o">=</span><span class="s2">&quot;Clone &#39;wc&#39; in ag&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>After running the snippet above, we obtain the following resivions history:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">h</span><span class="o">.</span><span class="n">print_history</span><span class="p">()</span>
+<span class="go">2020-01-24 14:37:14.627367 78f98e3c-2361-4d96-9737-31678d507ac6 master Initial commit</span>
+<span class="go">2020-01-24 14:37:14.635519 b135a358-2af2-41f8-9c66-aa392ca21660 test1 Created branch &#39;test1&#39;</span>
+<span class="go">2020-01-24 14:37:14.646972 5ebdb406-eee6-44b9-a2a0-005e4b5ef94f test1 Remove square in shapes</span>
+<span class="go">2020-01-24 14:37:14.697650 4e00034e-17d5-48ed-9078-d070a0d65d03 master Clone &#39;wc&#39; in ag</span>
+</pre></div>
+</div>
+<p>Let us perform another rewriting as follows:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">pattern</span> <span class="o">=</span> <span class="n">NXGraph</span><span class="p">()</span>
+<span class="n">pattern</span><span class="o">.</span><span class="n">add_nodes_from</span><span class="p">([</span><span class="s2">&quot;wc1&quot;</span><span class="p">])</span>
+
+<span class="n">rule</span> <span class="o">=</span> <span class="n">Rule</span><span class="o">.</span><span class="n">from_transform</span><span class="p">(</span><span class="n">pattern</span><span class="p">)</span>
+<span class="n">rule</span><span class="o">.</span><span class="n">inject_add_node</span><span class="p">(</span><span class="s2">&quot;new_node&quot;</span><span class="p">)</span>
+<span class="n">rule</span><span class="o">.</span><span class="n">inject_add_edge</span><span class="p">(</span><span class="s2">&quot;new_node&quot;</span><span class="p">,</span> <span class="s2">&quot;wc1&quot;</span><span class="p">)</span>
+
+<span class="n">_</span> <span class="o">=</span> <span class="n">h</span><span class="o">.</span><span class="n">rewrite</span><span class="p">(</span>
+    <span class="s2">&quot;data&quot;</span><span class="p">,</span>
+    <span class="n">rule</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;wc1&quot;</span><span class="p">:</span> <span class="s2">&quot;wc1&quot;</span><span class="p">},</span>
+    <span class="n">message</span><span class="o">=</span><span class="s2">&quot;Add a new node to &#39;data&#39;&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Now we merge the branch <cite>test1</cite> in into <cite>master</cite>.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">h</span><span class="o">.</span><span class="n">merge_with</span><span class="p">(</span><span class="s2">&quot;test1&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">h</span><span class="o">.</span><span class="n">print_history</span><span class="p">()</span>
+<span class="go">2020-01-24 14:37:14.627367 78f98e3c-2361-4d96-9737-31678d507ac6 master Initial commit</span>
+<span class="go">2020-01-24 14:37:14.635519 b135a358-2af2-41f8-9c66-aa392ca21660 test1 Created branch &#39;test1&#39;</span>
+<span class="go">2020-01-24 14:37:14.646972 5ebdb406-eee6-44b9-a2a0-005e4b5ef94f test1 Remove square in shapes</span>
+<span class="go">2020-01-24 14:37:14.697650 4e00034e-17d5-48ed-9078-d070a0d65d03 master Clone &#39;wc&#39; in ag</span>
+<span class="go">2020-01-24 14:37:14.728376 dc371f55-18fb-4797-ba75-8ff9217bfe65 master Add a new node to &#39;data&#39;</span>
+<span class="go">2020-01-24 14:37:14.751670 f2239fa2-2632-4650-8b53-78f03cf2d795 master Merged branch &#39;test1&#39; into &#39;master&#39;</span>
+</pre></div>
+</div>
+<p>Let us now rollback to the commit <cite>clone_commit</cite>.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">h</span><span class="o">.</span><span class="n">rollback</span><span class="p">(</span><span class="n">clone_commit</span><span class="p">)</span>
+<span class="go">Created the new head for &#39;test1&#39;</span>
+<span class="go">Created the new head for &#39;master&#39;</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">h</span><span class="o">.</span><span class="n">print_history</span><span class="p">()</span>
+<span class="go">2020-01-24 14:37:14.627367 78f98e3c-2361-4d96-9737-31678d507ac6 master Initial commit</span>
+<span class="go">2020-01-24 14:37:14.635519 b135a358-2af2-41f8-9c66-aa392ca21660 test1 Created branch &#39;test1&#39;</span>
+<span class="go">2020-01-24 14:37:14.646972 5ebdb406-eee6-44b9-a2a0-005e4b5ef94f test1 Remove square in shapes</span>
+<span class="go">2020-01-24 14:37:14.697650 4e00034e-17d5-48ed-9078-d070a0d65d03 master Clone &#39;wc&#39; in ag</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">h</span><span class="o">.</span><span class="n">branches</span><span class="p">())</span>
+<span class="go">[&#39;master&#39;, &#39;test1&#39;]</span>
+</pre></div>
+</div>
+<p>We can see that the revision history came back to the previous state (right after the clone commit), and we still have two branches <cite>master</cite> and <cite>test1</cite>.</p>
+<div class="section" id="see-more">
+<h2>See more<a class="headerlink" href="#see-more" title="Permalink to this headline">¶</a></h2>
+<p>Module reference: <a class="reference internal" href="audit.html#audit"><span class="std std-ref">Audit trail</span></a></p>
+</div>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">ReGraph</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2018, Eugenia Oshurko.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.2.0</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="_sources/tutorial_audit_hierarchy.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

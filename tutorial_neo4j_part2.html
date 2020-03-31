@@ -1,0 +1,575 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>Tutorial for the Neo4j backend &#8212; ReGraph 3.0 documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="tutorial-for-the-neo4j-backend">
+<span id="neo4j-tutorial2"></span><h1>Tutorial for the Neo4j backend<a class="headerlink" href="#tutorial-for-the-neo4j-backend" title="Permalink to this headline">¶</a></h1>
+<ul class="simple">
+<li><dl class="simple">
+<dt><a class="reference internal" href="tutorial_neo4j_part1.html#n4-tutorial-part1"><span class="std std-ref">Part 1: Rewriting simple graph with attributes</span></a></dt><dd><ul>
+<li><p><a class="reference internal" href="tutorial_neo4j_part1.html#n4-graph-objects"><span class="std std-ref">Creating and modifying a graph object</span></a></p></li>
+<li><p><a class="reference internal" href="tutorial_neo4j_part1.html#n4-graph-patterns"><span class="std std-ref">Finding graph patterns</span></a></p></li>
+<li><p><a class="reference internal" href="tutorial_neo4j_part1.html#n4-rewriting-graphs"><span class="std std-ref">Rewriting graph objects</span></a></p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><a class="reference internal" href="#n4-tutorial-part2"><span class="std std-ref">Part 2: Rewriting hierarchies of graphs</span></a></dt><dd><ul>
+<li><p><a class="reference internal" href="#n4-create-hierarchy"><span class="std std-ref">Creating and modifying hierarchies</span></a></p></li>
+<li><dl class="simple">
+<dt><a class="reference internal" href="#n4-rewrite-hierarchy"><span class="std std-ref">Rewriting of objects in a hierarchy</span></a></dt><dd><ul>
+<li><p><a class="reference internal" href="#n4-strict-hierarchy"><span class="std std-ref">Strict rewriting</span></a></p></li>
+<li><p><a class="reference internal" href="#n4-propagation-hierarchy"><span class="std std-ref">Rewriting and propagation</span></a></p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><p><a class="reference internal" href="#n4-serialize-hierarchy"><span class="std std-ref">Serializing hierarchy objects</span></a></p></li>
+</ul>
+</dd>
+</dl>
+</li>
+</ul>
+<div class="section" id="part-2-rewriting-hierarchies-of-graphs">
+<span id="n4-tutorial-part2"></span><h2>Part 2: Rewriting hierarchies of graphs<a class="headerlink" href="#part-2-rewriting-hierarchies-of-graphs" title="Permalink to this headline">¶</a></h2>
+<p>ReGraph allows to create a hierarchies of graphs related by means of <em>homomorphisms</em> (or <em>typing</em>). In the context of a hierarchy, if there exists a homomorphism <cite>G -&gt; T</cite>, we say that graph <cite>G</cite> is typed by a graph <cite>T</cite>. Graph hierarchy is a DAG, where nodes are graphs and edges are homomorphisms. A homomorphism  maps every node of <cite>G</cite> to some node in <cite>T</cite> (a type) in such a way that:</p>
+<ul class="simple">
+<li><p>edges are preserved</p></li>
+<li><p>attributes of both nodes and edges are preserved</p></li>
+</ul>
+<p>ReGraph provides the data structure <cite>Neo4jHierarchy</cite> that encodes a graph hierarchy as a property graph stored in a Neo4j database. This encoding represents each graph in a hierarchy with nodes of the database labeled by a unique label corresponding to the ID of the corresponding graph in the hierarchy. For example, the following Cypher query mathces all the nodes belonging to the graph <cite>graphID</cite> in the hierarchy:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">MATCH</span> <span class="p">(</span><span class="n">n</span><span class="p">:</span><span class="n">graphID</span><span class="p">)</span> <span class="n">RETURN</span> <span class="n">n</span>
+</pre></div>
+</div>
+<p>The edges in graphs are labeled as <cite>edge</cite> and the typing edges are labeled as <cite>typing</cite>. We can then easily find the typing of nodes in <cite>graph1</cite> by <cite>graph2</cite> with the query:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">MATCH</span> <span class="p">(</span><span class="n">n</span><span class="p">:</span><span class="n">graph1</span><span class="p">)</span><span class="o">-</span><span class="p">[:</span><span class="n">typing</span><span class="p">]</span><span class="o">-&gt;</span><span class="p">(</span><span class="n">m</span><span class="p">:</span><span class="n">graph2</span><span class="p">)</span> <span class="n">RETURN</span> <span class="n">n</span><span class="p">,</span> <span class="n">m</span>
+</pre></div>
+</div>
+<p>The hierarchy skeleton is represented by nodes labeled as <cite>graph</cite> be default. So, matching the nodes of the hierarchy skeleton can be done with the following query:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">MATCH</span> <span class="p">(</span><span class="n">n</span><span class="p">:</span><span class="n">graph</span><span class="p">)</span> <span class="k">return</span> <span class="n">n</span>
+</pre></div>
+</div>
+<p>Let us start by importing the necessary data structures and some utilities:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">regraph</span> <span class="k">import</span> <span class="n">NXGraph</span><span class="p">,</span> <span class="n">Neo4jHierarchy</span><span class="p">,</span> <span class="n">Rule</span>
+<span class="kn">from</span> <span class="nn">regraph</span> <span class="k">import</span> <span class="n">plot_graph</span><span class="p">,</span> <span class="n">plot_instance</span><span class="p">,</span> <span class="n">plot_rule</span>
+</pre></div>
+</div>
+<div class="section" id="creating-and-modifying-hierarchies">
+<span id="n4-create-hierarchy"></span><h3>Creating and modifying hierarchies<a class="headerlink" href="#creating-and-modifying-hierarchies" title="Permalink to this headline">¶</a></h3>
+<p>Consider the following example of a simple graph hierarchy. The two graphs <cite>G</cite> and <cite>T</cite> are being created and added to the heirarchy. After, a typing homomorphism between <cite>G</cite> and <cite>T</cite> is added, so that every node of <cite>G</cite> is typed by some node in <cite>T</cite>.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1"># Define graph G</span>
+<span class="n">g</span> <span class="o">=</span> <span class="n">NXGraph</span><span class="p">()</span>
+<span class="n">g</span><span class="o">.</span><span class="n">add_nodes_from</span><span class="p">([</span><span class="s2">&quot;protein&quot;</span><span class="p">,</span> <span class="s2">&quot;binding&quot;</span><span class="p">,</span> <span class="s2">&quot;region&quot;</span><span class="p">,</span> <span class="s2">&quot;compound&quot;</span><span class="p">])</span>
+<span class="n">g</span><span class="o">.</span><span class="n">add_edges_from</span><span class="p">([</span>
+    <span class="p">(</span><span class="s2">&quot;region&quot;</span><span class="p">,</span> <span class="s2">&quot;protein&quot;</span><span class="p">),</span>
+    <span class="p">(</span><span class="s2">&quot;protein&quot;</span><span class="p">,</span> <span class="s2">&quot;binding&quot;</span><span class="p">),</span>
+    <span class="p">(</span><span class="s2">&quot;region&quot;</span><span class="p">,</span> <span class="s2">&quot;binding&quot;</span><span class="p">),</span>
+    <span class="p">(</span><span class="s2">&quot;compound&quot;</span><span class="p">,</span> <span class="s2">&quot;binding&quot;</span><span class="p">)])</span>
+
+<span class="c1"># Create a hierarchy</span>
+<span class="n">simple_hierarchy</span> <span class="o">=</span> <span class="n">Neo4jHierarchy</span><span class="p">(</span>
+    <span class="n">uri</span><span class="o">=</span><span class="s2">&quot;bolt://localhost:7687&quot;</span><span class="p">,</span>
+    <span class="n">user</span><span class="o">=</span><span class="s2">&quot;neo4j&quot;</span><span class="p">,</span> <span class="n">password</span><span class="o">=</span><span class="s2">&quot;neo4j&quot;</span><span class="p">)</span>
+
+<span class="n">simple_hierarchy</span><span class="o">.</span><span class="n">add_graph</span><span class="p">(</span>
+    <span class="s2">&quot;G&quot;</span><span class="p">,</span> <span class="n">g</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;Simple protein interaction&quot;</span><span class="p">})</span>
+
+<span class="c1"># Add a new graph without explicitly creating a graph object</span>
+<span class="n">simple_hierarchy</span><span class="o">.</span><span class="n">add_graph_from_data</span><span class="p">(</span>
+    <span class="s2">&quot;T&quot;</span><span class="p">,</span>
+    <span class="n">node_list</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;action&quot;</span><span class="p">,</span> <span class="s2">&quot;agent&quot;</span><span class="p">],</span>
+    <span class="n">edge_list</span><span class="o">=</span><span class="p">[(</span><span class="s2">&quot;agent&quot;</span><span class="p">,</span> <span class="s2">&quot;agent&quot;</span><span class="p">),</span> <span class="p">(</span><span class="s2">&quot;agent&quot;</span><span class="p">,</span> <span class="s2">&quot;action&quot;</span><span class="p">)],</span>
+    <span class="n">attrs</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;Agent interaction&quot;</span><span class="p">})</span>
+<span class="n">simple_hierarchy</span><span class="o">.</span><span class="n">add_typing</span><span class="p">(</span>
+    <span class="s2">&quot;G&quot;</span><span class="p">,</span> <span class="s2">&quot;T&quot;</span><span class="p">,</span>
+    <span class="p">{</span><span class="s2">&quot;protein&quot;</span><span class="p">:</span> <span class="s2">&quot;agent&quot;</span><span class="p">,</span>
+     <span class="s2">&quot;region&quot;</span><span class="p">:</span> <span class="s2">&quot;agent&quot;</span><span class="p">,</span>
+     <span class="s2">&quot;compound&quot;</span><span class="p">:</span> <span class="s2">&quot;agent&quot;</span><span class="p">,</span>
+     <span class="s2">&quot;binding&quot;</span><span class="p">:</span> <span class="s2">&quot;action&quot;</span><span class="p">,</span>
+    <span class="p">}</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p>The method <cite>get_graph</cite> returns the graph object corresponding to the provided graph id.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="nb">type</span><span class="p">(</span><span class="n">simple_hierarchy</span><span class="o">.</span><span class="n">get_graph</span><span class="p">(</span><span class="s2">&quot;T&quot;</span><span class="p">))</span>
+<span class="go">regraph.backends.neo4j.graphs.Neo4jGraph</span>
+</pre></div>
+</div>
+<p>The method <cite>get_typing</cite> returns the dictionary object corresponding to the provided hierarchy edge and representing the associated graph homomorphism.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">simple_hierarchy</span><span class="o">.</span><span class="n">get_typing</span><span class="p">(</span><span class="s2">&quot;G&quot;</span><span class="p">,</span> <span class="s2">&quot;T&quot;</span><span class="p">)</span>
+<span class="go">{&#39;protein&#39;: &#39;agent&#39;,</span>
+<span class="go"> &#39;region&#39;: &#39;agent&#39;,</span>
+<span class="go"> &#39;compound&#39;: &#39;agent&#39;,</span>
+<span class="go"> &#39;binding&#39;: &#39;action&#39;}</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="rewriting-of-objects-in-a-hierarchy">
+<span id="n4-rewrite-hierarchy"></span><h3>Rewriting of objects in a hierarchy<a class="headerlink" href="#rewriting-of-objects-in-a-hierarchy" title="Permalink to this headline">¶</a></h3>
+<p>ReGraph implements the rewriting technique called <cite>sesqui-pushout rewriting</cite> that allows to transform graphs by applying rules through their instances (matchings). Rewriting an individual graphs in a hierarchy may require an update of other graphs and typings in this hierarchy, such updates are called <em>propagation</em> and are distinguished into two types: <em>backward</em> and <em>forward</em> propagation.</p>
+<p><strong>Backward propagation briefly</strong>:
+- If some graph elements (nodes/edges or attributes) are removed from a graph in the hierarchy, then all the respective elements that are typed by them in the ancestor graphs <strong>should</strong> be removed.
+- If a graph node is cloned, then for every instance of this node (every node that is typed by the clonned node) in the ancestor graphs we either: (a) specify to which clone it corresponds or (b) clone it.</p>
+<p><strong>Forward propagation briefly</strong>:
+- If some graph nodes are merged and these nodes are typed by different nodes in a descendant graph, the corresponding nodes in the descendant graph <strong>should</strong> be merged.
+- If a new graph element (node/edge or attribute) is added, then for all the descendent graphs in the hierarchy we either (a) select an existing element to type the added element or (b) add a new element to type the added element.</p>
+<p>For more details, please see <a class="reference external" href="https://link.springer.com/chapter/10.1007/978-3-030-23611-3_9/">here</a>.</p>
+<p>ReGraph allows to rewrite individual graphs situated in the hierarchy using the method <cite>rewrite</cite> of <cite>NXHierarchy</cite>. The rewriting can be done in two modes:</p>
+<ol class="arabic simple">
+<li><p><em>Strict rewriting</em> rewriting that does not allow propagation.</p></li>
+<li><p><em>Non-strict rewriting</em> that allows propagation.</p></li>
+</ol>
+<p>The <cite>rewrite</cite> takes as the input the following parameters:</p>
+<ul class="simple">
+<li><p><cite>graph_id</cite>, ID of the graph in the hierarchy to rewrite,</p></li>
+<li><p><cite>rule</cite>, a rule object to apply,</p></li>
+<li><p><cite>instance</cite>, a dictionary containing an instance of the lhs of the rule in the graph subject to rewriting, by default, tries to construct identity morphism of the nodes of the pattern,</p></li>
+<li><p><cite>p_typing</cite>, a dictionary containing typing of graphs in the hierarchy by the interface of the rule, keys are IDs of hierarchy graphs, values are dictionaries containing the mapping of nodes from the hierarchy graphs to the inteface nodes (note that a node from a graph can be typed by a set of nodes in the interface of the rule, e.g. if we want to perform cloning of some types, etc).</p></li>
+<li><p><cite>rhs_typing</cite>, a dictionary containing typing of the rhs by graphs of the hierarchy, keys are ids of hierarchy graphs, values are dictionaries containing the mapping of nodes from the lhs to the nodes of the typing graph given by the respective key of the value (note that a node from the rhs can be typed by a set of nodes of some graph, e.g. if we want to perform merging of some types, etc),</p></li>
+<li><p><cite>strict</cite>, flag indicating if rewriting is strict, then any propagation is not allowed.</p></li>
+</ul>
+<div class="section" id="strict-rewriting">
+<span id="n4-strict-hierarchy"></span><h4>Strict rewriting<a class="headerlink" href="#strict-rewriting" title="Permalink to this headline">¶</a></h4>
+<p>Let us create a Rule object containing a rule we would like to apply.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">lhs</span> <span class="o">=</span> <span class="n">NXGraph</span><span class="p">()</span>
+<span class="n">lhs</span><span class="o">.</span><span class="n">add_nodes_from</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">])</span>
+<span class="n">lhs</span><span class="o">.</span><span class="n">add_edges_from</span><span class="p">([(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">)])</span>
+
+<span class="n">p</span> <span class="o">=</span> <span class="n">NXGraph</span><span class="p">()</span>
+<span class="n">p</span><span class="o">.</span><span class="n">add_nodes_from</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">])</span>
+<span class="n">p</span><span class="o">.</span><span class="n">add_edges_from</span><span class="p">([])</span>
+
+<span class="n">rhs</span> <span class="o">=</span> <span class="n">NXGraph</span><span class="p">()</span>
+<span class="n">rhs</span><span class="o">.</span><span class="n">add_nodes_from</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">])</span>
+<span class="n">rhs</span><span class="o">.</span><span class="n">add_edges_from</span><span class="p">([(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">2</span><span class="p">)])</span>
+
+<span class="c1"># By default if `p_lhs` and `p_rhs` are not provided</span>
+<span class="c1"># to a rule, it tries to construct this homomorphisms</span>
+<span class="c1"># automatically by matching the names. In this case we</span>
+<span class="c1"># have defined lhs, p and rhs in such a way that that</span>
+<span class="c1"># the names of the matching nodes correspond</span>
+<span class="n">rule</span> <span class="o">=</span> <span class="n">Rule</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">lhs</span><span class="p">,</span> <span class="n">rhs</span><span class="p">)</span>
+<span class="n">plot_rule</span><span class="p">(</span><span class="n">rule</span><span class="p">)</span>
+</pre></div>
+</div>
+<img alt="_images/rule_p2_1.png" src="_images/rule_p2_1.png" />
+<p>The created rule removes the edge <cite>1-&gt;2</cite>, adds the new node <cite>3</cite> and two edges <cite>3-&gt;1</cite> and <cite>3-&gt;2</cite>. Let us find instances of the created rule in the graph <cite>G</cite> as follows:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">instances</span> <span class="o">=</span> <span class="n">simple_hierarchy</span><span class="o">.</span><span class="n">find_matching</span><span class="p">(</span><span class="s2">&quot;G&quot;</span><span class="p">,</span> <span class="n">rule</span><span class="o">.</span><span class="n">lhs</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Instances: &quot;</span><span class="p">,</span> <span class="n">instances</span><span class="p">)</span>
+<span class="go">Instances:  [{&#39;a&#39;: &#39;protein&#39;, &#39;b&#39;: &#39;binding&#39;}, {&#39;a&#39;: &#39;compound&#39;, &#39;b&#39;: &#39;binding&#39;}, {&#39;a&#39;: &#39;region&#39;, &#39;b&#39;: &#39;binding&#39;}, {&#39;a&#39;: &#39;region&#39;, &#39;b&#39;: &#39;protein&#39;}]</span>
+</pre></div>
+</div>
+<p>Let us fix the desired instance: we would like to remove the edge from <cite>protein</cite> to <cite>binding</cite> and add some new node connecting them.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">instance</span> <span class="o">=</span> <span class="p">{</span><span class="mi">1</span><span class="p">:</span> <span class="s2">&quot;protein&quot;</span><span class="p">,</span> <span class="mi">2</span><span class="p">:</span> <span class="s2">&quot;binding&quot;</span><span class="p">}</span>
+</pre></div>
+</div>
+<p>Let us try to apply the rule to the selected instance as is in the strict rewriting mode:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="k">try</span><span class="p">:</span>
+    <span class="n">rhs_instance</span> <span class="o">=</span> <span class="n">simple_hierarchy</span><span class="o">.</span><span class="n">rewrite</span><span class="p">(</span><span class="s2">&quot;G&quot;</span><span class="p">,</span> <span class="n">rule</span><span class="p">,</span> <span class="n">instance</span><span class="p">,</span> <span class="n">strict</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Error message: &quot;</span><span class="p">,</span> <span class="n">e</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Type: &quot;</span><span class="p">,</span> <span class="nb">type</span><span class="p">(</span><span class="n">e</span><span class="p">))</span>
+</pre></div>
+</div>
+<p>Running this snippet produces the following output:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>Error message:  Rewriting is strict (no propagation of types is allowed), typing of the added nodes &#39;{3}&#39; by &#39;T&#39; is required
+Type:  &lt;class &#39;regraph.exceptions.RewritingError&#39;&gt;
+</pre></div>
+</div>
+<p>We have failed to rewrite <cite>G</cite>, because we have not specified typing for the newly added node <cite>3</cite>. Let us try again, but this time we will prove such typing.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">rhs_typing</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;T&quot;</span><span class="p">:</span> <span class="p">{</span><span class="mi">3</span><span class="p">:</span> <span class="s2">&quot;agent&quot;</span><span class="p">}}</span>
+<span class="n">rhs_instance</span> <span class="o">=</span> <span class="n">simple_hierarchy</span><span class="o">.</span><span class="n">rewrite</span><span class="p">(</span>
+    <span class="s2">&quot;G&quot;</span><span class="p">,</span> <span class="n">rule</span><span class="p">,</span> <span class="n">instance</span><span class="p">,</span> <span class="n">rhs_typing</span><span class="o">=</span><span class="n">rhs_typing</span><span class="p">,</span> <span class="n">strict</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>We can check the instance of the right-hand side of the rule:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">rhs_instance</span><span class="p">)</span>
+<span class="go">{&#39;a&#39;: &#39;protein&#39;, &#39;b&#39;: &#39;binding&#39;, &#39;c&#39;: &#39;c&#39;}</span>
+</pre></div>
+</div>
+<p>Let us now create a rule that applied to <cite>T</cite> and that clones the node <cite>agent</cite> into two nodes.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">lhs</span> <span class="o">=</span> <span class="n">NXGraph</span><span class="p">()</span>
+<span class="n">lhs</span><span class="o">.</span><span class="n">add_nodes_from</span><span class="p">([</span><span class="s2">&quot;agent&quot;</span><span class="p">])</span>
+
+<span class="n">rule</span> <span class="o">=</span> <span class="n">Rule</span><span class="o">.</span><span class="n">from_transform</span><span class="p">(</span><span class="n">lhs</span><span class="p">)</span>
+<span class="n">_</span><span class="p">,</span> <span class="n">rhs_clone</span> <span class="o">=</span> <span class="n">rule</span><span class="o">.</span><span class="n">inject_clone_node</span><span class="p">(</span><span class="s2">&quot;agent&quot;</span><span class="p">)</span>
+<span class="n">plot_rule</span><span class="p">(</span><span class="n">rule</span><span class="p">)</span>
+</pre></div>
+</div>
+<img alt="_images/rule_p2_2.png" src="_images/rule_p2_2.png" />
+<p>We set its instance explicitly:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">instance</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;agent&quot;</span><span class="p">:</span> <span class="s2">&quot;agent&quot;</span><span class="p">}</span>
+</pre></div>
+</div>
+<p>and we try to apply the created rule to the graph T in the strict mode:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="k">try</span><span class="p">:</span>
+    <span class="n">rhs_instance</span> <span class="o">=</span> <span class="n">simple_hierarchy</span><span class="o">.</span><span class="n">rewrite</span><span class="p">(</span><span class="s2">&quot;T&quot;</span><span class="p">,</span> <span class="n">rule</span><span class="p">,</span> <span class="n">instance</span><span class="p">,</span> <span class="n">strict</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Error message: &quot;</span><span class="p">,</span> <span class="n">e</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Type: &quot;</span><span class="p">,</span> <span class="nb">type</span><span class="p">(</span><span class="n">e</span><span class="p">))</span>
+</pre></div>
+</div>
+<p>Running this snippet produces the following output:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>Error message:  Rewriting is strict (no propagation of clones is allowed), the cloned node &#39;agent&#39; in &#39;T&#39; has instances &#39;[&#39;protein&#39;, &#39;region&#39;, &#39;compound&#39;, 3]&#39; in &#39;G&#39; and their typing by P is not specified
+Type:  &lt;class &#39;regraph.exceptions.RewritingError&#39;&gt;
+</pre></div>
+</div>
+<p>We have failed to rewrite <cite>T</cite>, because we have not specified typing for instances of <cite>agent</cite> in the interface of the rule (<cite>P</cite>). Let us try again, but this time we will prove such typing:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">p_typing</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;G&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s1">&#39;protein&#39;</span><span class="p">:</span> <span class="s1">&#39;agent&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;region&#39;</span><span class="p">:</span> <span class="s1">&#39;agent&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;compound&#39;</span><span class="p">:</span> <span class="n">rhs_clone</span><span class="p">,</span>
+        <span class="mi">3</span><span class="p">:</span> <span class="s1">&#39;agent&#39;</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+
+<span class="n">rhs_instance</span> <span class="o">=</span> <span class="n">simple_hierarchy</span><span class="o">.</span><span class="n">rewrite</span><span class="p">(</span>
+    <span class="s2">&quot;T&quot;</span><span class="p">,</span> <span class="n">rule</span><span class="p">,</span> <span class="n">instance</span><span class="p">,</span> <span class="n">p_typing</span><span class="o">=</span><span class="n">p_typing</span><span class="p">,</span> <span class="n">strict</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Let us relabel nodes in <cite>T</cite>.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">simple_hierarchy</span><span class="o">.</span><span class="n">relabel_graph_node</span><span class="p">(</span><span class="s1">&#39;T&#39;</span><span class="p">,</span> <span class="n">rhs_instance</span><span class="p">[</span><span class="s1">&#39;agent&#39;</span><span class="p">],</span> <span class="s1">&#39;organic_agent&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">simple_hierarchy</span><span class="o">.</span><span class="n">relabel_graph_node</span><span class="p">(</span><span class="s1">&#39;T&#39;</span><span class="p">,</span> <span class="n">rhs_instance</span><span class="p">[</span><span class="n">rhs_clone</span><span class="p">],</span> <span class="s1">&#39;non_organic_agent&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">plot_graph</span><span class="p">(</span><span class="n">simple_hierarchy</span><span class="o">.</span><span class="n">get_graph</span><span class="p">(</span><span class="s1">&#39;T&#39;</span><span class="p">))</span>
+</pre></div>
+</div>
+<img alt="_images/hierarchy1_t_prime.png" src="_images/hierarchy1_t_prime.png" />
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">simple_hierarchy</span><span class="o">.</span><span class="n">get_typing</span><span class="p">(</span><span class="s2">&quot;G&quot;</span><span class="p">,</span> <span class="s2">&quot;T&quot;</span><span class="p">))</span>
+<span class="go">{&#39;protein&#39;: &#39;organic_agent&#39;, &#39;binding&#39;: &#39;action&#39;, &#39;region&#39;: &#39;organic_agent&#39;, &#39;compound&#39;: &#39;non_organic_agent&#39;, 3: &#39;organic_agent&#39;}</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="rewriting-and-propagation">
+<span id="n4-propagation-hierarchy"></span><h4>Rewriting and propagation<a class="headerlink" href="#rewriting-and-propagation" title="Permalink to this headline">¶</a></h4>
+<p>To illustrate rewriting with propagation, let us consider a slighlty more sophisticated hierarchy. The following snippet creates a new <cite>Neo4jHierarchy</cite> object.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">hierarchy</span> <span class="o">=</span> <span class="n">Neo4jHierarchy</span><span class="p">(</span>
+    <span class="n">uri</span><span class="o">=</span><span class="s2">&quot;bolt://localhost:7687&quot;</span><span class="p">,</span>
+    <span class="n">user</span><span class="o">=</span><span class="s2">&quot;neo4j&quot;</span><span class="p">,</span>
+    <span class="n">password</span><span class="o">=</span><span class="s2">&quot;neo4j&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>The new hierarchy object provides connection to the Neo4j database. If you have run the previous example, <cite>hierarchy</cite> will connect to the same database as the previously used <cite>simple_graph</cite> and will contain the same graphs <cite>G</cite> and <cite>T</cite>. You can call the following method to clear the database before proceeding:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">hierarchy</span><span class="o">.</span><span class="n">_clear</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>Let us add graphs and homomorphisms to the new hierarchy:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">colors</span> <span class="o">=</span> <span class="n">NXGraph</span><span class="p">()</span>
+<span class="n">colors</span><span class="o">.</span><span class="n">add_nodes_from</span><span class="p">([</span>
+        <span class="s2">&quot;green&quot;</span><span class="p">,</span> <span class="s2">&quot;red&quot;</span>
+    <span class="p">])</span>
+<span class="n">colors</span><span class="o">.</span><span class="n">add_edges_from</span><span class="p">([</span>
+        <span class="p">(</span><span class="s2">&quot;red&quot;</span><span class="p">,</span> <span class="s2">&quot;green&quot;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s2">&quot;red&quot;</span><span class="p">,</span> <span class="s2">&quot;red&quot;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s2">&quot;green&quot;</span><span class="p">,</span> <span class="s2">&quot;green&quot;</span><span class="p">)</span>
+    <span class="p">])</span>
+<span class="n">hierarchy</span><span class="o">.</span><span class="n">add_graph</span><span class="p">(</span><span class="s2">&quot;colors&quot;</span><span class="p">,</span> <span class="n">colors</span><span class="p">)</span>
+
+<span class="n">shapes</span> <span class="o">=</span> <span class="n">NXGraph</span><span class="p">()</span>
+<span class="n">shapes</span><span class="o">.</span><span class="n">add_nodes_from</span><span class="p">([</span><span class="s2">&quot;circle&quot;</span><span class="p">,</span> <span class="s2">&quot;square&quot;</span><span class="p">])</span>
+<span class="n">shapes</span><span class="o">.</span><span class="n">add_edges_from</span><span class="p">([</span>
+        <span class="p">(</span><span class="s2">&quot;circle&quot;</span><span class="p">,</span> <span class="s2">&quot;square&quot;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s2">&quot;square&quot;</span><span class="p">,</span> <span class="s2">&quot;circle&quot;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s2">&quot;circle&quot;</span><span class="p">,</span> <span class="s2">&quot;circle&quot;</span><span class="p">)</span>
+    <span class="p">])</span>
+<span class="n">hierarchy</span><span class="o">.</span><span class="n">add_graph</span><span class="p">(</span><span class="s2">&quot;shapes&quot;</span><span class="p">,</span> <span class="n">shapes</span><span class="p">)</span>
+
+<span class="n">quality</span> <span class="o">=</span> <span class="n">NXGraph</span><span class="p">()</span>
+<span class="n">quality</span><span class="o">.</span><span class="n">add_nodes_from</span><span class="p">([</span><span class="s2">&quot;good&quot;</span><span class="p">,</span> <span class="s2">&quot;bad&quot;</span><span class="p">])</span>
+<span class="n">quality</span><span class="o">.</span><span class="n">add_edges_from</span><span class="p">([</span>
+        <span class="p">(</span><span class="s2">&quot;bad&quot;</span><span class="p">,</span> <span class="s2">&quot;bad&quot;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s2">&quot;bad&quot;</span><span class="p">,</span> <span class="s2">&quot;good&quot;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s2">&quot;good&quot;</span><span class="p">,</span> <span class="s2">&quot;good&quot;</span><span class="p">)</span>
+    <span class="p">])</span>
+<span class="n">hierarchy</span><span class="o">.</span><span class="n">add_graph</span><span class="p">(</span><span class="s2">&quot;quality&quot;</span><span class="p">,</span> <span class="n">quality</span><span class="p">)</span>
+
+<span class="n">g1</span> <span class="o">=</span> <span class="n">NXGraph</span><span class="p">()</span>
+<span class="n">g1</span><span class="o">.</span><span class="n">add_nodes_from</span><span class="p">([</span>
+    <span class="s2">&quot;red_circle&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;red_square&quot;</span><span class="p">,</span>
+<span class="p">])</span>
+<span class="n">g1</span><span class="o">.</span><span class="n">add_edges_from</span><span class="p">([</span>
+    <span class="p">(</span><span class="s2">&quot;red_circle&quot;</span><span class="p">,</span> <span class="s2">&quot;red_square&quot;</span><span class="p">),</span>
+    <span class="p">(</span><span class="s2">&quot;red_circle&quot;</span><span class="p">,</span> <span class="s2">&quot;red_circle&quot;</span><span class="p">),</span>
+    <span class="p">(</span><span class="s2">&quot;red_square&quot;</span><span class="p">,</span> <span class="s2">&quot;red_circle&quot;</span><span class="p">)</span>
+<span class="p">])</span>
+<span class="n">g1_colors</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;red_circle&quot;</span><span class="p">:</span> <span class="s2">&quot;red&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;red_square&quot;</span><span class="p">:</span> <span class="s2">&quot;red&quot;</span><span class="p">,</span>
+<span class="p">}</span>
+<span class="n">g1_shapes</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;red_circle&quot;</span><span class="p">:</span> <span class="s2">&quot;circle&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;red_square&quot;</span><span class="p">:</span> <span class="s2">&quot;square&quot;</span><span class="p">,</span>
+<span class="p">}</span>
+
+<span class="n">hierarchy</span><span class="o">.</span><span class="n">add_graph</span><span class="p">(</span><span class="s2">&quot;g1&quot;</span><span class="p">,</span> <span class="n">g1</span><span class="p">)</span>
+<span class="n">hierarchy</span><span class="o">.</span><span class="n">add_typing</span><span class="p">(</span><span class="s2">&quot;g1&quot;</span><span class="p">,</span> <span class="s2">&quot;colors&quot;</span><span class="p">,</span> <span class="n">g1_colors</span><span class="p">)</span>
+<span class="n">hierarchy</span><span class="o">.</span><span class="n">add_typing</span><span class="p">(</span><span class="s2">&quot;g1&quot;</span><span class="p">,</span> <span class="s2">&quot;shapes&quot;</span><span class="p">,</span> <span class="n">g1_shapes</span><span class="p">)</span>
+
+<span class="n">g2</span> <span class="o">=</span> <span class="n">NXGraph</span><span class="p">()</span>
+<span class="n">g2</span><span class="o">.</span><span class="n">add_nodes_from</span><span class="p">([</span>
+    <span class="s2">&quot;good_circle&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;good_square&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;bad_circle&quot;</span><span class="p">,</span>
+<span class="p">])</span>
+<span class="n">g2</span><span class="o">.</span><span class="n">add_edges_from</span><span class="p">([</span>
+    <span class="p">(</span><span class="s2">&quot;good_circle&quot;</span><span class="p">,</span> <span class="s2">&quot;good_square&quot;</span><span class="p">),</span>
+    <span class="p">(</span><span class="s2">&quot;good_square&quot;</span><span class="p">,</span> <span class="s2">&quot;good_circle&quot;</span><span class="p">),</span>
+    <span class="p">(</span><span class="s2">&quot;bad_circle&quot;</span><span class="p">,</span> <span class="s2">&quot;good_circle&quot;</span><span class="p">),</span>
+    <span class="p">(</span><span class="s2">&quot;bad_circle&quot;</span><span class="p">,</span> <span class="s2">&quot;bad_circle&quot;</span><span class="p">),</span>
+<span class="p">])</span>
+<span class="n">g2_shapes</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;good_circle&quot;</span><span class="p">:</span> <span class="s2">&quot;circle&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;good_square&quot;</span><span class="p">:</span> <span class="s2">&quot;square&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;bad_circle&quot;</span><span class="p">:</span> <span class="s2">&quot;circle&quot;</span>
+<span class="p">}</span>
+<span class="n">g2_quality</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;good_circle&quot;</span><span class="p">:</span> <span class="s2">&quot;good&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;good_square&quot;</span><span class="p">:</span> <span class="s2">&quot;good&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;bad_circle&quot;</span><span class="p">:</span> <span class="s2">&quot;bad&quot;</span><span class="p">,</span>
+<span class="p">}</span>
+
+<span class="n">hierarchy</span><span class="o">.</span><span class="n">add_graph</span><span class="p">(</span><span class="s2">&quot;g2&quot;</span><span class="p">,</span> <span class="n">g2</span><span class="p">)</span>
+<span class="n">hierarchy</span><span class="o">.</span><span class="n">add_typing</span><span class="p">(</span><span class="s2">&quot;g2&quot;</span><span class="p">,</span> <span class="s2">&quot;shapes&quot;</span><span class="p">,</span> <span class="n">g2_shapes</span><span class="p">)</span>
+<span class="n">hierarchy</span><span class="o">.</span><span class="n">add_typing</span><span class="p">(</span><span class="s2">&quot;g2&quot;</span><span class="p">,</span> <span class="s2">&quot;quality&quot;</span><span class="p">,</span> <span class="n">g2_quality</span><span class="p">)</span>
+
+<span class="n">g3</span> <span class="o">=</span> <span class="n">NXGraph</span><span class="p">()</span>
+<span class="n">g3</span><span class="o">.</span><span class="n">add_nodes_from</span><span class="p">([</span>
+    <span class="s2">&quot;good_red_circle&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;bad_red_circle&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;good_red_square&quot;</span><span class="p">,</span>
+<span class="p">])</span>
+<span class="n">g3</span><span class="o">.</span><span class="n">add_edges_from</span><span class="p">([</span>
+    <span class="p">(</span><span class="s2">&quot;bad_red_circle&quot;</span><span class="p">,</span> <span class="s2">&quot;good_red_circle&quot;</span><span class="p">),</span>
+    <span class="p">(</span><span class="s2">&quot;good_red_square&quot;</span><span class="p">,</span> <span class="s2">&quot;good_red_circle&quot;</span><span class="p">),</span>
+    <span class="p">(</span><span class="s2">&quot;good_red_circle&quot;</span><span class="p">,</span> <span class="s2">&quot;good_red_square&quot;</span><span class="p">)</span>
+<span class="p">])</span>
+
+<span class="n">g3_g1</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;good_red_circle&quot;</span><span class="p">:</span> <span class="s2">&quot;red_circle&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;bad_red_circle&quot;</span><span class="p">:</span> <span class="s2">&quot;red_circle&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;good_red_square&quot;</span><span class="p">:</span> <span class="s2">&quot;red_square&quot;</span>
+<span class="p">}</span>
+
+<span class="n">g3_g2</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;good_red_circle&quot;</span><span class="p">:</span> <span class="s2">&quot;good_circle&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;bad_red_circle&quot;</span><span class="p">:</span> <span class="s2">&quot;bad_circle&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;good_red_square&quot;</span><span class="p">:</span> <span class="s2">&quot;good_square&quot;</span><span class="p">,</span>
+<span class="p">}</span>
+
+<span class="n">hierarchy</span><span class="o">.</span><span class="n">add_graph</span><span class="p">(</span><span class="s2">&quot;g3&quot;</span><span class="p">,</span> <span class="n">g3</span><span class="p">)</span>
+<span class="n">hierarchy</span><span class="o">.</span><span class="n">add_typing</span><span class="p">(</span><span class="s2">&quot;g3&quot;</span><span class="p">,</span> <span class="s2">&quot;g1&quot;</span><span class="p">,</span> <span class="n">g3_g1</span><span class="p">)</span>
+<span class="n">hierarchy</span><span class="o">.</span><span class="n">add_typing</span><span class="p">(</span><span class="s2">&quot;g3&quot;</span><span class="p">,</span> <span class="s2">&quot;g2&quot;</span><span class="p">,</span> <span class="n">g3_g2</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Some of the graphs in the hierarchy are now typed by multiple graphs, which is reflected in the types of nodes, as in the example below:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Node types in G3:</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">hierarchy</span><span class="o">.</span><span class="n">get_graph</span><span class="p">(</span><span class="s2">&quot;g3&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="n">hierarchy</span><span class="o">.</span><span class="n">node_type</span><span class="p">(</span><span class="s2">&quot;g3&quot;</span><span class="p">,</span> <span class="n">node</span><span class="p">))</span>
+</pre></div>
+</div>
+<p>outputs:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Node</span> <span class="n">types</span> <span class="ow">in</span> <span class="n">G3</span><span class="p">:</span>
+
+<span class="n">good_red_circle</span> <span class="p">{</span><span class="s1">&#39;g1&#39;</span><span class="p">:</span> <span class="s1">&#39;red_circle&#39;</span><span class="p">,</span> <span class="s1">&#39;g2&#39;</span><span class="p">:</span> <span class="s1">&#39;good_circle&#39;</span><span class="p">}</span>
+<span class="n">bad_red_circle</span> <span class="p">{</span><span class="s1">&#39;g1&#39;</span><span class="p">:</span> <span class="s1">&#39;red_circle&#39;</span><span class="p">,</span> <span class="s1">&#39;g2&#39;</span><span class="p">:</span> <span class="s1">&#39;bad_circle&#39;</span><span class="p">}</span>
+<span class="n">good_red_square</span> <span class="p">{</span><span class="s1">&#39;g1&#39;</span><span class="p">:</span> <span class="s1">&#39;red_square&#39;</span><span class="p">,</span> <span class="s1">&#39;g2&#39;</span><span class="p">:</span> <span class="s1">&#39;good_square&#39;</span><span class="p">}</span>
+</pre></div>
+</div>
+<p>We now show how graph rewriting can be performed in such an hierarchy. In the previous example we perfromed strict rewriting in a hierarchy, where no propagation was performed.</p>
+<p>The following example illustrates how the ReGraph propagates the changes made by rewriting on any level to all the graphs (as well as the rules) typed by the one target of rewriting.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">lhs</span> <span class="o">=</span> <span class="n">NXGraph</span><span class="p">()</span>
+<span class="n">lhs</span><span class="o">.</span><span class="n">add_nodes_from</span><span class="p">([</span><span class="s2">&quot;a&quot;</span><span class="p">,</span> <span class="s2">&quot;b&quot;</span><span class="p">])</span>
+<span class="n">lhs</span><span class="o">.</span><span class="n">add_edges_from</span><span class="p">([</span>
+        <span class="p">(</span><span class="s2">&quot;a&quot;</span><span class="p">,</span> <span class="s2">&quot;b&quot;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s2">&quot;b&quot;</span><span class="p">,</span> <span class="s2">&quot;a&quot;</span><span class="p">)</span>
+    <span class="p">])</span>
+<span class="n">p</span> <span class="o">=</span> <span class="n">NXGraph</span><span class="p">()</span>
+<span class="n">p</span><span class="o">.</span><span class="n">add_nodes_from</span><span class="p">([</span><span class="s2">&quot;a&quot;</span><span class="p">,</span> <span class="s2">&quot;a1&quot;</span><span class="p">,</span> <span class="s2">&quot;b&quot;</span><span class="p">])</span>
+<span class="n">p</span><span class="o">.</span><span class="n">add_edges_from</span><span class="p">([</span>
+        <span class="p">(</span><span class="s2">&quot;a&quot;</span><span class="p">,</span> <span class="s2">&quot;b&quot;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s2">&quot;a1&quot;</span><span class="p">,</span> <span class="s2">&quot;b&quot;</span><span class="p">)</span>
+    <span class="p">])</span>
+<span class="n">rhs</span> <span class="o">=</span> <span class="n">NXGraph</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">p</span><span class="p">)</span>
+
+<span class="n">rule</span> <span class="o">=</span> <span class="n">Rule</span><span class="p">(</span>
+    <span class="n">p</span><span class="p">,</span> <span class="n">lhs</span><span class="p">,</span> <span class="n">rhs</span><span class="p">,</span>
+    <span class="p">{</span><span class="s2">&quot;a&quot;</span><span class="p">:</span> <span class="s2">&quot;a&quot;</span><span class="p">,</span> <span class="s2">&quot;a1&quot;</span><span class="p">:</span> <span class="s2">&quot;a&quot;</span><span class="p">,</span> <span class="s2">&quot;b&quot;</span><span class="p">:</span> <span class="s2">&quot;b&quot;</span><span class="p">},</span>
+    <span class="p">{</span><span class="s2">&quot;a&quot;</span><span class="p">:</span> <span class="s2">&quot;a&quot;</span><span class="p">,</span> <span class="s2">&quot;a1&quot;</span><span class="p">:</span> <span class="s2">&quot;a1&quot;</span><span class="p">,</span> <span class="s2">&quot;b&quot;</span><span class="p">:</span> <span class="s2">&quot;b&quot;</span><span class="p">},</span>
+<span class="p">)</span>
+<span class="n">plot_rule</span><span class="p">(</span><span class="n">rule</span><span class="p">)</span>
+</pre></div>
+</div>
+<img alt="_images/rule_p2_3.png" src="_images/rule_p2_3.png" />
+<p>We have created a rule that clones the node <cite>a</cite> and reconnects the edges between <cite>a</cite> and <cite>b</cite>. We rewrite the graph <cite>shapes</cite> with the fixed instances (so that the node <cite>circle</cite> is cloned).</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">rhs_instances</span> <span class="o">=</span> <span class="n">hierarchy</span><span class="o">.</span><span class="n">rewrite</span><span class="p">(</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="s2">&quot;shapes&quot;</span><span class="p">,</span> <span class="n">rule</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;a&quot;</span><span class="p">:</span> <span class="s2">&quot;circle&quot;</span><span class="p">,</span> <span class="s2">&quot;b&quot;</span><span class="p">:</span> <span class="s2">&quot;square&quot;</span><span class="p">})</span>
+</pre></div>
+</div>
+<p>Observe the following snippets, the cloning of circle was propagated to all the ancestors of <cite>shapes</cite>, because we didn’t specify how to retype intances of <cite>circle</cite> for these ancestors using the <cite>p_typing</cite> parameter. This is an example of previously mentioned <em>backward propagation</em>.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">hierarchy</span><span class="o">.</span><span class="n">get_graph</span><span class="p">(</span><span class="s2">&quot;shapes&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">nodes</span><span class="p">())</span>
+<span class="go">[&#39;circle&#39;, &#39;square&#39;, &#39;circle1&#39;]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">hierarchy</span><span class="o">.</span><span class="n">get_graph</span><span class="p">(</span><span class="s2">&quot;g1&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">nodes</span><span class="p">())</span>
+<span class="go">[&#39;red_circle&#39;, &#39;red_square&#39;, &#39;red_circle1&#39;]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">hierarchy</span><span class="o">.</span><span class="n">get_graph</span><span class="p">(</span><span class="s2">&quot;g2&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">nodes</span><span class="p">())</span>
+<span class="go">[&#39;good_circle&#39;, &#39;good_square&#39;, &#39;bad_circle&#39;, &#39;good_circle1&#39;, &#39;bad_circle1&#39;]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">hierarchy</span><span class="o">.</span><span class="n">get_graph</span><span class="p">(</span><span class="s2">&quot;g3&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">nodes</span><span class="p">())</span>
+<span class="go">[&#39;good_red_circle2&#39;, &#39;bad_red_circle2&#39;, &#39;good_red_circle11&#39;, &#39;bad_red_circle11&#39;, &#39;good_red_circle&#39;, &#39;bad_red_circle&#39;, &#39;good_red_square&#39;, &#39;good_red_circle1&#39;, &#39;bad_red_circle1&#39;]</span>
+</pre></div>
+</div>
+<p>Let us now consider a small example of <em>forward propagation</em>. We will create a rule that performs some additions and merges of nodes.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">pattern</span> <span class="o">=</span> <span class="n">NXGraph</span><span class="p">()</span>
+<span class="n">pattern</span><span class="o">.</span><span class="n">add_nodes_from</span><span class="p">([</span><span class="s2">&quot;a&quot;</span><span class="p">,</span> <span class="s2">&quot;b&quot;</span><span class="p">])</span>
+
+<span class="n">rule</span> <span class="o">=</span> <span class="n">Rule</span><span class="o">.</span><span class="n">from_transform</span><span class="p">(</span><span class="n">pattern</span><span class="p">)</span>
+<span class="n">rhs_node</span> <span class="o">=</span> <span class="n">rule</span><span class="o">.</span><span class="n">inject_merge_nodes</span><span class="p">([</span><span class="s2">&quot;a&quot;</span><span class="p">,</span> <span class="s2">&quot;b&quot;</span><span class="p">])</span>
+<span class="n">rule</span><span class="o">.</span><span class="n">inject_add_node</span><span class="p">(</span><span class="s2">&quot;c&quot;</span><span class="p">)</span>
+<span class="n">rule</span><span class="o">.</span><span class="n">inject_add_edge</span><span class="p">(</span><span class="s2">&quot;c&quot;</span><span class="p">,</span> <span class="n">rhs_node</span><span class="p">)</span>
+
+<span class="n">instance</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;a&quot;</span><span class="p">:</span> <span class="s2">&quot;good_circle&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;b&quot;</span><span class="p">:</span> <span class="s2">&quot;bad_circle&quot;</span><span class="p">,</span>
+<span class="p">}</span>
+
+<span class="n">plot_rule</span><span class="p">(</span><span class="n">rule</span><span class="p">)</span>
+</pre></div>
+</div>
+<img alt="_images/rule_p2_4.png" src="_images/rule_p2_4.png" />
+<p>Application of this rule will merge nodes <cite>bad_circle</cite> and <cite>good_circle</cite> in the graph <cite>g2</cite>. It with then add a new node and connect it with an edge to the merged node. Let us specify some typings of the new node in the RHS: we will set the new node to be typed as <cite>circle</cite> in the graph <cite>shapes</cite>.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">rhs_typing</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;shapes&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s2">&quot;c&quot;</span><span class="p">:</span> <span class="s2">&quot;circle&quot;</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+
+<span class="n">rhs_instance</span> <span class="o">=</span> <span class="n">hierarchy</span><span class="o">.</span><span class="n">rewrite</span><span class="p">(</span>
+    <span class="s2">&quot;g2&quot;</span><span class="p">,</span> <span class="n">rule</span><span class="p">,</span> <span class="n">instance</span><span class="p">,</span> <span class="n">rhs_typing</span><span class="o">=</span><span class="n">rhs_typing</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Observe the following snippets, as the result of forward propagation nodes <cite>good</cite> and <cite>bad</cite> were merged in the graph <cite>quality</cite>. In addition, a new node typing the node <cite>c</cite> in the rule was added to the graph <cite>quality</cite>.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">rhs_instance</span><span class="p">)</span>
+<span class="go">{&#39;a_b&#39;: &#39;bad_circle_good_circle&#39;, &#39;c&#39;: &#39;c&#39;}</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">hierarchy</span><span class="o">.</span><span class="n">get_graph</span><span class="p">(</span><span class="s2">&quot;quality&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">nodes</span><span class="p">())</span>
+<span class="go">[&#39;bad_good&#39;, &#39;c&#39;]</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="serializing-hierarchy-objects">
+<span id="n4-serialize-hierarchy"></span><h3>Serializing hierarchy objects<a class="headerlink" href="#serializing-hierarchy-objects" title="Permalink to this headline">¶</a></h3>
+<p>ReGraph provides some utils for serialization of <cite>Neo4jHierarchy</cite> objects and implements the following methods for loading and exporting your hierarchy in JSON-format:</p>
+<ul class="simple">
+<li><p><cite>Neo4jHierarchy.to_json</cite> creates a json representations of the hierarchy;</p></li>
+<li><p><cite>Neo4jHierarchy.from_json</cite> loads an hierarchy from json representation (returns new <cite>Hierarchy</cite> object);</p></li>
+<li><p><cite>Neo4jHierarchy.export</cite> exports the hierarchy to a file (json format);</p></li>
+<li><p><cite>Neo4jHierarchy.load</cite> loads an hierarchy from a .json file (returns new object as well).</p></li>
+</ul>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">hierarchy_json</span> <span class="o">=</span> <span class="n">hierarchy</span><span class="o">.</span><span class="n">to_json</span><span class="p">()</span>
+
+<span class="c1"># Clear the DB for the previous hierarchy</span>
+<span class="n">hierarchy</span><span class="o">.</span><span class="n">_clear</span><span class="p">()</span>
+
+<span class="c1"># Load json-data back to the DB</span>
+<span class="n">hierarchy</span> <span class="o">=</span> <span class="n">Neo4jHierarchy</span><span class="o">.</span><span class="n">from_json</span><span class="p">(</span>
+    <span class="n">uri</span><span class="o">=</span><span class="s2">&quot;bolt://localhost:7687&quot;</span><span class="p">,</span> <span class="n">user</span><span class="o">=</span><span class="s2">&quot;neo4j&quot;</span><span class="p">,</span>
+    <span class="n">password</span><span class="o">=</span><span class="s2">&quot;neo4j&quot;</span><span class="p">,</span> <span class="n">json_data</span><span class="o">=</span><span class="n">hierarchy_json</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Module reference: <a class="reference internal" href="neo4jhierarchies.html#neo4jhierarchies"><span class="std std-ref">Neo4j-based hierarchies</span></a></p>
+</div>
+</div>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">ReGraph</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2018, Eugenia Oshurko.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.2.0</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="_sources/tutorial_neo4j_part2.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

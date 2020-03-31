@@ -1,0 +1,327 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>Audit trails for graph objects &#8212; ReGraph 3.0 documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="audit-trails-for-graph-objects">
+<span id="audit-tutorial"></span><h1>Audit trails for graph objects<a class="headerlink" href="#audit-trails-for-graph-objects" title="Permalink to this headline">¶</a></h1>
+<p>ReGraph implements a framework for the version control (VC) of graph transformations</p>
+<p>The data structure <cite>VersionedGraph</cite> allows to store the history of transformations of a graph object and perform the following VC operations:</p>
+<ul class="simple">
+<li><p><strong>Rewrite</strong>: perform a rewriting of the object with a commit to the revision history</p></li>
+<li><p><strong>Branch</strong>: create a new branch (with a diverged version of the graph object)</p></li>
+<li><p><strong>Merge branches</strong>: merge branches</p></li>
+<li><p><strong>Rollback</strong>: rollback to a point in the history of transformations</p></li>
+</ul>
+<p>Let us start this tutorial by performing necessary imports:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">regraph</span> <span class="k">import</span> <span class="n">NXGraph</span>
+<span class="kn">from</span> <span class="nn">regraph.audit</span> <span class="k">import</span> <span class="n">VersionedGraph</span>
+<span class="kn">from</span> <span class="nn">regraph.rules</span> <span class="k">import</span> <span class="n">Rule</span>
+<span class="kn">from</span> <span class="nn">regraph</span> <span class="k">import</span> <span class="n">print_graph</span><span class="p">,</span> <span class="n">plot_rule</span><span class="p">,</span> <span class="n">plot_graph</span>
+</pre></div>
+</div>
+<p>First, we create a graph and pass it to the <cite>VersionedGraph</cite> wrapper that will take care of the version control.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">graph_obj</span> <span class="o">=</span> <span class="n">NXGraph</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">g</span> <span class="o">=</span> <span class="n">VersionedGraph</span><span class="p">(</span><span class="n">graph_obj</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Now let’s create a rule that adds to the graph two nodes connected with an edge and apply it. If we want the changes to be commited to the version control we rewrite through the <cite>rewrite</cite> method of a <cite>VersioneGraph</cite> object.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">rule</span> <span class="o">=</span> <span class="n">Rule</span><span class="o">.</span><span class="n">from_transform</span><span class="p">(</span><span class="n">NXGraph</span><span class="p">())</span>
+<span class="n">rule</span><span class="o">.</span><span class="n">inject_add_node</span><span class="p">(</span><span class="s2">&quot;a&quot;</span><span class="p">)</span>
+<span class="n">rule</span><span class="o">.</span><span class="n">inject_add_node</span><span class="p">(</span><span class="s2">&quot;b&quot;</span><span class="p">)</span>
+<span class="n">rule</span><span class="o">.</span><span class="n">inject_add_edge</span><span class="p">(</span><span class="s2">&quot;a&quot;</span><span class="p">,</span> <span class="s2">&quot;b&quot;</span><span class="p">)</span>
+
+<span class="n">rhs_instance</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">g</span><span class="o">.</span><span class="n">rewrite</span><span class="p">(</span><span class="n">rule</span><span class="p">,</span> <span class="p">{},</span> <span class="n">message</span><span class="o">=</span><span class="s2">&quot;Add a -&gt; b&quot;</span><span class="p">)</span>
+<span class="n">plot_graph</span><span class="p">(</span><span class="n">g</span><span class="o">.</span><span class="n">graph</span><span class="p">)</span>
+</pre></div>
+</div>
+<img alt="_images/g1.png" src="_images/g1.png" />
+<p>We create a new branch called “branch”:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">branch_commit</span> <span class="o">=</span> <span class="n">g</span><span class="o">.</span><span class="n">branch</span><span class="p">(</span><span class="s2">&quot;branch&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Branches: &quot;</span><span class="p">,</span> <span class="n">g</span><span class="o">.</span><span class="n">branches</span><span class="p">())</span>
+<span class="go">Branches:  [&#39;master&#39;, &#39;branch&#39;]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Current branch &#39;</span><span class="si">{}</span><span class="s2">&#39;&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">g</span><span class="o">.</span><span class="n">current_branch</span><span class="p">()))</span>
+<span class="go">Current branch &#39;branch&#39;</span>
+</pre></div>
+</div>
+<p>Apply a rule that clones the node ‘b’ to the current vesion of the graph (branch ‘branch’).</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">pattern</span> <span class="o">=</span> <span class="n">NXGraph</span><span class="p">()</span>
+<span class="n">pattern</span><span class="o">.</span><span class="n">add_node</span><span class="p">(</span><span class="s2">&quot;b&quot;</span><span class="p">)</span>
+<span class="n">rule</span> <span class="o">=</span> <span class="n">Rule</span><span class="o">.</span><span class="n">from_transform</span><span class="p">(</span><span class="n">pattern</span><span class="p">)</span>
+<span class="n">rule</span><span class="o">.</span><span class="n">inject_clone_node</span><span class="p">(</span><span class="s2">&quot;b&quot;</span><span class="p">)</span>
+<span class="n">plot_rule</span><span class="p">(</span><span class="n">rule</span><span class="p">)</span>
+
+<span class="n">rhs_instance</span><span class="p">,</span> <span class="n">commit_id</span> <span class="o">=</span> <span class="n">g</span><span class="o">.</span><span class="n">rewrite</span><span class="p">(</span>
+    <span class="n">rule</span><span class="p">,</span>
+    <span class="p">{</span><span class="s2">&quot;b&quot;</span><span class="p">:</span> <span class="n">rhs_instance</span><span class="p">[</span><span class="s2">&quot;b&quot;</span><span class="p">]},</span>
+    <span class="n">message</span><span class="o">=</span><span class="s2">&quot;Clone b&quot;</span><span class="p">)</span>
+<span class="n">plot_graph</span><span class="p">(</span><span class="n">g</span><span class="o">.</span><span class="n">graph</span><span class="p">)</span>
+</pre></div>
+</div>
+<img alt="_images/r1.png" src="_images/r1.png" />
+<img alt="_images/g2.png" src="_images/g2.png" />
+<p>The <cite>rewrite</cite> method of <cite>VersionedGraph</cite> returns the RHS instance of the applied and the id of the newly created commit corresponding to this rewrite.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="s2">&quot;RHS instance: &quot;</span><span class="p">,</span> <span class="n">rhs_instance</span><span class="p">)</span>
+<span class="go">RHS instance: {&#39;b&#39;: &#39;b1&#39;, &#39;b1&#39;: &#39;b&#39;}</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Commit ID: &quot;</span><span class="p">,</span> <span class="n">commit_id</span><span class="p">)</span>
+<span class="go">Commit ID:  afbab03b-2d7c-4363-a3c6-59c6032b9e5b</span>
+</pre></div>
+</div>
+<p>Switch back to the ‘master’ branch:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">g</span><span class="o">.</span><span class="n">switch_branch</span><span class="p">(</span><span class="s2">&quot;master&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">g</span><span class="o">.</span><span class="n">current_branch</span><span class="p">())</span>
+<span class="go">master</span>
+</pre></div>
+</div>
+<p>Apply a rule that adds a loop form ‘a’ to itself, a new node ‘c’ and connects it with ‘a’:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">pattern</span> <span class="o">=</span> <span class="n">NXGraph</span><span class="p">()</span>
+<span class="n">pattern</span><span class="o">.</span><span class="n">add_node</span><span class="p">(</span><span class="s2">&quot;a&quot;</span><span class="p">)</span>
+<span class="n">rule</span> <span class="o">=</span> <span class="n">Rule</span><span class="o">.</span><span class="n">from_transform</span><span class="p">(</span><span class="n">pattern</span><span class="p">)</span>
+<span class="n">rule</span><span class="o">.</span><span class="n">inject_add_node</span><span class="p">(</span><span class="s2">&quot;c&quot;</span><span class="p">)</span>
+<span class="n">rule</span><span class="o">.</span><span class="n">inject_add_edge</span><span class="p">(</span><span class="s2">&quot;c&quot;</span><span class="p">,</span> <span class="s2">&quot;a&quot;</span><span class="p">)</span>
+<span class="n">rule</span><span class="o">.</span><span class="n">inject_add_edge</span><span class="p">(</span><span class="s2">&quot;a&quot;</span><span class="p">,</span> <span class="s2">&quot;a&quot;</span><span class="p">)</span>
+
+<span class="n">rhs_instance</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">g</span><span class="o">.</span><span class="n">rewrite</span><span class="p">(</span><span class="n">rule</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;a&quot;</span><span class="p">:</span> <span class="s2">&quot;a&quot;</span><span class="p">},</span> <span class="n">message</span><span class="o">=</span><span class="s2">&quot;Add c and c-&gt;a&quot;</span><span class="p">)</span>
+<span class="n">plot_graph</span><span class="p">(</span><span class="n">g</span><span class="o">.</span><span class="n">graph</span><span class="p">)</span>
+</pre></div>
+</div>
+<img alt="_images/g3.png" src="_images/g3.png" />
+<p>Create a new branch ‘dev’:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">g</span><span class="o">.</span><span class="n">branch</span><span class="p">(</span><span class="s2">&quot;dev&quot;</span><span class="p">)</span>
+<span class="go">&#39;06ef2284-e360-4733-87c6-dcae7602d3ef&#39;</span>
+</pre></div>
+</div>
+<p>In this branch remove an edge from ‘c’ to ‘a’ and merge two nodes together.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">pattern</span> <span class="o">=</span> <span class="n">NXGraph</span><span class="p">()</span>
+<span class="n">pattern</span><span class="o">.</span><span class="n">add_node</span><span class="p">(</span><span class="s2">&quot;c&quot;</span><span class="p">)</span>
+<span class="n">pattern</span><span class="o">.</span><span class="n">add_node</span><span class="p">(</span><span class="s2">&quot;a&quot;</span><span class="p">)</span>
+<span class="n">pattern</span><span class="o">.</span><span class="n">add_edge</span><span class="p">(</span><span class="s2">&quot;c&quot;</span><span class="p">,</span> <span class="s2">&quot;a&quot;</span><span class="p">)</span>
+<span class="n">rule</span> <span class="o">=</span> <span class="n">Rule</span><span class="o">.</span><span class="n">from_transform</span><span class="p">(</span><span class="n">pattern</span><span class="p">)</span>
+<span class="n">rule</span><span class="o">.</span><span class="n">inject_remove_edge</span><span class="p">(</span><span class="s2">&quot;c&quot;</span><span class="p">,</span> <span class="s2">&quot;a&quot;</span><span class="p">)</span>
+<span class="n">rule</span><span class="o">.</span><span class="n">inject_merge_nodes</span><span class="p">([</span><span class="s2">&quot;c&quot;</span><span class="p">,</span> <span class="s2">&quot;a&quot;</span><span class="p">])</span>
+<span class="n">plot_rule</span><span class="p">(</span><span class="n">rule</span><span class="p">)</span>
+
+<span class="n">g</span><span class="o">.</span><span class="n">rewrite</span><span class="p">(</span>
+    <span class="n">rule</span><span class="p">,</span>
+    <span class="p">{</span><span class="s2">&quot;a&quot;</span><span class="p">:</span> <span class="n">rhs_instance</span><span class="p">[</span><span class="s2">&quot;a&quot;</span><span class="p">],</span> <span class="s2">&quot;c&quot;</span><span class="p">:</span> <span class="n">rhs_instance</span><span class="p">[</span><span class="s2">&quot;c&quot;</span><span class="p">]},</span>
+    <span class="n">message</span><span class="o">=</span><span class="s2">&quot;Merge c and a&quot;</span><span class="p">)</span>
+<span class="n">plot_graph</span><span class="p">(</span><span class="n">g</span><span class="o">.</span><span class="n">graph</span><span class="p">)</span>
+</pre></div>
+</div>
+<img alt="_images/r2.png" src="_images/r2.png" />
+<img alt="_images/g4.png" src="_images/g4.png" />
+<p>Switch back to the ‘master’ branch:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">g</span><span class="o">.</span><span class="n">switch_branch</span><span class="p">(</span><span class="s2">&quot;master&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Apply a rule that clones a node ‘a’.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">pattern</span> <span class="o">=</span> <span class="n">NXGraph</span><span class="p">()</span>
+<span class="n">pattern</span><span class="o">.</span><span class="n">add_node</span><span class="p">(</span><span class="s2">&quot;a&quot;</span><span class="p">)</span>
+<span class="n">rule</span> <span class="o">=</span> <span class="n">Rule</span><span class="o">.</span><span class="n">from_transform</span><span class="p">(</span><span class="n">pattern</span><span class="p">)</span>
+<span class="n">_</span><span class="p">,</span> <span class="n">rhs_clone</span> <span class="o">=</span> <span class="n">rule</span><span class="o">.</span><span class="n">inject_clone_node</span><span class="p">(</span><span class="s2">&quot;a&quot;</span><span class="p">)</span>
+<span class="n">rhs_instance</span><span class="p">,</span> <span class="n">rollback_commit</span> <span class="o">=</span> <span class="n">g</span><span class="o">.</span><span class="n">rewrite</span><span class="p">(</span>
+    <span class="n">rule</span><span class="p">,</span>
+    <span class="p">{</span><span class="s2">&quot;a&quot;</span><span class="p">:</span> <span class="n">rhs_instance</span><span class="p">[</span><span class="s2">&quot;a&quot;</span><span class="p">]},</span>
+    <span class="n">message</span><span class="o">=</span><span class="s2">&quot;Clone a&quot;</span><span class="p">)</span>
+<span class="n">plot_graph</span><span class="p">(</span><span class="n">g</span><span class="o">.</span><span class="n">graph</span><span class="p">)</span>
+</pre></div>
+</div>
+<img alt="_images/g5.png" src="_images/g5.png" />
+<p>Create a new branch ‘test’:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">g</span><span class="o">.</span><span class="n">branch</span><span class="p">(</span><span class="s2">&quot;test&quot;</span><span class="p">)</span>
+<span class="go">&#39;fb18eb3d-e663-4f3a-ad11-2fbd03336f87&#39;</span>
+</pre></div>
+</div>
+<p>In this branch apply the rule that adds a new node ‘d’ and connects it with an edge to one of the cloned ‘a’ nodes:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">pattern</span> <span class="o">=</span> <span class="n">NXGraph</span><span class="p">()</span>
+<span class="n">pattern</span><span class="o">.</span><span class="n">add_node</span><span class="p">(</span><span class="s2">&quot;a&quot;</span><span class="p">)</span>
+<span class="n">rule</span> <span class="o">=</span> <span class="n">Rule</span><span class="o">.</span><span class="n">from_transform</span><span class="p">(</span><span class="n">pattern</span><span class="p">)</span>
+<span class="n">rule</span><span class="o">.</span><span class="n">inject_add_node</span><span class="p">(</span><span class="s2">&quot;d&quot;</span><span class="p">)</span>
+<span class="n">rule</span><span class="o">.</span><span class="n">inject_add_edge</span><span class="p">(</span><span class="s2">&quot;a&quot;</span><span class="p">,</span> <span class="s2">&quot;d&quot;</span><span class="p">)</span>
+<span class="n">g</span><span class="o">.</span><span class="n">rewrite</span><span class="p">(</span><span class="n">rule</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;a&quot;</span><span class="p">:</span> <span class="n">rhs_instance</span><span class="p">[</span><span class="n">rhs_clone</span><span class="p">]},</span> <span class="n">message</span><span class="o">=</span><span class="s2">&quot;Add d -&gt; clone of a&quot;</span><span class="p">)</span>
+<span class="n">plot_graph</span><span class="p">(</span><span class="n">g</span><span class="o">.</span><span class="n">graph</span><span class="p">)</span>
+</pre></div>
+</div>
+<img alt="_images/g6.png" src="_images/g6.png" />
+<p>Switch back to ‘master’:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">g</span><span class="o">.</span><span class="n">switch_branch</span><span class="p">(</span><span class="s2">&quot;master&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Remove a node ‘a’:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">pattern</span> <span class="o">=</span> <span class="n">NXGraph</span><span class="p">()</span>
+<span class="n">pattern</span><span class="o">.</span><span class="n">add_node</span><span class="p">(</span><span class="s2">&quot;a&quot;</span><span class="p">)</span>
+<span class="n">rule</span> <span class="o">=</span> <span class="n">Rule</span><span class="o">.</span><span class="n">from_transform</span><span class="p">(</span><span class="n">pattern</span><span class="p">)</span>
+<span class="n">rule</span><span class="o">.</span><span class="n">inject_remove_node</span><span class="p">(</span><span class="s2">&quot;a&quot;</span><span class="p">)</span>
+<span class="n">rhs_instance</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">g</span><span class="o">.</span><span class="n">rewrite</span><span class="p">(</span>
+    <span class="n">rule</span><span class="p">,</span>
+    <span class="p">{</span><span class="s2">&quot;a&quot;</span><span class="p">:</span> <span class="n">rhs_instance</span><span class="p">[</span><span class="s2">&quot;a&quot;</span><span class="p">]},</span>
+    <span class="n">message</span><span class="o">=</span><span class="s2">&quot;Remove a&quot;</span><span class="p">)</span>
+<span class="n">plot_graph</span><span class="p">(</span><span class="n">g</span><span class="o">.</span><span class="n">graph</span><span class="p">)</span>
+</pre></div>
+</div>
+<img alt="_images/g7.png" src="_images/g7.png" />
+<p>Merge the branch ‘dev’ into ‘master’:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">g</span><span class="o">.</span><span class="n">merge_with</span><span class="p">(</span><span class="s2">&quot;dev&quot;</span><span class="p">)</span>
+<span class="go">&#39;7787c77f-c44d-4419-9416-155b139b6e9d&#39;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">plot_graph</span><span class="p">(</span><span class="n">g</span><span class="o">.</span><span class="n">graph</span><span class="p">)</span>
+</pre></div>
+</div>
+<img alt="_images/g8.png" src="_images/g8.png" />
+<p>Merge ‘test’ into ‘master’:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">g</span><span class="o">.</span><span class="n">merge_with</span><span class="p">(</span><span class="s2">&quot;test&quot;</span><span class="p">)</span>
+<span class="go">&#39;d86ac7e8-8868-435d-a108-805341097170&#39;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">plot_graph</span><span class="p">(</span><span class="n">g</span><span class="o">.</span><span class="n">graph</span><span class="p">)</span>
+</pre></div>
+</div>
+<img alt="_images/g9.png" src="_images/g9.png" />
+<p>We can inspect the version control object in more details and look at its attribute <cite>_revision_graph</cite>, whose nodes represent the commits and whose edges represent graph deltas between different commits (basically, rewriting rules that constitute commits). Here we can see that on the nodes of the revision graph are stored branch names to which commits belong and user specified commit messages.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="k">for</span> <span class="n">n</span><span class="p">,</span> <span class="n">attrs</span> <span class="ow">in</span> <span class="n">g</span><span class="o">.</span><span class="n">_revision_graph</span><span class="o">.</span><span class="n">nodes</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Node ID: &quot;</span><span class="p">,</span> <span class="n">n</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Attributes: &quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\t</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">attrs</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>We can pretty-print the entire revision history:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">g</span><span class="o">.</span><span class="n">print_history</span><span class="p">()</span>
+<span class="go">2020-01-24 14:13:03.731569 0f29d379-e76a-4433-bcc2-97082776b4b6 master Initial commit</span>
+<span class="go">2020-01-24 14:13:17.508136 499f6881-ce03-4463-9000-8d4ba714599b master Add a -&gt; b</span>
+<span class="go">2020-01-24 14:13:21.678884 a98d7050-be6c-444e-9e1e-c02f40a6efc4 branch Created branch &#39;branch&#39;</span>
+<span class="go">2020-01-24 14:13:26.471732 ee04e1dd-e276-4023-8fd4-299d698f26a1 branch Clone b</span>
+<span class="go">2020-01-24 14:13:35.370027 cf32caf3-9c36-4c3b-9119-0472b06c09fc master Add c and c-&gt;a</span>
+<span class="go">2020-01-24 14:13:37.486220 06ef2284-e360-4733-87c6-dcae7602d3ef dev Created branch &#39;dev&#39;</span>
+<span class="go">2020-01-24 14:13:39.841916 acd5c76f-98b3-40ab-9df9-8e657483f246 dev Merge c and a</span>
+<span class="go">2020-01-24 14:13:42.991329 a7d13243-df91-42c5-a38c-16240fa0ae2c master Clone a</span>
+<span class="go">2020-01-24 14:13:44.766558 fb18eb3d-e663-4f3a-ad11-2fbd03336f87 test Created branch &#39;test&#39;</span>
+<span class="go">2020-01-24 14:13:46.703745 d79e9972-5d9d-4dc6-9ccb-60a15e34ff64 test Add d -&gt; clone of a</span>
+<span class="go">2020-01-24 14:13:49.858790 5fc6208f-03e2-4134-bc36-1daac67a8359 master Remove a</span>
+<span class="go">2020-01-24 14:13:51.439732 7787c77f-c44d-4419-9416-155b139b6e9d master Merged branch &#39;dev&#39; into &#39;master&#39;</span>
+<span class="go">2020-01-24 14:13:53.726947 d86ac7e8-8868-435d-a108-805341097170 master Merged branch &#39;test&#39; into &#39;master&#39;</span>
+</pre></div>
+</div>
+<p>Now we can rollback to some previous commit (commit where we first cloned the node ‘a’):</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">g</span><span class="o">.</span><span class="n">rollback</span><span class="p">(</span><span class="n">rollback_commit</span><span class="p">)</span>
+<span class="go">Created the new head for &#39;dev&#39;</span>
+<span class="go">Created the new head for &#39;master&#39;</span>
+</pre></div>
+</div>
+<p>Now the following snippet:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Branches: &quot;</span><span class="p">,</span> <span class="n">g</span><span class="o">.</span><span class="n">branches</span><span class="p">())</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Current branch &#39;</span><span class="si">{}</span><span class="s2">&#39;&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">g</span><span class="o">.</span><span class="n">current_branch</span><span class="p">()))</span>
+<span class="n">plot_graph</span><span class="p">(</span><span class="n">g</span><span class="o">.</span><span class="n">graph</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>outputs:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Branches</span><span class="p">:</span>  <span class="p">[</span><span class="s1">&#39;master&#39;</span><span class="p">,</span> <span class="s1">&#39;branch&#39;</span><span class="p">,</span> <span class="s1">&#39;dev&#39;</span><span class="p">]</span>
+<span class="n">Current</span> <span class="n">branch</span> <span class="s1">&#39;master&#39;</span>
+</pre></div>
+</div>
+<img alt="_images/g10.png" src="_images/g10.png" />
+<p>Let us see the updated revision history:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">g</span><span class="o">.</span><span class="n">print_history</span><span class="p">()</span>
+<span class="go">2020-01-24 14:13:03.731569 0f29d379-e76a-4433-bcc2-97082776b4b6 master Initial commit</span>
+<span class="go">2020-01-24 14:13:17.508136 499f6881-ce03-4463-9000-8d4ba714599b master Add a -&gt; b</span>
+<span class="go">2020-01-24 14:13:21.678884 a98d7050-be6c-444e-9e1e-c02f40a6efc4 branch Created branch &#39;branch&#39;</span>
+<span class="go">2020-01-24 14:13:26.471732 ee04e1dd-e276-4023-8fd4-299d698f26a1 branch Clone b</span>
+<span class="go">2020-01-24 14:13:35.370027 cf32caf3-9c36-4c3b-9119-0472b06c09fc master Add c and c-&gt;a</span>
+<span class="go">2020-01-24 14:13:37.486220 06ef2284-e360-4733-87c6-dcae7602d3ef dev Created branch &#39;dev&#39;</span>
+<span class="go">2020-01-24 14:13:39.841916 acd5c76f-98b3-40ab-9df9-8e657483f246 dev Merge c and a</span>
+<span class="go">2020-01-24 14:13:42.991329 a7d13243-df91-42c5-a38c-16240fa0ae2c master Clone a</span>
+</pre></div>
+</div>
+<div class="section" id="see-more">
+<h2>See more<a class="headerlink" href="#see-more" title="Permalink to this headline">¶</a></h2>
+<p>Module reference: <a class="reference internal" href="audit.html#audit"><span class="std std-ref">Audit trail</span></a></p>
+</div>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">ReGraph</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2018, Eugenia Oshurko.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.2.0</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="_sources/tutorial_audit.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
