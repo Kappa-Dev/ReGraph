@@ -4,7 +4,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
     <meta charset="utf-8" />
-    <title>Rewriting schema-aware PGs through TypedNeo4jGraph &#8212; ReGraph 3.0 documentation</title>
+    <title>Tutorial for the Neo4j backend &#8212; ReGraph 3.0 documentation</title>
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
@@ -30,8 +30,55 @@
 
           <div class="body" role="main">
             
-  <div class="section" id="rewriting-schema-aware-pgs-through-typedneo4jgraph">
-<span id="tutorial-typedneo4j"></span><h1>Rewriting schema-aware PGs through TypedNeo4jGraph<a class="headerlink" href="#rewriting-schema-aware-pgs-through-typedneo4jgraph" title="Permalink to this headline">¶</a></h1>
+  <div class="section" id="tutorial-for-the-neo4j-backend">
+<span id="neo4j-tutorial3"></span><h1>Tutorial for the Neo4j backend<a class="headerlink" href="#tutorial-for-the-neo4j-backend" title="Permalink to this headline">¶</a></h1>
+<ul class="simple">
+<li><dl class="simple">
+<dt><a class="reference internal" href="tutorial_neo4j_part1.html#n4-tutorial-part1"><span class="std std-ref">Part 1: Rewriting simple graph with attributes</span></a></dt><dd><ul>
+<li><p><a class="reference internal" href="tutorial_neo4j_part1.html#n4-graph-objects"><span class="std std-ref">Creating and modifying a graph object</span></a></p></li>
+<li><p><a class="reference internal" href="tutorial_neo4j_part1.html#n4-graph-patterns"><span class="std std-ref">Finding graph patterns</span></a></p></li>
+<li><p><a class="reference internal" href="tutorial_neo4j_part1.html#n4-rewriting-graphs"><span class="std std-ref">Rewriting graph objects</span></a></p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><a class="reference internal" href="tutorial_neo4j_part2.html#n4-tutorial-part2"><span class="std std-ref">Part 2: Rewriting hierarchies of graphs</span></a></dt><dd><ul>
+<li><p><a class="reference internal" href="tutorial_neo4j_part2.html#n4-create-hierarchy"><span class="std std-ref">Creating and modifying hierarchies</span></a></p></li>
+<li><dl class="simple">
+<dt><a class="reference internal" href="tutorial_neo4j_part2.html#n4-rewrite-hierarchy"><span class="std std-ref">Rewriting of objects in a hierarchy</span></a></dt><dd><ul>
+<li><p><a class="reference internal" href="tutorial_neo4j_part2.html#n4-strict-hierarchy"><span class="std std-ref">Strict rewriting</span></a></p></li>
+<li><p><a class="reference internal" href="tutorial_neo4j_part2.html#n4-propagation-hierarchy"><span class="std std-ref">Rewriting and propagation</span></a></p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><p><a class="reference internal" href="tutorial_neo4j_part2.html#n4-serialize-hierarchy"><span class="std std-ref">Serializing hierarchy objects</span></a></p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><a class="reference internal" href="#tutorial-typedneo4j"><span class="std std-ref">Part 3: Rewriting schema-aware PGs through TypedNeo4jGraph</span></a></dt><dd><ul>
+<li><dl class="field-list simple">
+<dt class="field-odd">ref</dt>
+<dd class="field-odd"><p><cite>create_tn4</cite></p>
+</dd>
+</dl>
+</li>
+<li><dl class="field-list simple">
+<dt class="field-odd">ref</dt>
+<dd class="field-odd"><p><cite>rewrite_tn4</cite></p>
+</dd>
+</dl>
+</li>
+</ul>
+</dd>
+</dl>
+</li>
+</ul>
+<div class="section" id="part-3-rewriting-schema-aware-pgs-through-typedneo4jgraph">
+<span id="tutorial-typedneo4j"></span><h2>Part 3: Rewriting schema-aware PGs through TypedNeo4jGraph<a class="headerlink" href="#part-3-rewriting-schema-aware-pgs-through-typedneo4jgraph" title="Permalink to this headline">¶</a></h2>
 <p>Let us start by importing the necessary data structures and functions:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">regraph</span> <span class="k">import</span> <span class="n">NXGraph</span><span class="p">,</span> <span class="n">TypedNeo4jGraph</span><span class="p">,</span> <span class="n">Rule</span>
 <span class="kn">from</span> <span class="nn">regraph.attribute_sets</span> <span class="k">import</span> <span class="n">IntegerSet</span><span class="p">,</span> <span class="n">RegexSet</span>
@@ -39,7 +86,7 @@
 </pre></div>
 </div>
 <div class="section" id="creating-and-modifying-a-schema-aware-graph-object">
-<span id="create-tn4"></span><h2>Creating and modifying a schema-aware graph object<a class="headerlink" href="#creating-and-modifying-a-schema-aware-graph-object" title="Permalink to this headline">¶</a></h2>
+<span id="create-tn4"></span><h3>Creating and modifying a schema-aware graph object<a class="headerlink" href="#creating-and-modifying-a-schema-aware-graph-object" title="Permalink to this headline">¶</a></h3>
 <p>Let us start by defining elements for the data and the schema graph:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1"># Define schema graph elements</span>
 <span class="n">schema_nodes</span> <span class="o">=</span> <span class="p">[</span>
@@ -120,7 +167,7 @@
 </div>
 </div>
 <div class="section" id="rewriting-schema-aware-graphs">
-<span id="rewrite-tn4"></span><h2>Rewriting schema-aware graphs<a class="headerlink" href="#rewriting-schema-aware-graphs" title="Permalink to this headline">¶</a></h2>
+<span id="rewrite-tn4"></span><h3>Rewriting schema-aware graphs<a class="headerlink" href="#rewriting-schema-aware-graphs" title="Permalink to this headline">¶</a></h3>
 <p>ReGraph implements the rewriting technique called <cite>sesqui-pushout rewriting</cite> that allows to transform graphs by applying rules through their instances (matchings). Rewriting of the data or the schema may require an update to the other graph, such updates are called <em>propagation</em> and are distinguished into two types: <em>backward</em> and <em>forward</em> propagation.</p>
 <p><em>Backward propagation briefly</em>:
 - If some graph elements (nodes/edges or attributes) are removed from the schema, then all the respective elements that are typed by them in the data <strong>should</strong> be removed.
@@ -134,7 +181,7 @@
 <li><p><em>Not strict rewriting</em> that allows propagation.</p></li>
 </ol>
 <div class="section" id="strict-rewriting">
-<h3>Strict rewriting<a class="headerlink" href="#strict-rewriting" title="Permalink to this headline">¶</a></h3>
+<h4>Strict rewriting<a class="headerlink" href="#strict-rewriting" title="Permalink to this headline">¶</a></h4>
 <p><cite>TypedNeo4jGraph</cite> implements a set of methods that perform transformations of both data and schema that do not require propagation. Conider the following examples.</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">graph</span><span class="o">.</span><span class="n">add_schema_node</span><span class="p">(</span><span class="s2">&quot;Country&quot;</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;location&quot;</span><span class="p">:</span> <span class="n">RegexSet</span><span class="o">.</span><span class="n">universal</span><span class="p">()})</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">graph</span><span class="o">.</span><span class="n">add_schema_edge</span><span class="p">(</span><span class="s2">&quot;Organization&quot;</span><span class="p">,</span> <span class="s2">&quot;Country&quot;</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;located_in&quot;</span><span class="p">}})</span>
@@ -363,6 +410,7 @@ Type:  &lt;class &#39;regraph.exceptions.RewritingError&#39;&gt;
 <span class="go">  &quot;Sandra&quot;: &quot;Adult&quot;</span>
 <span class="go">}</span>
 </pre></div>
+</div>
 </div>
 </div>
 </div>

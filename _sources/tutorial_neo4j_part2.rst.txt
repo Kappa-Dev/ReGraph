@@ -556,6 +556,10 @@ ReGraph provides some utils for serialization of `Neo4jHierarchy` objects and im
         password="neo4j", json_data=hierarchy_json)
 
 
+
+Continue to :ref:`tutorial_typedneo4j` rewriting schema-aware PGs through the `TypedNeo4jGraph`interface.
+
+
 See more
 --------
 
