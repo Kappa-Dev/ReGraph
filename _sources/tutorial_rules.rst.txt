@@ -41,7 +41,7 @@ Now, let us plot the rule
 
 >>> plot_rule(rule1)
 
-..image:: _static/rules/r1.png
+.. image:: _static/rules/r1.png
 
 Every rule can be converted to a sequence of human-readable commands:
 
@@ -74,7 +74,7 @@ By default, `Rule` objects in ReGraph are initialized with three graph objects (
 
 >>> plot_rule(rule2)
 
-..image:: _static/rules/r2.png
+.. image:: _static/rules/r2.png
 
 
 >>> print("New node corresponding to the clone: ", p_clone)
@@ -95,7 +95,7 @@ rule2.inject_remove_edge(1, 3)
 [(1, 2), (1, '11'), (2, 3), ('11', 3)]
 >>> plot_rule(rule2)
 
-..image:: _static/rules/r3.png
+.. image:: _static/rules/r3.png
 
 Instead of initializing our rule from the pattern and injecting a lot of edge removals, we could directly initialize three objects for `P`, `LHS` and `RHS`, where `P` contains only the desired edges. In the following example, because the rule does not specify any merges or additions (so `RHS` is isomorphic to `P`), we can omit the parameter `RHS` in the constructor of `Rule`.
 
@@ -123,7 +123,7 @@ Instead of initializing our rule from the pattern and injecting a lot of edge re
 
 >>> plot_rule(rule3)
 
-..image:: _static/rules/r3.png
+.. image:: _static/rules/r3.png
 
 
 >>> print(rule3.p.edges())

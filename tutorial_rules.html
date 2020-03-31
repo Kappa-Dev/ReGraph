@@ -58,7 +58,7 @@
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">plot_rule</span><span class="p">(</span><span class="n">rule1</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>..image:: _static/rules/r1.png</p>
+<img alt="_images/r11.png" src="_images/r11.png" />
 <p>Every rule can be converted to a sequence of human-readable commands:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">rule1</span><span class="o">.</span><span class="n">to_commands</span><span class="p">())</span>
 <span class="go">CLONE 1 AS 11.</span>
@@ -83,7 +83,7 @@
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">plot_rule</span><span class="p">(</span><span class="n">rule2</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>..image:: _static/rules/r2.png</p>
+<img alt="_images/r21.png" src="_images/r21.png" />
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="s2">&quot;New node corresponding to the clone: &quot;</span><span class="p">,</span> <span class="n">p_clone</span><span class="p">)</span>
 <span class="go">New node corresponding to the clone:  11</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">rule2</span><span class="o">.</span><span class="n">p</span><span class="o">.</span><span class="n">edges</span><span class="p">())</span>
@@ -101,7 +101,7 @@ rule2.inject_remove_edge(1, 3)</p>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">plot_rule</span><span class="p">(</span><span class="n">rule2</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>..image:: _static/rules/r3.png</p>
+<img alt="_images/r3.png" src="_images/r3.png" />
 <p>Instead of initializing our rule from the pattern and injecting a lot of edge removals, we could directly initialize three objects for <cite>P</cite>, <cite>LHS</cite> and <cite>RHS</cite>, where <cite>P</cite> contains only the desired edges. In the following example, because the rule does not specify any merges or additions (so <cite>RHS</cite> is isomorphic to <cite>P</cite>), we can omit the parameter <cite>RHS</cite> in the constructor of <cite>Rule</cite>.</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1"># Define the left-hand side of the rule</span>
 <span class="n">lhs</span> <span class="o">=</span> <span class="n">NXGraph</span><span class="p">()</span>
@@ -126,7 +126,7 @@ rule2.inject_remove_edge(1, 3)</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">plot_rule</span><span class="p">(</span><span class="n">rule3</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>..image:: _static/rules/r3.png</p>
+<img alt="_images/r3.png" src="_images/r3.png" />
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">rule3</span><span class="o">.</span><span class="n">p</span><span class="o">.</span><span class="n">edges</span><span class="p">())</span>
 <span class="go">[(1, 2), (1, &#39;1_clone&#39;), (&#39;1_clone&#39;, 3), (2, 3)]</span>
 </pre></div>
