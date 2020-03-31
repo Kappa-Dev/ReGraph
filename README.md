@@ -1,6 +1,7 @@
-# ![alt text](https://github.com/Kappa-Dev/ReGraph/blob/gh-pages/_images/regraph_logo.png)
+# ![alt text](https://github.com/Kappa-Dev/ReGraph/blob/master/regraph_logo.png)
 
-A graph rewriting library. Documentation is available at http://dev.executableknowledge.org/ReGraph.
+
+Graph rewriting and graph-based knowledge representation library. Documentation is available at http://dev.executableknowledge.org/ReGraph.
 
 ## About project
 
@@ -10,29 +11,16 @@ ReGraph provides various utilities for graph rewriting which can be used for mod
 
 **ReGraph** contains a collection of utilities for rewriting graphs and hierarchies of graphs. It supports two backends: [NetworkX](https://networkx.github.io/) graph objects and on [Neo4j](https://neo4j.com/) property graphs stored in a graph database.
 
-## Environment configs 
-
-### Requirement
-
-The required `Python 3` packages are given inside the requirements.txt file
-
-To avoid manual installation and to easily set up development environment you may consider following the instructions below:
-
-### (Optional ) Setup virtual environment
-
-Create a new virtual environment
-```
-virtualenv venv -p path/to/your/python3
-```
-
-To activate the environment
-```
-source venv/bin/activate
-```
 
 ## Installation
 
-In order to install the **ReGraph** library you have to clone this repository using SSH
+In order to install the **ReGraph** library you can either use the latest version in PyPI:
+
+```
+pip install regraph
+```
+
+or install from the source by cloning the repository using SSH
 ```
 git clone git@github.com:Kappa-Dev/ReGraph.git
 ```
@@ -40,10 +28,12 @@ or using HTTPS
 ```
 https://github.com/Kappa-Dev/ReGraph.git
 ```
-Install the library with
+
+Install the library using Pythin setup tools:
 ```
 python setup.py install
 ```
+
 
 ### Neo4j installation and configuration
 
