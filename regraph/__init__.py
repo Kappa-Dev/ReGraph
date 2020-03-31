@@ -1,4 +1,4 @@
-"""."""
+"""Global imports for ReGraph's API."""
 from regraph.backends.networkx.graphs import NXGraph
 from regraph.backends.networkx.hierarchies import NXHierarchy
 from regraph.backends.networkx.plotting import *
