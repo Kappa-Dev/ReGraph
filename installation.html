@@ -32,7 +32,9 @@
             
   <div class="section" id="installation">
 <span id="id1"></span><h1>Installation<a class="headerlink" href="#installation" title="Permalink to this headline">¶</a></h1>
-<p>In order to install the ReGraph library you have to clone this repository using SSH</p>
+<ol class="arabic simple">
+<li><p>Clone this repository using SSH</p></li>
+</ol>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">git clone git@github.com:Kappa-Dev/ReGraph.git</span>
 </pre></div>
 </div>
@@ -40,10 +42,20 @@
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">git clone https://github.com/Kappa-Dev/ReGraph.git</span>
 </pre></div>
 </div>
-<p>Install the library and its dependencies with <cite>setup.py</cite></p>
+<ol class="arabic simple" start="2">
+<li><p>Install the library and its dependencies with <cite>setup.py</cite></p></li>
+</ol>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">cd ReGraph</span>
 <span class="go">python setup.py install</span>
 </pre></div>
+</div>
+<div class="section" id="neo4j-installation-and-configuration">
+<h2>Neo4j installation and configuration<a class="headerlink" href="#neo4j-installation-and-configuration" title="Permalink to this headline">¶</a></h2>
+<ol class="arabic simple">
+<li><p>If you want to use the Neo4j-based backend of ReGraph, you need to install the Neo4j database (see installation <a class="reference external" href="https://neo4j.com/docs/operations-manual/current/installation/">instructions</a>).</p></li>
+<li><p>Moreover, ReGraph uses the APOC Neo4j plugin, currently not included in the community edition. To install the plugin see the <a class="reference external" href="https://github.com/neo4j-contrib/neo4j-apoc-procedures/blob/4.0/readme.adoc">instructions</a>.</p></li>
+<li><p>ReGraph uses <a class="reference external" href="https://neo4j.com/docs/api/python-driver/current/#">Neo4j Bolt Driver for Python</a>, therefore, having set up your database, you need to provide to ReGraph’s API the address of the bolt server (for example, <cite>bolt://127.0.0.1:7687</cite>) and your credentials for connecting the database (i.e. user and password).</p></li>
+</ol>
 </div>
 </div>
 
