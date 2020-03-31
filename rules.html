@@ -1,27 +1,17 @@
 
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<!DOCTYPE html>
 
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>Rules &#8212; ReGraph 1.0 documentation</title>
+    <meta charset="utf-8" />
+    <title>Rules &#8212; ReGraph 3.0 documentation</title>
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
-    <script type="text/javascript">
-      var DOCUMENTATION_OPTIONS = {
-        URL_ROOT:    './',
-        VERSION:     '1.0',
-        COLLAPSE_INDEX: false,
-        FILE_SUFFIX: '.html',
-        HAS_SOURCE:  true,
-        SOURCELINK_SUFFIX: '.txt'
-      };
-    </script>
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
     <script type="text/javascript" src="_static/jquery.js"></script>
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
-    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
    
@@ -30,13 +20,14 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
 
-  </head>
-  <body>
+  </head><body>
   
 
     <div class="document">
       <div class="documentwrapper">
         <div class="bodywrapper">
+          
+
           <div class="body" role="main">
             
   <div class="section" id="rules">
@@ -47,10 +38,10 @@ of graph rewriting rules (for more on sesqui-pushout rewriting see:
 <a class="reference external" href="https://link.springer.com/chapter/10.1007/11841883_4">https://link.springer.com/chapter/10.1007/11841883_4</a>).</p>
 <dl class="class">
 <dt id="regraph.rules.Rule">
-<em class="property">class </em><code class="descclassname">regraph.rules.</code><code class="descname">Rule</code><span class="sig-paren">(</span><em>p</em>, <em>lhs</em>, <em>rhs</em>, <em>p_lhs=None</em>, <em>p_rhs=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/rules.html#Rule"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.rules.Rule" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-prename descclassname">regraph.rules.</code><code class="sig-name descname">Rule</code><span class="sig-paren">(</span><em class="sig-param">p=None</em>, <em class="sig-param">lhs=None</em>, <em class="sig-param">rhs=None</em>, <em class="sig-param">p_lhs=None</em>, <em class="sig-param">p_rhs=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/rules.html#Rule"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.rules.Rule" title="Permalink to this definition">¶</a></dt>
 <dd><p>Class representing rewriting rules.</p>
 <p>A rewriting rule consists of the three graphs:
-<cite>p</cite> – preserved part, <cite>lhs</cite> – left hand side,
+<cite>p</cite> – preserved part (or interface), <cite>lhs</cite> – left hand side,
 <cite>rhs</cite> – right hand side, and two mappings:
 from <cite>p</cite> to <cite>lhs</cite> and from <cite>p</cite> to <cite>rhs</cite>.
 Informally, <cite>lhs</cite> represents a pattern to match
@@ -67,274 +58,222 @@ the node corresponding to this node of the
 pattern will be cloned. Symmetrically, if two nodes
 from <cite>p</cite> map to the same node in <cite>rhs</cite>,
 the corresponding two nodes will be merged.</p>
-<p class="rubric">Attributes</p>
-<table border="1" class="docutils">
-<colgroup>
-<col width="7%" />
-<col width="93%" />
-</colgroup>
-<tbody valign="top">
-<tr class="row-odd"><td><strong>p</strong></td>
-<td>(networkx.(Di)Graph) Preserved part of the rule</td>
-</tr>
-<tr class="row-even"><td><strong>lhs</strong></td>
-<td>(networkx.(Di)Graph) Left-hand side (pattern) of the rule</td>
-</tr>
-<tr class="row-odd"><td><strong>rhs</strong></td>
-<td>(networkx.(Di)Graph) Right-hand side of the rule</td>
-</tr>
-<tr class="row-even"><td><strong>p_lhs</strong></td>
-<td>(dict) Homomorphism between <cite>p</cite> and <cite>lhs</cite> given by a dictionary with keys – nodes of <cite>p</cite>, values – nodes of <cite>lhs</cite>.</td>
-</tr>
-<tr class="row-odd"><td><strong>p_rhs</strong></td>
-<td>(dict) Homomorphism between <cite>p</cite> and <cite>rhs</cite> given by a dictionary with keys – nodes of <cite>p</cite>, values – nodes of <cite>rhs</cite>.</td>
-</tr>
-</tbody>
-</table>
+<dl class="field-list simple">
+<dt class="field-odd">Attributes</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>p</strong><span class="classifier">regaph.graphs.Graph</span></dt><dd><p>Preserved part of the rule</p>
+</dd>
+<dt><strong>lhs</strong><span class="classifier">regaph.graphs.Graph</span></dt><dd><p>Left-hand side (pattern) of the rule</p>
+</dd>
+<dt><strong>rhs</strong><span class="classifier">regaph.graphs.Graph</span></dt><dd><p>Right-hand side of the rule</p>
+</dd>
+<dt><strong>p_lhs</strong><span class="classifier">dict</span></dt><dd><p>Homomorphism between <cite>p</cite> and <cite>lhs</cite> given by
+a dictionary with keys – nodes of <cite>p</cite>,
+values – nodes of <cite>lhs</cite>.</p>
+</dd>
+<dt><strong>p_rhs</strong><span class="classifier">dict</span></dt><dd><p>Homomorphism between <cite>p</cite> and <cite>rhs</cite> given by
+a dictionary with keys – nodes of <cite>p</cite>,
+values – nodes of <cite>rhs</cite>.</p>
+</dd>
+</dl>
+</dd>
+</dl>
 <p class="rubric">Methods</p>
-<table border="1" class="longtable docutils">
+<table class="longtable docutils align-default">
 <colgroup>
-<col width="10%" />
-<col width="90%" />
+<col style="width: 10%" />
+<col style="width: 90%" />
 </colgroup>
-<tbody valign="top">
-<tr class="row-odd"><td><a class="reference internal" href="#regraph.rules.Rule.added_edge_attrs" title="regraph.rules.Rule.added_edge_attrs"><code class="xref py py-obj docutils literal"><span class="pre">added_edge_attrs</span></code></a>()</td>
-<td>Get edge attributes added by the rule.</td>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#regraph.rules.Rule.added_edge_attrs" title="regraph.rules.Rule.added_edge_attrs"><code class="xref py py-obj docutils literal notranslate"><span class="pre">added_edge_attrs</span></code></a>(self)</p></td>
+<td><p>Get edge attributes added by the rule.</p></td>
 </tr>
-<tr class="row-even"><td><a class="reference internal" href="#regraph.rules.Rule.added_edges" title="regraph.rules.Rule.added_edges"><code class="xref py py-obj docutils literal"><span class="pre">added_edges</span></code></a>()</td>
-<td>Get edges added by the rule.</td>
+<tr class="row-even"><td><p><a class="reference internal" href="#regraph.rules.Rule.added_edges" title="regraph.rules.Rule.added_edges"><code class="xref py py-obj docutils literal notranslate"><span class="pre">added_edges</span></code></a>(self)</p></td>
+<td><p>Get edges added by the rule.</p></td>
 </tr>
-<tr class="row-odd"><td><a class="reference internal" href="#regraph.rules.Rule.added_node_attrs" title="regraph.rules.Rule.added_node_attrs"><code class="xref py py-obj docutils literal"><span class="pre">added_node_attrs</span></code></a>()</td>
-<td>Get node attributes added by the rule.</td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#regraph.rules.Rule.added_node_attrs" title="regraph.rules.Rule.added_node_attrs"><code class="xref py py-obj docutils literal notranslate"><span class="pre">added_node_attrs</span></code></a>(self)</p></td>
+<td><p>Get node attributes added by the rule.</p></td>
 </tr>
-<tr class="row-even"><td><a class="reference internal" href="#regraph.rules.Rule.added_nodes" title="regraph.rules.Rule.added_nodes"><code class="xref py py-obj docutils literal"><span class="pre">added_nodes</span></code></a>()</td>
-<td>Get nodes added by the rule.</td>
+<tr class="row-even"><td><p><a class="reference internal" href="#regraph.rules.Rule.added_nodes" title="regraph.rules.Rule.added_nodes"><code class="xref py py-obj docutils literal notranslate"><span class="pre">added_nodes</span></code></a>(self)</p></td>
+<td><p>Get nodes added by the rule.</p></td>
 </tr>
-<tr class="row-odd"><td><a class="reference internal" href="#regraph.rules.Rule.apply_to" title="regraph.rules.Rule.apply_to"><code class="xref py py-obj docutils literal"><span class="pre">apply_to</span></code></a>(graph,&nbsp;instance[,&nbsp;inplace])</td>
-<td>Perform graph rewriting with the rule.</td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#regraph.rules.Rule.cloned_nodes" title="regraph.rules.Rule.cloned_nodes"><code class="xref py py-obj docutils literal notranslate"><span class="pre">cloned_nodes</span></code></a>(self)</p></td>
+<td><p>Get nodes cloned by the rule.</p></td>
 </tr>
-<tr class="row-even"><td><a class="reference internal" href="#regraph.rules.Rule.cloned_nodes" title="regraph.rules.Rule.cloned_nodes"><code class="xref py py-obj docutils literal"><span class="pre">cloned_nodes</span></code></a>()</td>
-<td>Get nodes cloned by the rule.</td>
+<tr class="row-even"><td><p><a class="reference internal" href="#regraph.rules.Rule.from_json" title="regraph.rules.Rule.from_json"><code class="xref py py-obj docutils literal notranslate"><span class="pre">from_json</span></code></a>(json_data)</p></td>
+<td><p>Create a rule obj from JSON repr.</p></td>
 </tr>
-<tr class="row-odd"><td><a class="reference internal" href="#regraph.rules.Rule.from_json" title="regraph.rules.Rule.from_json"><code class="xref py py-obj docutils literal"><span class="pre">from_json</span></code></a>(json_data[,&nbsp;directed])</td>
-<td>Create a rule obj from JSON repr.</td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#regraph.rules.Rule.from_transform" title="regraph.rules.Rule.from_transform"><code class="xref py py-obj docutils literal notranslate"><span class="pre">from_transform</span></code></a>(pattern[, commands])</p></td>
+<td><p>Initialize a rule from the transformation.</p></td>
 </tr>
-<tr class="row-even"><td><a class="reference internal" href="#regraph.rules.Rule.from_transform" title="regraph.rules.Rule.from_transform"><code class="xref py py-obj docutils literal"><span class="pre">from_transform</span></code></a>(pattern[,&nbsp;commands])</td>
-<td>Initialize a rule from the transformation.</td>
+<tr class="row-even"><td><p><a class="reference internal" href="#regraph.rules.Rule.get_inverted_rule" title="regraph.rules.Rule.get_inverted_rule"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_inverted_rule</span></code></a>(self)</p></td>
+<td><p>Get inverted rule with LHS and RHS swaped.</p></td>
 </tr>
-<tr class="row-odd"><td><a class="reference internal" href="#regraph.rules.Rule.inject_add_edge" title="regraph.rules.Rule.inject_add_edge"><code class="xref py py-obj docutils literal"><span class="pre">inject_add_edge</span></code></a>(n1,&nbsp;n2[,&nbsp;attrs])</td>
-<td>Inject addition of a new edge to the rule.</td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#regraph.rules.Rule.identity_rule" title="regraph.rules.Rule.identity_rule"><code class="xref py py-obj docutils literal notranslate"><span class="pre">identity_rule</span></code></a>()</p></td>
+<td><p>Create an identity rule.</p></td>
 </tr>
-<tr class="row-even"><td><a class="reference internal" href="#regraph.rules.Rule.inject_add_edge_attrs" title="regraph.rules.Rule.inject_add_edge_attrs"><code class="xref py py-obj docutils literal"><span class="pre">inject_add_edge_attrs</span></code></a>(n1,&nbsp;n2,&nbsp;attrs)</td>
-<td>Inject addition of edge attributes by the rule.</td>
+<tr class="row-even"><td><p><a class="reference internal" href="#regraph.rules.Rule.inject_add_edge" title="regraph.rules.Rule.inject_add_edge"><code class="xref py py-obj docutils literal notranslate"><span class="pre">inject_add_edge</span></code></a>(self, n1, n2[, attrs])</p></td>
+<td><p>Inject addition of a new edge to the rule.</p></td>
 </tr>
-<tr class="row-odd"><td><a class="reference internal" href="#regraph.rules.Rule.inject_add_node" title="regraph.rules.Rule.inject_add_node"><code class="xref py py-obj docutils literal"><span class="pre">inject_add_node</span></code></a>(node_id[,&nbsp;attrs])</td>
-<td>Inject an addition of a new node by the rule.</td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#regraph.rules.Rule.inject_add_edge_attrs" title="regraph.rules.Rule.inject_add_edge_attrs"><code class="xref py py-obj docutils literal notranslate"><span class="pre">inject_add_edge_attrs</span></code></a>(self, n1, n2, attrs)</p></td>
+<td><p>Inject addition of edge attributes by the rule.</p></td>
 </tr>
-<tr class="row-even"><td><a class="reference internal" href="#regraph.rules.Rule.inject_add_node_attrs" title="regraph.rules.Rule.inject_add_node_attrs"><code class="xref py py-obj docutils literal"><span class="pre">inject_add_node_attrs</span></code></a>(n,&nbsp;attrs)</td>
-<td>Inject addition of  node attributes by the rule.</td>
+<tr class="row-even"><td><p><a class="reference internal" href="#regraph.rules.Rule.inject_add_edges_from" title="regraph.rules.Rule.inject_add_edges_from"><code class="xref py py-obj docutils literal notranslate"><span class="pre">inject_add_edges_from</span></code></a>(self, edge_list)</p></td>
+<td><p>Inject addition of a new edge to the rule.</p></td>
 </tr>
-<tr class="row-odd"><td><a class="reference internal" href="#regraph.rules.Rule.inject_clone_node" title="regraph.rules.Rule.inject_clone_node"><code class="xref py py-obj docutils literal"><span class="pre">inject_clone_node</span></code></a>(n[,&nbsp;new_node_id])</td>
-<td>Inject cloning of a node by the rule.</td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#regraph.rules.Rule.inject_add_node" title="regraph.rules.Rule.inject_add_node"><code class="xref py py-obj docutils literal notranslate"><span class="pre">inject_add_node</span></code></a>(self, node_id[, attrs])</p></td>
+<td><p>Inject an addition of a new node by the rule.</p></td>
 </tr>
-<tr class="row-even"><td><a class="reference internal" href="#regraph.rules.Rule.inject_merge_nodes" title="regraph.rules.Rule.inject_merge_nodes"><code class="xref py py-obj docutils literal"><span class="pre">inject_merge_nodes</span></code></a>(node_list[,&nbsp;node_id])</td>
-<td>Inject merge of a collection of nodes by the rule.</td>
+<tr class="row-even"><td><p><a class="reference internal" href="#regraph.rules.Rule.inject_add_node_attrs" title="regraph.rules.Rule.inject_add_node_attrs"><code class="xref py py-obj docutils literal notranslate"><span class="pre">inject_add_node_attrs</span></code></a>(self, n, attrs)</p></td>
+<td><p>Inject addition of  node attributes by the rule.</p></td>
 </tr>
-<tr class="row-odd"><td><a class="reference internal" href="#regraph.rules.Rule.inject_remove_edge" title="regraph.rules.Rule.inject_remove_edge"><code class="xref py py-obj docutils literal"><span class="pre">inject_remove_edge</span></code></a>(n1,&nbsp;n2)</td>
-<td>Inject removal of an edge by the rule.</td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#regraph.rules.Rule.inject_add_nodes_from" title="regraph.rules.Rule.inject_add_nodes_from"><code class="xref py py-obj docutils literal notranslate"><span class="pre">inject_add_nodes_from</span></code></a>(self, node_list)</p></td>
+<td><p>Inject an addition of a new node by the rule.</p></td>
 </tr>
-<tr class="row-even"><td><a class="reference internal" href="#regraph.rules.Rule.inject_remove_edge_attrs" title="regraph.rules.Rule.inject_remove_edge_attrs"><code class="xref py py-obj docutils literal"><span class="pre">inject_remove_edge_attrs</span></code></a>(n1,&nbsp;n2,&nbsp;attrs)</td>
-<td>Inject a removal of edge attrs by the rule.</td>
+<tr class="row-even"><td><p><a class="reference internal" href="#regraph.rules.Rule.inject_clone_node" title="regraph.rules.Rule.inject_clone_node"><code class="xref py py-obj docutils literal notranslate"><span class="pre">inject_clone_node</span></code></a>(self, n[, new_node_id])</p></td>
+<td><p>Inject cloning of a node by the rule.</p></td>
 </tr>
-<tr class="row-odd"><td><a class="reference internal" href="#regraph.rules.Rule.inject_remove_node" title="regraph.rules.Rule.inject_remove_node"><code class="xref py py-obj docutils literal"><span class="pre">inject_remove_node</span></code></a>(lhs_node_id)</td>
-<td>Inject a new node removal to the rule.</td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#regraph.rules.Rule.inject_merge_nodes" title="regraph.rules.Rule.inject_merge_nodes"><code class="xref py py-obj docutils literal notranslate"><span class="pre">inject_merge_nodes</span></code></a>(self, node_list[, node_id])</p></td>
+<td><p>Inject merge of a collection of nodes by the rule.</p></td>
 </tr>
-<tr class="row-even"><td><a class="reference internal" href="#regraph.rules.Rule.inject_remove_node_attrs" title="regraph.rules.Rule.inject_remove_node_attrs"><code class="xref py py-obj docutils literal"><span class="pre">inject_remove_node_attrs</span></code></a>(n,&nbsp;attrs)</td>
-<td>Inject a removal of node attrs by the rule.</td>
+<tr class="row-even"><td><p><a class="reference internal" href="#regraph.rules.Rule.inject_remove_edge" title="regraph.rules.Rule.inject_remove_edge"><code class="xref py py-obj docutils literal notranslate"><span class="pre">inject_remove_edge</span></code></a>(self, n1, n2)</p></td>
+<td><p>Inject removal of an edge by the rule.</p></td>
 </tr>
-<tr class="row-odd"><td><a class="reference internal" href="#regraph.rules.Rule.inject_update_edge_attrs" title="regraph.rules.Rule.inject_update_edge_attrs"><code class="xref py py-obj docutils literal"><span class="pre">inject_update_edge_attrs</span></code></a>(n1,&nbsp;n2,&nbsp;attrs)</td>
-<td>Inject an update of edge attrs by the rule.</td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#regraph.rules.Rule.inject_remove_edge_attrs" title="regraph.rules.Rule.inject_remove_edge_attrs"><code class="xref py py-obj docutils literal notranslate"><span class="pre">inject_remove_edge_attrs</span></code></a>(self, n1, n2, attrs)</p></td>
+<td><p>Inject a removal of edge attrs by the rule.</p></td>
 </tr>
-<tr class="row-even"><td><a class="reference internal" href="#regraph.rules.Rule.inject_update_node_attrs" title="regraph.rules.Rule.inject_update_node_attrs"><code class="xref py py-obj docutils literal"><span class="pre">inject_update_node_attrs</span></code></a>(n,&nbsp;attrs)</td>
-<td>Inject an update of node attrs by the rule.</td>
+<tr class="row-even"><td><p><a class="reference internal" href="#regraph.rules.Rule.inject_remove_node" title="regraph.rules.Rule.inject_remove_node"><code class="xref py py-obj docutils literal notranslate"><span class="pre">inject_remove_node</span></code></a>(self, p_node_id)</p></td>
+<td><p>Inject a new node removal to the rule.</p></td>
 </tr>
-<tr class="row-odd"><td><a class="reference internal" href="#regraph.rules.Rule.is_relaxing" title="regraph.rules.Rule.is_relaxing"><code class="xref py py-obj docutils literal"><span class="pre">is_relaxing</span></code></a>()</td>
-<td>Check if the rule is relaxing.</td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#regraph.rules.Rule.inject_remove_node_attrs" title="regraph.rules.Rule.inject_remove_node_attrs"><code class="xref py py-obj docutils literal notranslate"><span class="pre">inject_remove_node_attrs</span></code></a>(self, n, attrs)</p></td>
+<td><p>Inject a removal of node attrs by the rule.</p></td>
 </tr>
-<tr class="row-even"><td><a class="reference internal" href="#regraph.rules.Rule.is_restrictive" title="regraph.rules.Rule.is_restrictive"><code class="xref py py-obj docutils literal"><span class="pre">is_restrictive</span></code></a>()</td>
-<td>Check if the rule is  restrictive.</td>
+<tr class="row-even"><td><p><a class="reference internal" href="#regraph.rules.Rule.inject_update_edge_attrs" title="regraph.rules.Rule.inject_update_edge_attrs"><code class="xref py py-obj docutils literal notranslate"><span class="pre">inject_update_edge_attrs</span></code></a>(self, n1, n2, attrs)</p></td>
+<td><p>Inject an update of edge attrs by the rule.</p></td>
 </tr>
-<tr class="row-odd"><td><a class="reference internal" href="#regraph.rules.Rule.merged_nodes" title="regraph.rules.Rule.merged_nodes"><code class="xref py py-obj docutils literal"><span class="pre">merged_nodes</span></code></a>()</td>
-<td>Get nodes merged by the rule.</td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#regraph.rules.Rule.inject_update_node_attrs" title="regraph.rules.Rule.inject_update_node_attrs"><code class="xref py py-obj docutils literal notranslate"><span class="pre">inject_update_node_attrs</span></code></a>(self, n, attrs)</p></td>
+<td><p>Inject an update of node attrs by the rule.</p></td>
 </tr>
-<tr class="row-even"><td><a class="reference internal" href="#regraph.rules.Rule.removed_edge_attrs" title="regraph.rules.Rule.removed_edge_attrs"><code class="xref py py-obj docutils literal"><span class="pre">removed_edge_attrs</span></code></a>()</td>
-<td>Get edge attributes removed by the rule.</td>
+<tr class="row-even"><td><p><a class="reference internal" href="#regraph.rules.Rule.is_identity" title="regraph.rules.Rule.is_identity"><code class="xref py py-obj docutils literal notranslate"><span class="pre">is_identity</span></code></a>(self)</p></td>
+<td><p>Test if the rule is identity.</p></td>
 </tr>
-<tr class="row-odd"><td><a class="reference internal" href="#regraph.rules.Rule.removed_edges" title="regraph.rules.Rule.removed_edges"><code class="xref py py-obj docutils literal"><span class="pre">removed_edges</span></code></a>()</td>
-<td>Get edges removed by the rule.</td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#regraph.rules.Rule.is_relaxing" title="regraph.rules.Rule.is_relaxing"><code class="xref py py-obj docutils literal notranslate"><span class="pre">is_relaxing</span></code></a>(self)</p></td>
+<td><p>Check if the rule is relaxing.</p></td>
 </tr>
-<tr class="row-even"><td><a class="reference internal" href="#regraph.rules.Rule.removed_node_attrs" title="regraph.rules.Rule.removed_node_attrs"><code class="xref py py-obj docutils literal"><span class="pre">removed_node_attrs</span></code></a>()</td>
-<td>Get node attributes removed by the rule.</td>
+<tr class="row-even"><td><p><a class="reference internal" href="#regraph.rules.Rule.is_restrictive" title="regraph.rules.Rule.is_restrictive"><code class="xref py py-obj docutils literal notranslate"><span class="pre">is_restrictive</span></code></a>(self)</p></td>
+<td><p>Check if the rule is  restrictive.</p></td>
 </tr>
-<tr class="row-odd"><td><a class="reference internal" href="#regraph.rules.Rule.removed_nodes" title="regraph.rules.Rule.removed_nodes"><code class="xref py py-obj docutils literal"><span class="pre">removed_nodes</span></code></a>()</td>
-<td>Get nodes removed by the rule.</td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#regraph.rules.Rule.merged_nodes" title="regraph.rules.Rule.merged_nodes"><code class="xref py py-obj docutils literal notranslate"><span class="pre">merged_nodes</span></code></a>(self)</p></td>
+<td><p>Get nodes merged by the rule.</p></td>
 </tr>
-<tr class="row-even"><td><a class="reference internal" href="#regraph.rules.Rule.to_commands" title="regraph.rules.Rule.to_commands"><code class="xref py py-obj docutils literal"><span class="pre">to_commands</span></code></a>()</td>
-<td>Convert the rule to a list of commands.</td>
+<tr class="row-even"><td><p><a class="reference internal" href="#regraph.rules.Rule.plot" title="regraph.rules.Rule.plot"><code class="xref py py-obj docutils literal notranslate"><span class="pre">plot</span></code></a>(self[, filename, title])</p></td>
+<td><p>Plot the rule.</p></td>
 </tr>
-<tr class="row-odd"><td><a class="reference internal" href="#regraph.rules.Rule.to_json" title="regraph.rules.Rule.to_json"><code class="xref py py-obj docutils literal"><span class="pre">to_json</span></code></a>()</td>
-<td>Convert the rule to JSON repr.</td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#regraph.rules.Rule.refine" title="regraph.rules.Rule.refine"><code class="xref py py-obj docutils literal notranslate"><span class="pre">refine</span></code></a>(self, graph, instance)</p></td>
+<td><p>Get refined (side-effect-free) version of the rule.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#regraph.rules.Rule.removed_edge_attrs" title="regraph.rules.Rule.removed_edge_attrs"><code class="xref py py-obj docutils literal notranslate"><span class="pre">removed_edge_attrs</span></code></a>(self)</p></td>
+<td><p>Get edge attributes removed by the rule.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#regraph.rules.Rule.removed_edges" title="regraph.rules.Rule.removed_edges"><code class="xref py py-obj docutils literal notranslate"><span class="pre">removed_edges</span></code></a>(self)</p></td>
+<td><p>Get edges removed by the rule.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#regraph.rules.Rule.removed_node_attrs" title="regraph.rules.Rule.removed_node_attrs"><code class="xref py py-obj docutils literal notranslate"><span class="pre">removed_node_attrs</span></code></a>(self)</p></td>
+<td><p>Get node attributes removed by the rule.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#regraph.rules.Rule.removed_nodes" title="regraph.rules.Rule.removed_nodes"><code class="xref py py-obj docutils literal notranslate"><span class="pre">removed_nodes</span></code></a>(self)</p></td>
+<td><p>Get nodes removed by the rule.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#regraph.rules.Rule.to_commands" title="regraph.rules.Rule.to_commands"><code class="xref py py-obj docutils literal notranslate"><span class="pre">to_commands</span></code></a>(self)</p></td>
+<td><p>Convert the rule to a list of commands.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#regraph.rules.Rule.to_json" title="regraph.rules.Rule.to_json"><code class="xref py py-obj docutils literal notranslate"><span class="pre">to_json</span></code></a>(self)</p></td>
+<td><p>Convert the rule to JSON repr.</p></td>
 </tr>
 </tbody>
 </table>
 <dl class="method">
 <dt id="regraph.rules.Rule.added_edge_attrs">
-<code class="descname">added_edge_attrs</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/rules.html#Rule.added_edge_attrs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.rules.Rule.added_edge_attrs" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">added_edge_attrs</code><span class="sig-paren">(</span><em class="sig-param">self</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/rules.html#Rule.added_edge_attrs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.rules.Rule.added_edge_attrs" title="Permalink to this definition">¶</a></dt>
 <dd><p>Get edge attributes added by the rule.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>attrs</strong> : dict</p>
-<blockquote class="last">
-<div><p>Dictionary where keys are edges from <cite>rhs</cite>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>attrs</strong><span class="classifier">dict</span></dt><dd><p>Dictionary where keys are edges from <cite>rhs</cite>
 and values are attribute dictionaries to add.</p>
-</div></blockquote>
-</td>
-</tr>
-</tbody>
-</table>
+</dd>
+</dl>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="method">
 <dt id="regraph.rules.Rule.added_edges">
-<code class="descname">added_edges</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/rules.html#Rule.added_edges"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.rules.Rule.added_edges" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">added_edges</code><span class="sig-paren">(</span><em class="sig-param">self</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/rules.html#Rule.added_edges"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.rules.Rule.added_edges" title="Permalink to this definition">¶</a></dt>
 <dd><p>Get edges added by the rule.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>edges</strong> : set</p>
-<blockquote class="last">
-<div><p>Set of edges from <cite>rhs</cite> added by the rule.</p>
-</div></blockquote>
-</td>
-</tr>
-</tbody>
-</table>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>edges</strong><span class="classifier">set</span></dt><dd><p>Set of edges from <cite>rhs</cite> added by the rule.</p>
+</dd>
+</dl>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="method">
 <dt id="regraph.rules.Rule.added_node_attrs">
-<code class="descname">added_node_attrs</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/rules.html#Rule.added_node_attrs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.rules.Rule.added_node_attrs" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">added_node_attrs</code><span class="sig-paren">(</span><em class="sig-param">self</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/rules.html#Rule.added_node_attrs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.rules.Rule.added_node_attrs" title="Permalink to this definition">¶</a></dt>
 <dd><p>Get node attributes added by the rule.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>attrs</strong> : dict</p>
-<blockquote class="last">
-<div><p>Dictionary where keys are nodes from <cite>rhs</cite>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>attrs</strong><span class="classifier">dict</span></dt><dd><p>Dictionary where keys are nodes from <cite>rhs</cite>
 and values are attribute dictionaries to add.</p>
-</div></blockquote>
-</td>
-</tr>
-</tbody>
-</table>
+</dd>
+</dl>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="method">
 <dt id="regraph.rules.Rule.added_nodes">
-<code class="descname">added_nodes</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/rules.html#Rule.added_nodes"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.rules.Rule.added_nodes" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">added_nodes</code><span class="sig-paren">(</span><em class="sig-param">self</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/rules.html#Rule.added_nodes"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.rules.Rule.added_nodes" title="Permalink to this definition">¶</a></dt>
 <dd><p>Get nodes added by the rule.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>nodes</strong> : set</p>
-<blockquote class="last">
-<div><p>Set of nodes from <cite>rhs</cite> added by the rule.</p>
-</div></blockquote>
-</td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
-
-<dl class="method">
-<dt id="regraph.rules.Rule.apply_to">
-<code class="descname">apply_to</code><span class="sig-paren">(</span><em>graph</em>, <em>instance</em>, <em>inplace=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/rules.html#Rule.apply_to"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.rules.Rule.apply_to" title="Permalink to this definition">¶</a></dt>
-<dd><p>Perform graph rewriting with the rule.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>graph</strong> : nx.(Di)Graph</p>
-<blockquote>
-<div><p>Graph to rewrite with the rule.</p>
-</div></blockquote>
-<p><strong>instance</strong> : dict</p>
-<blockquote>
-<div><p>Instance of the <cite>lhs</cite> pattern in the graph
-defined by a dictionary where keys are nodes
-of <cite>lhs</cite> and values are nodes of the graph.</p>
-</div></blockquote>
-<p><strong>inplace</strong> : bool, optional</p>
-<blockquote>
-<div><p>If <cite>True</cite>, the rewriting will be performed
-in-place by applying primitve transformations
-to the graph object, otherwise the result of
-the rewriting is a new graph object.
-Default value is <cite>False</cite>.</p>
-</div></blockquote>
-</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>g_prime</strong> : nx.(Di)Graph</p>
-<blockquote>
-<div><p>Result of the rewriting. If parameter
-<cite>inplace</cite> was <cite>True</cite>, <cite>g_prime</cite> is exactly
-the (transformed) input graph object <cite>graph</cite>.</p>
-</div></blockquote>
-<p><strong>rhs_g_prime</strong> : dict</p>
-<blockquote class="last">
-<div><p>Matching of the <cite>rhs</cite> in <cite>g_prime</cite>, a dictionary,
-where keys are nodes of <cite>rhs</cite> and values are
-nodes of <cite>g_prime</cite>.</p>
-</div></blockquote>
-</td>
-</tr>
-</tbody>
-</table>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>nodes</strong><span class="classifier">set</span></dt><dd><p>Set of nodes from <cite>rhs</cite> added by the rule.</p>
+</dd>
+</dl>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="method">
 <dt id="regraph.rules.Rule.cloned_nodes">
-<code class="descname">cloned_nodes</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/rules.html#Rule.cloned_nodes"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.rules.Rule.cloned_nodes" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">cloned_nodes</code><span class="sig-paren">(</span><em class="sig-param">self</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/rules.html#Rule.cloned_nodes"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.rules.Rule.cloned_nodes" title="Permalink to this definition">¶</a></dt>
 <dd><p>Get nodes cloned by the rule.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>nodes</strong> : dict</p>
-<blockquote class="last">
-<div><p>Dictionary where keys are nodes from <cite>lhs</cite> and
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>nodes</strong><span class="classifier">dict</span></dt><dd><p>Dictionary where keys are nodes from <cite>lhs</cite> and
 values are sets of corresponding nodes from <cite>p</cite>.</p>
-</div></blockquote>
-</td>
-</tr>
-</tbody>
-</table>
+</dd>
+</dl>
+</dd>
+</dl>
 </dd></dl>
 
-<dl class="classmethod">
+<dl class="method">
 <dt id="regraph.rules.Rule.from_json">
-<em class="property">classmethod </em><code class="descname">from_json</code><span class="sig-paren">(</span><em>json_data</em>, <em>directed=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/rules.html#Rule.from_json"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.rules.Rule.from_json" title="Permalink to this definition">¶</a></dt>
+<em class="property">classmethod </em><code class="sig-name descname">from_json</code><span class="sig-paren">(</span><em class="sig-param">json_data</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/rules.html#Rule.from_json"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.rules.Rule.from_json" title="Permalink to this definition">¶</a></dt>
 <dd><p>Create a rule obj from JSON repr.</p>
 </dd></dl>
 
-<dl class="classmethod">
+<dl class="method">
 <dt id="regraph.rules.Rule.from_transform">
-<em class="property">classmethod </em><code class="descname">from_transform</code><span class="sig-paren">(</span><em>pattern</em>, <em>commands=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/rules.html#Rule.from_transform"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.rules.Rule.from_transform" title="Permalink to this definition">¶</a></dt>
+<em class="property">classmethod </em><code class="sig-name descname">from_transform</code><span class="sig-paren">(</span><em class="sig-param">pattern</em>, <em class="sig-param">commands=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/rules.html#Rule.from_transform"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.rules.Rule.from_transform" title="Permalink to this definition">¶</a></dt>
 <dd><p>Initialize a rule from the transformation.</p>
 <p>On input takes a pattern which is used as <cite>lhs</cite> of the rule,
 as an optional argument transformation commands can be provided,
@@ -343,564 +282,531 @@ are initialized to be the same graph (pattern), later on
 when transformations are applied <cite>p</cite> and <cite>rhs</cite> are being updated.
 If list of commands is specified, these commands are simplified,
 transformed to the canonical order, and applied to <cite>p</cite>, <cite>lhs</cite> and <cite>rhs</cite>.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>pattern</strong> : networkx.(Di)Graph</p>
-<blockquote>
-<div><p>Pattern graph to initialize and the lhs of the rule.</p>
-</div></blockquote>
-<p><strong>commands</strong> : str, optional</p>
-<blockquote class="last">
-<div><p>Script containing transformation commands, which
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>pattern</strong><span class="classifier">networkx.(Di)Graph</span></dt><dd><p>Pattern graph to initialize and the lhs of the rule.</p>
+</dd>
+<dt><strong>commands</strong><span class="classifier">str, optional</span></dt><dd><p>Script containing transformation commands, which
 can be parsed by <cite>regraph.parser.parse</cite>.</p>
-</div></blockquote>
-</td>
-</tr>
-</tbody>
-</table>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.rules.Rule.get_inverted_rule">
+<code class="sig-name descname">get_inverted_rule</code><span class="sig-paren">(</span><em class="sig-param">self</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/rules.html#Rule.get_inverted_rule"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.rules.Rule.get_inverted_rule" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get inverted rule with LHS and RHS swaped.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.rules.Rule.identity_rule">
+<em class="property">classmethod </em><code class="sig-name descname">identity_rule</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/rules.html#Rule.identity_rule"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.rules.Rule.identity_rule" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create an identity rule.</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="regraph.rules.Rule.inject_add_edge">
-<code class="descname">inject_add_edge</code><span class="sig-paren">(</span><em>n1</em>, <em>n2</em>, <em>attrs=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/rules.html#Rule.inject_add_edge"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.rules.Rule.inject_add_edge" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">inject_add_edge</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">n1</em>, <em class="sig-param">n2</em>, <em class="sig-param">attrs=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/rules.html#Rule.inject_add_edge"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.rules.Rule.inject_add_edge" title="Permalink to this definition">¶</a></dt>
 <dd><p>Inject addition of a new edge to the rule.</p>
 <p>This method adds an edge between two nodes of the
 <cite>rhs</cite>.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>n1</strong> : hashable</p>
-<blockquote>
-<div><p>Id of an edge’s source node in <cite>rhs</cite>.</p>
-</div></blockquote>
-<p><strong>n2</strong> : hashable</p>
-<blockquote>
-<div><p>Id of an edge’s target node in <cite>rhs</cite>.</p>
-</div></blockquote>
-</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Raises:</th><td class="field-body"><p class="first"><strong>RuleError</strong></p>
-<blockquote class="last">
-<div><p>If some of the nodes (<cite>n1</cite> or <cite>n2</cite>) do not exist
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>n1</strong><span class="classifier">hashable</span></dt><dd><p>Id of an edge’s source node in <cite>rhs</cite>.</p>
+</dd>
+<dt><strong>n2</strong><span class="classifier">hashable</span></dt><dd><p>Id of an edge’s target node in <cite>rhs</cite>.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><dl class="simple">
+<dt>RuleError</dt><dd><p>If some of the nodes (<cite>n1</cite> or <cite>n2</cite>) do not exist
 or if there is already an edge between them in <cite>rhs</cite>.</p>
-</div></blockquote>
-</td>
-</tr>
-</tbody>
-</table>
+</dd>
+</dl>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="method">
 <dt id="regraph.rules.Rule.inject_add_edge_attrs">
-<code class="descname">inject_add_edge_attrs</code><span class="sig-paren">(</span><em>n1</em>, <em>n2</em>, <em>attrs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/rules.html#Rule.inject_add_edge_attrs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.rules.Rule.inject_add_edge_attrs" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">inject_add_edge_attrs</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">n1</em>, <em class="sig-param">n2</em>, <em class="sig-param">attrs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/rules.html#Rule.inject_add_edge_attrs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.rules.Rule.inject_add_edge_attrs" title="Permalink to this definition">¶</a></dt>
 <dd><p>Inject addition of edge attributes by the rule.</p>
-<p>For <cite>n1</cite> and <cite>n2</cite>, first, tries to find a node with this id in the
-left-hand side, finds a node from <cite>rhs</cite> related to it through
-l&lt;-p-&gt;r, if found, otherwise, tries to find the corresponding node in
-the preserved part and finds the node to which <cite>n</cite> maps in p-&gt;r,
-if it is not found in <cite>p</cite>, tries to find it in
-the <cite>rhs</cite> (it helps us to implement injection
-of the edge attrs add to only one of the edges incident to clones,
-or to new edges, or to edges produced by merges).</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>n1</strong> : hashable</p>
-<p><strong>n2</strong> : hashable</p>
-<p><strong>attrs</strong> : dict</p>
-<blockquote>
-<div><p>Dictionary with attrs to add</p>
-</div></blockquote>
-</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Raises:</th><td class="field-body"><p class="first"><strong>RuleError</strong></p>
-<blockquote class="last">
-<div><p>If some of the nodes defining an edge are not found in neither
-<cite>lhs</cite>, nor <cite>p</cite> nor <cite>rhs</cite>, or if an edge is incident to smth thats
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>n1</strong><span class="classifier">hashable</span></dt><dd><p>Source node in the RHS</p>
+</dd>
+<dt><strong>n2</strong><span class="classifier">hashable</span></dt><dd><p>Target node in the RHS</p>
+</dd>
+<dt><strong>attrs</strong><span class="classifier">dict</span></dt><dd><p>Dictionary with attrs to add</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><dl class="simple">
+<dt>RuleError</dt><dd><p>If some of the nodes defining an edge are not found in neither
+<cite>rhs</cite>, or if an edge is incident to smth thats
 is going to be removed by the rule.</p>
-</div></blockquote>
-</td>
-</tr>
-</tbody>
-</table>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.rules.Rule.inject_add_edges_from">
+<code class="sig-name descname">inject_add_edges_from</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">edge_list</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/rules.html#Rule.inject_add_edges_from"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.rules.Rule.inject_add_edges_from" title="Permalink to this definition">¶</a></dt>
+<dd><p>Inject addition of a new edge to the rule.</p>
+<p>This method injects addition of edges from the list.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>edge_list</strong><span class="classifier">iterable</span></dt><dd><p>Collection of edges to add, where every element is
+either a tuple of the form (&lt;source_id&gt;, &lt;target_id&gt;)
+or (&lt;source_id&gt;, &lt;target_id&gt;, &lt;edge_attrs&gt;). Here
+source and target nodes are assumed to be from the <cite>rhs</cite>.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><dl class="simple">
+<dt>RuleError</dt><dd><p>If some of the nodes (<cite>n1</cite> or <cite>n2</cite>) do not exist
+or if there is already an edge between them in <cite>rhs</cite>.</p>
+</dd>
+</dl>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="method">
 <dt id="regraph.rules.Rule.inject_add_node">
-<code class="descname">inject_add_node</code><span class="sig-paren">(</span><em>node_id</em>, <em>attrs=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/rules.html#Rule.inject_add_node"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.rules.Rule.inject_add_node" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">inject_add_node</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">node_id</em>, <em class="sig-param">attrs=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/rules.html#Rule.inject_add_node"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.rules.Rule.inject_add_node" title="Permalink to this definition">¶</a></dt>
 <dd><p>Inject an addition of a new node by the rule.</p>
 <p>This method adds a node with <cite>node_id</cite> (and the specified
 attributes <cite>attrs</cite>) to <cite>rhs</cite>.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>node_id</strong> : hashable</p>
-<blockquote>
-<div><p>Id of a node to add</p>
-</div></blockquote>
-<p><strong>attrs</strong> : dict, optional</p>
-<blockquote>
-<div><p>Attributes of the node.</p>
-</div></blockquote>
-</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Raises:</th><td class="field-body"><p class="first"><strong>RuleError</strong></p>
-<blockquote class="last">
-<div><p>If node with this id already exists in the <cite>rhs</cite>.</p>
-</div></blockquote>
-</td>
-</tr>
-</tbody>
-</table>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>node_id</strong><span class="classifier">hashable</span></dt><dd><p>Id of a node to add</p>
+</dd>
+<dt><strong>attrs</strong><span class="classifier">dict, optional</span></dt><dd><p>Attributes of the node.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><dl class="simple">
+<dt>RuleError</dt><dd><p>If node with this id already exists in the <cite>rhs</cite>.</p>
+</dd>
+</dl>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="method">
 <dt id="regraph.rules.Rule.inject_add_node_attrs">
-<code class="descname">inject_add_node_attrs</code><span class="sig-paren">(</span><em>n</em>, <em>attrs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/rules.html#Rule.inject_add_node_attrs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.rules.Rule.inject_add_node_attrs" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">inject_add_node_attrs</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">n</em>, <em class="sig-param">attrs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/rules.html#Rule.inject_add_node_attrs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.rules.Rule.inject_add_node_attrs" title="Permalink to this definition">¶</a></dt>
 <dd><p>Inject addition of  node attributes by the rule.</p>
-<p>First, tries to find a node with the id <cite>n</cite> in the
-left-hand side, injects its attrs add to all the <cite>rhs</cite> nodes
-related to it through l&lt;-p-&gt;r, if found,
-otherwise, tries to find the corresponding node in
-the preserved part and adds attrs to the node to which <cite>n</cite>
-maps in p-&gt;r, if it is not found in <cite>p</cite>, tries to find it in
-the <cite>rhs</cite> (it helps us to implement injection
-of the node attrs add to only one of the clone nodes, or to new nodes,
-or to merged nodes).</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>n1</strong> : hashable</p>
-<blockquote>
-<div><p>Id of an edge’s source node in <cite>lhs</cite>, <cite>p</cite> or <cite>rhs</cite>.</p>
-</div></blockquote>
-<p><strong>n2</strong> : hashable</p>
-<blockquote>
-<div><p>Id of an edge’s target node in <cite>lhs</cite>, <cite>p</cite> or <cite>rhs</cite>.</p>
-</div></blockquote>
-<p><strong>attrs</strong> : dict</p>
-<blockquote>
-<div><p>Dictionary with attrs to add</p>
-</div></blockquote>
-</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Raises:</th><td class="field-body"><p class="first"><strong>RuleError</strong></p>
-<blockquote class="last">
-<div><p>If node <cite>n</cite> does not exist in the rhs of the rule</p>
-</div></blockquote>
-</td>
-</tr>
-</tbody>
-</table>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>n</strong><span class="classifier">hashable</span></dt><dd><p>Id of the node in the <cite>rhs</cite> to add attributes to.</p>
+</dd>
+<dt><strong>attrs</strong><span class="classifier">dict</span></dt><dd><p>Dictionary with attrs to add</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><dl class="simple">
+<dt>RuleError</dt><dd><p>If node <cite>n</cite> does not exist in the rhs of the rule</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.rules.Rule.inject_add_nodes_from">
+<code class="sig-name descname">inject_add_nodes_from</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">node_list</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/rules.html#Rule.inject_add_nodes_from"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.rules.Rule.inject_add_nodes_from" title="Permalink to this definition">¶</a></dt>
+<dd><p>Inject an addition of a new node by the rule.</p>
+<p>This method adds a nodes from the list (and the specified
+attributes <cite>attrs</cite>) to <cite>rhs</cite>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>node_list</strong><span class="classifier">iterable</span></dt><dd><p>Collection of nodes to add, where every element is
+either a tuple of the form (&lt;node_id&gt;, &lt;node_attrs&gt;)
+or a single value &lt;node_id&gt;</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><dl class="simple">
+<dt>RuleError</dt><dd><p>If some node from the list already exists in the <cite>rhs</cite>.</p>
+</dd>
+</dl>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="method">
 <dt id="regraph.rules.Rule.inject_clone_node">
-<code class="descname">inject_clone_node</code><span class="sig-paren">(</span><em>n</em>, <em>new_node_id=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/rules.html#Rule.inject_clone_node"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.rules.Rule.inject_clone_node" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">inject_clone_node</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">n</em>, <em class="sig-param">new_node_id=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/rules.html#Rule.inject_clone_node"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.rules.Rule.inject_clone_node" title="Permalink to this definition">¶</a></dt>
 <dd><p>Inject cloning of a node by the rule.</p>
 <p>This procedure clones <cite>n</cite> in the preserved part
 and the right-hand side.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>n</strong> : hashable</p>
-<blockquote>
-<div><p>Node from <cite>lhs</cite> to clone</p>
-</div></blockquote>
-<p><strong>new_node_id</strong> : hashable</p>
-<blockquote>
-<div><p>Id for the clone</p>
-</div></blockquote>
-</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>p_new_node_id</strong> : hashable</p>
-<blockquote>
-<div><p>Id of the new clone node in the preserved part</p>
-</div></blockquote>
-<p><strong>rhs_new_node_id</strong> : hashable</p>
-<blockquote>
-<div><p>Id of the new clone node in the right-hand side</p>
-</div></blockquote>
-</td>
-</tr>
-<tr class="field-odd field"><th class="field-name">Raises:</th><td class="field-body"><p class="first"><strong>RuleError</strong></p>
-<blockquote class="last">
-<div><p>If the node to clone is already being removed by the rule
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>n</strong><span class="classifier">hashable</span></dt><dd><p>Node from <cite>lhs</cite> to clone</p>
+</dd>
+<dt><strong>new_node_id</strong><span class="classifier">hashable</span></dt><dd><p>Id for the clone</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>p_new_node_id</strong><span class="classifier">hashable</span></dt><dd><p>Id of the new clone node in the preserved part</p>
+</dd>
+<dt><strong>rhs_new_node_id</strong><span class="classifier">hashable</span></dt><dd><p>Id of the new clone node in the right-hand side</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-odd">Raises</dt>
+<dd class="field-odd"><dl class="simple">
+<dt>RuleError</dt><dd><p>If the node to clone is already being removed by the rule
 or if node with the specified clone id already exists in p.</p>
-</div></blockquote>
-</td>
-</tr>
-</tbody>
-</table>
+</dd>
+</dl>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="method">
 <dt id="regraph.rules.Rule.inject_merge_nodes">
-<code class="descname">inject_merge_nodes</code><span class="sig-paren">(</span><em>node_list</em>, <em>node_id=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/rules.html#Rule.inject_merge_nodes"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.rules.Rule.inject_merge_nodes" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">inject_merge_nodes</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">node_list</em>, <em class="sig-param">node_id=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/rules.html#Rule.inject_merge_nodes"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.rules.Rule.inject_merge_nodes" title="Permalink to this definition">¶</a></dt>
 <dd><p>Inject merge of a collection of nodes by the rule.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>node_list</strong> : iterable</p>
-<blockquote>
-<div><p>Collection of ids of nodes from the preserved part or
-the rhs to merge.</p>
-</div></blockquote>
-<p><strong>node_id</strong> : hashable</p>
-<blockquote>
-<div><p>Id of the new node corresponding to the result of merge.</p>
-</div></blockquote>
-</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>new_name</strong> : hashable</p>
-<blockquote>
-<div><p>Id of the new node corresponding to the result of merge.</p>
-</div></blockquote>
-</td>
-</tr>
-<tr class="field-odd field"><th class="field-name">Raises:</th><td class="field-body"><p class="first"><strong>RuleError</strong></p>
-<blockquote class="last">
-<div><p>If a node with some id specified in <cite>node_lust</cite> does not
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>node_list</strong><span class="classifier">iterable</span></dt><dd><p>Collection of ids of nodes from the preserved part.</p>
+</dd>
+<dt><strong>node_id</strong><span class="classifier">hashable</span></dt><dd><p>Id of the new node corresponding to the result of merge.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>new_name</strong><span class="classifier">hashable</span></dt><dd><p>Id of the new node corresponding to the result of merge.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-odd">Raises</dt>
+<dd class="field-odd"><dl class="simple">
+<dt>RuleError</dt><dd><p>If a node with some id specified in <cite>node_list</cite> does not
 exist in the preserved part of the rule.</p>
-</div></blockquote>
-</td>
-</tr>
-</tbody>
-</table>
+</dd>
+</dl>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="method">
 <dt id="regraph.rules.Rule.inject_remove_edge">
-<code class="descname">inject_remove_edge</code><span class="sig-paren">(</span><em>n1</em>, <em>n2</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/rules.html#Rule.inject_remove_edge"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.rules.Rule.inject_remove_edge" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">inject_remove_edge</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">n1</em>, <em class="sig-param">n2</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/rules.html#Rule.inject_remove_edge"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.rules.Rule.inject_remove_edge" title="Permalink to this definition">¶</a></dt>
 <dd><p>Inject removal of an edge by the rule.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>n1</strong> : hashable</p>
-<blockquote>
-<div><p>Id of an edge’s source node in <cite>lhs</cite>.</p>
-</div></blockquote>
-<p><strong>n2</strong> : hashable</p>
-<blockquote>
-<div><p>Id of an edge’s target node in <cite>lhs</cite>.</p>
-</div></blockquote>
-</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Raises:</th><td class="field-body"><p class="first"><strong>RuleError</strong></p>
-<blockquote class="last">
-<div><p>If some of the nodes are not found in neither
-<cite>lhs</cite> nor <cite>p</cite>, or if a corresponding edge in
-<cite>p</cite> does not exist.</p>
-</div></blockquote>
-</td>
-</tr>
-</tbody>
-</table>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>n1</strong><span class="classifier">hashable</span></dt><dd><p>Id of an edge’s source node in <cite>p</cite>.</p>
+</dd>
+<dt><strong>n2</strong><span class="classifier">hashable</span></dt><dd><p>Id of an edge’s target node in <cite>p</cite>.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><dl class="simple">
+<dt>RuleError</dt><dd><p>If some of the nodes are not found in <cite>p</cite>,
+or if a corresponding edge in <cite>p</cite> does not exist.</p>
+</dd>
+</dl>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="method">
 <dt id="regraph.rules.Rule.inject_remove_edge_attrs">
-<code class="descname">inject_remove_edge_attrs</code><span class="sig-paren">(</span><em>n1</em>, <em>n2</em>, <em>attrs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/rules.html#Rule.inject_remove_edge_attrs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.rules.Rule.inject_remove_edge_attrs" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">inject_remove_edge_attrs</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">n1</em>, <em class="sig-param">n2</em>, <em class="sig-param">attrs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/rules.html#Rule.inject_remove_edge_attrs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.rules.Rule.inject_remove_edge_attrs" title="Permalink to this definition">¶</a></dt>
 <dd><p>Inject a removal of edge attrs by the rule.</p>
-<p>For both <cite>n1</cite> and <cite>n2</cite>, first, tries to find
-a node with this id in the left-hand side,
-injects the removal of the respective edge attrs if found,
-otherwise, tries to find the corresponding node in
-the preserved part (it helps us to implement injection
-of the edge attrs removal to only one of the edges
-incident to the clone).</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>n1</strong> : hashable</p>
-<blockquote>
-<div><p>Id of an edge’s source node in <cite>lhs</cite> or <cite>p</cite>.</p>
-</div></blockquote>
-<p><strong>n2</strong> : hashable</p>
-<blockquote>
-<div><p>Id of an edge’s target node in <cite>lhs</cite> or <cite>p</cite>.</p>
-</div></blockquote>
-<p><strong>attrs</strong> : dict</p>
-<blockquote>
-<div><p>Dictionary with attributes to remove.</p>
-</div></blockquote>
-</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Raises:</th><td class="field-body"><p class="first last"><strong>RuleError</strong></p>
-</td>
-</tr>
-</tbody>
-</table>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>n1</strong><span class="classifier">hashable</span></dt><dd><p>Id of an edge’s source node in  <cite>p</cite>.</p>
+</dd>
+<dt><strong>n2</strong><span class="classifier">hashable</span></dt><dd><p>Id of an edge’s target node in <cite>p</cite>.</p>
+</dd>
+<dt><strong>attrs</strong><span class="classifier">dict</span></dt><dd><p>Dictionary with attributes to remove.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><dl class="simple">
+<dt>RuleError</dt><dd><p>If edge <cite>n1-&gt; n2</cite> does not exist in the preserved part of the rule,
+or when the node whose attrs should be removed
+is itself is being removed by the rule.</p>
+</dd>
+</dl>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="method">
 <dt id="regraph.rules.Rule.inject_remove_node">
-<code class="descname">inject_remove_node</code><span class="sig-paren">(</span><em>lhs_node_id</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/rules.html#Rule.inject_remove_node"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.rules.Rule.inject_remove_node" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">inject_remove_node</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">p_node_id</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/rules.html#Rule.inject_remove_node"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.rules.Rule.inject_remove_node" title="Permalink to this definition">¶</a></dt>
 <dd><p>Inject a new node removal to the rule.</p>
-<p>This method removes from <cite>p</cite> all the nodes that map
-to the node with the id <cite>lhs_node_id</cite>. In addition,
-all the nodes from <cite>rhs</cite> that are mapped by the nodes
-removed in <cite>p</cite> are also removed.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>lhs_node_id</strong></p>
-<blockquote class="last">
-<div><p>Id of the node in <cite>lhs</cite> that should be removed
+<p>This method removes the indicated node from <cite>p</cite></p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>p_node_id</strong></dt><dd><p>Id of the node in <cite>p</cite> that should be removed
 by the rule.</p>
-</div></blockquote>
-</td>
-</tr>
-</tbody>
-</table>
+</dd>
+</dl>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="method">
 <dt id="regraph.rules.Rule.inject_remove_node_attrs">
-<code class="descname">inject_remove_node_attrs</code><span class="sig-paren">(</span><em>n</em>, <em>attrs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/rules.html#Rule.inject_remove_node_attrs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.rules.Rule.inject_remove_node_attrs" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">inject_remove_node_attrs</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">n</em>, <em class="sig-param">attrs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/rules.html#Rule.inject_remove_node_attrs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.rules.Rule.inject_remove_node_attrs" title="Permalink to this definition">¶</a></dt>
 <dd><p>Inject a removal of node attrs by the rule.</p>
-<p>First, tries to find a node with the id <cite>n</cite> in the
-left-hand side, injects its attrs removal if found,
-otherwise, tries to find the corresponding node in
-the preserved part (it helps us to implement injection
-of the node attrs removal to only one of the clone nodes).</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>n</strong> : hashable</p>
-<blockquote>
-<div><p>Id of a node whose attrs to remove (node from the
-left-hand side or the preserved part).</p>
-</div></blockquote>
-<p><strong>attrs</strong> : dict</p>
-<blockquote>
-<div><p>Dictionary with attributes to remove.</p>
-</div></blockquote>
-</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Raises:</th><td class="field-body"><p class="first"><strong>RuleError</strong></p>
-<blockquote class="last">
-<div><p>If <cite>n</cite> does not exist in neither the left-hand side
-nor the preserved part of the rule, or when the node
-whose attrs should be removed is itself is being removed
-by the rule.</p>
-</div></blockquote>
-</td>
-</tr>
-</tbody>
-</table>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>n</strong><span class="classifier">hashable</span></dt><dd><p>Id of a node whose attrs to remove (node from the
+preserved part).</p>
+</dd>
+<dt><strong>attrs</strong><span class="classifier">dict</span></dt><dd><p>Dictionary with attributes to remove.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><dl class="simple">
+<dt>RuleError</dt><dd><p>If <cite>n</cite> does not exist in the preserved part of the rule,
+or when the node whose attrs should be removed
+is itself is being removed by the rule.</p>
+</dd>
+</dl>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="method">
 <dt id="regraph.rules.Rule.inject_update_edge_attrs">
-<code class="descname">inject_update_edge_attrs</code><span class="sig-paren">(</span><em>n1</em>, <em>n2</em>, <em>attrs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/rules.html#Rule.inject_update_edge_attrs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.rules.Rule.inject_update_edge_attrs" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">inject_update_edge_attrs</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">n1</em>, <em class="sig-param">n2</em>, <em class="sig-param">attrs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/rules.html#Rule.inject_update_edge_attrs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.rules.Rule.inject_update_edge_attrs" title="Permalink to this definition">¶</a></dt>
 <dd><p>Inject an update of edge attrs by the rule.</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="regraph.rules.Rule.inject_update_node_attrs">
-<code class="descname">inject_update_node_attrs</code><span class="sig-paren">(</span><em>n</em>, <em>attrs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/rules.html#Rule.inject_update_node_attrs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.rules.Rule.inject_update_node_attrs" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">inject_update_node_attrs</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">n</em>, <em class="sig-param">attrs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/rules.html#Rule.inject_update_node_attrs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.rules.Rule.inject_update_node_attrs" title="Permalink to this definition">¶</a></dt>
 <dd><p>Inject an update of node attrs by the rule.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>n</strong> : hashable</p>
-<blockquote>
-<div><p>Id of a node from the left-hand side whose attrs
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>n</strong><span class="classifier">hashable</span></dt><dd><p>Id of a node from the left-hand side whose attrs
 should be updated</p>
-</div></blockquote>
-<p><strong>attrs</strong> : dict</p>
-<blockquote>
-<div><p>Dictionary of new attrs that will replace the old ones</p>
-</div></blockquote>
-</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Raises:</th><td class="field-body"><p class="first"><strong>RuleError</strong></p>
-<blockquote class="last">
-<div><p>If node <cite>n</cite> does not exist in the left-hand side or
+</dd>
+<dt><strong>attrs</strong><span class="classifier">dict</span></dt><dd><p>Dictionary of new attrs that will replace the old ones</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><dl class="simple">
+<dt>RuleError</dt><dd><p>If node <cite>n</cite> does not exist in the left-hand side or
 is being removed by the rule.</p>
-</div></blockquote>
-</td>
-</tr>
-</tbody>
-</table>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.rules.Rule.is_identity">
+<code class="sig-name descname">is_identity</code><span class="sig-paren">(</span><em class="sig-param">self</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/rules.html#Rule.is_identity"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.rules.Rule.is_identity" title="Permalink to this definition">¶</a></dt>
+<dd><p>Test if the rule is identity.</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="regraph.rules.Rule.is_relaxing">
-<code class="descname">is_relaxing</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/rules.html#Rule.is_relaxing"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.rules.Rule.is_relaxing" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">is_relaxing</code><span class="sig-paren">(</span><em class="sig-param">self</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/rules.html#Rule.is_relaxing"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.rules.Rule.is_relaxing" title="Permalink to this definition">¶</a></dt>
 <dd><p>Check if the rule is relaxing.</p>
 <p>Rule is relaxing if it adds
 nodes/edges/attributes or merges nodes.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"><cite>True</cite> if the rule is relaxing, <cite>False</cite> otherwise</td>
-</tr>
-</tbody>
-</table>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><cite>True</cite> if the rule is relaxing, <cite>False</cite> otherwise</dt><dd></dd>
+</dl>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="method">
 <dt id="regraph.rules.Rule.is_restrictive">
-<code class="descname">is_restrictive</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/rules.html#Rule.is_restrictive"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.rules.Rule.is_restrictive" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">is_restrictive</code><span class="sig-paren">(</span><em class="sig-param">self</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/rules.html#Rule.is_restrictive"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.rules.Rule.is_restrictive" title="Permalink to this definition">¶</a></dt>
 <dd><p>Check if the rule is  restrictive.</p>
 <p>Rule is restictive if it removes
 nodes/edges/attributes or clones nodes.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><cite>True</cite> if the rule is restrictive, <cite>False</cite></p>
-<p class="last">otherwise</p>
-</td>
-</tr>
-</tbody>
-</table>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><cite>True</cite> if the rule is restrictive, <cite>False</cite></dt><dd></dd>
+<dt>otherwise</dt><dd></dd>
+</dl>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="method">
 <dt id="regraph.rules.Rule.merged_nodes">
-<code class="descname">merged_nodes</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/rules.html#Rule.merged_nodes"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.rules.Rule.merged_nodes" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">merged_nodes</code><span class="sig-paren">(</span><em class="sig-param">self</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/rules.html#Rule.merged_nodes"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.rules.Rule.merged_nodes" title="Permalink to this definition">¶</a></dt>
 <dd><p>Get nodes merged by the rule.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>nodes</strong> : dict</p>
-<blockquote class="last">
-<div><p>Dictionary where keys are nodes from <cite>rhs</cite> and
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>nodes</strong><span class="classifier">dict</span></dt><dd><p>Dictionary where keys are nodes from <cite>rhs</cite> and
 values are sets of nodes from <cite>p</cite> that are merged.</p>
-</div></blockquote>
-</td>
-</tr>
-</tbody>
-</table>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.rules.Rule.plot">
+<code class="sig-name descname">plot</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">filename=None</em>, <em class="sig-param">title=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/rules.html#Rule.plot"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.rules.Rule.plot" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plot the rule.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.rules.Rule.refine">
+<code class="sig-name descname">refine</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">graph</em>, <em class="sig-param">instance</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/rules.html#Rule.refine"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.rules.Rule.refine" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get refined (side-effect-free) version of the rule.</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="regraph.rules.Rule.removed_edge_attrs">
-<code class="descname">removed_edge_attrs</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/rules.html#Rule.removed_edge_attrs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.rules.Rule.removed_edge_attrs" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">removed_edge_attrs</code><span class="sig-paren">(</span><em class="sig-param">self</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/rules.html#Rule.removed_edge_attrs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.rules.Rule.removed_edge_attrs" title="Permalink to this definition">¶</a></dt>
 <dd><p>Get edge attributes removed by the rule.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>attrs</strong> : dict</p>
-<blockquote class="last">
-<div><p>Dictionary where keys are edges from <cite>lhs</cite>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>attrs</strong><span class="classifier">dict</span></dt><dd><p>Dictionary where keys are edges from <cite>p</cite>
 and values are attribute dictionaries to remove.</p>
-</div></blockquote>
-</td>
-</tr>
-</tbody>
-</table>
+</dd>
+</dl>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="method">
 <dt id="regraph.rules.Rule.removed_edges">
-<code class="descname">removed_edges</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/rules.html#Rule.removed_edges"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.rules.Rule.removed_edges" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">removed_edges</code><span class="sig-paren">(</span><em class="sig-param">self</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/rules.html#Rule.removed_edges"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.rules.Rule.removed_edges" title="Permalink to this definition">¶</a></dt>
 <dd><p>Get edges removed by the rule.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>edges</strong> : set</p>
-<blockquote class="last">
-<div><p>Set of edges from <cite>lhs</cite> removed by the rule.</p>
-</div></blockquote>
-</td>
-</tr>
-</tbody>
-</table>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>edges</strong><span class="classifier">set</span></dt><dd><p>Set of edges from <cite>lhs</cite> removed by the rule.</p>
+</dd>
+</dl>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="method">
 <dt id="regraph.rules.Rule.removed_node_attrs">
-<code class="descname">removed_node_attrs</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/rules.html#Rule.removed_node_attrs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.rules.Rule.removed_node_attrs" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">removed_node_attrs</code><span class="sig-paren">(</span><em class="sig-param">self</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/rules.html#Rule.removed_node_attrs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.rules.Rule.removed_node_attrs" title="Permalink to this definition">¶</a></dt>
 <dd><p>Get node attributes removed by the rule.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>attrs</strong> : dict</p>
-<blockquote class="last">
-<div><p>Dictionary where keys are nodes from <cite>lhs</cite>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>attrs</strong><span class="classifier">dict</span></dt><dd><p>Dictionary where keys are nodes from <cite>p</cite>
 and values are attribute dictionaries to remove.</p>
-</div></blockquote>
-</td>
-</tr>
-</tbody>
-</table>
+</dd>
+</dl>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="method">
 <dt id="regraph.rules.Rule.removed_nodes">
-<code class="descname">removed_nodes</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/rules.html#Rule.removed_nodes"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.rules.Rule.removed_nodes" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">removed_nodes</code><span class="sig-paren">(</span><em class="sig-param">self</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/rules.html#Rule.removed_nodes"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.rules.Rule.removed_nodes" title="Permalink to this definition">¶</a></dt>
 <dd><p>Get nodes removed by the rule.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>nodes</strong> : set</p>
-<blockquote class="last">
-<div><p>Set of nodes from <cite>lhs</cite> removed by the rule.</p>
-</div></blockquote>
-</td>
-</tr>
-</tbody>
-</table>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>nodes</strong><span class="classifier">set</span></dt><dd><p>Set of nodes from <cite>lhs</cite> removed by the rule.</p>
+</dd>
+</dl>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="method">
 <dt id="regraph.rules.Rule.to_commands">
-<code class="descname">to_commands</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/rules.html#Rule.to_commands"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.rules.Rule.to_commands" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">to_commands</code><span class="sig-paren">(</span><em class="sig-param">self</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/rules.html#Rule.to_commands"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.rules.Rule.to_commands" title="Permalink to this definition">¶</a></dt>
 <dd><p>Convert the rule to a list of commands.</p>
 <p>This method produces a list of commands
 corresponding to the rule. These commands
 follow a simple grammar of transformations
 that can be recognized by <cite>regraph.parser</cite> module.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>commands</strong> : str</p>
-<blockquote class="last">
-<div><p>Commands representing primitive transformations on the
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>commands</strong><span class="classifier">str</span></dt><dd><p>Commands representing primitive transformations on the
 the <cite>lhs</cite> that are preformed in the rule.</p>
-</div></blockquote>
-</td>
-</tr>
-</tbody>
-</table>
+</dd>
+</dl>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="method">
 <dt id="regraph.rules.Rule.to_json">
-<code class="descname">to_json</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/rules.html#Rule.to_json"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.rules.Rule.to_json" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">to_json</code><span class="sig-paren">(</span><em class="sig-param">self</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/rules.html#Rule.to_json"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.rules.Rule.to_json" title="Permalink to this definition">¶</a></dt>
 <dd><p>Convert the rule to JSON repr.</p>
 </dd></dl>
 
+</dd></dl>
+
+<dl class="function">
+<dt id="regraph.rules.compose_rule_hierarchies">
+<code class="sig-prename descclassname">regraph.rules.</code><code class="sig-name descname">compose_rule_hierarchies</code><span class="sig-paren">(</span><em class="sig-param">rule_hierarchy1</em>, <em class="sig-param">lhs_instances1</em>, <em class="sig-param">rhs_instances1</em>, <em class="sig-param">rule_hierarchy2</em>, <em class="sig-param">lhs_instances2</em>, <em class="sig-param">rhs_instances2</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/rules.html#compose_rule_hierarchies"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.rules.compose_rule_hierarchies" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compose two rule hierarchies.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="regraph.rules.compose_rules">
+<code class="sig-prename descclassname">regraph.rules.</code><code class="sig-name descname">compose_rules</code><span class="sig-paren">(</span><em class="sig-param">rule1</em>, <em class="sig-param">lhs_instance1</em>, <em class="sig-param">rhs_instance1</em>, <em class="sig-param">rule2</em>, <em class="sig-param">lhs_instance2</em>, <em class="sig-param">rhs_instance2</em>, <em class="sig-param">return_all=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/rules.html#compose_rules"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.rules.compose_rules" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compose two rules respecting instances.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="regraph.rules.invert_rule_hierarchy">
+<code class="sig-prename descclassname">regraph.rules.</code><code class="sig-name descname">invert_rule_hierarchy</code><span class="sig-paren">(</span><em class="sig-param">rule_hierarchy</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/rules.html#invert_rule_hierarchy"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.rules.invert_rule_hierarchy" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get inverted rule hierarchy (swapped lhs and rhs).</p>
 </dd></dl>
 
 </div>
 
 
           </div>
+          
         </div>
       </div>
       <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
@@ -924,25 +830,33 @@ the <cite>lhs</cite> that are preformed in the rule.</p>
 </ul>
 </div>
 <div id="searchbox" style="display: none" role="search">
-  <h3>Quick search</h3>
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
     <form class="search" action="search.html" method="get">
-      <div><input type="text" name="q" /></div>
-      <div><input type="submit" value="Go" /></div>
-      <input type="hidden" name="check_keywords" value="yes" />
-      <input type="hidden" name="area" value="default" />
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
     </form>
+    </div>
 </div>
 <script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
         </div>
       </div>
       <div class="clearer"></div>
     </div>
     <div class="footer">
-      &copy;2017, Eugenia Oshurko, Yves-Stan Le Cornec.
+      &copy;2018, Eugenia Oshurko.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.3</a>
-      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.2.0</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
       
       |
       <a href="_sources/rules.rst.txt"

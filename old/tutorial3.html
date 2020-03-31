@@ -1,0 +1,325 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>Tutorial &#8212; ReGraph 3.0 documentation</title>
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="tutorial">
+<h1>Tutorial<a class="headerlink" href="#tutorial" title="Permalink to this headline">¶</a></h1>
+<ul class="simple">
+<li><dl class="simple">
+<dt><a class="reference internal" href="tutorial1.html#tutorial-part1"><span class="std std-ref">Tutorial: part 1</span></a></dt><dd><ul>
+<li><p><a class="reference internal" href="tutorial1.html#installation"><span class="std std-ref">Installation</span></a></p></li>
+<li><dl class="simple">
+<dt><a class="reference internal" href="tutorial1.html#simple-rewriting"><span class="std std-ref">Simple graph rewriting</span></a></dt><dd><ul>
+<li><p><a class="reference internal" href="tutorial1.html#graph-creation"><span class="std std-ref">Primitive graph transformations</span></a></p></li>
+<li><p><a class="reference internal" href="../tutorial_attrs.html#advanced-attributes"><span class="std std-ref">Advanced node and edge attributes</span></a></p></li>
+<li><p><a class="reference internal" href="tutorial1.html#rewiting-rules"><span class="std std-ref">Rewriting rules</span></a></p></li>
+</ul>
+</dd>
+</dl>
+</li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><a class="reference internal" href="tutorial2.html#tutorial-part2"><span class="std std-ref">Tutorial: part 2</span></a></dt><dd><ul>
+<li><dl class="simple">
+<dt><a class="reference internal" href="tutorial2.html#hierarchy-tutorial"><span class="std std-ref">Graph hierarchies</span></a></dt><dd><ul>
+<li><p><a class="reference internal" href="tutorial2.html#hierarchy-creation"><span class="std std-ref">Creating a hierarchy</span></a></p></li>
+<li><p><a class="reference internal" href="tutorial2.html#rewriting-in-hierarchy"><span class="std std-ref">Rewriting in the hierarchy</span></a></p></li>
+</ul>
+</dd>
+</dl>
+</li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><a class="reference internal" href="#tutorial-part3"><span class="std std-ref">Tutorial: part 3</span></a></dt><dd><ul>
+<li><dl class="simple">
+<dt><a class="reference internal" href="#neo4j-tutorial"><span class="std std-ref">Rewriting Neo4j property graphs</span></a></dt><dd><ul>
+<li><p><a class="reference internal" href="#neo4j-graph-tutorial"><span class="std std-ref">Neo4jGraph object</span></a></p></li>
+<li><p><a class="reference internal" href="#typed-neo4j-graph-tutorial"><span class="std std-ref">TypedNeo4jGraph object</span></a></p></li>
+<li><p><a class="reference internal" href="#neo4j-hierarchy-tutorial"><span class="std std-ref">Neo4jHierarchy object</span></a></p></li>
+</ul>
+</dd>
+</dl>
+</li>
+</ul>
+</dd>
+</dl>
+</li>
+</ul>
+</div>
+<div class="section" id="tutorial-part-3">
+<span id="tutorial-part3"></span><h1>Tutorial: part 3<a class="headerlink" href="#tutorial-part-3" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="rewriting-neo4j-property-graphs">
+<span id="neo4j-tutorial"></span><h2>Rewriting Neo4j property graphs<a class="headerlink" href="#rewriting-neo4j-property-graphs" title="Permalink to this headline">¶</a></h2>
+<p>So far in this tutorial we have used NetworkX graphs. Such graphs were in-memory objects whose lifetime was limited by the lifetime of our Python applications (unless they where exported to some external representation, e.g. JSON-files). Unsurprisingly, it is often desirable to build our knowledge representation systems on graphs that would be persistent (whose lifetime would therefore be independent from the one of the application manipulating them, not mentioning scalability issues related to working with in-memory graphs). For this reason  ReGraph allows to use most of its functionality on <a class="reference external" href="https://neo4j.com/">Neo4j</a> property graphs.</p>
+<p>ReGraph provides three data structures that allow the user to work with Neo4j property graphs in the backend:</p>
+<ul class="simple">
+<li><p><cite>regraph.neo4j.Neo4jGraph</cite> for simple graphs</p></li>
+<li><p><cite>regraph.neo4j.TypedNeo4jGraph</cite> for simple graphs typed by a simple graph (in this context called schema)</p></li>
+<li><p><cite>regraph.neo4j.Neo4jHierarchy</cite> for simple graphs structured in a graph hierarchy</p></li>
+</ul>
+<div class="section" id="neo4jgraph-object">
+<span id="neo4j-graph-tutorial"></span><h3>Neo4jGraph object<a class="headerlink" href="#neo4jgraph-object" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="starting-neo4j-server">
+<h4>Starting Neo4j server<a class="headerlink" href="#starting-neo4j-server" title="Permalink to this headline">¶</a></h4>
+<ul class="simple">
+<li><p>When installing neo4j you will be asked to choose login/password for you DB (in this example we assume it is “neo4j”/”admin”).</p></li>
+<li><p>To start neo4j server run <cite>sudo service neo4j start</cite></p></li>
+<li><p>Check status by running <cite>sudo service neo4j status</cite>. Here you can check the bolt port uri needed to initialize our Neo4jGraph object.</p></li>
+<li><p>You can also query the DB by using the Neo4j browser, the address can be found also in the result of ‘status’, e.g. “Remote interface available at <a class="reference external" href="http://localhost:7474/">http://localhost:7474/</a>”.</p></li>
+</ul>
+</div>
+<div class="section" id="creating-neo4jgraph-objects">
+<h4>Creating Neo4jGraph objects<a class="headerlink" href="#creating-neo4jgraph-objects" title="Permalink to this headline">¶</a></h4>
+<p>Creation of <cite>Neo4jGraph</cite> object initializes a driver that provides connection to a Neo4j database. It can be created providing credentials necessary to connect to the DB (uri, username, password).</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">regraph.neo4j</span> <span class="k">import</span> <span class="n">Neo4jGraph</span>
+
+
+<span class="n">g</span> <span class="o">=</span> <span class="n">Neo4jGraph</span><span class="p">(</span>
+    <span class="n">uri</span><span class="o">=</span><span class="s2">&quot;bolt://localhost:7687&quot;</span><span class="p">,</span>
+    <span class="n">user</span><span class="o">=</span><span class="s2">&quot;neo4j&quot;</span><span class="p">,</span>
+    <span class="n">password</span><span class="o">=</span><span class="s2">&quot;admin&quot;</span><span class="p">,</span>
+    <span class="n">node_label</span><span class="o">=</span><span class="s2">&quot;Person&quot;</span><span class="p">,</span>
+    <span class="n">edge_label</span><span class="o">=</span><span class="s2">&quot;KNOWS&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Alternatively, an existing driver can be used, for example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">regraph.neo4j</span> <span class="k">import</span> <span class="n">Neo4jGraph</span>
+<span class="kn">from</span> <span class="nn">neo4j.v1</span> <span class="k">import</span> <span class="n">GraphDatabase</span>
+
+
+<span class="n">neo4j_driver</span> <span class="o">=</span> <span class="n">GraphDatabase</span><span class="o">.</span><span class="n">driver</span><span class="p">(</span>
+    <span class="n">uri</span><span class="p">,</span> <span class="n">auth</span><span class="o">=</span><span class="p">(</span><span class="n">user</span><span class="p">,</span> <span class="n">password</span><span class="p">))</span>
+<span class="n">g</span> <span class="o">=</span> <span class="n">Neo4jGraph</span><span class="p">(</span>
+    <span class="n">driver</span><span class="o">=</span><span class="n">neo4j_driver</span><span class="p">,</span>
+    <span class="n">node_label</span><span class="o">=</span><span class="s2">&quot;Person&quot;</span><span class="p">,</span>
+    <span class="n">edge_label</span><span class="o">=</span><span class="s2">&quot;KNOWS&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>You can now access graph sitting in the DB through the inteface provided by <cite>Neo4jGraph</cite>. Note that when initializing <cite>Neo4jGraph</cite> we have specified node/edge labels (arguments <cite>node_label</cite> and <cite>edge_label</cite>), which means that our graph object will operate _only_ on the subgraph of the property graph stored in the DB induced by the nodes and relations possessing the right labels. In our previous example we will operate on nodes labeled <cite>:Person</cite> and relations of type <cite>:KNOWS</cite>. By default, ReGraph scopes nodes and relations with labels <cite>:node</cite> and <cite>:edge</cite> respectively.</p>
+<p><strong>Node identifiers.</strong> Identifiers for graph elements. For all elements of a proprerty graph (both nodes and edges) Neo4j generates unique internal identifiers. However, these identifiers are unsuitable for our purposes of defining. One of the main reasons for for that is due to
+the fact the user has virtually no control over them, i.e. they are automatically allocated,
+can be reassigned in some particular scenarios, and as the result. Using them as reference
+identifiers in our system can cause dangling reference problems.
+Therefore, in the concrete implementation of attribute graphs the value of the property
+id is reserved and chosen to encode such an identifier. We also create the uniqueness
+constraint on the values of this property for every namespace (corresponding to G and T ,
+i.e. the ids of the nodes of the same graph are required to be unique) with the following
+two queries:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">CREATE</span> <span class="n">CONSTRAINT</span> <span class="n">ON</span> <span class="p">(</span><span class="n">n</span><span class="p">:</span><span class="n">Person</span><span class="p">)</span> <span class="n">ASSERT</span> <span class="n">n</span><span class="o">.</span><span class="n">id</span> <span class="n">IS</span> <span class="n">UNIQUE</span>
+</pre></div>
+</div>
+<p>Now we can add nodes/edges to the graph using NetworkX-like interface provided by Neo4jGraph. For example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">nodes</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="p">(</span><span class="s2">&quot;a&quot;</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;Jack&quot;</span><span class="p">,</span> <span class="s2">&quot;age&quot;</span><span class="p">:</span> <span class="mi">23</span><span class="p">,</span>
+           <span class="s2">&quot;hobby&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;hiking&quot;</span><span class="p">,</span> <span class="s2">&quot;music&quot;</span><span class="p">},</span> <span class="s2">&quot;weight&quot;</span><span class="p">:</span> <span class="mi">75</span><span class="p">}),</span>
+    <span class="p">(</span><span class="s2">&quot;b&quot;</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;Bob&quot;</span><span class="p">,</span> <span class="s2">&quot;age&quot;</span><span class="p">:</span> <span class="mi">24</span><span class="p">,</span>
+           <span class="s2">&quot;hobby&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;sport&quot;</span><span class="p">,</span> <span class="s2">&quot;music&quot;</span><span class="p">},</span> <span class="s2">&quot;height&quot;</span><span class="p">:</span> <span class="mi">178</span><span class="p">}),</span>
+    <span class="s2">&quot;c&quot;</span><span class="p">,</span>
+    <span class="p">(</span><span class="s2">&quot;d&quot;</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;Paul&quot;</span><span class="p">}),</span> <span class="s2">&quot;e&quot;</span><span class="p">,</span> <span class="s2">&quot;f&quot;</span>
+<span class="p">]</span>
+<span class="n">edges</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="p">(</span><span class="s2">&quot;a&quot;</span><span class="p">,</span> <span class="s2">&quot;b&quot;</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;friends&quot;</span><span class="p">,</span> <span class="s2">&quot;colleagues&quot;</span><span class="p">}}),</span>
+    <span class="p">(</span><span class="s2">&quot;d&quot;</span><span class="p">,</span> <span class="s2">&quot;b&quot;</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;enemies&quot;</span><span class="p">}),</span>
+    <span class="p">(</span><span class="s2">&quot;a&quot;</span><span class="p">,</span> <span class="s2">&quot;c&quot;</span><span class="p">),</span>
+    <span class="p">(</span><span class="s2">&quot;d&quot;</span><span class="p">,</span> <span class="s2">&quot;a&quot;</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;friends&quot;</span><span class="p">}),</span>
+    <span class="p">(</span><span class="s2">&quot;e&quot;</span><span class="p">,</span> <span class="s2">&quot;a&quot;</span><span class="p">),</span>
+    <span class="p">(</span><span class="s2">&quot;f&quot;</span><span class="p">,</span> <span class="s2">&quot;d&quot;</span><span class="p">)</span>
+<span class="p">]</span>
+<span class="n">g</span><span class="o">.</span><span class="n">add_nodes_from</span><span class="p">(</span><span class="n">nodes</span><span class="p">)</span>
+<span class="n">g</span><span class="o">.</span><span class="n">add_edges_from</span><span class="p">(</span><span class="n">edges</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>We can also access nodes/edges in a similar way:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">g</span><span class="o">.</span><span class="n">nodes</span><span class="p">()</span>
+<span class="go">[&#39;a&#39;, &#39;b&#39;, &#39;c&#39;, &#39;d&#39;, &#39;e&#39;, &#39;f&#39;, &#39;x&#39;]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">g</span><span class="o">.</span><span class="n">edges</span><span class="p">()</span>
+<span class="go">[(&#39;a&#39;, &#39;b&#39;),</span>
+<span class="go"> (&#39;a&#39;, &#39;c&#39;),</span>
+<span class="go"> (&#39;d&#39;, &#39;b&#39;),</span>
+<span class="go"> (&#39;d&#39;, &#39;a&#39;),</span>
+<span class="go"> (&#39;e&#39;, &#39;a&#39;),</span>
+<span class="go"> (&#39;f&#39;, &#39;d&#39;),</span>
+<span class="go"> (&#39;x&#39;, &#39;c&#39;)]</span>
+</pre></div>
+</div>
+<p>as well as node/edge attributes:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">g</span><span class="o">.</span><span class="n">get_node</span><span class="p">(</span><span class="s2">&quot;a&quot;</span><span class="p">)</span>
+<span class="go">{&#39;age&#39;: {23}, &#39;hobby&#39;: {&#39;hiking&#39;, &#39;music&#39;}, &#39;name&#39;: {&#39;Jack&#39;}, &#39;weight&#39;: {75}}</span>
+</pre></div>
+</div>
+<p>To get node’s properties on the level of the DB ReGraph performs the following Cypher query:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">MATCH</span> <span class="p">(</span><span class="n">n</span><span class="p">:</span><span class="n">node</span> <span class="p">{</span> <span class="nb">id</span><span class="p">:</span> <span class="s1">&#39;a&#39;</span> <span class="p">})</span>
+<span class="n">RETURN</span> <span class="n">properties</span><span class="p">(</span><span class="n">n</span><span class="p">)</span> <span class="k">as</span> <span class="n">attributes</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="primitive-graph-transformations-through-neo4jgraph">
+<h4>Primitive graph transformations through Neo4jGraph<a class="headerlink" href="#primitive-graph-transformations-through-neo4jgraph" title="Permalink to this headline">¶</a></h4>
+<p>ReGraph provides a set of utils (implemented as methods of Neo4jGraph) for node/edge/attribute addition/removal, node cloning and merging. Under the hood of all these utils lie (automatically) generated Cypher queries produced and executed by ReGraph using the DB connection associated with the driver inside of the Neo4jGraph object.</p>
+<p><strong>Attention:</strong> on the current stage of its development, ReGraph assumes that the underlying graphs are <strong>simple</strong> (no multuple edges allowed).</p>
+<p>For example, we can do the following:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">g</span><span class="o">.</span><span class="n">add_node</span><span class="p">(</span><span class="s2">&quot;x&quot;</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;Roberto&quot;</span><span class="p">})</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">g</span><span class="o">.</span><span class="n">add_edge</span><span class="p">(</span><span class="s2">&quot;x&quot;</span><span class="p">,</span> <span class="s2">&quot;c&quot;</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;friends&quot;</span><span class="p">,</span> <span class="s2">&quot;colleagues&quot;</span><span class="p">},</span> <span class="s2">&quot;since&quot;</span><span class="p">:</span> <span class="mi">1993</span><span class="p">})</span>
+</pre></div>
+</div>
+<p>We can clone and merge nodes as well:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">clone_res</span> <span class="o">=</span> <span class="n">g</span><span class="o">.</span><span class="n">clone_node</span><span class="p">(</span><span class="s1">&#39;a&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">clone_res</span><span class="p">)</span>
+<span class="go">a1</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">g</span><span class="o">.</span><span class="n">get_node</span><span class="p">(</span><span class="n">clone_res</span><span class="p">)</span>
+<span class="go">{&#39;name&#39;: {&#39;Jack&#39;}, &#39;weight&#39;: {75}, &#39;age&#39;: {23}, &#39;hobby&#39;: {&#39;hiking&#39;, &#39;music&#39;}}</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">g</span><span class="o">.</span><span class="n">get_edge</span><span class="p">(</span><span class="n">clone_res</span><span class="p">,</span> <span class="s1">&#39;b&#39;</span><span class="p">)</span>
+<span class="go">{&#39;type&#39;: {&#39;friends&#39;, &#39;colleagues&#39;}}</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">merge_res</span> <span class="o">=</span> <span class="n">g</span><span class="o">.</span><span class="n">merge_nodes1</span><span class="p">([</span><span class="s2">&quot;a&quot;</span><span class="p">,</span> <span class="s2">&quot;b&quot;</span><span class="p">])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">g</span><span class="o">.</span><span class="n">get_node</span><span class="p">(</span><span class="n">merge_res</span><span class="p">)</span>
+<span class="go">{&#39;name&#39;: {&#39;Jack&#39;, &#39;Bob&#39;}, &#39;weight&#39;: {75}, &#39;age&#39;: {24, 23}, &#39;height&#39;: {178}, &#39;hobby&#39;: {&#39;hiking&#39;, &#39;music&#39;, &#39;sport&#39;}}</span>
+</pre></div>
+</div>
+<p>You can find all the available utils in <span class="xref std std-ref">neo4j_graphs</span>.</p>
+</div>
+<div class="section" id="rewriting-neo4jgraphs">
+<h4>Rewriting Neo4jGraphs<a class="headerlink" href="#rewriting-neo4jgraphs" title="Permalink to this headline">¶</a></h4>
+<p>Finally, we can perform rewriting on property graphs manipulated by Neo4jGraph objects in a similar way to the NetworkX graphs.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">regraph</span> <span class="k">import</span> <span class="n">Rule</span>
+
+
+<span class="n">pattern</span> <span class="o">=</span> <span class="n">nx</span><span class="o">.</span><span class="n">DiGraph</span><span class="p">()</span>
+<span class="n">pattern</span><span class="o">.</span><span class="n">add_nodes_from</span><span class="p">([</span><span class="s2">&quot;x&quot;</span><span class="p">,</span> <span class="s2">&quot;y&quot;</span><span class="p">,</span> <span class="s2">&quot;z&quot;</span><span class="p">])</span>
+<span class="n">pattern</span><span class="o">.</span><span class="n">add_edges_from</span><span class="p">([(</span><span class="s2">&quot;y&quot;</span><span class="p">,</span> <span class="s2">&quot;x&quot;</span><span class="p">),</span> <span class="p">(</span><span class="s2">&quot;y&quot;</span><span class="p">,</span> <span class="s2">&quot;z&quot;</span><span class="p">),</span> <span class="p">(</span><span class="s2">&quot;z&quot;</span><span class="p">,</span> <span class="s2">&quot;z&quot;</span><span class="p">)])</span>
+
+<span class="n">rule</span> <span class="o">=</span> <span class="n">Rule</span><span class="o">.</span><span class="n">from_transform</span><span class="p">(</span><span class="n">pattern</span><span class="p">)</span>
+<span class="n">clone_name1</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">rule</span><span class="o">.</span><span class="n">inject_clone_node</span><span class="p">(</span><span class="s2">&quot;y&quot;</span><span class="p">)</span>
+<span class="n">clone_name2</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">rule</span><span class="o">.</span><span class="n">inject_clone_node</span><span class="p">(</span><span class="s2">&quot;y&quot;</span><span class="p">)</span>
+<span class="n">rule</span><span class="o">.</span><span class="n">inject_remove_edge</span><span class="p">(</span><span class="n">clone_name2</span><span class="p">,</span> <span class="s2">&quot;z&quot;</span><span class="p">)</span>
+<span class="n">rule</span><span class="o">.</span><span class="n">inject_remove_node</span><span class="p">(</span><span class="s2">&quot;x&quot;</span><span class="p">)</span>
+<span class="n">rule</span><span class="o">.</span><span class="n">inject_add_node</span><span class="p">(</span><span class="s2">&quot;new_node&quot;</span><span class="p">)</span>
+<span class="n">rule</span><span class="o">.</span><span class="n">inject_add_edge</span><span class="p">(</span><span class="s2">&quot;new_node&quot;</span><span class="p">,</span> <span class="s2">&quot;z&quot;</span><span class="p">)</span>
+<span class="n">instances</span> <span class="o">=</span> <span class="n">g</span><span class="o">.</span><span class="n">find_matching</span><span class="p">(</span><span class="n">pattern</span><span class="p">)</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">instances</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+<span class="go">{&#39;x&#39;: &#39;c&#39;, &#39;y&#39;: &#39;a_clone&#39;, &#39;z&#39;: &#39;a_b_d&#39;}</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">rhs_g</span> <span class="o">=</span> <span class="n">g</span><span class="o">.</span><span class="n">rewrite</span><span class="p">(</span><span class="n">rule</span><span class="p">,</span> <span class="n">instances</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">rhs_g</span>
+<span class="go">{&#39;y2&#39;: &#39;166399&#39;,</span>
+<span class="go"> &#39;y1&#39;: &#39;166398&#39;,</span>
+<span class="go"> &#39;new_node&#39;: &#39;166400&#39;,</span>
+<span class="go"> &#39;y&#39;: &#39;a_clone&#39;,</span>
+<span class="go"> &#39;z&#39;: &#39;a_b_d&#39;}</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="typedneo4jgraph-object">
+<span id="typed-neo4j-graph-tutorial"></span><h3>TypedNeo4jGraph object<a class="headerlink" href="#typedneo4jgraph-object" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="neo4jhierarchy-object">
+<span id="neo4j-hierarchy-tutorial"></span><h3>Neo4jHierarchy object<a class="headerlink" href="#neo4jhierarchy-object" title="Permalink to this headline">¶</a></h3>
+</div>
+</div>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">ReGraph</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2018, Eugenia Oshurko.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.2.0</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="../_sources/old/tutorial3.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

@@ -1,0 +1,308 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>Audit trail &#8212; ReGraph 3.0 documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="module-regraph.audit">
+<span id="audit-trail"></span><span id="audit"></span><h1>Audit trail<a class="headerlink" href="#module-regraph.audit" title="Permalink to this headline">¶</a></h1>
+<p>Audit trails for graphs and graph hierarchies.</p>
+<p>This module containes a collection of utils for audit trails that
+provide version control for transformations of graphs and graph hierarchies:</p>
+<ul class="simple">
+<li><p><cite>Versioning</cite>, abstract class for in-memory versioning of objects;</p></li>
+<li><p><cite>VersionedGraph</cite>, wrapper around graph objects in ReGraph that allows to track their audit trail;</p></li>
+<li><p><cite>VersionedHierarchy</cite>, wrapper around hierarchy objects in ReGraph that allows to track their audit trail;</p></li>
+</ul>
+<dl class="class">
+<dt id="regraph.audit.VersionedGraph">
+<em class="property">class </em><code class="sig-prename descclassname">regraph.audit.</code><code class="sig-name descname">VersionedGraph</code><span class="sig-paren">(</span><em class="sig-param">graph</em>, <em class="sig-param">init_branch='master'</em>, <em class="sig-param">current_branch=None</em>, <em class="sig-param">deltas=None</em>, <em class="sig-param">heads=None</em>, <em class="sig-param">revision_graph=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/audit.html#VersionedGraph"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.audit.VersionedGraph" title="Permalink to this definition">¶</a></dt>
+<dd><p>Class for versioned hierarchies.</p>
+<p class="rubric">Methods</p>
+<table class="longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#regraph.audit.VersionedGraph.from_json" title="regraph.audit.VersionedGraph.from_json"><code class="xref py py-obj docutils literal notranslate"><span class="pre">from_json</span></code></a>(graph, json_data)</p></td>
+<td><p>Retrieve versioning object from JSON.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#regraph.audit.VersionedGraph.rewrite" title="regraph.audit.VersionedGraph.rewrite"><code class="xref py py-obj docutils literal notranslate"><span class="pre">rewrite</span></code></a>(self, rule[, instance, message])</p></td>
+<td><p>Rewrite the versioned graph and commit.</p></td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="regraph.audit.VersionedGraph.from_json">
+<em class="property">classmethod </em><code class="sig-name descname">from_json</code><span class="sig-paren">(</span><em class="sig-param">graph</em>, <em class="sig-param">json_data</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/audit.html#VersionedGraph.from_json"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.audit.VersionedGraph.from_json" title="Permalink to this definition">¶</a></dt>
+<dd><p>Retrieve versioning object from JSON.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.audit.VersionedGraph.rewrite">
+<code class="sig-name descname">rewrite</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">rule</em>, <em class="sig-param">instance=None</em>, <em class="sig-param">message=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/audit.html#VersionedGraph.rewrite"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.audit.VersionedGraph.rewrite" title="Permalink to this definition">¶</a></dt>
+<dd><p>Rewrite the versioned graph and commit.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="regraph.audit.VersionedHierarchy">
+<em class="property">class </em><code class="sig-prename descclassname">regraph.audit.</code><code class="sig-name descname">VersionedHierarchy</code><span class="sig-paren">(</span><em class="sig-param">hierarchy</em>, <em class="sig-param">init_branch='master'</em>, <em class="sig-param">current_branch=None</em>, <em class="sig-param">deltas=None</em>, <em class="sig-param">heads=None</em>, <em class="sig-param">revision_graph=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/audit.html#VersionedHierarchy"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.audit.VersionedHierarchy" title="Permalink to this definition">¶</a></dt>
+<dd><p>Class for versioned hierarchies.</p>
+<p class="rubric">Methods</p>
+<table class="longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#regraph.audit.VersionedHierarchy.from_json" title="regraph.audit.VersionedHierarchy.from_json"><code class="xref py py-obj docutils literal notranslate"><span class="pre">from_json</span></code></a>(hierarchy, json_data)</p></td>
+<td><p>Retrieve versioning object from JSON.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#regraph.audit.VersionedHierarchy.rewrite" title="regraph.audit.VersionedHierarchy.rewrite"><code class="xref py py-obj docutils literal notranslate"><span class="pre">rewrite</span></code></a>(self, graph_id, rule[, instance, …])</p></td>
+<td><p>Rewrite the versioned hierarchy and commit.</p></td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="regraph.audit.VersionedHierarchy.from_json">
+<em class="property">classmethod </em><code class="sig-name descname">from_json</code><span class="sig-paren">(</span><em class="sig-param">hierarchy</em>, <em class="sig-param">json_data</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/audit.html#VersionedHierarchy.from_json"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.audit.VersionedHierarchy.from_json" title="Permalink to this definition">¶</a></dt>
+<dd><p>Retrieve versioning object from JSON.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.audit.VersionedHierarchy.rewrite">
+<code class="sig-name descname">rewrite</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">graph_id</em>, <em class="sig-param">rule</em>, <em class="sig-param">instance=None</em>, <em class="sig-param">p_typing=None</em>, <em class="sig-param">rhs_typing=None</em>, <em class="sig-param">strict=False</em>, <em class="sig-param">message=''</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/audit.html#VersionedHierarchy.rewrite"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.audit.VersionedHierarchy.rewrite" title="Permalink to this definition">¶</a></dt>
+<dd><p>Rewrite the versioned hierarchy and commit.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="regraph.audit.Versioning">
+<em class="property">class </em><code class="sig-prename descclassname">regraph.audit.</code><code class="sig-name descname">Versioning</code><span class="sig-paren">(</span><em class="sig-param">init_branch='master'</em>, <em class="sig-param">current_branch=None</em>, <em class="sig-param">deltas=None</em>, <em class="sig-param">heads=None</em>, <em class="sig-param">revision_graph=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/audit.html#Versioning"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.audit.Versioning" title="Permalink to this definition">¶</a></dt>
+<dd><p>Class for version control.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Attributes</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>_current_branch</strong></dt><dd><p>Name of the current branch</p>
+</dd>
+<dt><strong>_deltas</strong><span class="classifier">dict</span></dt><dd><p>Dictionary with delta’s to all other branches</p>
+</dd>
+<dt><strong>_heads</strong><span class="classifier">dict</span></dt><dd></dd>
+<dt><strong>_revision_graph</strong><span class="classifier">networkx.DiGraph</span></dt><dd></dd>
+</dl>
+</dd>
+</dl>
+<p class="rubric">Methods</p>
+<table class="longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">_compose_deltas</span></code>(self, delta1, delta2)</p></td>
+<td><p>Abstract method for composing deltas.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">_invert_delta</span></code>(self, delta1)</p></td>
+<td><p>Abstract method for inverting deltas.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">_merge_into_current_branch</span></code>(self, delta)</p></td>
+<td><p>Abstract method for merging a branch into the current one.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">_create_identity_delta</span></code>(self)</p></td>
+<td><p>Abstract method for creating an identity-delta.</p></td>
+</tr>
+</tbody>
+</table>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 77%" />
+<col style="width: 23%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>branches()</strong></p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p><strong>current_branch()</strong></p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><strong>commit(graph, rule, instance)</strong></p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p><strong>branch(new_branch)</strong></p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><strong>switch_branch(branch)</strong></p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p><strong>merge(branch1, branch2)</strong></p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><strong>_compose_delta_path</strong></p></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="regraph.audit.Versioning.branch">
+<code class="sig-name descname">branch</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">new_branch</em>, <em class="sig-param">message=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/audit.html#Versioning.branch"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.audit.Versioning.branch" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a new branch with identity commit.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.audit.Versioning.branches">
+<code class="sig-name descname">branches</code><span class="sig-paren">(</span><em class="sig-param">self</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/audit.html#Versioning.branches"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.audit.Versioning.branches" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return list of branches.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.audit.Versioning.commit">
+<code class="sig-name descname">commit</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">delta</em>, <em class="sig-param">message=None</em>, <em class="sig-param">previous_commit=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/audit.html#Versioning.commit"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.audit.Versioning.commit" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add a commit.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.audit.Versioning.current_branch">
+<code class="sig-name descname">current_branch</code><span class="sig-paren">(</span><em class="sig-param">self</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/audit.html#Versioning.current_branch"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.audit.Versioning.current_branch" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the name of the current branch.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.audit.Versioning.from_json">
+<code class="sig-name descname">from_json</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">json_data</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/audit.html#Versioning.from_json"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.audit.Versioning.from_json" title="Permalink to this definition">¶</a></dt>
+<dd><p>Retrieve versioning object from JSON.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.audit.Versioning.initial_commit">
+<code class="sig-name descname">initial_commit</code><span class="sig-paren">(</span><em class="sig-param">self</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/audit.html#Versioning.initial_commit"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.audit.Versioning.initial_commit" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the id of the initial commit.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.audit.Versioning.merge_with">
+<code class="sig-name descname">merge_with</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">branch</em>, <em class="sig-param">message=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/audit.html#Versioning.merge_with"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.audit.Versioning.merge_with" title="Permalink to this definition">¶</a></dt>
+<dd><p>Merge the current branch with the specified one.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.audit.Versioning.print_history">
+<code class="sig-name descname">print_history</code><span class="sig-paren">(</span><em class="sig-param">self</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/audit.html#Versioning.print_history"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.audit.Versioning.print_history" title="Permalink to this definition">¶</a></dt>
+<dd><p>Print the history of commits.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.audit.Versioning.rollback">
+<code class="sig-name descname">rollback</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">rollback_commit</em>, <em class="sig-param">message=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/audit.html#Versioning.rollback"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.audit.Versioning.rollback" title="Permalink to this definition">¶</a></dt>
+<dd><p>Rollback the current branch to a specific commit.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.audit.Versioning.switch_branch">
+<code class="sig-name descname">switch_branch</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">branch</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/audit.html#Versioning.switch_branch"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.audit.Versioning.switch_branch" title="Permalink to this definition">¶</a></dt>
+<dd><p>Switch branches.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.audit.Versioning.to_json">
+<code class="sig-name descname">to_json</code><span class="sig-paren">(</span><em class="sig-param">self</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/audit.html#Versioning.to_json"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.audit.Versioning.to_json" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert versioning object to JSON.</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">ReGraph</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2018, Eugenia Oshurko.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.2.0</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="_sources/audit.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

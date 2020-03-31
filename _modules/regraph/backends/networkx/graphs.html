@@ -1,0 +1,587 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>regraph.backends.networkx.graphs &#8212; ReGraph 3.0 documentation</title>
+    <link rel="stylesheet" href="../../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../../../" src="../../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+   
+  <link rel="stylesheet" href="../../../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for regraph.backends.networkx.graphs</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;NetworkX-based in-memory graph objects.</span>
+
+<span class="sd">This module implements data structures wrapping the `networkx.DiGraph` class.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">itertools</span>
+<span class="kn">import</span> <span class="nn">networkx</span> <span class="k">as</span> <span class="nn">nx</span>
+<span class="kn">from</span> <span class="nn">networkx.algorithms</span> <span class="k">import</span> <span class="n">isomorphism</span>
+
+<span class="kn">import</span> <span class="nn">warnings</span>
+
+<span class="kn">from</span> <span class="nn">regraph.exceptions</span> <span class="k">import</span> <span class="p">(</span><span class="n">ReGraphError</span><span class="p">,</span>
+                                <span class="n">GraphError</span><span class="p">,</span>
+                                <span class="n">GraphAttrsWarning</span><span class="p">,</span>
+                                <span class="p">)</span>
+<span class="kn">from</span> <span class="nn">regraph.graphs</span> <span class="k">import</span> <span class="n">Graph</span>
+
+<span class="kn">from</span> <span class="nn">regraph.utils</span> <span class="k">import</span> <span class="p">(</span><span class="n">normalize_attrs</span><span class="p">,</span>
+                           <span class="n">safe_deepcopy_dict</span><span class="p">,</span>
+                           <span class="n">valid_attributes</span><span class="p">,</span>
+                           <span class="p">)</span>
+
+
+<div class="viewcode-block" id="NXGraph"><a class="viewcode-back" href="../../../../nxgraphs.html#regraph.backends.networkx.graphs.NXGraph">[docs]</a><span class="k">class</span> <span class="nc">NXGraph</span><span class="p">(</span><span class="n">Graph</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Wrapper for NetworkX directed graphs.&quot;&quot;&quot;</span>
+
+    <span class="n">node_dict_factory</span> <span class="o">=</span> <span class="nb">dict</span>
+    <span class="n">adj_dict_factory</span> <span class="o">=</span> <span class="nb">dict</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">incoming_graph_data</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">attr</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Initialize NetworkX graph.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">node_dict_factory</span> <span class="o">=</span> <span class="n">ndf</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">node_dict_factory</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">adj_dict_factory</span> <span class="o">=</span> <span class="n">adf</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">adj_dict_factory</span>
+
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_graph</span> <span class="o">=</span> <span class="n">nx</span><span class="o">.</span><span class="n">DiGraph</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">node</span> <span class="o">=</span> <span class="n">ndf</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">adj</span> <span class="o">=</span> <span class="n">adf</span><span class="p">()</span>
+
+<div class="viewcode-block" id="NXGraph.nodes"><a class="viewcode-back" href="../../../../nxgraphs.html#regraph.backends.networkx.graphs.NXGraph.nodes">[docs]</a>    <span class="k">def</span> <span class="nf">nodes</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return the list of nodes.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">data</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">[(</span><span class="n">n</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_node</span><span class="p">(</span><span class="n">n</span><span class="p">))</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_graph</span><span class="o">.</span><span class="n">nodes</span><span class="p">()]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_graph</span><span class="o">.</span><span class="n">nodes</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="NXGraph.edges"><a class="viewcode-back" href="../../../../nxgraphs.html#regraph.backends.networkx.graphs.NXGraph.edges">[docs]</a>    <span class="k">def</span> <span class="nf">edges</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return the list of edges.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">data</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">[(</span><span class="n">s</span><span class="p">,</span> <span class="n">t</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_edge</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">t</span><span class="p">))</span> <span class="k">for</span> <span class="n">s</span><span class="p">,</span> <span class="n">t</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">edges</span><span class="p">()]</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_graph</span><span class="o">.</span><span class="n">edges</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="NXGraph.get_node"><a class="viewcode-back" href="../../../../nxgraphs.html#regraph.backends.networkx.graphs.NXGraph.get_node">[docs]</a>    <span class="k">def</span> <span class="nf">get_node</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Get node attributes.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        n : hashable</span>
+<span class="sd">            Node id.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_graph</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">n</span><span class="p">]</span></div>
+
+<div class="viewcode-block" id="NXGraph.get_edge"><a class="viewcode-back" href="../../../../nxgraphs.html#regraph.backends.networkx.graphs.NXGraph.get_edge">[docs]</a>    <span class="k">def</span> <span class="nf">get_edge</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">s</span><span class="p">,</span> <span class="n">t</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Get edge attributes.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        graph : networkx.(Di)Graph</span>
+<span class="sd">        s : hashable, source node id.</span>
+<span class="sd">        t : hashable, target node id.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_graph</span><span class="o">.</span><span class="n">adj</span><span class="p">[</span><span class="n">s</span><span class="p">][</span><span class="n">t</span><span class="p">]</span></div>
+
+<div class="viewcode-block" id="NXGraph.add_node"><a class="viewcode-back" href="../../../../nxgraphs.html#regraph.backends.networkx.graphs.NXGraph.add_node">[docs]</a>    <span class="k">def</span> <span class="nf">add_node</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node_id</span><span class="p">,</span> <span class="n">attrs</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Abstract method for adding a node.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        node_id : hashable</span>
+<span class="sd">            Prefix that is prepended to the new unique name.</span>
+<span class="sd">        attrs : dict, optional</span>
+<span class="sd">            Node attributes.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">attrs</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">new_attrs</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">new_attrs</span> <span class="o">=</span> <span class="n">safe_deepcopy_dict</span><span class="p">(</span><span class="n">attrs</span><span class="p">)</span>
+            <span class="n">normalize_attrs</span><span class="p">(</span><span class="n">new_attrs</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">node_id</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_graph</span><span class="o">.</span><span class="n">add_node</span><span class="p">(</span><span class="n">node_id</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">node_id</span><span class="p">]</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+            <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">new_attrs</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_graph</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">node_id</span><span class="p">][</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">v</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">node_id</span><span class="p">][</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">v</span>
+            <span class="k">return</span> <span class="n">node_id</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">GraphError</span><span class="p">(</span><span class="s2">&quot;Node &#39;</span><span class="si">{}</span><span class="s2">&#39; already exists!&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">node_id</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="NXGraph.remove_node"><a class="viewcode-back" href="../../../../nxgraphs.html#regraph.backends.networkx.graphs.NXGraph.remove_node">[docs]</a>    <span class="k">def</span> <span class="nf">remove_node</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node_id</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Remove node.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        graph : networkx.(Di)Graph</span>
+<span class="sd">        node_id : hashable, node to remove.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">node_id</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_graph</span><span class="o">.</span><span class="n">remove_node</span><span class="p">(</span><span class="n">node_id</span><span class="p">)</span>
+            <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">node_id</span><span class="p">]</span>
+
+            <span class="k">if</span> <span class="n">node_id</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">adj</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">adj</span><span class="p">[</span><span class="n">node_id</span><span class="p">]</span>
+
+            <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">adj</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="k">if</span> <span class="n">v</span> <span class="o">==</span> <span class="n">node_id</span><span class="p">:</span>
+                    <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">adj</span><span class="p">[</span><span class="n">k</span><span class="p">][</span><span class="n">v</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">GraphError</span><span class="p">(</span><span class="s2">&quot;Node &#39;</span><span class="si">{}</span><span class="s2">&#39; does not exist!&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">node_id</span><span class="p">))</span>
+        <span class="k">return</span></div>
+
+<div class="viewcode-block" id="NXGraph.add_edge"><a class="viewcode-back" href="../../../../nxgraphs.html#regraph.backends.networkx.graphs.NXGraph.add_edge">[docs]</a>    <span class="k">def</span> <span class="nf">add_edge</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">s</span><span class="p">,</span> <span class="n">t</span><span class="p">,</span> <span class="n">attrs</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">attr</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Add an edge to a graph.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        graph : networkx.(Di)Graph</span>
+<span class="sd">        s : hashable, source node id.</span>
+<span class="sd">        t : hashable, target node id.</span>
+<span class="sd">        attrs : dict</span>
+<span class="sd">            Edge attributes.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">attrs</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">attrs</span> <span class="o">=</span> <span class="n">attr</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">attrs</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">attr</span><span class="p">)</span>
+            <span class="k">except</span> <span class="ne">AttributeError</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">ReGraphError</span><span class="p">(</span>
+                    <span class="s2">&quot;The attr_dict argument must be a dictionary.&quot;</span>
+                <span class="p">)</span>
+
+        <span class="n">new_attrs</span> <span class="o">=</span> <span class="n">safe_deepcopy_dict</span><span class="p">(</span><span class="n">attrs</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">s</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
+            <span class="k">raise</span> <span class="n">GraphError</span><span class="p">(</span><span class="s2">&quot;Node &#39;</span><span class="si">{}</span><span class="s2">&#39; does not exist!&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">s</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">t</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
+            <span class="k">raise</span> <span class="n">GraphError</span><span class="p">(</span><span class="s2">&quot;Node &#39;</span><span class="si">{}</span><span class="s2">&#39; does not exist!&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">t</span><span class="p">))</span>
+        <span class="n">normalize_attrs</span><span class="p">(</span><span class="n">new_attrs</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">t</span><span class="p">)</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">edges</span><span class="p">():</span>
+            <span class="k">raise</span> <span class="n">GraphError</span><span class="p">(</span>
+                <span class="s2">&quot;Edge &#39;</span><span class="si">{}</span><span class="s2">&#39;-&gt;&#39;</span><span class="si">{}</span><span class="s2">&#39; already exists!&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">t</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_graph</span><span class="o">.</span><span class="n">add_edge</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">t</span><span class="p">,</span> <span class="o">**</span><span class="n">new_attrs</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">s</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">adj</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">adj</span><span class="p">[</span><span class="n">s</span><span class="p">][</span><span class="n">t</span><span class="p">]</span> <span class="o">=</span> <span class="n">new_attrs</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">adj</span><span class="p">[</span><span class="n">s</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="n">t</span><span class="p">:</span> <span class="n">new_attrs</span><span class="p">}</span></div>
+
+<div class="viewcode-block" id="NXGraph.remove_edge"><a class="viewcode-back" href="../../../../nxgraphs.html#regraph.backends.networkx.graphs.NXGraph.remove_edge">[docs]</a>    <span class="k">def</span> <span class="nf">remove_edge</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">s</span><span class="p">,</span> <span class="n">t</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Remove edge from the graph.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        graph : networkx.(Di)Graph</span>
+<span class="sd">        s : hashable, source node id.</span>
+<span class="sd">        t : hashable, target node id.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">t</span><span class="p">)</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">edges</span><span class="p">():</span>
+            <span class="k">raise</span> <span class="n">GraphError</span><span class="p">(</span>
+                <span class="s2">&quot;Edge &#39;</span><span class="si">{}</span><span class="s2">-&gt;</span><span class="si">{}</span><span class="s2">&#39; does not exist!&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">t</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_graph</span><span class="o">.</span><span class="n">remove_edge</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">t</span><span class="p">)</span>
+        <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">adj</span><span class="p">[</span><span class="n">s</span><span class="p">][</span><span class="n">t</span><span class="p">]</span></div>
+
+<div class="viewcode-block" id="NXGraph.update_node_attrs"><a class="viewcode-back" href="../../../../nxgraphs.html#regraph.backends.networkx.graphs.NXGraph.update_node_attrs">[docs]</a>    <span class="k">def</span> <span class="nf">update_node_attrs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node_id</span><span class="p">,</span> <span class="n">attrs</span><span class="p">,</span> <span class="n">normalize</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Update attributes of a node.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        node_id : hashable, node to update.</span>
+<span class="sd">        attrs : dict</span>
+<span class="sd">            New attributes to assign to the node</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">new_attrs</span> <span class="o">=</span> <span class="n">safe_deepcopy_dict</span><span class="p">(</span><span class="n">attrs</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">node_id</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
+            <span class="k">raise</span> <span class="n">GraphError</span><span class="p">(</span>
+                <span class="s2">&quot;Node &#39;</span><span class="si">{}</span><span class="s2">&#39; does not exist!&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">node_id</span><span class="p">))</span>
+        <span class="k">elif</span> <span class="n">new_attrs</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+                <span class="s2">&quot;You want to update &#39;</span><span class="si">{}</span><span class="s2">&#39; attrs with an empty attrs_dict!&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                    <span class="n">node_id</span><span class="p">),</span>
+                <span class="n">GraphAttrsWarning</span>
+            <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">normalize</span> <span class="ow">is</span> <span class="kc">True</span><span class="p">:</span>
+                <span class="n">normalize_attrs</span><span class="p">(</span><span class="n">new_attrs</span><span class="p">)</span>
+            <span class="n">attrs_to_remove</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+            <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_graph</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">node_id</span><span class="p">]</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                <span class="k">if</span> <span class="n">k</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">new_attrs</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                    <span class="n">attrs_to_remove</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">k</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_graph</span><span class="o">.</span><span class="n">add_node</span><span class="p">(</span><span class="n">node_id</span><span class="p">,</span> <span class="o">**</span><span class="n">new_attrs</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">node_id</span><span class="p">]</span> <span class="o">=</span> <span class="n">new_attrs</span>
+            <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">attrs_to_remove</span><span class="p">:</span>
+                <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">_graph</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">node_id</span><span class="p">][</span><span class="n">k</span><span class="p">]</span></div>
+
+<div class="viewcode-block" id="NXGraph.update_edge_attrs"><a class="viewcode-back" href="../../../../nxgraphs.html#regraph.backends.networkx.graphs.NXGraph.update_edge_attrs">[docs]</a>    <span class="k">def</span> <span class="nf">update_edge_attrs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">s</span><span class="p">,</span> <span class="n">t</span><span class="p">,</span> <span class="n">attrs</span><span class="p">,</span> <span class="n">normalize</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Update attributes of a node.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        s : hashable, source node of the edge to update.</span>
+<span class="sd">        t : hashable, target node of the edge to update.</span>
+<span class="sd">        attrs : dict</span>
+<span class="sd">            New attributes to assign to the node</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_graph</span><span class="o">.</span><span class="n">has_edge</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">t</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="n">GraphError</span><span class="p">(</span><span class="s2">&quot;Edge &#39;</span><span class="si">{}</span><span class="s2">-&gt;</span><span class="si">{}</span><span class="s2">&#39; does not exist!&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                             <span class="n">s</span><span class="p">,</span> <span class="n">t</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">attrs</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+                <span class="s2">&quot;You want to update &#39;</span><span class="si">{}</span><span class="s2">-&gt;</span><span class="si">{}</span><span class="s2">&#39; attrs with an empty attrs_dict&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                    <span class="n">s</span><span class="p">,</span> <span class="n">t</span><span class="p">),</span> <span class="n">GraphAttrsWarning</span>
+            <span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">normalize</span> <span class="ow">is</span> <span class="kc">True</span><span class="p">:</span>
+            <span class="n">normalize_attrs</span><span class="p">(</span><span class="n">attrs</span><span class="p">)</span>
+        <span class="n">attrs_to_remove</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_graph</span><span class="o">.</span><span class="n">adj</span><span class="p">[</span><span class="n">s</span><span class="p">][</span><span class="n">t</span><span class="p">]</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">k</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">attrs</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                <span class="n">attrs_to_remove</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">k</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_graph</span><span class="o">.</span><span class="n">add_edge</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">t</span><span class="p">,</span> <span class="o">**</span><span class="n">attrs</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">adj</span><span class="p">[</span><span class="n">s</span><span class="p">][</span><span class="n">t</span><span class="p">]</span> <span class="o">=</span> <span class="n">attrs</span>
+        <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">attrs_to_remove</span><span class="p">:</span>
+            <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">_graph</span><span class="o">.</span><span class="n">adj</span><span class="p">[</span><span class="n">s</span><span class="p">][</span><span class="n">t</span><span class="p">][</span><span class="n">k</span><span class="p">]</span></div>
+
+<div class="viewcode-block" id="NXGraph.successors"><a class="viewcode-back" href="../../../../nxgraphs.html#regraph.backends.networkx.graphs.NXGraph.successors">[docs]</a>    <span class="k">def</span> <span class="nf">successors</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node_id</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return the set of successors.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_graph</span><span class="o">.</span><span class="n">successors</span><span class="p">(</span><span class="n">node_id</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="NXGraph.predecessors"><a class="viewcode-back" href="../../../../nxgraphs.html#regraph.backends.networkx.graphs.NXGraph.predecessors">[docs]</a>    <span class="k">def</span> <span class="nf">predecessors</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node_id</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return the set of predecessors.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">node_id</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
+            <span class="k">raise</span> <span class="n">GraphError</span><span class="p">(</span>
+                <span class="s2">&quot;Node &#39;</span><span class="si">{}</span><span class="s2">&#39; does not exist in the graph&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                    <span class="n">node_id</span><span class="p">))</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_graph</span><span class="o">.</span><span class="n">predecessors</span><span class="p">(</span><span class="n">node_id</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="NXGraph.get_relabeled_graph"><a class="viewcode-back" href="../../../../nxgraphs.html#regraph.backends.networkx.graphs.NXGraph.get_relabeled_graph">[docs]</a>    <span class="k">def</span> <span class="nf">get_relabeled_graph</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mapping</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return a graph with node labeling specified in the mapping.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        graph : networkx.(Di)Graph</span>
+<span class="sd">        mapping: dict</span>
+<span class="sd">            A dictionary with keys being old node ids and their values</span>
+<span class="sd">            being new id&#39;s of the respective nodes.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        g : networkx.(Di)Graph</span>
+<span class="sd">            New graph object isomorphic to the `graph` with the relabled nodes.</span>
+
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        ReGraphError</span>
+<span class="sd">            If new id&#39;s do not define a set of distinct node id&#39;s.</span>
+
+
+<span class="sd">        See also</span>
+<span class="sd">        --------</span>
+<span class="sd">        regraph.primitives.relabel_nodes</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">g</span> <span class="o">=</span> <span class="n">nx</span><span class="o">.</span><span class="n">DiGraph</span><span class="p">()</span>
+        <span class="n">old_nodes</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">mapping</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+
+        <span class="k">for</span> <span class="n">old_node</span> <span class="ow">in</span> <span class="n">old_nodes</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">new_node</span> <span class="o">=</span> <span class="n">mapping</span><span class="p">[</span><span class="n">old_node</span><span class="p">]</span>
+            <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+                <span class="k">continue</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">g</span><span class="o">.</span><span class="n">add_node</span><span class="p">(</span>
+                    <span class="n">new_node</span><span class="p">,</span>
+                    <span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">get_node</span><span class="p">(</span><span class="n">old_node</span><span class="p">))</span>
+            <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">GraphError</span><span class="p">(</span><span class="s2">&quot;Node &#39;</span><span class="si">%s</span><span class="s2">&#39; does not exist!&quot;</span> <span class="o">%</span> <span class="n">old_node</span><span class="p">)</span>
+
+        <span class="n">new_edges</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+        <span class="n">attributes</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">s</span><span class="p">,</span> <span class="n">t</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">edges</span><span class="p">():</span>
+            <span class="n">new_edges</span><span class="o">.</span><span class="n">append</span><span class="p">((</span>
+                <span class="n">mapping</span><span class="p">[</span><span class="n">s</span><span class="p">],</span>
+                <span class="n">mapping</span><span class="p">[</span><span class="n">t</span><span class="p">]))</span>
+            <span class="n">attributes</span><span class="p">[(</span><span class="n">mapping</span><span class="p">[</span><span class="n">s</span><span class="p">],</span> <span class="n">mapping</span><span class="p">[</span><span class="n">t</span><span class="p">])]</span> <span class="o">=</span>\
+                <span class="bp">self</span><span class="o">.</span><span class="n">get_edge</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">t</span><span class="p">)</span>
+
+        <span class="n">g</span><span class="o">.</span><span class="n">add_edges_from</span><span class="p">(</span><span class="n">new_edges</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">s</span><span class="p">,</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">g</span><span class="o">.</span><span class="n">edges</span><span class="p">():</span>
+            <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">attributes</span><span class="p">[(</span><span class="n">s</span><span class="p">,</span> <span class="n">t</span><span class="p">)]</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="n">g</span><span class="o">.</span><span class="n">adj</span><span class="p">[</span><span class="n">s</span><span class="p">][</span><span class="n">t</span><span class="p">][</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">v</span>
+        <span class="k">return</span> <span class="n">g</span></div>
+
+<div class="viewcode-block" id="NXGraph.subgraph"><a class="viewcode-back" href="../../../../nxgraphs.html#regraph.backends.networkx.graphs.NXGraph.subgraph">[docs]</a>    <span class="k">def</span> <span class="nf">subgraph</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">nodes</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Get a subgraph induced by the collection of nodes.&quot;&quot;&quot;</span>
+        <span class="n">g</span> <span class="o">=</span> <span class="n">NXGraph</span><span class="p">()</span>
+        <span class="n">g</span><span class="o">.</span><span class="n">add_nodes_from</span><span class="p">([</span>
+            <span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">attrs</span><span class="p">)</span> <span class="k">for</span> <span class="n">n</span><span class="p">,</span> <span class="n">attrs</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">nodes</span><span class="p">])</span>
+        <span class="k">for</span> <span class="n">s</span><span class="p">,</span> <span class="n">t</span><span class="p">,</span> <span class="n">attrs</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">edges</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">g</span><span class="o">.</span><span class="n">nodes</span><span class="p">()</span> <span class="ow">and</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">g</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
+                <span class="n">g</span><span class="o">.</span><span class="n">add_edge</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">t</span><span class="p">,</span> <span class="n">attrs</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">g</span></div>
+
+<div class="viewcode-block" id="NXGraph.find_matching"><a class="viewcode-back" href="../../../../nxgraphs.html#regraph.backends.networkx.graphs.NXGraph.find_matching">[docs]</a>    <span class="k">def</span> <span class="nf">find_matching</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pattern</span><span class="p">,</span> <span class="n">nodes</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                      <span class="n">graph_typing</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">pattern_typing</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Find matching of a pattern in a graph.</span>
+
+<span class="sd">        This function takes as an input a graph and a pattern, optionally,</span>
+<span class="sd">        it also takes a collection of nodes specifying the subgraph of the</span>
+<span class="sd">        original graph, where the matching should be searched in, then it</span>
+<span class="sd">        searches for a matching of the pattern inside of the graph (or induced</span>
+<span class="sd">        subragh), which corresponds to solving subgraph matching problem.</span>
+<span class="sd">        The matching is defined by a map from the nodes of the pattern</span>
+<span class="sd">        to the nodes of the graph such that:</span>
+
+<span class="sd">        * edges are preserved, i.e. if there is an edge between nodes `n1`</span>
+<span class="sd">          and `n2` in the pattern, there is an edge between the nodes of</span>
+<span class="sd">          the graph that correspond to the image of `n1` and `n2`,</span>
+<span class="sd">          moreover, the attribute dictionary of the edge between `n1`</span>
+<span class="sd">          and `n2` is the subdictiotary of the edge it corresponds to</span>
+<span class="sd">          in the graph;</span>
+<span class="sd">        * the attribute dictionary of a pattern node is a subdictionary of</span>
+<span class="sd">          its image in the graph;</span>
+
+<span class="sd">        Uses `networkx.isomorphism.(Di)GraphMatcher` class, which implements</span>
+<span class="sd">        subgraph matching algorithm.</span>
+
+<span class="sd">        In addition, two parameters `graph_typing` and `pattern_typing`</span>
+<span class="sd">        can be specified. They restrict the space of admisible solutions</span>
+<span class="sd">        by checking if an isomorphic subgraph found in the input graph respects</span>
+<span class="sd">        the provided pattern typings according to the specified graph typings.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        graph : nx.(Di)Graph</span>
+<span class="sd">        pattern : nx.(Di)Graph</span>
+<span class="sd">            Pattern graph to search for</span>
+<span class="sd">        nodes : iterable, optional</span>
+<span class="sd">            Subset of nodes to search for matching</span>
+<span class="sd">        graph_typing : dict of dict, optional</span>
+<span class="sd">            Dictionary defining typing of graph nodes</span>
+<span class="sd">        pattern_typing : dict of dict, optional</span>
+<span class="sd">            Dictionary definiting typing of pattern nodes</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        instances : list of dict&#39;s</span>
+<span class="sd">            List of instances of matching found in the graph, every instance</span>
+<span class="sd">            is represented with a dictionary where keys are nodes of the</span>
+<span class="sd">            pattern, and values are corresponding nodes of the graph.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">pattern_typing</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">pattern_typing</span> <span class="o">=</span> <span class="p">{}</span>
+
+        <span class="k">if</span> <span class="n">graph_typing</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">graph_typing</span> <span class="o">=</span> <span class="p">{}</span>
+
+        <span class="c1"># check graph/pattern typing is consistent</span>
+        <span class="k">for</span> <span class="n">g</span><span class="p">,</span> <span class="n">mapping</span> <span class="ow">in</span> <span class="n">pattern_typing</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">g</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">graph_typing</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">ReGraphError</span><span class="p">(</span>
+                    <span class="s2">&quot;Graph is not typed by &#39;</span><span class="si">{}</span><span class="s2">&#39; from the specified &quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                        <span class="n">g</span><span class="p">)</span> <span class="o">+</span>
+                    <span class="s2">&quot;pattern typing&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">nodes</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">g</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_graph</span><span class="o">.</span><span class="n">subgraph</span><span class="p">(</span><span class="n">nodes</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">g</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_graph</span>
+
+        <span class="n">labels_mapping</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">([(</span><span class="n">n</span><span class="p">,</span> <span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">n</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">g</span><span class="o">.</span><span class="n">nodes</span><span class="p">())])</span>
+        <span class="n">g</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_relabeled_graph</span><span class="p">(</span><span class="n">labels_mapping</span><span class="p">)</span>
+        <span class="n">inverse_mapping</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span>
+            <span class="p">[(</span><span class="n">value</span><span class="p">,</span> <span class="n">key</span><span class="p">)</span> <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">labels_mapping</span><span class="o">.</span><span class="n">items</span><span class="p">()]</span>
+        <span class="p">)</span>
+
+        <span class="n">matching_nodes</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+
+        <span class="c1"># find all the nodes matching the nodes in pattern</span>
+        <span class="k">for</span> <span class="n">pattern_node</span> <span class="ow">in</span> <span class="n">pattern</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
+            <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">g</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
+                <span class="k">if</span> <span class="n">pattern_typing</span><span class="p">:</span>
+                    <span class="c1"># check types match</span>
+                    <span class="n">match</span> <span class="o">=</span> <span class="kc">False</span>
+                    <span class="k">for</span> <span class="n">graph</span><span class="p">,</span> <span class="n">pattern_mapping</span> <span class="ow">in</span> <span class="n">pattern_typing</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                        <span class="k">if</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">graph_typing</span><span class="p">[</span><span class="n">graph</span><span class="p">]</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span> <span class="ow">and</span>\
+                           <span class="n">pattern_node</span> <span class="ow">in</span> <span class="n">pattern_mapping</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                            <span class="k">if</span> <span class="n">graph_typing</span><span class="p">[</span><span class="n">graph</span><span class="p">][</span><span class="n">node</span><span class="p">]</span> <span class="o">==</span> <span class="n">pattern_mapping</span><span class="p">[</span>
+                                    <span class="n">pattern_node</span><span class="p">]:</span>
+                                <span class="k">if</span> <span class="n">valid_attributes</span><span class="p">(</span>
+                                        <span class="n">pattern</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">pattern_node</span><span class="p">],</span>
+                                        <span class="n">g</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">node</span><span class="p">]):</span>
+                                    <span class="n">match</span> <span class="o">=</span> <span class="kc">True</span>
+                        <span class="k">else</span><span class="p">:</span>
+                            <span class="k">if</span> <span class="n">valid_attributes</span><span class="p">(</span>
+                                    <span class="n">pattern</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">pattern_node</span><span class="p">],</span>
+                                    <span class="n">g</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">node</span><span class="p">]):</span>
+                                <span class="n">match</span> <span class="o">=</span> <span class="kc">True</span>
+                    <span class="k">if</span> <span class="n">match</span><span class="p">:</span>
+                        <span class="n">matching_nodes</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">node</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">valid_attributes</span><span class="p">(</span>
+                            <span class="n">pattern</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">pattern_node</span><span class="p">],</span>
+                            <span class="n">g</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">node</span><span class="p">]):</span>
+                        <span class="n">matching_nodes</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">node</span><span class="p">)</span>
+
+        <span class="c1"># find all the isomorphic subgraphs</span>
+        <span class="n">reduced_graph</span> <span class="o">=</span> <span class="n">g</span><span class="o">.</span><span class="n">subgraph</span><span class="p">(</span><span class="n">matching_nodes</span><span class="p">)</span>
+        <span class="n">instances</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">isomorphic_subgraphs</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">sub_nodes</span> <span class="ow">in</span> <span class="n">itertools</span><span class="o">.</span><span class="n">combinations</span><span class="p">(</span><span class="n">reduced_graph</span><span class="o">.</span><span class="n">nodes</span><span class="p">(),</span>
+                                                <span class="nb">len</span><span class="p">(</span><span class="n">pattern</span><span class="o">.</span><span class="n">nodes</span><span class="p">())):</span>
+            <span class="n">subg</span> <span class="o">=</span> <span class="n">reduced_graph</span><span class="o">.</span><span class="n">subgraph</span><span class="p">(</span><span class="n">sub_nodes</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">edgeset</span> <span class="ow">in</span> <span class="n">itertools</span><span class="o">.</span><span class="n">combinations</span><span class="p">(</span><span class="n">subg</span><span class="o">.</span><span class="n">edges</span><span class="p">(),</span>
+                                                  <span class="nb">len</span><span class="p">(</span><span class="n">pattern</span><span class="o">.</span><span class="n">edges</span><span class="p">())):</span>
+                <span class="n">edge_induced_graph</span> <span class="o">=</span> <span class="n">nx</span><span class="o">.</span><span class="n">DiGraph</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">edgeset</span><span class="p">))</span>
+                <span class="n">edge_induced_graph</span><span class="o">.</span><span class="n">add_nodes_from</span><span class="p">(</span>
+                    <span class="p">[</span><span class="n">n</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">subg</span><span class="o">.</span><span class="n">nodes</span><span class="p">()</span>
+                     <span class="k">if</span> <span class="n">n</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">edge_induced_graph</span><span class="o">.</span><span class="n">nodes</span><span class="p">()])</span>
+                <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">pattern</span><span class="p">,</span> <span class="n">Graph</span><span class="p">):</span>
+                    <span class="n">matching_obj</span> <span class="o">=</span> <span class="n">isomorphism</span><span class="o">.</span><span class="n">DiGraphMatcher</span><span class="p">(</span>
+                        <span class="n">pattern</span><span class="o">.</span><span class="n">_graph</span><span class="p">,</span> <span class="n">edge_induced_graph</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">matching_obj</span> <span class="o">=</span> <span class="n">isomorphism</span><span class="o">.</span><span class="n">DiGraphMatcher</span><span class="p">(</span>
+                        <span class="n">pattern</span><span class="p">,</span> <span class="n">edge_induced_graph</span><span class="p">)</span>
+                <span class="k">for</span> <span class="n">isom</span> <span class="ow">in</span> <span class="n">matching_obj</span><span class="o">.</span><span class="n">isomorphisms_iter</span><span class="p">():</span>
+                    <span class="n">isomorphic_subgraphs</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">subg</span><span class="p">,</span> <span class="n">isom</span><span class="p">))</span>
+
+        <span class="k">for</span> <span class="n">subgraph</span><span class="p">,</span> <span class="n">mapping</span> <span class="ow">in</span> <span class="n">isomorphic_subgraphs</span><span class="p">:</span>
+            <span class="c1"># print(subgraph.nodes(), mapping)</span>
+            <span class="c1"># check node matches</span>
+            <span class="c1"># exclude subgraphs which nodes information does not</span>
+            <span class="c1"># correspond to pattern</span>
+            <span class="k">for</span> <span class="p">(</span><span class="n">pattern_node</span><span class="p">,</span> <span class="n">node</span><span class="p">)</span> <span class="ow">in</span> <span class="n">mapping</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="k">if</span> <span class="n">pattern_typing</span><span class="p">:</span>
+                    <span class="k">for</span> <span class="n">g</span><span class="p">,</span> <span class="n">pattern_mapping</span> <span class="ow">in</span> <span class="n">pattern_typing</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                        <span class="k">if</span> <span class="n">inverse_mapping</span><span class="p">[</span><span class="n">node</span><span class="p">]</span> <span class="ow">in</span> <span class="n">graph_typing</span><span class="p">[</span><span class="n">g</span><span class="p">]</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span> <span class="ow">and</span>\
+                           <span class="n">pattern_node</span> <span class="ow">in</span> <span class="n">pattern_mapping</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                            <span class="k">if</span> <span class="n">graph_typing</span><span class="p">[</span><span class="n">g</span><span class="p">][</span>
+                                <span class="n">inverse_mapping</span><span class="p">[</span><span class="n">node</span><span class="p">]]</span> <span class="o">!=</span> <span class="n">pattern_mapping</span><span class="p">[</span>
+                                    <span class="n">pattern_node</span><span class="p">]:</span>
+                                <span class="k">break</span>
+                        <span class="k">if</span> <span class="ow">not</span> <span class="n">valid_attributes</span><span class="p">(</span>
+                                <span class="n">pattern</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">pattern_node</span><span class="p">],</span>
+                                <span class="n">subgraph</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">node</span><span class="p">]):</span>
+                            <span class="k">break</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="k">continue</span>
+                    <span class="k">break</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="ow">not</span> <span class="n">valid_attributes</span><span class="p">(</span>
+                            <span class="n">pattern</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">pattern_node</span><span class="p">],</span>
+                            <span class="n">subgraph</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">node</span><span class="p">]):</span>
+                        <span class="k">break</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c1"># check edge attribute matched</span>
+                <span class="k">for</span> <span class="n">edge</span> <span class="ow">in</span> <span class="n">pattern</span><span class="o">.</span><span class="n">edges</span><span class="p">():</span>
+                    <span class="n">pattern_attrs</span> <span class="o">=</span> <span class="n">pattern</span><span class="o">.</span><span class="n">adj</span><span class="p">[</span><span class="n">edge</span><span class="p">[</span><span class="mi">0</span><span class="p">]][</span><span class="n">edge</span><span class="p">[</span><span class="mi">1</span><span class="p">]]</span>
+                    <span class="n">target_attrs</span> <span class="o">=</span> <span class="n">subgraph</span><span class="o">.</span><span class="n">adj</span><span class="p">[</span>
+                        <span class="n">mapping</span><span class="p">[</span><span class="n">edge</span><span class="p">[</span><span class="mi">0</span><span class="p">]]][</span><span class="n">mapping</span><span class="p">[</span><span class="n">edge</span><span class="p">[</span><span class="mi">1</span><span class="p">]]]</span>
+                    <span class="k">if</span> <span class="ow">not</span> <span class="n">valid_attributes</span><span class="p">(</span><span class="n">pattern_attrs</span><span class="p">,</span> <span class="n">target_attrs</span><span class="p">):</span>
+                        <span class="k">break</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">instances</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">mapping</span><span class="p">)</span>
+
+        <span class="c1"># bring back original labeling</span>
+        <span class="k">for</span> <span class="n">instance</span> <span class="ow">in</span> <span class="n">instances</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">instance</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="n">instance</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">inverse_mapping</span><span class="p">[</span><span class="n">value</span><span class="p">]</span>
+
+        <span class="k">return</span> <span class="n">instances</span></div>
+
+<div class="viewcode-block" id="NXGraph.copy"><a class="viewcode-back" href="../../../../nxgraphs.html#regraph.backends.networkx.graphs.NXGraph.copy">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">copy</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">graph</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Copy the input graph object.&quot;&quot;&quot;</span>
+        <span class="n">new_graph</span> <span class="o">=</span> <span class="bp">cls</span><span class="p">()</span>
+        <span class="n">new_graph</span><span class="o">.</span><span class="n">add_nodes_from</span><span class="p">(</span><span class="n">graph</span><span class="o">.</span><span class="n">nodes</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
+        <span class="n">new_graph</span><span class="o">.</span><span class="n">add_edges_from</span><span class="p">(</span><span class="n">graph</span><span class="o">.</span><span class="n">edges</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">new_graph</span></div></div>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../../../index.html">ReGraph</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2018, Eugenia Oshurko.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.2.0</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

@@ -1,27 +1,17 @@
 
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<!DOCTYPE html>
 
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>Welcome to ReGraph’s documentation! &#8212; ReGraph 1.0 documentation</title>
+    <meta charset="utf-8" />
+    <title>Welcome to ReGraph’s documentation! &#8212; ReGraph 3.0 documentation</title>
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
-    <script type="text/javascript">
-      var DOCUMENTATION_OPTIONS = {
-        URL_ROOT:    './',
-        VERSION:     '1.0',
-        COLLAPSE_INDEX: false,
-        FILE_SUFFIX: '.html',
-        HAS_SOURCE:  true,
-        SOURCELINK_SUFFIX: '.txt'
-      };
-    </script>
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
     <script type="text/javascript" src="_static/jquery.js"></script>
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
-    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
    
@@ -30,83 +20,84 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
 
-  </head>
-  <body>
+  </head><body>
   
 
     <div class="document">
       <div class="documentwrapper">
         <div class="bodywrapper">
+          
+
           <div class="body" role="main">
             
   <div class="section" id="welcome-to-regraph-s-documentation">
 <h1>Welcome to ReGraph’s documentation!<a class="headerlink" href="#welcome-to-regraph-s-documentation" title="Permalink to this headline">¶</a></h1>
-<p>The ReGraph Python library is a generic framework for modelling graph-based systems.</p>
-<p>ReGraph provides various utilities for graph rewriting (based on the sesqui-pushout rewriting procedure). It enables a user to define a typing for models (graphs) that gives specifications for the structure of the models. This later functionality allows both to preserve the specified structure during rewriting and to propagate the changes to the specifications to the models.</p>
-<p>ReGraph contains a collection of utilities for graph rewriting on <a class="reference external" href="https://networkx.github.io/">NetworkX (version 1)</a> graph objects, both undirected and directed graphs.</p>
+<p>The ReGraph Python library is a generic framework for building graph-based knowledge representations.</p>
+<p>ReGraph provides various utilities for rewriting simple graphs with attributes (based on the <a class="reference external" href="https://ncatlab.org/nlab/show/span+rewriting#sesquipushout_rewriting/">sesqui-pushout rewriting</a> approach). It allows the user to create and manipulate graph objects equipped with dictionary attributes, create rewriting rules, apply them to graphs, construct graph hierarchies and perform rewriting and propagation in these hierarchies. Moreover, it provides tools for audit of updates performed in individual graph objects as well as hierarchies of graphs.</p>
+<p>ReGraph supports two graph backends: in-memory <a class="reference external" href="https://networkx.github.io/">NetworkX</a> graph objects (directed graphs) and persistent <a class="reference external" href="https://neo4j.com/">Neo4j</a> property graphs.</p>
 <div class="toctree-wrapper compound">
 </div>
 </div>
-<div class="section" id="tutorial">
-<h1><a class="reference internal" href="tutorial1.html#tutorial"><span class="std std-ref">Tutorial</span></a><a class="headerlink" href="#tutorial" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="tutorials">
+<h1>Tutorials<a class="headerlink" href="#tutorials" title="Permalink to this headline">¶</a></h1>
 <ul class="simple">
-<li><dl class="first docutils">
-<dt><a class="reference internal" href="tutorial1.html#tutorial-part1"><span class="std std-ref">Tutorial: part 1</span></a></dt>
-<dd><ul class="first last">
-<li><a class="reference internal" href="tutorial1.html#installation"><span class="std std-ref">Installation</span></a></li>
-<li><dl class="first docutils">
-<dt><a class="reference internal" href="tutorial1.html#simple-rewriting"><span class="std std-ref">Simple graph rewriting</span></a></dt>
-<dd><ul class="first last">
-<li><a class="reference internal" href="tutorial1.html#graph-creation"><span class="std std-ref">Primitive graph transformations</span></a></li>
-<li><a class="reference internal" href="tutorial1.html#advanced-attributes"><span class="std std-ref">Advanced attributes</span></a></li>
-<li><a class="reference internal" href="tutorial1.html#rewiting-rules"><span class="std std-ref">Rewriting rules</span></a></li>
+<li><dl class="simple">
+<dt><a class="reference internal" href="tutorial_networkx_part1.html#network-tutorial1"><span class="std std-ref">Tutorial for the NetworkX backend</span></a></dt><dd><ul>
+<li><p><a class="reference internal" href="tutorial_networkx_part1.html#nx-tutorial-part1"><span class="std std-ref">Part 1: Rewriting simple graph with attributes</span></a></p></li>
+<li><p><a class="reference internal" href="tutorial_networkx_part2.html#nx-tutorial-part2"><span class="std std-ref">Part 2: Rewriting hierarchies of graphs</span></a></p></li>
 </ul>
 </dd>
 </dl>
 </li>
+<li><dl class="simple">
+<dt><a class="reference internal" href="tutorial_neo4j_part1.html#neo4j-tutorial1"><span class="std std-ref">Tutorial for the Neo4j backend</span></a></dt><dd><ul>
+<li><p><a class="reference internal" href="tutorial_neo4j_part1.html#n4-tutorial-part1"><span class="std std-ref">Part 1: Rewriting simple graph with attributes</span></a></p></li>
+<li><p><a class="reference internal" href="tutorial_neo4j_part2.html#n4-tutorial-part2"><span class="std std-ref">Part 2: Rewriting hierarchies of graphs</span></a></p></li>
 </ul>
 </dd>
 </dl>
 </li>
-<li><dl class="first docutils">
-<dt><a class="reference internal" href="tutorial2.html#tutorial-part2"><span class="std std-ref">Tutorial: part 2</span></a></dt>
-<dd><ul class="first last">
-<li><dl class="first docutils">
-<dt><a class="reference internal" href="tutorial2.html#hierarchy-tutorial"><span class="std std-ref">Hierarchy</span></a></dt>
-<dd><ul class="first last">
-<li><a class="reference internal" href="tutorial2.html#hierarchy-creation"><span class="std std-ref">Hierarchy creation</span></a></li>
-<li><a class="reference internal" href="tutorial2.html#rewriting-in-hierarchy"><span class="std std-ref">Rewriting in the hierarchy</span></a></li>
+<li><dl class="simple">
+<dt><a class="reference internal" href="tutorial_rules.html#tutorial-rules"><span class="std std-ref">Rewriting rules tutorial</span></a></dt><dd><ul>
+<li><p><a class="reference internal" href="tutorial_rules.html#tutorial-rules1"><span class="std std-ref">Creating a rewriting rule from a pattern</span></a></p></li>
+<li><p><a class="reference internal" href="tutorial_rules.html#tutorial-rules2"><span class="std std-ref">Creating a rewriting rule from a span</span></a></p></li>
 </ul>
 </dd>
 </dl>
 </li>
-</ul>
-</dd>
-</dl>
-</li>
+<li><p><a class="reference internal" href="tutorial_attrs.html#advanced-attributes"><span class="std std-ref">Advanced node and edge attributes</span></a></p></li>
+<li><p><a class="reference internal" href="tutorial_audit.html#audit-tutorial"><span class="std std-ref">Audit trails for graph objects</span></a></p></li>
+<li><p><a class="reference internal" href="tutorial_audit_hierarchy.html#audit-tutorial-hierarchies"><span class="std std-ref">Audit trails for hierarchy objects</span></a></p></li>
+<li><p><a class="reference internal" href="tutorial_typedneo4j.html#tutorial-typedneo4j"><span class="std std-ref">Rewriting schema-aware PGs through TypedNeo4jGraph</span></a></p></li>
 </ul>
 </div>
 <div class="section" id="modules">
 <h1><a class="reference internal" href="modules.html#modules"><span class="std std-ref">Modules</span></a><a class="headerlink" href="#modules" title="Permalink to this headline">¶</a></h1>
 <ul class="simple">
-<li><a class="reference internal" href="primitives.html#primitives"><span class="std std-ref">Primitives</span></a></li>
-<li><a class="reference internal" href="attribute_sets.html#attribute-sets"><span class="std std-ref">Attribute Sets</span></a></li>
-<li><a class="reference internal" href="rules.html#rules"><span class="std std-ref">Rules</span></a></li>
-<li><a class="reference internal" href="hierarchy.html#hierarchy"><span class="std std-ref">Hierarchy</span></a></li>
-<li><a class="reference internal" href="exceptions.html#exceptions"><span class="std std-ref">Exceptions</span></a></li>
+<li><p><a class="reference internal" href="graphs.html#graphs"><span class="std std-ref">Graphs</span></a></p></li>
+<li><p><a class="reference internal" href="hierarchies.html#hierarchies"><span class="std std-ref">Hierarchies</span></a></p></li>
+<li><p><a class="reference internal" href="attribute_sets.html#attribute-sets"><span class="std std-ref">Attribute Sets</span></a></p></li>
+<li><p><a class="reference internal" href="rules.html#rules"><span class="std std-ref">Rules</span></a></p></li>
+<li><p><a class="reference internal" href="nxgraphs.html#nxgraphs"><span class="std std-ref">NetworkX-based graphs</span></a></p></li>
+<li><p><a class="reference internal" href="neo4jgraphs.html#neo4jgraphs"><span class="std std-ref">Neo4j-based graphs</span></a></p></li>
+<li><p><a class="reference internal" href="nxhierarchies.html#nxhierarchies"><span class="std std-ref">NetworkX-based hierarchies</span></a></p></li>
+<li><p><a class="reference internal" href="neo4jhierarchies.html#neo4jhierarchies"><span class="std std-ref">Neo4j-based hierarchies</span></a></p></li>
+<li><p><a class="reference internal" href="audit.html#audit"><span class="std std-ref">Audit trail</span></a></p></li>
+<li><p><a class="reference internal" href="exceptions.html#exceptions"><span class="std std-ref">Exceptions</span></a></p></li>
 </ul>
 </div>
 <div class="section" id="indices-and-tables">
 <h1>Indices and tables<a class="headerlink" href="#indices-and-tables" title="Permalink to this headline">¶</a></h1>
 <ul class="simple">
-<li><a class="reference internal" href="genindex.html"><span class="std std-ref">Index</span></a></li>
-<li><a class="reference internal" href="py-modindex.html"><span class="std std-ref">Module Index</span></a></li>
-<li><a class="reference internal" href="search.html"><span class="std std-ref">Search Page</span></a></li>
+<li><p><a class="reference internal" href="genindex.html"><span class="std std-ref">Index</span></a></p></li>
+<li><p><a class="reference internal" href="py-modindex.html"><span class="std std-ref">Module Index</span></a></p></li>
+<li><p><a class="reference internal" href="search.html"><span class="std std-ref">Search Page</span></a></p></li>
 </ul>
 </div>
 
 
           </div>
+          
         </div>
       </div>
       <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
@@ -130,25 +121,33 @@
 </ul>
 </div>
 <div id="searchbox" style="display: none" role="search">
-  <h3>Quick search</h3>
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
     <form class="search" action="search.html" method="get">
-      <div><input type="text" name="q" /></div>
-      <div><input type="submit" value="Go" /></div>
-      <input type="hidden" name="check_keywords" value="yes" />
-      <input type="hidden" name="area" value="default" />
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
     </form>
+    </div>
 </div>
 <script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
         </div>
       </div>
       <div class="clearer"></div>
     </div>
     <div class="footer">
-      &copy;2017, Eugenia Oshurko, Yves-Stan Le Cornec.
+      &copy;2018, Eugenia Oshurko.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.3</a>
-      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.2.0</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
       
       |
       <a href="_sources/index.rst.txt"

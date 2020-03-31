@@ -1,0 +1,1097 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>Hierarchies &#8212; ReGraph 3.0 documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="hierarchies">
+<span id="id1"></span><h1>Hierarchies<a class="headerlink" href="#hierarchies" title="Permalink to this headline">¶</a></h1>
+<span class="target" id="module-regraph.hierarchies"></span><p>Abstract hierarchies of graphs in ReGraph.</p>
+<p>This module contains abstact data structures for
+graph hierarchies. A graph hierarchy is a DAG, whose nodes
+are graphs and whose directed edges represent
+homomorphisms between graphs. In addition, hierarchies are
+equipped with relations on graphs (which can be thought of as
+undirected edges or, alternatively, spans).</p>
+<dl class="class">
+<dt id="regraph.hierarchies.Hierarchy">
+<em class="property">class </em><code class="sig-prename descclassname">regraph.hierarchies.</code><code class="sig-name descname">Hierarchy</code><a class="reference internal" href="_modules/regraph/hierarchies.html#Hierarchy"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.hierarchies.Hierarchy" title="Permalink to this definition">¶</a></dt>
+<dd><p>Abstract class for graph hierarchy objects in ReGraph.</p>
+<p>A graph hierarchy is a DAG, where nodes are graphs with attributes and
+edges are homomorphisms representing graph typing in the system.</p>
+<p class="rubric">Methods</p>
+<table class="longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#regraph.hierarchies.Hierarchy.add_empty_graph" title="regraph.hierarchies.Hierarchy.add_empty_graph"><code class="xref py py-obj docutils literal notranslate"><span class="pre">add_empty_graph</span></code></a>(self, graph_id[, attrs])</p></td>
+<td><p>“Add a new empty graph to the hierarchy.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#regraph.hierarchies.Hierarchy.add_graph" title="regraph.hierarchies.Hierarchy.add_graph"><code class="xref py py-obj docutils literal notranslate"><span class="pre">add_graph</span></code></a>(self, graph_id, graph[, graph_attrs])</p></td>
+<td><p>Add a new graph to the hierarchy.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#regraph.hierarchies.Hierarchy.add_graph_from_data" title="regraph.hierarchies.Hierarchy.add_graph_from_data"><code class="xref py py-obj docutils literal notranslate"><span class="pre">add_graph_from_data</span></code></a>(self, graph_id, …[, attrs])</p></td>
+<td><p>Add a new graph to the hierarchy from the input node/edge lists.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#regraph.hierarchies.Hierarchy.add_graph_from_json" title="regraph.hierarchies.Hierarchy.add_graph_from_json"><code class="xref py py-obj docutils literal notranslate"><span class="pre">add_graph_from_json</span></code></a>(self, graph_id, json_data)</p></td>
+<td><p>Add a new graph to the hirarchy from its JSON-reprsentation.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#regraph.hierarchies.Hierarchy.add_relation" title="regraph.hierarchies.Hierarchy.add_relation"><code class="xref py py-obj docutils literal notranslate"><span class="pre">add_relation</span></code></a>(self, left, right, relation[, …])</p></td>
+<td><p>Add relation to the hierarchy.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#regraph.hierarchies.Hierarchy.add_typing" title="regraph.hierarchies.Hierarchy.add_typing"><code class="xref py py-obj docutils literal notranslate"><span class="pre">add_typing</span></code></a>(self, source, target, mapping[, …])</p></td>
+<td><p>Add homomorphism to the hierarchy.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#regraph.hierarchies.Hierarchy.adjacent_relations" title="regraph.hierarchies.Hierarchy.adjacent_relations"><code class="xref py py-obj docutils literal notranslate"><span class="pre">adjacent_relations</span></code></a>(self, g)</p></td>
+<td><p>Return a list of related graphs.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#regraph.hierarchies.Hierarchy.apply_rule_hierarchy" title="regraph.hierarchies.Hierarchy.apply_rule_hierarchy"><code class="xref py py-obj docutils literal notranslate"><span class="pre">apply_rule_hierarchy</span></code></a>(self, rule_hierarchy, …)</p></td>
+<td><p>Apply rule hierarchy.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#regraph.hierarchies.Hierarchy.bfs_tree" title="regraph.hierarchies.Hierarchy.bfs_tree"><code class="xref py py-obj docutils literal notranslate"><span class="pre">bfs_tree</span></code></a>(self, graph[, reverse])</p></td>
+<td><p>BFS tree from the graph to all other reachable graphs.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#regraph.hierarchies.Hierarchy.compose_path_typing" title="regraph.hierarchies.Hierarchy.compose_path_typing"><code class="xref py py-obj docutils literal notranslate"><span class="pre">compose_path_typing</span></code></a>(self, path)</p></td>
+<td><p>Compose homomorphisms along the path.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#regraph.hierarchies.Hierarchy.copy_graph" title="regraph.hierarchies.Hierarchy.copy_graph"><code class="xref py py-obj docutils literal notranslate"><span class="pre">copy_graph</span></code></a>(self, graph_id, new_graph_id[, …])</p></td>
+<td><p>Create a copy of a graph in a hierarchy.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#regraph.hierarchies.Hierarchy.duplicate_subgraph" title="regraph.hierarchies.Hierarchy.duplicate_subgraph"><code class="xref py py-obj docutils literal notranslate"><span class="pre">duplicate_subgraph</span></code></a>(self, graph_dict[, …])</p></td>
+<td><p>Duplicate a subgraph induced by the set of nodes.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#regraph.hierarchies.Hierarchy.export" title="regraph.hierarchies.Hierarchy.export"><code class="xref py py-obj docutils literal notranslate"><span class="pre">export</span></code></a>(self, filename)</p></td>
+<td><p>Export the hierarchy to a file.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#regraph.hierarchies.Hierarchy.find_matching" title="regraph.hierarchies.Hierarchy.find_matching"><code class="xref py py-obj docutils literal notranslate"><span class="pre">find_matching</span></code></a>(self, graph_id, pattern[, …])</p></td>
+<td><p>Find an instance of a pattern in a specified graph.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#regraph.hierarchies.Hierarchy.from_json" title="regraph.hierarchies.Hierarchy.from_json"><code class="xref py py-obj docutils literal notranslate"><span class="pre">from_json</span></code></a>(json_data[, ignore])</p></td>
+<td><p>Create a hierarchy object from JSON-representation.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#regraph.hierarchies.Hierarchy.get_ancestors" title="regraph.hierarchies.Hierarchy.get_ancestors"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_ancestors</span></code></a>(self, graph_id)</p></td>
+<td><p>Return ancestors of a graph with the typing morphisms.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#regraph.hierarchies.Hierarchy.get_descendants" title="regraph.hierarchies.Hierarchy.get_descendants"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_descendants</span></code></a>(self, graph_id[, maybe])</p></td>
+<td><p>Return descendants of a graph with the typing morphisms.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#regraph.hierarchies.Hierarchy.get_graph" title="regraph.hierarchies.Hierarchy.get_graph"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_graph</span></code></a>(self, graph_id)</p></td>
+<td><p>Get a graph object associated to the node ‘graph_id’.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#regraph.hierarchies.Hierarchy.get_graph_attrs" title="regraph.hierarchies.Hierarchy.get_graph_attrs"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_graph_attrs</span></code></a>(self, graph_id)</p></td>
+<td><p>Get attributes of a graph in the hierarchy.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#regraph.hierarchies.Hierarchy.get_relation" title="regraph.hierarchies.Hierarchy.get_relation"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_relation</span></code></a>(self, left_id, right_id)</p></td>
+<td><p>Get a relation dict associated to the rel ‘left_id-&gt;target_id’.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#regraph.hierarchies.Hierarchy.get_relation_attrs" title="regraph.hierarchies.Hierarchy.get_relation_attrs"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_relation_attrs</span></code></a>(self, left, right)</p></td>
+<td><p>Get attributes of a reltion in the hierarchy.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#regraph.hierarchies.Hierarchy.get_rule_hierarchy" title="regraph.hierarchies.Hierarchy.get_rule_hierarchy"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_rule_hierarchy</span></code></a>(self, origin_id, rule[, …])</p></td>
+<td><p>Find rule hierarchy corresponding to the input rewriting.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#regraph.hierarchies.Hierarchy.get_typing" title="regraph.hierarchies.Hierarchy.get_typing"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_typing</span></code></a>(self, source_id, target_id)</p></td>
+<td><p>Get a typing dict associated to the edge ‘source_id-&gt;target_id’.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#regraph.hierarchies.Hierarchy.get_typing_attrs" title="regraph.hierarchies.Hierarchy.get_typing_attrs"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_typing_attrs</span></code></a>(self, source, target)</p></td>
+<td><p>Get attributes of a typing in the hierarchy.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#regraph.hierarchies.Hierarchy.graphs" title="regraph.hierarchies.Hierarchy.graphs"><code class="xref py py-obj docutils literal notranslate"><span class="pre">graphs</span></code></a>(self[, data])</p></td>
+<td><p>Return a list of graphs in the hierarchy.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#regraph.hierarchies.Hierarchy.graphs_typed_by_node" title="regraph.hierarchies.Hierarchy.graphs_typed_by_node"><code class="xref py py-obj docutils literal notranslate"><span class="pre">graphs_typed_by_node</span></code></a>(self, graph_id, node_id)</p></td>
+<td><p>Get graphs typed by ‘node_id’ in ‘graph_id’.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#regraph.hierarchies.Hierarchy.load" title="regraph.hierarchies.Hierarchy.load"><code class="xref py py-obj docutils literal notranslate"><span class="pre">load</span></code></a>(filename[, ignore])</p></td>
+<td><p>Load the hierarchy from a file.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#regraph.hierarchies.Hierarchy.new_apply_rule_hierarchy" title="regraph.hierarchies.Hierarchy.new_apply_rule_hierarchy"><code class="xref py py-obj docutils literal notranslate"><span class="pre">new_apply_rule_hierarchy</span></code></a>(self, …)</p></td>
+<td><p>Apply rule hierarchy.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#regraph.hierarchies.Hierarchy.node_type" title="regraph.hierarchies.Hierarchy.node_type"><code class="xref py py-obj docutils literal notranslate"><span class="pre">node_type</span></code></a>(self, graph_id, node_id)</p></td>
+<td><p>Get a list of the immediate types of a node.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#regraph.hierarchies.Hierarchy.predecessors" title="regraph.hierarchies.Hierarchy.predecessors"><code class="xref py py-obj docutils literal notranslate"><span class="pre">predecessors</span></code></a>(self, node_id)</p></td>
+<td><p>Return the set of predecessors.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#regraph.hierarchies.Hierarchy.refine_rule_hierarchy" title="regraph.hierarchies.Hierarchy.refine_rule_hierarchy"><code class="xref py py-obj docutils literal notranslate"><span class="pre">refine_rule_hierarchy</span></code></a>(self, rule_hierarchy, …)</p></td>
+<td><p>Refine the input rule hierarchy to its reversible version.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#regraph.hierarchies.Hierarchy.relabel_graph" title="regraph.hierarchies.Hierarchy.relabel_graph"><code class="xref py py-obj docutils literal notranslate"><span class="pre">relabel_graph</span></code></a>(self, graph_id, new_graph_id)</p></td>
+<td><p>Relabel a graph in the hierarchy.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#regraph.hierarchies.Hierarchy.relabel_graph_node" title="regraph.hierarchies.Hierarchy.relabel_graph_node"><code class="xref py py-obj docutils literal notranslate"><span class="pre">relabel_graph_node</span></code></a>(self, graph_id, node, …)</p></td>
+<td><p>Rename a node in a graph of the hierarchy.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#regraph.hierarchies.Hierarchy.relabel_graphs" title="regraph.hierarchies.Hierarchy.relabel_graphs"><code class="xref py py-obj docutils literal notranslate"><span class="pre">relabel_graphs</span></code></a>(self, mapping)</p></td>
+<td><p>Relabel graphs in the hierarchy.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#regraph.hierarchies.Hierarchy.relabel_nodes" title="regraph.hierarchies.Hierarchy.relabel_nodes"><code class="xref py py-obj docutils literal notranslate"><span class="pre">relabel_nodes</span></code></a>(self, graph, mapping)</p></td>
+<td><p>Relabel nodes of a graph in the hierarchy.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#regraph.hierarchies.Hierarchy.relation_to_span" title="regraph.hierarchies.Hierarchy.relation_to_span"><code class="xref py py-obj docutils literal notranslate"><span class="pre">relation_to_span</span></code></a>(self, left, right[, edges, …])</p></td>
+<td><p>Convert relation to a span.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#regraph.hierarchies.Hierarchy.relations" title="regraph.hierarchies.Hierarchy.relations"><code class="xref py py-obj docutils literal notranslate"><span class="pre">relations</span></code></a>(self[, data])</p></td>
+<td><p>Return a list of relations.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#regraph.hierarchies.Hierarchy.remove_graph" title="regraph.hierarchies.Hierarchy.remove_graph"><code class="xref py py-obj docutils literal notranslate"><span class="pre">remove_graph</span></code></a>(self, graph_id[, reconnect])</p></td>
+<td><p>Remove graph from the hierarchy.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#regraph.hierarchies.Hierarchy.remove_relation" title="regraph.hierarchies.Hierarchy.remove_relation"><code class="xref py py-obj docutils literal notranslate"><span class="pre">remove_relation</span></code></a>(self, left, right)</p></td>
+<td><p>Remove a relation from the hierarchy.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#regraph.hierarchies.Hierarchy.remove_typing" title="regraph.hierarchies.Hierarchy.remove_typing"><code class="xref py py-obj docutils literal notranslate"><span class="pre">remove_typing</span></code></a>(self, s, t)</p></td>
+<td><p>Remove a typing from the hierarchy.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#regraph.hierarchies.Hierarchy.rewrite" title="regraph.hierarchies.Hierarchy.rewrite"><code class="xref py py-obj docutils literal notranslate"><span class="pre">rewrite</span></code></a>(self, graph_id, rule, instance[, …])</p></td>
+<td><p>Rewrite and propagate the changes backward &amp; forward.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#regraph.hierarchies.Hierarchy.set_graph_attrs" title="regraph.hierarchies.Hierarchy.set_graph_attrs"><code class="xref py py-obj docutils literal notranslate"><span class="pre">set_graph_attrs</span></code></a>(self, node_id, attrs)</p></td>
+<td><p>Set attributes of a graph in the hierarchy.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#regraph.hierarchies.Hierarchy.set_node_relation" title="regraph.hierarchies.Hierarchy.set_node_relation"><code class="xref py py-obj docutils literal notranslate"><span class="pre">set_node_relation</span></code></a>(self, left_graph, …)</p></td>
+<td><p>Set relation for a particular node.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#regraph.hierarchies.Hierarchy.set_relation_attrs" title="regraph.hierarchies.Hierarchy.set_relation_attrs"><code class="xref py py-obj docutils literal notranslate"><span class="pre">set_relation_attrs</span></code></a>(self, left, right, attrs)</p></td>
+<td><p>Set attributes of a relation in the hierarchy.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#regraph.hierarchies.Hierarchy.set_typing_attrs" title="regraph.hierarchies.Hierarchy.set_typing_attrs"><code class="xref py py-obj docutils literal notranslate"><span class="pre">set_typing_attrs</span></code></a>(self, source, target, attrs)</p></td>
+<td><p>Set attributes of a typing in the hierarchy.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#regraph.hierarchies.Hierarchy.shortest_path" title="regraph.hierarchies.Hierarchy.shortest_path"><code class="xref py py-obj docutils literal notranslate"><span class="pre">shortest_path</span></code></a>(self, source, target)</p></td>
+<td><p>Shortest path from ‘source’ to ‘target’.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#regraph.hierarchies.Hierarchy.successors" title="regraph.hierarchies.Hierarchy.successors"><code class="xref py py-obj docutils literal notranslate"><span class="pre">successors</span></code></a>(self, node_id)</p></td>
+<td><p>Return the set of successors.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#regraph.hierarchies.Hierarchy.to_json" title="regraph.hierarchies.Hierarchy.to_json"><code class="xref py py-obj docutils literal notranslate"><span class="pre">to_json</span></code></a>(self[, rename_nodes])</p></td>
+<td><p>Return json representation of the hierarchy.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#regraph.hierarchies.Hierarchy.typings" title="regraph.hierarchies.Hierarchy.typings"><code class="xref py py-obj docutils literal notranslate"><span class="pre">typings</span></code></a>(self[, data])</p></td>
+<td><p>Return a list of graph typing edges in the hierarchy.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#regraph.hierarchies.Hierarchy.unique_graph_id" title="regraph.hierarchies.Hierarchy.unique_graph_id"><code class="xref py py-obj docutils literal notranslate"><span class="pre">unique_graph_id</span></code></a>(self, prefix)</p></td>
+<td><p>Generate a new graph id starting with a prefix.</p></td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="regraph.hierarchies.Hierarchy.add_empty_graph">
+<em class="property">abstract </em><code class="sig-name descname">add_empty_graph</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">graph_id</em>, <em class="sig-param">attrs=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/hierarchies.html#Hierarchy.add_empty_graph"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.hierarchies.Hierarchy.add_empty_graph" title="Permalink to this definition">¶</a></dt>
+<dd><p>“Add a new empty graph to the hierarchy.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>graph_id</strong><span class="classifier">hashable</span></dt><dd><p>Id of a new node in the hierarchy</p>
+</dd>
+<dt><strong>graph_attrs</strong><span class="classifier">dict, optional</span></dt><dd><p>Dictionary containing attributes of the new node</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.hierarchies.Hierarchy.add_graph">
+<em class="property">abstract </em><code class="sig-name descname">add_graph</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">graph_id</em>, <em class="sig-param">graph</em>, <em class="sig-param">graph_attrs=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/hierarchies.html#Hierarchy.add_graph"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.hierarchies.Hierarchy.add_graph" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add a new graph to the hierarchy.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>graph_id</strong><span class="classifier">hashable</span></dt><dd><p>Id of a new node in the hierarchy</p>
+</dd>
+<dt><strong>graph</strong><span class="classifier">regraph.Graph</span></dt><dd><p>Graph object corresponding to the new node of
+the hierarchy</p>
+</dd>
+<dt><strong>graph_attrs</strong><span class="classifier">dict, optional</span></dt><dd><p>Dictionary containing attributes of the new node</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.hierarchies.Hierarchy.add_graph_from_data">
+<em class="property">abstract </em><code class="sig-name descname">add_graph_from_data</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">graph_id</em>, <em class="sig-param">node_list</em>, <em class="sig-param">edge_list</em>, <em class="sig-param">attrs=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/hierarchies.html#Hierarchy.add_graph_from_data"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.hierarchies.Hierarchy.add_graph_from_data" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add a new graph to the hierarchy from the input node/edge lists.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>graph_id</strong><span class="classifier">hashable</span></dt><dd><p>Id of a new node in the hierarchy</p>
+</dd>
+<dt><strong>node_list</strong><span class="classifier">iterable</span></dt><dd><p>List of nodes (with attributes)</p>
+</dd>
+<dt><strong>edge_list</strong><span class="classifier">iterable</span></dt><dd><p>List of edges (with attributes)</p>
+</dd>
+<dt><strong>graph_attrs</strong><span class="classifier">dict, optional</span></dt><dd><p>Dictionary containing attributes of the new node</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.hierarchies.Hierarchy.add_graph_from_json">
+<code class="sig-name descname">add_graph_from_json</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">graph_id</em>, <em class="sig-param">json_data</em>, <em class="sig-param">attrs=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/hierarchies.html#Hierarchy.add_graph_from_json"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.hierarchies.Hierarchy.add_graph_from_json" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add a new graph to the hirarchy from its JSON-reprsentation.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>graph_id</strong><span class="classifier">hashable</span></dt><dd><p>Id of the new graph</p>
+</dd>
+<dt><strong>json_data</strong><span class="classifier">dict</span></dt><dd><p>JSON-like dictionary containing the representation of the graph</p>
+</dd>
+<dt><strong>attrs</strong><span class="classifier">dict</span></dt><dd><p>Attributes to attach to the new graph</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.hierarchies.Hierarchy.add_relation">
+<em class="property">abstract </em><code class="sig-name descname">add_relation</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">left</em>, <em class="sig-param">right</em>, <em class="sig-param">relation</em>, <em class="sig-param">attrs=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/hierarchies.html#Hierarchy.add_relation"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.hierarchies.Hierarchy.add_relation" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add relation to the hierarchy.</p>
+<p>This method adds a relation between two graphs in
+the hierarchy corresponding to the nodes with ids
+<cite>left</cite> and <cite>right</cite>, the relation itself is defined
+by a dictionary <cite>relation</cite>, where a key is a node in
+the <cite>left</cite> graph and its corresponding value is a set
+of nodes from the <cite>right</cite> graph to which the node is
+related. Relations in the hierarchy are symmetric
+(see example below).</p>
+<dl class="field-list">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>left</strong></dt><dd><p>Id of the hierarchy’s node represening the <cite>left</cite> graph</p>
+</dd>
+<dt><strong>right</strong></dt><dd><p>Id of the hierarchy’s node represening the <cite>right</cite> graph</p>
+</dd>
+<dt><strong>relation</strong><span class="classifier">dict</span></dt><dd><p>Dictionary representing a relation of nodes from <cite>left</cite>
+to the nodes from <cite>right</cite>, a key of the dictionary is
+assumed to be a node from <cite>left</cite> and its value a set
+of ids of related nodes from <cite>right</cite></p>
+</dd>
+<dt><strong>attrs</strong><span class="classifier">dict</span></dt><dd><p>Dictionary containing attributes of the new relation</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><dl>
+<dt>HierarchyError</dt><dd><p>This error is raised in the following cases:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>node with id <cite>left</cite>/<cite>right</cite> is not defined in the hierarchy;</p></li>
+<li><p>node with id <cite>left</cite>/<cite>right</cite> is not a graph;</p></li>
+<li><p>a relation between <cite>left</cite> and <cite>right</cite> already exists;</p></li>
+<li><p>some node ids specified in <cite>relation</cite> are not found in the</p></li>
+</ul>
+<p><cite>left</cite>/<cite>right</cite> graph.</p>
+</div></blockquote>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.hierarchies.Hierarchy.add_typing">
+<em class="property">abstract </em><code class="sig-name descname">add_typing</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">source</em>, <em class="sig-param">target</em>, <em class="sig-param">mapping</em>, <em class="sig-param">attrs=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/hierarchies.html#Hierarchy.add_typing"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.hierarchies.Hierarchy.add_typing" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add homomorphism to the hierarchy.</p>
+<dl class="field-list">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>source</strong><span class="classifier">hashable</span></dt><dd><p>Id of the source graph node of typing</p>
+</dd>
+<dt><strong>target</strong><span class="classifier">hashable</span></dt><dd><p>Id of the target graph node of typing</p>
+</dd>
+<dt><strong>mapping</strong><span class="classifier">dict</span></dt><dd><p>Dictionary representing a mapping of nodes
+from the source graph to target’s nodes</p>
+</dd>
+<dt><strong>attrs</strong><span class="classifier">dict</span></dt><dd><p>Dictionary containing attributes of the new
+typing edge</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><dl>
+<dt>HierarchyError</dt><dd><p>This error is raised in the following cases:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>source or target ids are not found in the hierarchy</p></li>
+<li><p>a typing edge between source and target already exists</p></li>
+<li><p>addition of an edge between source and target creates</p></li>
+</ul>
+<p>a cycle or produces paths that do not commute with
+some already existing paths</p>
+</div></blockquote>
+</dd>
+<dt>InvalidHomomorphism</dt><dd><p>If a homomorphisms from a graph at the source to a graph at
+the target given by <cite>mapping</cite> is not a valid homomorphism.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.hierarchies.Hierarchy.adjacent_relations">
+<code class="sig-name descname">adjacent_relations</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">g</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/hierarchies.html#Hierarchy.adjacent_relations"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.hierarchies.Hierarchy.adjacent_relations" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return a list of related graphs.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.hierarchies.Hierarchy.apply_rule_hierarchy">
+<code class="sig-name descname">apply_rule_hierarchy</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">rule_hierarchy</em>, <em class="sig-param">instances</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/hierarchies.html#Hierarchy.apply_rule_hierarchy"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.hierarchies.Hierarchy.apply_rule_hierarchy" title="Permalink to this definition">¶</a></dt>
+<dd><p>Apply rule hierarchy.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>rule_hierarchy</strong><span class="classifier">dict</span></dt><dd><p>Dictionary containing the input rule hierarchy</p>
+</dd>
+<dt><strong>instances</strong><span class="classifier">dict</span></dt><dd><p>Dictionary containing an instance for every rule in the hierarchy</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>rhs_instances</strong><span class="classifier">dict</span></dt><dd><p>Dictionary containing the RHS instances for every
+graph in the hierarchy</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.hierarchies.Hierarchy.bfs_tree">
+<em class="property">abstract </em><code class="sig-name descname">bfs_tree</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">graph</em>, <em class="sig-param">reverse=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/hierarchies.html#Hierarchy.bfs_tree"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.hierarchies.Hierarchy.bfs_tree" title="Permalink to this definition">¶</a></dt>
+<dd><p>BFS tree from the graph to all other reachable graphs.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.hierarchies.Hierarchy.compose_path_typing">
+<code class="sig-name descname">compose_path_typing</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">path</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/hierarchies.html#Hierarchy.compose_path_typing"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.hierarchies.Hierarchy.compose_path_typing" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compose homomorphisms along the path.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>path</strong><span class="classifier">list</span></dt><dd><p>List of nodes of the hierarchy forming a path</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><dl class="simple">
+<dt>If source node of the path is a graph</dt><dd></dd>
+<dt><strong>homomorphism</strong><span class="classifier">dict</span></dt><dd><p>Dictionary containg the typing of the nodes
+from the source graph of the path by the nodes
+of the target graph</p>
+</dd>
+<dt>if source node of the path is a rule</dt><dd></dd>
+<dt><strong>lhs_homomorphism</strong><span class="classifier">dict</span></dt><dd><p>Dictionary containg the typing of the nodes
+from the left-hand side of the source rule
+of the path by the nodes of the target graph</p>
+</dd>
+<dt><strong>rhs_homomorphism</strong><span class="classifier">dict</span></dt><dd><p>Dictionary containg the typing of the nodes
+from the right-hand side of the source rule
+of the path by the nodes of the target graph</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.hierarchies.Hierarchy.copy_graph">
+<em class="property">abstract </em><code class="sig-name descname">copy_graph</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">graph_id</em>, <em class="sig-param">new_graph_id</em>, <em class="sig-param">attach_graphs=[]</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/hierarchies.html#Hierarchy.copy_graph"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.hierarchies.Hierarchy.copy_graph" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a copy of a graph in a hierarchy.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.hierarchies.Hierarchy.duplicate_subgraph">
+<code class="sig-name descname">duplicate_subgraph</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">graph_dict</em>, <em class="sig-param">attach_graphs=[]</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/hierarchies.html#Hierarchy.duplicate_subgraph"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.hierarchies.Hierarchy.duplicate_subgraph" title="Permalink to this definition">¶</a></dt>
+<dd><p>Duplicate a subgraph induced by the set of nodes.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>graph_dict</strong><span class="classifier">dict</span></dt><dd><p>Dictionary contaning names of graphs to duplicate as keys
+and their new IDs in the hierarchy as values</p>
+</dd>
+<dt><strong>attach_graphs</strong><span class="classifier">list, optional</span></dt><dd><p>List of not duplicated graph IDs that should be reattached to
+the duplicated graphs, if empty, duplicated subgraph
+is disconnected from the rest of the hierarchy</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.hierarchies.Hierarchy.export">
+<code class="sig-name descname">export</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">filename</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/hierarchies.html#Hierarchy.export"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.hierarchies.Hierarchy.export" title="Permalink to this definition">¶</a></dt>
+<dd><p>Export the hierarchy to a file.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.hierarchies.Hierarchy.find_matching">
+<code class="sig-name descname">find_matching</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">graph_id</em>, <em class="sig-param">pattern</em>, <em class="sig-param">pattern_typing=None</em>, <em class="sig-param">nodes=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/hierarchies.html#Hierarchy.find_matching"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.hierarchies.Hierarchy.find_matching" title="Permalink to this definition">¶</a></dt>
+<dd><p>Find an instance of a pattern in a specified graph.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>graph_id</strong><span class="classifier">hashable</span></dt><dd><p>Id of a graph in the hierarchy to search for matches</p>
+</dd>
+<dt><strong>pattern</strong><span class="classifier">Graph object</span></dt><dd><p>A pattern to match</p>
+</dd>
+<dt><strong>pattern_typing</strong><span class="classifier">dict</span></dt><dd><p>A dictionary that specifies a typing of a pattern,
+keys of the dictionary – graph id that types a pattern, this graph
+should be among parents of the <cite>graph_id</cite> graph;
+values are mappings of nodes from pattern to the typing graph;</p>
+</dd>
+<dt><strong>nodes</strong><span class="classifier">iterable</span></dt><dd><p>Subset of nodes where matching should be performed</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>instances</strong><span class="classifier">list of dict</span></dt><dd><p>List of matched instances</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.hierarchies.Hierarchy.from_json">
+<em class="property">classmethod </em><code class="sig-name descname">from_json</code><span class="sig-paren">(</span><em class="sig-param">json_data</em>, <em class="sig-param">ignore=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/hierarchies.html#Hierarchy.from_json"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.hierarchies.Hierarchy.from_json" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a hierarchy object from JSON-representation.</p>
+<dl class="field-list">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl>
+<dt><strong>json_data</strong><span class="classifier">dict</span></dt><dd><p>JSON-like dict containing representation of a hierarchy</p>
+</dd>
+<dt><strong>ignore</strong><span class="classifier">dict, optional</span></dt><dd><p>Dictionary containing components to ignore in the process
+of converting from JSON, dictionary should respect the
+following format:
+{</p>
+<blockquote>
+<div><p>“graphs”: &lt;collection of ids of graphs to ignore&gt;,
+“rules”: &lt;collection of ids of rules to ignore&gt;,
+“typing”: &lt;collection of tuples containing typing</p>
+<blockquote>
+<div><p>edges to ignore&gt;,</p>
+</div></blockquote>
+<dl class="simple">
+<dt>“rule_typing”: &lt;collection of tuples containing rule</dt><dd><p>typing edges to ignore&gt;&gt;,</p>
+</dd>
+<dt>“relations”: &lt;collection of tuples containing</dt><dd><p>relations to ignore&gt;,</p>
+</dd>
+</dl>
+</div></blockquote>
+<p>}</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>hierarchy</strong><span class="classifier">regraph.hierarchies.Hierarchy</span></dt><dd></dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.hierarchies.Hierarchy.get_ancestors">
+<code class="sig-name descname">get_ancestors</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">graph_id</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/hierarchies.html#Hierarchy.get_ancestors"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.hierarchies.Hierarchy.get_ancestors" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return ancestors of a graph with the typing morphisms.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.hierarchies.Hierarchy.get_descendants">
+<code class="sig-name descname">get_descendants</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">graph_id</em>, <em class="sig-param">maybe=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/hierarchies.html#Hierarchy.get_descendants"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.hierarchies.Hierarchy.get_descendants" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return descendants of a graph with the typing morphisms.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.hierarchies.Hierarchy.get_graph">
+<em class="property">abstract </em><code class="sig-name descname">get_graph</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">graph_id</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/hierarchies.html#Hierarchy.get_graph"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.hierarchies.Hierarchy.get_graph" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get a graph object associated to the node ‘graph_id’.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.hierarchies.Hierarchy.get_graph_attrs">
+<em class="property">abstract </em><code class="sig-name descname">get_graph_attrs</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">graph_id</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/hierarchies.html#Hierarchy.get_graph_attrs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.hierarchies.Hierarchy.get_graph_attrs" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get attributes of a graph in the hierarchy.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>graph_id</strong><span class="classifier">hashable</span></dt><dd><p>Id of the graph</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.hierarchies.Hierarchy.get_relation">
+<em class="property">abstract </em><code class="sig-name descname">get_relation</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">left_id</em>, <em class="sig-param">right_id</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/hierarchies.html#Hierarchy.get_relation"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.hierarchies.Hierarchy.get_relation" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get a relation dict associated to the rel ‘left_id-&gt;target_id’.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.hierarchies.Hierarchy.get_relation_attrs">
+<em class="property">abstract </em><code class="sig-name descname">get_relation_attrs</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">left</em>, <em class="sig-param">right</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/hierarchies.html#Hierarchy.get_relation_attrs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.hierarchies.Hierarchy.get_relation_attrs" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get attributes of a reltion in the hierarchy.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>left</strong><span class="classifier">hashable</span></dt><dd><p>Id of the left graph</p>
+</dd>
+<dt><strong>right</strong><span class="classifier">hashable</span></dt><dd><p>Id of the right graph</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.hierarchies.Hierarchy.get_rule_hierarchy">
+<code class="sig-name descname">get_rule_hierarchy</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">origin_id</em>, <em class="sig-param">rule</em>, <em class="sig-param">instance=None</em>, <em class="sig-param">p_typing=None</em>, <em class="sig-param">rhs_typing=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/hierarchies.html#Hierarchy.get_rule_hierarchy"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.hierarchies.Hierarchy.get_rule_hierarchy" title="Permalink to this definition">¶</a></dt>
+<dd><p>Find rule hierarchy corresponding to the input rewriting.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>graph_id</strong><span class="classifier">hashable</span></dt><dd><p>Id of the graph to rewrite</p>
+</dd>
+<dt><strong>rule</strong><span class="classifier">regraph.Rule</span></dt><dd><p>Rewriting rule</p>
+</dd>
+<dt><strong>instance</strong><span class="classifier">dict, optional</span></dt><dd><p>Instance of the rule in the graph. If not specified,
+the identity of the left-hand side is used</p>
+</dd>
+<dt><strong>p_typing</strong><span class="classifier">dict</span></dt><dd><p>Relations controlling backward propagation. The keys are
+ancestors of the rewritten graph, values are dictionaries
+containing individual relations between the nodes of a given
+ancestor and the preserved part of the rule</p>
+</dd>
+<dt><strong>rhs_typing</strong><span class="classifier">dict</span></dt><dd><p>Relation controlling forward propagation. The keys are
+descendants of the rewritten graph, values are dictionaries
+containing individual relations between the right-hand
+side of the rule and the nodes of a given
+descendant</p>
+</dd>
+<dt><strong>Returns</strong></dt><dd></dd>
+<dt><strong>——-</strong></dt><dd></dd>
+<dt><strong>rule_hierarchy</strong><span class="classifier">dictionary</span></dt><dd><p>Dictionary contains two keys: (1) <cite>rules</cite> whose value is
+a dictionary with id’s of the graphs in the hierarchy and
+the computed propagation rules; (2) <cite>rule_homomorphisms</cite> whose
+value is a dictionary with pairs of graphs in the hierarchy and
+the computed homomorphisms between rules.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.hierarchies.Hierarchy.get_typing">
+<em class="property">abstract </em><code class="sig-name descname">get_typing</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">source_id</em>, <em class="sig-param">target_id</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/hierarchies.html#Hierarchy.get_typing"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.hierarchies.Hierarchy.get_typing" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get a typing dict associated to the edge ‘source_id-&gt;target_id’.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.hierarchies.Hierarchy.get_typing_attrs">
+<em class="property">abstract </em><code class="sig-name descname">get_typing_attrs</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">source</em>, <em class="sig-param">target</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/hierarchies.html#Hierarchy.get_typing_attrs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.hierarchies.Hierarchy.get_typing_attrs" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get attributes of a typing in the hierarchy.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>source</strong><span class="classifier">hashable</span></dt><dd><p>Id of the source graph</p>
+</dd>
+<dt><strong>target</strong><span class="classifier">hashable</span></dt><dd><p>Id of the target graph</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.hierarchies.Hierarchy.graphs">
+<em class="property">abstract </em><code class="sig-name descname">graphs</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">data=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/hierarchies.html#Hierarchy.graphs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.hierarchies.Hierarchy.graphs" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return a list of graphs in the hierarchy.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.hierarchies.Hierarchy.graphs_typed_by_node">
+<code class="sig-name descname">graphs_typed_by_node</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">graph_id</em>, <em class="sig-param">node_id</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/hierarchies.html#Hierarchy.graphs_typed_by_node"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.hierarchies.Hierarchy.graphs_typed_by_node" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get graphs typed by ‘node_id’ in ‘graph_id’.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.hierarchies.Hierarchy.load">
+<em class="property">classmethod </em><code class="sig-name descname">load</code><span class="sig-paren">(</span><em class="sig-param">filename</em>, <em class="sig-param">ignore=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/hierarchies.html#Hierarchy.load"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.hierarchies.Hierarchy.load" title="Permalink to this definition">¶</a></dt>
+<dd><p>Load the hierarchy from a file.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>filename</strong><span class="classifier">str</span></dt><dd><p>Path to the file containing JSON-representation of the hierarchy</p>
+</dd>
+<dt><strong>ignore</strong><span class="classifier">dict</span></dt><dd><p>Dictionary with graph elemenets to ignore when loading</p>
+</dd>
+<dt><strong>Returns</strong></dt><dd></dd>
+<dt><strong>——-</strong></dt><dd></dd>
+<dt><strong>hierarchy</strong><span class="classifier">regraph.hierarchies.Hierarchy</span></dt><dd></dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.hierarchies.Hierarchy.new_apply_rule_hierarchy">
+<code class="sig-name descname">new_apply_rule_hierarchy</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">rule_hierarchy</em>, <em class="sig-param">instances</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/hierarchies.html#Hierarchy.new_apply_rule_hierarchy"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.hierarchies.Hierarchy.new_apply_rule_hierarchy" title="Permalink to this definition">¶</a></dt>
+<dd><p>Apply rule hierarchy.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>rule_hierarchy</strong><span class="classifier">dict</span></dt><dd><p>Dictionary containing the input rule hierarchy</p>
+</dd>
+<dt><strong>instances</strong><span class="classifier">dict</span></dt><dd><p>Dictionary containing an instance for every rule in the hierarchy</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>rhs_instances</strong><span class="classifier">dict</span></dt><dd><p>Dictionary containing the RHS instances for every
+graph in the hierarchy</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.hierarchies.Hierarchy.node_type">
+<code class="sig-name descname">node_type</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">graph_id</em>, <em class="sig-param">node_id</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/hierarchies.html#Hierarchy.node_type"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.hierarchies.Hierarchy.node_type" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get a list of the immediate types of a node.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.hierarchies.Hierarchy.predecessors">
+<em class="property">abstract </em><code class="sig-name descname">predecessors</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">node_id</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/hierarchies.html#Hierarchy.predecessors"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.hierarchies.Hierarchy.predecessors" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the set of predecessors.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.hierarchies.Hierarchy.refine_rule_hierarchy">
+<code class="sig-name descname">refine_rule_hierarchy</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">rule_hierarchy</em>, <em class="sig-param">instances</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/hierarchies.html#Hierarchy.refine_rule_hierarchy"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.hierarchies.Hierarchy.refine_rule_hierarchy" title="Permalink to this definition">¶</a></dt>
+<dd><p>Refine the input rule hierarchy to its reversible version.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>rule_hierarchy</strong><span class="classifier">dict</span></dt><dd><p>Rule hierarchy to refine</p>
+</dd>
+<dt><strong>instances</strong><span class="classifier">dict of dict</span></dt><dd><p>Dictionary containing ids of the graphs in the hierarchy as keys
+and dictionaries represening instances of the corresponding rules</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>new_instances</strong><span class="classifier">dict of dict</span></dt><dd><p>Dictionary containing ids of the graphs in the hierarchy as keys
+and dictionaries represening new instances of the corresponding
+refined rules</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.hierarchies.Hierarchy.relabel_graph">
+<em class="property">abstract </em><code class="sig-name descname">relabel_graph</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">graph_id</em>, <em class="sig-param">new_graph_id</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/hierarchies.html#Hierarchy.relabel_graph"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.hierarchies.Hierarchy.relabel_graph" title="Permalink to this definition">¶</a></dt>
+<dd><p>Relabel a graph in the hierarchy.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>graph_id</strong><span class="classifier">hashable</span></dt><dd><p>Id of the graph to relabel</p>
+</dd>
+<dt><strong>new_graph_id</strong><span class="classifier">hashable</span></dt><dd><p>New graph id to assign to this graph</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.hierarchies.Hierarchy.relabel_graph_node">
+<em class="property">abstract </em><code class="sig-name descname">relabel_graph_node</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">graph_id</em>, <em class="sig-param">node</em>, <em class="sig-param">new_name</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/hierarchies.html#Hierarchy.relabel_graph_node"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.hierarchies.Hierarchy.relabel_graph_node" title="Permalink to this definition">¶</a></dt>
+<dd><p>Rename a node in a graph of the hierarchy.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.hierarchies.Hierarchy.relabel_graphs">
+<em class="property">abstract </em><code class="sig-name descname">relabel_graphs</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">mapping</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/hierarchies.html#Hierarchy.relabel_graphs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.hierarchies.Hierarchy.relabel_graphs" title="Permalink to this definition">¶</a></dt>
+<dd><p>Relabel graphs in the hierarchy.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>mapping: dict</strong></dt><dd><p>A dictionary with keys being old graph ids and their values
+being new id’s of the respective graphs.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><dl class="simple">
+<dt>ReGraphError</dt><dd><p>If new id’s do not define a set of distinct graph id’s.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.hierarchies.Hierarchy.relabel_nodes">
+<code class="sig-name descname">relabel_nodes</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">graph</em>, <em class="sig-param">mapping</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/hierarchies.html#Hierarchy.relabel_nodes"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.hierarchies.Hierarchy.relabel_nodes" title="Permalink to this definition">¶</a></dt>
+<dd><p>Relabel nodes of a graph in the hierarchy.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.hierarchies.Hierarchy.relation_to_span">
+<code class="sig-name descname">relation_to_span</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">left</em>, <em class="sig-param">right</em>, <em class="sig-param">edges=False</em>, <em class="sig-param">attrs=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/hierarchies.html#Hierarchy.relation_to_span"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.hierarchies.Hierarchy.relation_to_span" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert relation to a span.</p>
+<p>This method computes the span of the form
+<cite>left</cite> &lt;- <cite>common</cite> -&gt; <cite>right</cite> from a binary
+symmetric relation between two graphs in
+the hierarchy.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>left</strong></dt><dd><p>Id of the hierarchy’s node represening the <cite>left</cite> graph</p>
+</dd>
+<dt><strong>right</strong></dt><dd><p>Id of the hierarchy’s node represening the <cite>right</cite> graph</p>
+</dd>
+<dt><strong>edges</strong><span class="classifier">bool, optional</span></dt><dd><p>If True, maximal set of edges is added to the common
+part graph</p>
+</dd>
+<dt><strong>attrs</strong><span class="classifier">bool, optional</span></dt><dd><p>If True, maximal dict of attrs is added to the nodes of
+the common part graph</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>common</strong><span class="classifier">nx.(Di)Graph</span></dt><dd><p>Graph representing the common part graph induced
+by the relation</p>
+</dd>
+<dt><strong>left_h</strong><span class="classifier">dict</span></dt><dd><p>Homomorphism from the common part graph to the left
+graph of the relation</p>
+</dd>
+<dt><strong>right_h</strong><span class="classifier">dict</span></dt><dd><p>Homomorphism from the common part graph to the right
+graph of the relation</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-odd">Raises</dt>
+<dd class="field-odd"><dl class="simple">
+<dt>HierarchyError</dt><dd><p>If nodes corresponding to either <cite>left</cite> or <cite>right</cite> ids
+do not exist in the hierarchy, or there is no relation
+between them.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.hierarchies.Hierarchy.relations">
+<em class="property">abstract </em><code class="sig-name descname">relations</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">data=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/hierarchies.html#Hierarchy.relations"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.hierarchies.Hierarchy.relations" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return a list of relations.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.hierarchies.Hierarchy.remove_graph">
+<em class="property">abstract </em><code class="sig-name descname">remove_graph</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">graph_id</em>, <em class="sig-param">reconnect=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/hierarchies.html#Hierarchy.remove_graph"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.hierarchies.Hierarchy.remove_graph" title="Permalink to this definition">¶</a></dt>
+<dd><p>Remove graph from the hierarchy.</p>
+<p>Removes a graph from the hierarchy, if the <cite>reconnect</cite>
+parameter is set to True, adds typing from the
+predecessors of the removed node to all its successors,
+by composing the homomorphisms (for every predecessor <cite>p</cite>
+and for every successor ‘s’ composes two homomorphisms
+<cite>p</cite>-&gt;`node_id` and <cite>node_id</cite>-&gt;`s`, then removes <cite>node_id</cite> and
+all its incident edges, by which makes node’s
+removal a procedure of ‘forgetting’ one level
+of ‘abstraction’).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>node_id</strong></dt><dd><p>Id of a graph to remove</p>
+</dd>
+<dt><strong>reconnect</strong><span class="classifier">bool</span></dt><dd><p>Reconnect the descendants of the removed node to
+its predecessors</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><dl class="simple">
+<dt>HierarchyError</dt><dd><p>If graph with <cite>node_id</cite> is not defined in the hierarchy</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.hierarchies.Hierarchy.remove_relation">
+<em class="property">abstract </em><code class="sig-name descname">remove_relation</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">left</em>, <em class="sig-param">right</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/hierarchies.html#Hierarchy.remove_relation"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.hierarchies.Hierarchy.remove_relation" title="Permalink to this definition">¶</a></dt>
+<dd><p>Remove a relation from the hierarchy.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.hierarchies.Hierarchy.remove_typing">
+<em class="property">abstract </em><code class="sig-name descname">remove_typing</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">s</em>, <em class="sig-param">t</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/hierarchies.html#Hierarchy.remove_typing"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.hierarchies.Hierarchy.remove_typing" title="Permalink to this definition">¶</a></dt>
+<dd><p>Remove a typing from the hierarchy.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.hierarchies.Hierarchy.rewrite">
+<code class="sig-name descname">rewrite</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">graph_id</em>, <em class="sig-param">rule</em>, <em class="sig-param">instance</em>, <em class="sig-param">p_typing=None</em>, <em class="sig-param">rhs_typing=None</em>, <em class="sig-param">strict=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/hierarchies.html#Hierarchy.rewrite"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.hierarchies.Hierarchy.rewrite" title="Permalink to this definition">¶</a></dt>
+<dd><p>Rewrite and propagate the changes backward &amp; forward.</p>
+<p>Rewriting in the hierarchy cosists of an application of the
+SqPO-rewriting rule (given by the ‘rule’ parameter) to a
+graph in the hierarchy. Such rewriting often triggers a set of
+changes that are applied to other graphs and homomorphisms in the
+hierarchy, which are necessary to ensure that the hierarchy stays
+consistent. If the rule is restrictive (deletes nodes/edges/attrs
+or clones nodes), in general, the respective changes to all the graphs
+(transitively) typed by the graph subject to rewriting are made.
+On the other hand, if the rule is relaxing (adds nodes/edges/attrs
+or merges nodes), in general, the respective changes to all the graphs
+that (tansitively) type the graph subject to rewriting are made.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>graph_id</strong></dt><dd><p>Id of the graph in the hierarchy to rewrite</p>
+</dd>
+<dt><strong>rule</strong><span class="classifier">regraph.rule.Rule</span></dt><dd><p>Rule object to apply</p>
+</dd>
+<dt><strong>instance</strong><span class="classifier">dict, optional</span></dt><dd><p>Dictionary containing an instance of the lhs of the rule in
+the graph subject to rewriting, by default, tries to construct
+identity morphism of the nodes of the pattern</p>
+</dd>
+<dt><strong>p_typing</strong><span class="classifier">dict, optional</span></dt><dd><p>Dictionary containing typing of graphs in the hierarchy by the
+interface of the rule, keys are ids of hierarchy graphs,
+values are dictionaries containing the mapping of nodes from
+the hierarchy graphs to the inteface nodes (note that a node
+from a graph can be typed by a set of nodes in
+the interface of the rule, e.g. if we want to perform
+cloning of some types, etc).</p>
+</dd>
+<dt><strong>rhs_typing</strong><span class="classifier">dict, optional</span></dt><dd><p>Dictionary containing typing of the rhs by graphs of the hierarchy,
+keys are ids of hierarchy graphs, values are dictionaries
+containing the mapping of nodes from the rhs to the nodes of
+the typing graph given by the respective key of the value
+(note that a node from the rhs can be typed by a set of nodes of
+some graph, e.g. if we want to perform merging of some types, etc).</p>
+</dd>
+<dt><strong>strict</strong><span class="classifier">bool, optional</span></dt><dd><p>Rewriting is strict when propagation down is not allowed</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><dl class="simple">
+<dt>HierarchyError</dt><dd><p>If the graph is not in the database</p>
+</dd>
+<dt>RewritingError</dt><dd><p>If the provided p and rhs typing are inconsistent</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.hierarchies.Hierarchy.set_graph_attrs">
+<em class="property">abstract </em><code class="sig-name descname">set_graph_attrs</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">node_id</em>, <em class="sig-param">attrs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/hierarchies.html#Hierarchy.set_graph_attrs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.hierarchies.Hierarchy.set_graph_attrs" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set attributes of a graph in the hierarchy.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>graph_id</strong><span class="classifier">hashable</span></dt><dd><p>Id of the graph</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.hierarchies.Hierarchy.set_node_relation">
+<em class="property">abstract </em><code class="sig-name descname">set_node_relation</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">left_graph</em>, <em class="sig-param">right_graph</em>, <em class="sig-param">left_node</em>, <em class="sig-param">right_node</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/hierarchies.html#Hierarchy.set_node_relation"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.hierarchies.Hierarchy.set_node_relation" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set relation for a particular node.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.hierarchies.Hierarchy.set_relation_attrs">
+<em class="property">abstract </em><code class="sig-name descname">set_relation_attrs</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">left</em>, <em class="sig-param">right</em>, <em class="sig-param">attrs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/hierarchies.html#Hierarchy.set_relation_attrs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.hierarchies.Hierarchy.set_relation_attrs" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set attributes of a relation in the hierarchy.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>left</strong><span class="classifier">hashable</span></dt><dd><p>Id of the left graph</p>
+</dd>
+<dt><strong>right</strong><span class="classifier">hashable</span></dt><dd><p>Id of the right graph</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.hierarchies.Hierarchy.set_typing_attrs">
+<em class="property">abstract </em><code class="sig-name descname">set_typing_attrs</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">source</em>, <em class="sig-param">target</em>, <em class="sig-param">attrs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/hierarchies.html#Hierarchy.set_typing_attrs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.hierarchies.Hierarchy.set_typing_attrs" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set attributes of a typing in the hierarchy.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>source</strong><span class="classifier">hashable</span></dt><dd><p>Id of the source graph</p>
+</dd>
+<dt><strong>target</strong><span class="classifier">hashable</span></dt><dd><p>Id of the target graph</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.hierarchies.Hierarchy.shortest_path">
+<em class="property">abstract </em><code class="sig-name descname">shortest_path</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">source</em>, <em class="sig-param">target</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/hierarchies.html#Hierarchy.shortest_path"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.hierarchies.Hierarchy.shortest_path" title="Permalink to this definition">¶</a></dt>
+<dd><p>Shortest path from ‘source’ to ‘target’.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.hierarchies.Hierarchy.successors">
+<em class="property">abstract </em><code class="sig-name descname">successors</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">node_id</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/hierarchies.html#Hierarchy.successors"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.hierarchies.Hierarchy.successors" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the set of successors.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.hierarchies.Hierarchy.to_json">
+<code class="sig-name descname">to_json</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">rename_nodes=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/hierarchies.html#Hierarchy.to_json"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.hierarchies.Hierarchy.to_json" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return json representation of the hierarchy.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>rename_nodes</strong><span class="classifier">dict, optional</span></dt><dd><p>Dictionary specifying mapping of node ids
+from the original graph to its JSON-representation</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.hierarchies.Hierarchy.typings">
+<em class="property">abstract </em><code class="sig-name descname">typings</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">data=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/hierarchies.html#Hierarchy.typings"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.hierarchies.Hierarchy.typings" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return a list of graph typing edges in the hierarchy.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.hierarchies.Hierarchy.unique_graph_id">
+<code class="sig-name descname">unique_graph_id</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">prefix</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/hierarchies.html#Hierarchy.unique_graph_id"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.hierarchies.Hierarchy.unique_graph_id" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generate a new graph id starting with a prefix.</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">ReGraph</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2018, Eugenia Oshurko.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.2.0</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="_sources/hierarchies.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

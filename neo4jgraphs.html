@@ -1,0 +1,406 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>Neo4j-based graphs &#8212; ReGraph 3.0 documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="module-regraph.backends.neo4j.graphs">
+<span id="neo4j-based-graphs"></span><span id="neo4jgraphs"></span><h1>Neo4j-based graphs<a class="headerlink" href="#module-regraph.backends.neo4j.graphs" title="Permalink to this headline">¶</a></h1>
+<p>Neo4j-based persisent graph objects.</p>
+<p>This module implements data structures that allow working with persistent
+graphs stored in an instance of the Neo4j database.</p>
+<dl class="class">
+<dt id="regraph.backends.neo4j.graphs.Neo4jGraph">
+<em class="property">class </em><code class="sig-prename descclassname">regraph.backends.neo4j.graphs.</code><code class="sig-name descname">Neo4jGraph</code><span class="sig-paren">(</span><em class="sig-param">driver=None</em>, <em class="sig-param">uri=None</em>, <em class="sig-param">user=None</em>, <em class="sig-param">password=None</em>, <em class="sig-param">node_label='node'</em>, <em class="sig-param">edge_label='edge'</em>, <em class="sig-param">unique_node_ids=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/backends/neo4j/graphs.html#Neo4jGraph"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.backends.neo4j.graphs.Neo4jGraph" title="Permalink to this definition">¶</a></dt>
+<dd><p>Class implementing Neo4j graph instance.</p>
+<p>This class encapsulates neo4j.v1.GraphDatabase object.
+It provides an interface for accessing graph sitting
+in the DB. This interface is similar (in fact is
+intended to be as similar as possible) to the
+<cite>networkx.DiGraph</cite> object.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Attributes</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>_driver</strong><span class="classifier">neo4j.v1.GraphDatabase</span></dt><dd><p>Driver providing connection to a Neo4j database</p>
+</dd>
+<dt><strong>_node_label</strong><span class="classifier">str</span></dt><dd><p>Label of nodes inducing the manipulated subgraph.</p>
+</dd>
+<dt><strong>_edge_label</strong><span class="classifier">str</span></dt><dd><p>Type of relations used in the manipulated subgraph.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<p class="rubric">Methods</p>
+<table class="longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#regraph.backends.neo4j.graphs.Neo4jGraph.add_edge" title="regraph.backends.neo4j.graphs.Neo4jGraph.add_edge"><code class="xref py py-obj docutils literal notranslate"><span class="pre">add_edge</span></code></a>(self, s, t[, attrs])</p></td>
+<td><p>Add an edge to a graph.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#regraph.backends.neo4j.graphs.Neo4jGraph.add_node" title="regraph.backends.neo4j.graphs.Neo4jGraph.add_node"><code class="xref py py-obj docutils literal notranslate"><span class="pre">add_node</span></code></a>(self, node[, attrs, ignore_naming])</p></td>
+<td><p>Abstract method for adding a node.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#regraph.backends.neo4j.graphs.Neo4jGraph.edges" title="regraph.backends.neo4j.graphs.Neo4jGraph.edges"><code class="xref py py-obj docutils literal notranslate"><span class="pre">edges</span></code></a>(self[, data])</p></td>
+<td><p>Return the list of edges of the graph.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#regraph.backends.neo4j.graphs.Neo4jGraph.find_matching" title="regraph.backends.neo4j.graphs.Neo4jGraph.find_matching"><code class="xref py py-obj docutils literal notranslate"><span class="pre">find_matching</span></code></a>(self, pattern[, nodes, …])</p></td>
+<td><p>Find matching of a pattern in a graph.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#regraph.backends.neo4j.graphs.Neo4jGraph.from_json" title="regraph.backends.neo4j.graphs.Neo4jGraph.from_json"><code class="xref py py-obj docutils literal notranslate"><span class="pre">from_json</span></code></a>([driver, uri, user, password, …])</p></td>
+<td><p>Create a Neo4jGraph from a json-like dictionary.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#regraph.backends.neo4j.graphs.Neo4jGraph.get_edge" title="regraph.backends.neo4j.graphs.Neo4jGraph.get_edge"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_edge</span></code></a>(self, s, t)</p></td>
+<td><p>Get edge attributes.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#regraph.backends.neo4j.graphs.Neo4jGraph.get_node" title="regraph.backends.neo4j.graphs.Neo4jGraph.get_node"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_node</span></code></a>(self, node_id)</p></td>
+<td><p>Get node attributes.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#regraph.backends.neo4j.graphs.Neo4jGraph.load" title="regraph.backends.neo4j.graphs.Neo4jGraph.load"><code class="xref py py-obj docutils literal notranslate"><span class="pre">load</span></code></a>([driver, uri, user, password, …])</p></td>
+<td><p>Load a Neo4jGraph from a JSON file.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#regraph.backends.neo4j.graphs.Neo4jGraph.nodes" title="regraph.backends.neo4j.graphs.Neo4jGraph.nodes"><code class="xref py py-obj docutils literal notranslate"><span class="pre">nodes</span></code></a>(self[, data])</p></td>
+<td><p>Return a list of nodes of the graph.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#regraph.backends.neo4j.graphs.Neo4jGraph.predecessors" title="regraph.backends.neo4j.graphs.Neo4jGraph.predecessors"><code class="xref py py-obj docutils literal notranslate"><span class="pre">predecessors</span></code></a>(self, node_id)</p></td>
+<td><p>Return the set of predecessors.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#regraph.backends.neo4j.graphs.Neo4jGraph.relabel_node" title="regraph.backends.neo4j.graphs.Neo4jGraph.relabel_node"><code class="xref py py-obj docutils literal notranslate"><span class="pre">relabel_node</span></code></a>(self, node_id, new_id)</p></td>
+<td><p>Relabel a node in the graph.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#regraph.backends.neo4j.graphs.Neo4jGraph.remove_edge" title="regraph.backends.neo4j.graphs.Neo4jGraph.remove_edge"><code class="xref py py-obj docutils literal notranslate"><span class="pre">remove_edge</span></code></a>(self, s, t)</p></td>
+<td><p>Remove edge from the graph.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#regraph.backends.neo4j.graphs.Neo4jGraph.remove_node" title="regraph.backends.neo4j.graphs.Neo4jGraph.remove_node"><code class="xref py py-obj docutils literal notranslate"><span class="pre">remove_node</span></code></a>(self, node)</p></td>
+<td><p>Remove node.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#regraph.backends.neo4j.graphs.Neo4jGraph.successors" title="regraph.backends.neo4j.graphs.Neo4jGraph.successors"><code class="xref py py-obj docutils literal notranslate"><span class="pre">successors</span></code></a>(self, node_id)</p></td>
+<td><p>Return the set of successors.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#regraph.backends.neo4j.graphs.Neo4jGraph.update_edge_attrs" title="regraph.backends.neo4j.graphs.Neo4jGraph.update_edge_attrs"><code class="xref py py-obj docutils literal notranslate"><span class="pre">update_edge_attrs</span></code></a>(self, s, t, attrs[, normalize])</p></td>
+<td><p>Update attributes of a node.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#regraph.backends.neo4j.graphs.Neo4jGraph.update_node_attrs" title="regraph.backends.neo4j.graphs.Neo4jGraph.update_node_attrs"><code class="xref py py-obj docutils literal notranslate"><span class="pre">update_node_attrs</span></code></a>(self, node_id, attrs[, …])</p></td>
+<td><p>Update attributes of a node.</p></td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="regraph.backends.neo4j.graphs.Neo4jGraph.add_edge">
+<code class="sig-name descname">add_edge</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">s</em>, <em class="sig-param">t</em>, <em class="sig-param">attrs=None</em>, <em class="sig-param">**attr</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/backends/neo4j/graphs.html#Neo4jGraph.add_edge"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.backends.neo4j.graphs.Neo4jGraph.add_edge" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add an edge to a graph.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>graph</strong><span class="classifier">networkx.(Di)Graph</span></dt><dd></dd>
+<dt><strong>s</strong><span class="classifier">hashable, source node id.</span></dt><dd></dd>
+<dt><strong>t</strong><span class="classifier">hashable, target node id.</span></dt><dd></dd>
+<dt><strong>attrs</strong><span class="classifier">dict</span></dt><dd><p>Edge attributes.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.backends.neo4j.graphs.Neo4jGraph.add_node">
+<code class="sig-name descname">add_node</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">node</em>, <em class="sig-param">attrs=None</em>, <em class="sig-param">ignore_naming=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/backends/neo4j/graphs.html#Neo4jGraph.add_node"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.backends.neo4j.graphs.Neo4jGraph.add_node" title="Permalink to this definition">¶</a></dt>
+<dd><p>Abstract method for adding a node.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>node</strong><span class="classifier">hashable</span></dt><dd><p>Prefix that is prepended to the new unique name.</p>
+</dd>
+<dt><strong>attrs</strong><span class="classifier">dict, optional</span></dt><dd><p>Node attributes.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.backends.neo4j.graphs.Neo4jGraph.edges">
+<code class="sig-name descname">edges</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">data=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/backends/neo4j/graphs.html#Neo4jGraph.edges"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.backends.neo4j.graphs.Neo4jGraph.edges" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the list of edges of the graph.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.backends.neo4j.graphs.Neo4jGraph.find_matching">
+<code class="sig-name descname">find_matching</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">pattern</em>, <em class="sig-param">nodes=None</em>, <em class="sig-param">graph_typing=None</em>, <em class="sig-param">pattern_typing=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/backends/neo4j/graphs.html#Neo4jGraph.find_matching"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.backends.neo4j.graphs.Neo4jGraph.find_matching" title="Permalink to this definition">¶</a></dt>
+<dd><p>Find matching of a pattern in a graph.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.backends.neo4j.graphs.Neo4jGraph.from_json">
+<em class="property">classmethod </em><code class="sig-name descname">from_json</code><span class="sig-paren">(</span><em class="sig-param">driver=None</em>, <em class="sig-param">uri=None</em>, <em class="sig-param">user=None</em>, <em class="sig-param">password=None</em>, <em class="sig-param">json_data=None</em>, <em class="sig-param">node_label='node'</em>, <em class="sig-param">edge_label='edge'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/backends/neo4j/graphs.html#Neo4jGraph.from_json"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.backends.neo4j.graphs.Neo4jGraph.from_json" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a Neo4jGraph from a json-like dictionary.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>json_data</strong><span class="classifier">dict</span></dt><dd><p>JSON-like dictionary with graph representation</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.backends.neo4j.graphs.Neo4jGraph.get_edge">
+<code class="sig-name descname">get_edge</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">s</em>, <em class="sig-param">t</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/backends/neo4j/graphs.html#Neo4jGraph.get_edge"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.backends.neo4j.graphs.Neo4jGraph.get_edge" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get edge attributes.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>graph</strong><span class="classifier">networkx.(Di)Graph</span></dt><dd></dd>
+<dt><strong>s</strong><span class="classifier">hashable, source node id.</span></dt><dd></dd>
+<dt><strong>t</strong><span class="classifier">hashable, target node id.</span></dt><dd></dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.backends.neo4j.graphs.Neo4jGraph.get_node">
+<code class="sig-name descname">get_node</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">node_id</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/backends/neo4j/graphs.html#Neo4jGraph.get_node"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.backends.neo4j.graphs.Neo4jGraph.get_node" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get node attributes.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>graph</strong><span class="classifier">networkx.(Di)Graph or regraph.neo4j.Neo4jGraph</span></dt><dd></dd>
+<dt><strong>node_id</strong><span class="classifier">hashable, node id.</span></dt><dd></dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.backends.neo4j.graphs.Neo4jGraph.load">
+<em class="property">classmethod </em><code class="sig-name descname">load</code><span class="sig-paren">(</span><em class="sig-param">driver=None</em>, <em class="sig-param">uri=None</em>, <em class="sig-param">user=None</em>, <em class="sig-param">password=None</em>, <em class="sig-param">filename=None</em>, <em class="sig-param">node_label='node'</em>, <em class="sig-param">edge_label='edge'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/backends/neo4j/graphs.html#Neo4jGraph.load"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.backends.neo4j.graphs.Neo4jGraph.load" title="Permalink to this definition">¶</a></dt>
+<dd><p>Load a Neo4jGraph from a JSON file.</p>
+<p>Create a graph object from
+a JSON representation stored in a file.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>driver</strong><span class="classifier">neo4j.v1.direct.DirectDriver, optional</span></dt><dd><p>Driver providing connection to a Neo4j database</p>
+</dd>
+<dt><strong>uri</strong><span class="classifier">str, optional</span></dt><dd><p>Uri for a new Neo4j database connection (bolt)</p>
+</dd>
+<dt><strong>user</strong><span class="classifier">str, optional</span></dt><dd><p>Username for the Neo4j database connection</p>
+</dd>
+<dt><strong>password</strong><span class="classifier">str, optional</span></dt><dd><p>Password for the Neo4j database connection</p>
+</dd>
+<dt><strong>filename</strong><span class="classifier">str, optional</span></dt><dd><p>Name of the file to load the json serialization of the graph</p>
+</dd>
+<dt><strong>node_label</strong><span class="classifier">optional</span></dt><dd><p>Label of nodes inducing the subgraph to scope.
+By default <cite>“node”</cite>.</p>
+</dd>
+<dt><strong>edge_label</strong><span class="classifier">optional</span></dt><dd><p>Type of relations inducing the subgraph to scope.
+By default <cite>“edge”</cite>.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><dl class="simple">
+<dt>Graph object</dt><dd></dd>
+</dl>
+</dd>
+<dt class="field-odd">Raises</dt>
+<dd class="field-odd"><dl class="simple">
+<dt>ReGraphError</dt><dd><p>If was not able to load the file</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.backends.neo4j.graphs.Neo4jGraph.nodes">
+<code class="sig-name descname">nodes</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">data=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/backends/neo4j/graphs.html#Neo4jGraph.nodes"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.backends.neo4j.graphs.Neo4jGraph.nodes" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return a list of nodes of the graph.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.backends.neo4j.graphs.Neo4jGraph.predecessors">
+<code class="sig-name descname">predecessors</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">node_id</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/backends/neo4j/graphs.html#Neo4jGraph.predecessors"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.backends.neo4j.graphs.Neo4jGraph.predecessors" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the set of predecessors.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.backends.neo4j.graphs.Neo4jGraph.relabel_node">
+<code class="sig-name descname">relabel_node</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">node_id</em>, <em class="sig-param">new_id</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/backends/neo4j/graphs.html#Neo4jGraph.relabel_node"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.backends.neo4j.graphs.Neo4jGraph.relabel_node" title="Permalink to this definition">¶</a></dt>
+<dd><p>Relabel a node in the graph.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>node_id</strong><span class="classifier">hashable</span></dt><dd><p>Id of the node to relabel.</p>
+</dd>
+<dt><strong>new_id</strong><span class="classifier">hashable</span></dt><dd><p>New label of a node.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.backends.neo4j.graphs.Neo4jGraph.remove_edge">
+<code class="sig-name descname">remove_edge</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">s</em>, <em class="sig-param">t</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/backends/neo4j/graphs.html#Neo4jGraph.remove_edge"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.backends.neo4j.graphs.Neo4jGraph.remove_edge" title="Permalink to this definition">¶</a></dt>
+<dd><p>Remove edge from the graph.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>graph</strong><span class="classifier">networkx.(Di)Graph</span></dt><dd></dd>
+<dt><strong>s</strong><span class="classifier">hashable, source node id.</span></dt><dd></dd>
+<dt><strong>t</strong><span class="classifier">hashable, target node id.</span></dt><dd></dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.backends.neo4j.graphs.Neo4jGraph.remove_node">
+<code class="sig-name descname">remove_node</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">node</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/backends/neo4j/graphs.html#Neo4jGraph.remove_node"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.backends.neo4j.graphs.Neo4jGraph.remove_node" title="Permalink to this definition">¶</a></dt>
+<dd><p>Remove node.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>graph</strong><span class="classifier">networkx.(Di)Graph</span></dt><dd></dd>
+<dt><strong>node_id</strong><span class="classifier">hashable, node to remove.</span></dt><dd></dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.backends.neo4j.graphs.Neo4jGraph.successors">
+<code class="sig-name descname">successors</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">node_id</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/backends/neo4j/graphs.html#Neo4jGraph.successors"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.backends.neo4j.graphs.Neo4jGraph.successors" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the set of successors.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.backends.neo4j.graphs.Neo4jGraph.update_edge_attrs">
+<code class="sig-name descname">update_edge_attrs</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">s</em>, <em class="sig-param">t</em>, <em class="sig-param">attrs</em>, <em class="sig-param">normalize=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/backends/neo4j/graphs.html#Neo4jGraph.update_edge_attrs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.backends.neo4j.graphs.Neo4jGraph.update_edge_attrs" title="Permalink to this definition">¶</a></dt>
+<dd><p>Update attributes of a node.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>s</strong><span class="classifier">hashable, source node of the edge to update.</span></dt><dd></dd>
+<dt><strong>t</strong><span class="classifier">hashable, target node of the edge to update.</span></dt><dd></dd>
+<dt><strong>attrs</strong><span class="classifier">dict</span></dt><dd><p>New attributes to assign to the node</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.backends.neo4j.graphs.Neo4jGraph.update_node_attrs">
+<code class="sig-name descname">update_node_attrs</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">node_id</em>, <em class="sig-param">attrs</em>, <em class="sig-param">normalize=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/backends/neo4j/graphs.html#Neo4jGraph.update_node_attrs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.backends.neo4j.graphs.Neo4jGraph.update_node_attrs" title="Permalink to this definition">¶</a></dt>
+<dd><p>Update attributes of a node.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>node_id</strong><span class="classifier">hashable, node to update.</span></dt><dd></dd>
+<dt><strong>attrs</strong><span class="classifier">dict</span></dt><dd><p>New attributes to assign to the node</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">ReGraph</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2018, Eugenia Oshurko.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.2.0</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="_sources/neo4jgraphs.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

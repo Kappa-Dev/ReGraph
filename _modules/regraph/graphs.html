@@ -1,0 +1,1120 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>regraph.graphs &#8212; ReGraph 3.0 documentation</title>
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for regraph.graphs</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;Abstract graphs in ReGraph.</span>
+
+<span class="sd">This module contains abstract classes for graph objects in ReGraph. Such</span>
+<span class="sd">graph objects represent simple graphs with dictionary-like attributes</span>
+<span class="sd">on nodes and edges.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">json</span>
+<span class="kn">import</span> <span class="nn">os</span>
+
+<span class="kn">import</span> <span class="nn">warnings</span>
+
+<span class="kn">from</span> <span class="nn">abc</span> <span class="k">import</span> <span class="n">ABC</span><span class="p">,</span> <span class="n">abstractmethod</span>
+
+<span class="kn">from</span> <span class="nn">regraph.exceptions</span> <span class="k">import</span> <span class="p">(</span><span class="n">ReGraphError</span><span class="p">,</span>
+                                <span class="n">GraphError</span><span class="p">,</span>
+                                <span class="n">GraphAttrsWarning</span><span class="p">,</span>
+                                <span class="p">)</span>
+<span class="kn">from</span> <span class="nn">regraph.utils</span> <span class="k">import</span> <span class="p">(</span><span class="n">load_nodes_from_json</span><span class="p">,</span>
+                           <span class="n">load_edges_from_json</span><span class="p">,</span>
+                           <span class="n">generate_new_id</span><span class="p">,</span>
+                           <span class="n">normalize_attrs</span><span class="p">,</span>
+                           <span class="n">safe_deepcopy_dict</span><span class="p">,</span>
+                           <span class="n">set_attrs</span><span class="p">,</span>
+                           <span class="n">add_attrs</span><span class="p">,</span>
+                           <span class="n">remove_attrs</span><span class="p">,</span>
+                           <span class="n">merge_attributes</span><span class="p">,</span>
+                           <span class="n">keys_by_value</span><span class="p">,</span>
+                           <span class="p">)</span>
+
+
+<div class="viewcode-block" id="Graph"><a class="viewcode-back" href="../../graphs.html#regraph.graphs.Graph">[docs]</a><span class="k">class</span> <span class="nc">Graph</span><span class="p">(</span><span class="n">ABC</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Abstract class for graph objects in ReGraph.&quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="Graph.nodes"><a class="viewcode-back" href="../../graphs.html#regraph.graphs.Graph.nodes">[docs]</a>    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">nodes</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return the list of nodes.&quot;&quot;&quot;</span>
+        <span class="k">pass</span></div>
+
+<div class="viewcode-block" id="Graph.edges"><a class="viewcode-back" href="../../graphs.html#regraph.graphs.Graph.edges">[docs]</a>    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">edges</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return the list of edges.&quot;&quot;&quot;</span>
+        <span class="k">pass</span></div>
+
+<div class="viewcode-block" id="Graph.get_node"><a class="viewcode-back" href="../../graphs.html#regraph.graphs.Graph.get_node">[docs]</a>    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">get_node</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Get node attributes.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        s : hashable</span>
+<span class="sd">            Source node id.</span>
+<span class="sd">        t : hashable,</span>
+<span class="sd">            Target node id.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">pass</span></div>
+
+<div class="viewcode-block" id="Graph.get_edge"><a class="viewcode-back" href="../../graphs.html#regraph.graphs.Graph.get_edge">[docs]</a>    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">get_edge</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">s</span><span class="p">,</span> <span class="n">t</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Get edge attributes.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        s : hashable</span>
+<span class="sd">            Source node id.</span>
+<span class="sd">        t : hashable</span>
+<span class="sd">            Target node id.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">pass</span></div>
+
+<div class="viewcode-block" id="Graph.add_node"><a class="viewcode-back" href="../../graphs.html#regraph.graphs.Graph.add_node">[docs]</a>    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">add_node</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node_id</span><span class="p">,</span> <span class="n">attrs</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Abstract method for adding a node.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        node_id : hashable</span>
+<span class="sd">            Prefix that is prepended to the new unique name.</span>
+<span class="sd">        attrs : dict, optional</span>
+<span class="sd">            Node attributes.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">pass</span></div>
+
+<div class="viewcode-block" id="Graph.remove_node"><a class="viewcode-back" href="../../graphs.html#regraph.graphs.Graph.remove_node">[docs]</a>    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">remove_node</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node_id</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Remove node.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        node_id : hashable</span>
+<span class="sd">            Node to remove.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">pass</span></div>
+
+<div class="viewcode-block" id="Graph.add_edge"><a class="viewcode-back" href="../../graphs.html#regraph.graphs.Graph.add_edge">[docs]</a>    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">add_edge</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">s</span><span class="p">,</span> <span class="n">t</span><span class="p">,</span> <span class="n">attrs</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">attr</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Add an edge to a graph.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        s : hashable</span>
+<span class="sd">            Source node id.</span>
+<span class="sd">        t : hashable</span>
+<span class="sd">            Target node id.</span>
+<span class="sd">        attrs : dict</span>
+<span class="sd">            Edge attributes.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">pass</span></div>
+
+<div class="viewcode-block" id="Graph.remove_edge"><a class="viewcode-back" href="../../graphs.html#regraph.graphs.Graph.remove_edge">[docs]</a>    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">remove_edge</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">source_id</span><span class="p">,</span> <span class="n">target_id</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Remove edge from the graph.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        s : hashable</span>
+<span class="sd">            Source node id.</span>
+<span class="sd">        t : hashable</span>
+<span class="sd">            Target node id.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">pass</span></div>
+
+<div class="viewcode-block" id="Graph.update_node_attrs"><a class="viewcode-back" href="../../graphs.html#regraph.graphs.Graph.update_node_attrs">[docs]</a>    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">update_node_attrs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node_id</span><span class="p">,</span> <span class="n">attrs</span><span class="p">,</span> <span class="n">normalize</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Update attributes of a node.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        node_id : hashable</span>
+<span class="sd">            Node to update.</span>
+<span class="sd">        attrs : dict</span>
+<span class="sd">            New attributes to assign to the node</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">pass</span></div>
+
+<div class="viewcode-block" id="Graph.update_edge_attrs"><a class="viewcode-back" href="../../graphs.html#regraph.graphs.Graph.update_edge_attrs">[docs]</a>    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">update_edge_attrs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">s</span><span class="p">,</span> <span class="n">t</span><span class="p">,</span> <span class="n">attrs</span><span class="p">,</span> <span class="n">normalize</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Update attributes of a node.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        s : hashable</span>
+<span class="sd">            Source node of the edge to update.</span>
+<span class="sd">        t : hashable</span>
+<span class="sd">            Target node of the edge to update.</span>
+<span class="sd">        attrs : dict</span>
+<span class="sd">            New attributes to assign to the node</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">pass</span></div>
+
+<div class="viewcode-block" id="Graph.successors"><a class="viewcode-back" href="../../graphs.html#regraph.graphs.Graph.successors">[docs]</a>    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">successors</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node_id</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return the set of successors.&quot;&quot;&quot;</span>
+        <span class="k">pass</span></div>
+
+<div class="viewcode-block" id="Graph.predecessors"><a class="viewcode-back" href="../../graphs.html#regraph.graphs.Graph.predecessors">[docs]</a>    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">predecessors</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node_id</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return the set of predecessors.&quot;&quot;&quot;</span>
+        <span class="k">pass</span></div>
+
+<div class="viewcode-block" id="Graph.find_matching"><a class="viewcode-back" href="../../graphs.html#regraph.graphs.Graph.find_matching">[docs]</a>    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">find_matching</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pattern</span><span class="p">,</span> <span class="n">nodes</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Find matching of a pattern in a graph.&quot;&quot;&quot;</span>
+        <span class="k">pass</span></div>
+
+<div class="viewcode-block" id="Graph.print_graph"><a class="viewcode-back" href="../../graphs.html#regraph.graphs.Graph.print_graph">[docs]</a>    <span class="k">def</span> <span class="nf">print_graph</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Pretty-print the graph.&quot;&quot;&quot;</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Nodes:</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
+            <span class="nb">print</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="s2">&quot; : &quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_node</span><span class="p">(</span><span class="n">n</span><span class="p">))</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Edges:</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">for</span> <span class="p">(</span><span class="n">n1</span><span class="p">,</span> <span class="n">n2</span><span class="p">)</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">edges</span><span class="p">():</span>
+            <span class="nb">print</span><span class="p">(</span><span class="n">n1</span><span class="p">,</span> <span class="s1">&#39;-&gt;&#39;</span><span class="p">,</span> <span class="n">n2</span><span class="p">,</span> <span class="s1">&#39; : &#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_edge</span><span class="p">(</span><span class="n">n1</span><span class="p">,</span> <span class="n">n2</span><span class="p">))</span>
+        <span class="k">return</span></div>
+
+    <span class="k">def</span> <span class="nf">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;String representation of the graph.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="s2">&quot;Graph(</span><span class="si">{}</span><span class="s2"> nodes, </span><span class="si">{}</span><span class="s2"> edges)&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+            <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">()),</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">edges</span><span class="p">()))</span>
+
+    <span class="k">def</span> <span class="nf">__eq__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">graph</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Eqaulity operator.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        graph : regraph.Graph</span>
+<span class="sd">            Another graph object</span>
+
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        bool</span>
+<span class="sd">            True if two graphs are equal, False otherwise.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">set</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">())</span> <span class="o">!=</span> <span class="nb">set</span><span class="p">(</span><span class="n">graph</span><span class="o">.</span><span class="n">nodes</span><span class="p">()):</span>
+            <span class="k">return</span> <span class="kc">False</span>
+        <span class="k">if</span> <span class="nb">set</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">edges</span><span class="p">())</span> <span class="o">!=</span> <span class="nb">set</span><span class="p">(</span><span class="n">graph</span><span class="o">.</span><span class="n">edges</span><span class="p">()):</span>
+            <span class="k">return</span> <span class="kc">False</span>
+        <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_node</span><span class="p">(</span><span class="n">node</span><span class="p">)</span> <span class="o">!=</span> <span class="n">graph</span><span class="o">.</span><span class="n">get_node</span><span class="p">(</span><span class="n">node</span><span class="p">):</span>
+                <span class="k">return</span> <span class="kc">False</span>
+        <span class="k">for</span> <span class="n">s</span><span class="p">,</span> <span class="n">t</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">edges</span><span class="p">():</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_edge</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">t</span><span class="p">)</span> <span class="o">!=</span> <span class="n">graph</span><span class="o">.</span><span class="n">get_edge</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">t</span><span class="p">):</span>
+                <span class="k">return</span> <span class="kc">False</span>
+        <span class="k">return</span> <span class="kc">True</span>
+
+    <span class="k">def</span> <span class="nf">__ne__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">graph</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Non-equality operator.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="ow">not</span> <span class="p">(</span><span class="bp">self</span> <span class="o">==</span> <span class="n">graph</span><span class="p">)</span>
+
+<div class="viewcode-block" id="Graph.get_node_attrs"><a class="viewcode-back" href="../../graphs.html#regraph.graphs.Graph.get_node_attrs">[docs]</a>    <span class="k">def</span> <span class="nf">get_node_attrs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Get node attributes.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        n : hashable</span>
+<span class="sd">            Node id.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_node</span><span class="p">(</span><span class="n">n</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Graph.get_edge_attrs"><a class="viewcode-back" href="../../graphs.html#regraph.graphs.Graph.get_edge_attrs">[docs]</a>    <span class="k">def</span> <span class="nf">get_edge_attrs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">s</span><span class="p">,</span> <span class="n">t</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Get edge attributes.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        graph : networkx.(Di)Graph</span>
+<span class="sd">        s : hashable, source node id.</span>
+<span class="sd">        t : hashable, target node id.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_edge</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">t</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Graph.in_edges"><a class="viewcode-back" href="../../graphs.html#regraph.graphs.Graph.in_edges">[docs]</a>    <span class="k">def</span> <span class="nf">in_edges</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node_id</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return the set of in-coming edges.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="p">[(</span><span class="n">p</span><span class="p">,</span> <span class="n">node_id</span><span class="p">)</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">predecessors</span><span class="p">(</span><span class="n">node_id</span><span class="p">)]</span></div>
+
+<div class="viewcode-block" id="Graph.out_edges"><a class="viewcode-back" href="../../graphs.html#regraph.graphs.Graph.out_edges">[docs]</a>    <span class="k">def</span> <span class="nf">out_edges</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node_id</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return the set of out-going edges.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="p">[(</span><span class="n">node_id</span><span class="p">,</span> <span class="n">s</span><span class="p">)</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">successors</span><span class="p">(</span><span class="n">node_id</span><span class="p">)]</span></div>
+
+<div class="viewcode-block" id="Graph.add_nodes_from"><a class="viewcode-back" href="../../graphs.html#regraph.graphs.Graph.add_nodes_from">[docs]</a>    <span class="k">def</span> <span class="nf">add_nodes_from</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node_list</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Add nodes from a node list.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        node_list : iterable</span>
+<span class="sd">            Iterable containing a collection of nodes, optionally,</span>
+<span class="sd">            with their attributes</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">node_list</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">n</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">str</span><span class="p">:</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">node_id</span><span class="p">,</span> <span class="n">node_attrs</span> <span class="o">=</span> <span class="n">n</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">add_node</span><span class="p">(</span><span class="n">node_id</span><span class="p">,</span> <span class="n">node_attrs</span><span class="p">)</span>
+                <span class="k">except</span> <span class="p">(</span><span class="ne">TypeError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">):</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">add_node</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">add_node</span><span class="p">(</span><span class="n">n</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Graph.add_edges_from"><a class="viewcode-back" href="../../graphs.html#regraph.graphs.Graph.add_edges_from">[docs]</a>    <span class="k">def</span> <span class="nf">add_edges_from</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">edge_list</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Add edges from an edge list.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        edge_list : iterable</span>
+<span class="sd">            Iterable containing a collection of edges, optionally,</span>
+<span class="sd">            with their attributes</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">edge_list</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">e</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">add_edge</span><span class="p">(</span><span class="n">e</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">e</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+            <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">e</span><span class="p">)</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">add_edge</span><span class="p">(</span><span class="n">e</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">e</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">e</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">ReGraphError</span><span class="p">(</span>
+                    <span class="s2">&quot;Was expecting 2 or 3 elements per tuple, got </span><span class="si">%s</span><span class="s2">.&quot;</span> <span class="o">%</span>
+                    <span class="nb">str</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">e</span><span class="p">))</span>
+                <span class="p">)</span></div>
+
+<div class="viewcode-block" id="Graph.exists_edge"><a class="viewcode-back" href="../../graphs.html#regraph.graphs.Graph.exists_edge">[docs]</a>    <span class="k">def</span> <span class="nf">exists_edge</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">s</span><span class="p">,</span> <span class="n">t</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Check if an edge exists.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        s : hashable</span>
+<span class="sd">            Source node id.</span>
+<span class="sd">        t : hashable</span>
+<span class="sd">            Target node id.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># print(&quot;\n\n\n\n\n\n\n\n\n\n&quot;, s, t, self.edges())</span>
+        <span class="k">return</span><span class="p">((</span><span class="n">s</span><span class="p">,</span> <span class="n">t</span><span class="p">)</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">edges</span><span class="p">())</span></div>
+
+<div class="viewcode-block" id="Graph.set_node_attrs"><a class="viewcode-back" href="../../graphs.html#regraph.graphs.Graph.set_node_attrs">[docs]</a>    <span class="k">def</span> <span class="nf">set_node_attrs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node_id</span><span class="p">,</span> <span class="n">attrs</span><span class="p">,</span> <span class="n">normalize</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">update</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Set node attrs.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        node_id : hashable</span>
+<span class="sd">            Id of the node to update</span>
+<span class="sd">        attrs : dict</span>
+<span class="sd">            Dictionary with new attributes to set</span>
+<span class="sd">        normalize : bool, optional</span>
+<span class="sd">            Flag, when set to True attributes are normalized to be set-valued.</span>
+<span class="sd">            True by default</span>
+<span class="sd">        update : bool, optional</span>
+<span class="sd">            Flag, when set to True attributes whose keys are not present</span>
+<span class="sd">            in attrs are removed, True by default</span>
+
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        GraphError</span>
+<span class="sd">            If a node `node_id` does not exist.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">node_id</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
+            <span class="k">raise</span> <span class="n">GraphError</span><span class="p">(</span><span class="s2">&quot;Node &#39;</span><span class="si">{}</span><span class="s2">&#39; does not exist!&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">node_id</span><span class="p">))</span>
+
+        <span class="n">node_attrs</span> <span class="o">=</span> <span class="n">safe_deepcopy_dict</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get_node</span><span class="p">(</span><span class="n">node_id</span><span class="p">))</span>
+        <span class="n">set_attrs</span><span class="p">(</span><span class="n">node_attrs</span><span class="p">,</span> <span class="n">attrs</span><span class="p">,</span> <span class="n">normalize</span><span class="p">,</span> <span class="n">update</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">update_node_attrs</span><span class="p">(</span><span class="n">node_id</span><span class="p">,</span> <span class="n">node_attrs</span><span class="p">,</span> <span class="n">normalize</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Graph.add_node_attrs"><a class="viewcode-back" href="../../graphs.html#regraph.graphs.Graph.add_node_attrs">[docs]</a>    <span class="k">def</span> <span class="nf">add_node_attrs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">,</span> <span class="n">attrs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Add new attributes to a node.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        node : hashable</span>
+<span class="sd">            Id of a node to add attributes to.</span>
+<span class="sd">        attrs : dict</span>
+<span class="sd">            Attributes to add.</span>
+
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        GraphError</span>
+<span class="sd">            If a node `node_id` does not exist.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">node</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
+            <span class="k">raise</span> <span class="n">GraphError</span><span class="p">(</span><span class="s2">&quot;Node &#39;</span><span class="si">{}</span><span class="s2">&#39; does not exist!&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">node</span><span class="p">))</span>
+
+        <span class="n">node_attrs</span> <span class="o">=</span> <span class="n">safe_deepcopy_dict</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get_node</span><span class="p">(</span><span class="n">node</span><span class="p">))</span>
+        <span class="n">add_attrs</span><span class="p">(</span><span class="n">node_attrs</span><span class="p">,</span> <span class="n">attrs</span><span class="p">,</span> <span class="n">normalize</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">update_node_attrs</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="n">node_attrs</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Graph.remove_node_attrs"><a class="viewcode-back" href="../../graphs.html#regraph.graphs.Graph.remove_node_attrs">[docs]</a>    <span class="k">def</span> <span class="nf">remove_node_attrs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node_id</span><span class="p">,</span> <span class="n">attrs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Remove attrs of a node specified by attrs_dict.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        node_id : hashable</span>
+<span class="sd">            Node whose attributes to remove.</span>
+<span class="sd">        attrs : dict</span>
+<span class="sd">            Dictionary with attributes to remove.</span>
+
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        GraphError</span>
+<span class="sd">            If a node with the specified id does not exist.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">node_id</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
+            <span class="k">raise</span> <span class="n">GraphError</span><span class="p">(</span><span class="s2">&quot;Node &#39;</span><span class="si">%s</span><span class="s2">&#39; does not exist!&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">node_id</span><span class="p">))</span>
+        <span class="k">elif</span> <span class="n">attrs</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+                <span class="s2">&quot;You want to remove attrs from &#39;</span><span class="si">{}</span><span class="s2">&#39; with an empty attrs_dict!&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                    <span class="n">node_id</span><span class="p">),</span> <span class="n">GraphAttrsWarning</span>
+            <span class="p">)</span>
+
+        <span class="n">node_attrs</span> <span class="o">=</span> <span class="n">safe_deepcopy_dict</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get_node</span><span class="p">(</span><span class="n">node_id</span><span class="p">))</span>
+        <span class="n">remove_attrs</span><span class="p">(</span><span class="n">node_attrs</span><span class="p">,</span> <span class="n">attrs</span><span class="p">,</span> <span class="n">normalize</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">update_node_attrs</span><span class="p">(</span><span class="n">node_id</span><span class="p">,</span> <span class="n">node_attrs</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Graph.set_edge_attrs"><a class="viewcode-back" href="../../graphs.html#regraph.graphs.Graph.set_edge_attrs">[docs]</a>    <span class="k">def</span> <span class="nf">set_edge_attrs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">s</span><span class="p">,</span> <span class="n">t</span><span class="p">,</span> <span class="n">attrs</span><span class="p">,</span> <span class="n">normalize</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">update</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Set edge attrs.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        attrs : dict</span>
+<span class="sd">            Dictionary with new attributes to set</span>
+<span class="sd">        normalize : bool, optional</span>
+<span class="sd">            Flag, when set to True attributes are normalized to be set-valued.</span>
+<span class="sd">            True by default</span>
+<span class="sd">        update : bool, optional</span>
+<span class="sd">            Flag, when set to True attributes whose keys are not present</span>
+<span class="sd">            in attrs are removed, True by default</span>
+
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        GraphError</span>
+<span class="sd">            If an edge between `s` and `t` does not exist.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">exists_edge</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">t</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="n">GraphError</span><span class="p">(</span>
+                <span class="s2">&quot;Edge </span><span class="si">{}</span><span class="s2">-&gt;</span><span class="si">{}</span><span class="s2"> does not exist&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">t</span><span class="p">))</span>
+
+        <span class="n">edge_attrs</span> <span class="o">=</span> <span class="n">safe_deepcopy_dict</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get_edge</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">t</span><span class="p">))</span>
+        <span class="n">set_attrs</span><span class="p">(</span><span class="n">edge_attrs</span><span class="p">,</span> <span class="n">attrs</span><span class="p">,</span> <span class="n">normalize</span><span class="p">,</span> <span class="n">update</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">update_edge_attrs</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">t</span><span class="p">,</span> <span class="n">edge_attrs</span><span class="p">,</span> <span class="n">normalize</span><span class="o">=</span><span class="n">normalize</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Graph.set_edge"><a class="viewcode-back" href="../../graphs.html#regraph.graphs.Graph.set_edge">[docs]</a>    <span class="k">def</span> <span class="nf">set_edge</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">s</span><span class="p">,</span> <span class="n">t</span><span class="p">,</span> <span class="n">attrs</span><span class="p">,</span> <span class="n">normalize</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">update</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Set edge attrs.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        s : hashable</span>
+<span class="sd">            Source node id.</span>
+<span class="sd">        t : hashable</span>
+<span class="sd">            Target node id.</span>
+<span class="sd">        attrs : dictionary</span>
+<span class="sd">            Dictionary with attributes to set.</span>
+
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        GraphError</span>
+<span class="sd">            If an edge between `s` and `t` does not exist.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_edge_attrs</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">t</span><span class="p">,</span> <span class="n">attrs</span><span class="p">,</span> <span class="n">normalize</span><span class="p">,</span> <span class="n">update</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Graph.add_edge_attrs"><a class="viewcode-back" href="../../graphs.html#regraph.graphs.Graph.add_edge_attrs">[docs]</a>    <span class="k">def</span> <span class="nf">add_edge_attrs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">s</span><span class="p">,</span> <span class="n">t</span><span class="p">,</span> <span class="n">attrs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Add attributes of an edge in a graph.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        s : hashable</span>
+<span class="sd">            Source node id.</span>
+<span class="sd">        t : hashable</span>
+<span class="sd">            Target node id.</span>
+<span class="sd">        attrs : dict</span>
+<span class="sd">            Dictionary with attributes to remove.</span>
+
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        GraphError</span>
+<span class="sd">            If an edge between `s` and `t` does not exist.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">exists_edge</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">t</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="n">GraphError</span><span class="p">(</span>
+                <span class="s2">&quot;Edge </span><span class="si">{}</span><span class="s2">-&gt;</span><span class="si">{}</span><span class="s2"> does not exist&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">t</span><span class="p">))</span>
+
+        <span class="n">edge_attrs</span> <span class="o">=</span> <span class="n">safe_deepcopy_dict</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get_edge</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">t</span><span class="p">))</span>
+        <span class="n">add_attrs</span><span class="p">(</span><span class="n">edge_attrs</span><span class="p">,</span> <span class="n">attrs</span><span class="p">,</span> <span class="n">normalize</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">update_edge_attrs</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">t</span><span class="p">,</span> <span class="n">edge_attrs</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Graph.remove_edge_attrs"><a class="viewcode-back" href="../../graphs.html#regraph.graphs.Graph.remove_edge_attrs">[docs]</a>    <span class="k">def</span> <span class="nf">remove_edge_attrs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">s</span><span class="p">,</span> <span class="n">t</span><span class="p">,</span> <span class="n">attrs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Remove attrs of an edge specified by attrs.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        s : hashable</span>
+<span class="sd">            Source node id.</span>
+<span class="sd">        t : hashable</span>
+<span class="sd">            Target node id.</span>
+<span class="sd">        attrs : dict</span>
+<span class="sd">            Dictionary with attributes to remove.</span>
+
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        GraphError</span>
+<span class="sd">            If an edge between `s` and `t` does not exist.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">exists_edge</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">t</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="n">GraphError</span><span class="p">(</span>
+                <span class="s2">&quot;Edge </span><span class="si">{}</span><span class="s2">-&gt;</span><span class="si">{}</span><span class="s2"> does not exist&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">t</span><span class="p">))</span>
+
+        <span class="n">edge_attrs</span> <span class="o">=</span> <span class="n">safe_deepcopy_dict</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get_edge</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">t</span><span class="p">))</span>
+        <span class="n">remove_attrs</span><span class="p">(</span><span class="n">edge_attrs</span><span class="p">,</span> <span class="n">attrs</span><span class="p">,</span> <span class="n">normalize</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">update_edge_attrs</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">t</span><span class="p">,</span> <span class="n">edge_attrs</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Graph.clone_node"><a class="viewcode-back" href="../../graphs.html#regraph.graphs.Graph.clone_node">[docs]</a>    <span class="k">def</span> <span class="nf">clone_node</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node_id</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Clone node.</span>
+
+<span class="sd">        Create a new node, a copy of a node with `node_id`, and reconnect it</span>
+<span class="sd">        with all the adjacent nodes of `node_id`.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        node_id : hashable,</span>
+<span class="sd">            Id of a node to clone.</span>
+<span class="sd">        name : hashable, optional</span>
+<span class="sd">            Id for the clone, if is not specified, new id will be generated.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        new_node : hashable</span>
+<span class="sd">            Id of the new node corresponding to the clone</span>
+
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        GraphError</span>
+<span class="sd">            If node wiht `node_id` does not exists or a node with</span>
+<span class="sd">            `name` (clone&#39;s name) already exists.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">node_id</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
+            <span class="k">raise</span> <span class="n">GraphError</span><span class="p">(</span><span class="s2">&quot;Node &#39;</span><span class="si">{}</span><span class="s2">&#39; does not exist!&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">node_id</span><span class="p">))</span>
+
+        <span class="c1"># generate new name for a clone</span>
+        <span class="k">if</span> <span class="n">name</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">i</span> <span class="o">=</span> <span class="mi">1</span>
+            <span class="n">new_node</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">node_id</span><span class="p">)</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+            <span class="k">while</span> <span class="n">new_node</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
+                <span class="n">i</span> <span class="o">+=</span> <span class="mi">1</span>
+                <span class="n">new_node</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">node_id</span><span class="p">)</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
+                <span class="k">raise</span> <span class="n">GraphError</span><span class="p">(</span><span class="s2">&quot;Node &#39;</span><span class="si">{}</span><span class="s2">&#39; already exists!&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">name</span><span class="p">))</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">new_node</span> <span class="o">=</span> <span class="n">name</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">add_node</span><span class="p">(</span><span class="n">new_node</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_node</span><span class="p">(</span><span class="n">node_id</span><span class="p">))</span>
+
+        <span class="c1"># Connect all the edges</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">add_edges_from</span><span class="p">(</span>
+            <span class="nb">set</span><span class="p">([(</span><span class="n">n</span><span class="p">,</span> <span class="n">new_node</span><span class="p">)</span> <span class="k">for</span> <span class="n">n</span><span class="p">,</span> <span class="n">_</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">in_edges</span><span class="p">(</span><span class="n">node_id</span><span class="p">)</span>
+                 <span class="k">if</span> <span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">new_node</span><span class="p">)</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">edges</span><span class="p">()]))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">add_edges_from</span><span class="p">(</span>
+            <span class="nb">set</span><span class="p">([(</span><span class="n">new_node</span><span class="p">,</span> <span class="n">n</span><span class="p">)</span> <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">n</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">out_edges</span><span class="p">(</span><span class="n">node_id</span><span class="p">)</span>
+                 <span class="k">if</span> <span class="p">(</span><span class="n">new_node</span><span class="p">,</span> <span class="n">n</span><span class="p">)</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">edges</span><span class="p">()]))</span>
+
+        <span class="c1"># Copy the attributes of the edges</span>
+        <span class="k">for</span> <span class="n">s</span><span class="p">,</span> <span class="n">t</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">in_edges</span><span class="p">(</span><span class="n">node_id</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">set_edge</span><span class="p">(</span>
+                <span class="n">s</span><span class="p">,</span> <span class="n">new_node</span><span class="p">,</span>
+                <span class="n">safe_deepcopy_dict</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get_edge</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">t</span><span class="p">)))</span>
+        <span class="k">for</span> <span class="n">s</span><span class="p">,</span> <span class="n">t</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">out_edges</span><span class="p">(</span><span class="n">node_id</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">set_edge</span><span class="p">(</span>
+                <span class="n">new_node</span><span class="p">,</span> <span class="n">t</span><span class="p">,</span>
+                <span class="n">safe_deepcopy_dict</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get_edge</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">t</span><span class="p">)))</span>
+        <span class="k">return</span> <span class="n">new_node</span></div>
+
+<div class="viewcode-block" id="Graph.relabel_node"><a class="viewcode-back" href="../../graphs.html#regraph.graphs.Graph.relabel_node">[docs]</a>    <span class="k">def</span> <span class="nf">relabel_node</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node_id</span><span class="p">,</span> <span class="n">new_id</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Relabel a node in the graph.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        node_id : hashable</span>
+<span class="sd">            Id of the node to relabel.</span>
+<span class="sd">        new_id : hashable</span>
+<span class="sd">            New label of a node.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">new_id</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
+            <span class="k">raise</span> <span class="n">ReGraphError</span><span class="p">(</span>
+                <span class="s2">&quot;Cannot relabel &#39;</span><span class="si">{}</span><span class="s2">&#39; to &#39;</span><span class="si">{}</span><span class="s2">&#39;, &#39;</span><span class="si">{}</span><span class="s2">&#39; &quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                    <span class="n">node_id</span><span class="p">,</span> <span class="n">new_id</span><span class="p">,</span> <span class="n">new_id</span><span class="p">)</span> <span class="o">+</span>
+                <span class="s2">&quot;already exists in the graph&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">clone_node</span><span class="p">(</span><span class="n">node_id</span><span class="p">,</span> <span class="n">new_id</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">remove_node</span><span class="p">(</span><span class="n">node_id</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Graph.merge_nodes"><a class="viewcode-back" href="../../graphs.html#regraph.graphs.Graph.merge_nodes">[docs]</a>    <span class="k">def</span> <span class="nf">merge_nodes</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">nodes</span><span class="p">,</span> <span class="n">node_id</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s2">&quot;union&quot;</span><span class="p">,</span>
+                    <span class="n">edge_method</span><span class="o">=</span><span class="s2">&quot;union&quot;</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Merge a list of nodes.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+
+<span class="sd">        nodes : iterable</span>
+<span class="sd">            Collection of node id&#39;s to merge.</span>
+<span class="sd">        node_id : hashable, optional</span>
+<span class="sd">            Id of a new node corresponding to the result of merge.</span>
+<span class="sd">        method : optional</span>
+<span class="sd">            Method of node attributes merge: if `&quot;union&quot;` the resulting node</span>
+<span class="sd">            will contain the union of all attributes of the merged nodes,</span>
+<span class="sd">            if `&quot;intersection&quot;`, the resulting node will contain their</span>
+<span class="sd">            intersection. Default value is `&quot;union&quot;`.</span>
+<span class="sd">        edge_method : optional</span>
+<span class="sd">            Method of edge attributes merge: if `&quot;union&quot;` the edges that were</span>
+<span class="sd">            merged will contain the union of all attributes,</span>
+<span class="sd">            if `&quot;intersection&quot;` -- their ntersection.</span>
+<span class="sd">            Default value is `&quot;union&quot;`.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">nodes</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+
+            <span class="k">if</span> <span class="n">method</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">method</span> <span class="o">=</span> <span class="s2">&quot;union&quot;</span>
+
+            <span class="k">if</span> <span class="n">edge_method</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">method</span> <span class="o">=</span> <span class="s2">&quot;union&quot;</span>
+
+            <span class="c1"># Generate name for new node</span>
+            <span class="k">if</span> <span class="n">node_id</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">node_id</span> <span class="o">=</span> <span class="s2">&quot;_&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">sorted</span><span class="p">([</span><span class="nb">str</span><span class="p">(</span><span class="n">n</span><span class="p">)</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">nodes</span><span class="p">]))</span>
+                <span class="k">if</span> <span class="n">node_id</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
+                    <span class="n">node_id</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">generate_new_node_id</span><span class="p">(</span><span class="n">node_id</span><span class="p">)</span>
+
+            <span class="k">elif</span> <span class="n">node_id</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">()</span> <span class="ow">and</span> <span class="p">(</span><span class="n">node_id</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">nodes</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="n">GraphError</span><span class="p">(</span>
+                    <span class="s2">&quot;New name for merged node is not valid: &quot;</span>
+                    <span class="s2">&quot;node with name &#39;</span><span class="si">%s</span><span class="s2">&#39; already exists!&quot;</span> <span class="o">%</span> <span class="n">node_id</span>
+                <span class="p">)</span>
+            <span class="c1"># Merge data attached to node according to the method specified</span>
+            <span class="c1"># restore proper connectivity</span>
+            <span class="k">if</span> <span class="n">method</span> <span class="o">==</span> <span class="s2">&quot;union&quot;</span><span class="p">:</span>
+                <span class="n">attr_accumulator</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="k">elif</span> <span class="n">method</span> <span class="o">==</span> <span class="s2">&quot;intersection&quot;</span><span class="p">:</span>
+                <span class="n">attr_accumulator</span> <span class="o">=</span> <span class="n">safe_deepcopy_dict</span><span class="p">(</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">get_node</span><span class="p">(</span><span class="n">nodes</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">ReGraphError</span><span class="p">(</span><span class="s2">&quot;Merging method &#39;</span><span class="si">{}</span><span class="s2">&#39; is not defined!&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                    <span class="n">method</span><span class="p">))</span>
+
+            <span class="n">self_loop</span> <span class="o">=</span> <span class="kc">False</span>
+            <span class="n">self_loop_attrs</span> <span class="o">=</span> <span class="p">{}</span>
+
+            <span class="n">source_nodes</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+            <span class="n">target_nodes</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+
+            <span class="n">source_dict</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="n">target_dict</span> <span class="o">=</span> <span class="p">{}</span>
+
+            <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">nodes</span><span class="p">:</span>
+                <span class="n">attr_accumulator</span> <span class="o">=</span> <span class="n">merge_attributes</span><span class="p">(</span>
+                    <span class="n">attr_accumulator</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_node</span><span class="p">(</span><span class="n">node</span><span class="p">),</span> <span class="n">method</span><span class="p">)</span>
+
+                <span class="n">in_edges</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">in_edges</span><span class="p">(</span><span class="n">node</span><span class="p">)</span>
+                <span class="n">out_edges</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">out_edges</span><span class="p">(</span><span class="n">node</span><span class="p">)</span>
+
+                <span class="c1"># manage self loops</span>
+                <span class="k">for</span> <span class="n">s</span><span class="p">,</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">in_edges</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">nodes</span><span class="p">:</span>
+                        <span class="n">self_loop</span> <span class="o">=</span> <span class="kc">True</span>
+                        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">self_loop_attrs</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                            <span class="n">self_loop_attrs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_edge</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">t</span><span class="p">)</span>
+                        <span class="k">else</span><span class="p">:</span>
+                            <span class="n">self_loop_attrs</span> <span class="o">=</span> <span class="n">merge_attributes</span><span class="p">(</span>
+                                <span class="n">self_loop_attrs</span><span class="p">,</span>
+                                <span class="bp">self</span><span class="o">.</span><span class="n">get_edge</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">t</span><span class="p">),</span>
+                                <span class="n">edge_method</span><span class="p">)</span>
+
+                <span class="k">for</span> <span class="n">s</span><span class="p">,</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">out_edges</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">nodes</span><span class="p">:</span>
+                        <span class="n">self_loop</span> <span class="o">=</span> <span class="kc">True</span>
+                        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">self_loop_attrs</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                            <span class="n">self_loop_attrs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_edge</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">t</span><span class="p">)</span>
+                        <span class="k">else</span><span class="p">:</span>
+                            <span class="n">self_loop_attrs</span> <span class="o">=</span> <span class="n">merge_attributes</span><span class="p">(</span>
+                                <span class="n">self_loop_attrs</span><span class="p">,</span>
+                                <span class="bp">self</span><span class="o">.</span><span class="n">get_edge</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">t</span><span class="p">),</span>
+                                <span class="n">edge_method</span><span class="p">)</span>
+
+                <span class="n">source_nodes</span><span class="o">.</span><span class="n">update</span><span class="p">(</span>
+                    <span class="p">[</span><span class="n">n</span> <span class="k">if</span> <span class="n">n</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">nodes</span> <span class="k">else</span> <span class="n">node_id</span>
+                     <span class="k">for</span> <span class="n">n</span><span class="p">,</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">in_edges</span><span class="p">])</span>
+                <span class="n">target_nodes</span><span class="o">.</span><span class="n">update</span><span class="p">(</span>
+                    <span class="p">[</span><span class="n">n</span> <span class="k">if</span> <span class="n">n</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">nodes</span> <span class="k">else</span> <span class="n">node_id</span>
+                     <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">out_edges</span><span class="p">])</span>
+
+                <span class="k">for</span> <span class="n">edge</span> <span class="ow">in</span> <span class="n">in_edges</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="ow">not</span> <span class="n">edge</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">in</span> <span class="n">source_dict</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                        <span class="n">attrs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_edge</span><span class="p">(</span><span class="n">edge</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">edge</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+                        <span class="n">source_dict</span><span class="o">.</span><span class="n">update</span><span class="p">({</span><span class="n">edge</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span> <span class="n">attrs</span><span class="p">})</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">attrs</span> <span class="o">=</span> <span class="n">merge_attributes</span><span class="p">(</span>
+                            <span class="n">source_dict</span><span class="p">[</span><span class="n">edge</span><span class="p">[</span><span class="mi">0</span><span class="p">]],</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">get_edge</span><span class="p">(</span><span class="n">edge</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">edge</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span>
+                            <span class="n">edge_method</span><span class="p">)</span>
+                        <span class="n">source_dict</span><span class="o">.</span><span class="n">update</span><span class="p">({</span><span class="n">edge</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span> <span class="n">attrs</span><span class="p">})</span>
+
+                <span class="k">for</span> <span class="n">edge</span> <span class="ow">in</span> <span class="n">out_edges</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="ow">not</span> <span class="n">edge</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="ow">in</span> <span class="n">target_dict</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                        <span class="n">attrs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_edge</span><span class="p">(</span><span class="n">edge</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">edge</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+                        <span class="n">target_dict</span><span class="o">.</span><span class="n">update</span><span class="p">({</span><span class="n">edge</span><span class="p">[</span><span class="mi">1</span><span class="p">]:</span> <span class="n">attrs</span><span class="p">})</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">attrs</span> <span class="o">=</span> <span class="n">merge_attributes</span><span class="p">(</span>
+                            <span class="n">target_dict</span><span class="p">[</span><span class="n">edge</span><span class="p">[</span><span class="mi">1</span><span class="p">]],</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">get_edge</span><span class="p">(</span><span class="n">edge</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">edge</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span>
+                            <span class="n">edge_method</span><span class="p">)</span>
+                        <span class="n">target_dict</span><span class="o">.</span><span class="n">update</span><span class="p">({</span><span class="n">edge</span><span class="p">[</span><span class="mi">1</span><span class="p">]:</span> <span class="n">attrs</span><span class="p">})</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">remove_node</span><span class="p">(</span><span class="n">node</span><span class="p">)</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">add_node</span><span class="p">(</span><span class="n">node_id</span><span class="p">,</span> <span class="n">attr_accumulator</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">self_loop</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">add_edges_from</span><span class="p">([(</span><span class="n">node_id</span><span class="p">,</span> <span class="n">node_id</span><span class="p">)])</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">set_edge</span><span class="p">(</span><span class="n">node_id</span><span class="p">,</span> <span class="n">node_id</span><span class="p">,</span> <span class="n">self_loop_attrs</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">source_nodes</span><span class="p">:</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">exists_edge</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">node_id</span><span class="p">):</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">add_edge</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">node_id</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">target_nodes</span><span class="p">:</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">exists_edge</span><span class="p">(</span><span class="n">node_id</span><span class="p">,</span> <span class="n">n</span><span class="p">):</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">add_edge</span><span class="p">(</span><span class="n">node_id</span><span class="p">,</span> <span class="n">n</span><span class="p">)</span>
+
+            <span class="c1"># Attach accumulated attributes to edges</span>
+            <span class="k">for</span> <span class="n">node</span><span class="p">,</span> <span class="n">attrs</span> <span class="ow">in</span> <span class="n">source_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="k">if</span> <span class="n">node</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">nodes</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">set_edge</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="n">node_id</span><span class="p">,</span> <span class="n">attrs</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">node</span><span class="p">,</span> <span class="n">attrs</span> <span class="ow">in</span> <span class="n">target_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="k">if</span> <span class="n">node</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">nodes</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">set_edge</span><span class="p">(</span><span class="n">node_id</span><span class="p">,</span> <span class="n">node</span><span class="p">,</span> <span class="n">attrs</span><span class="p">)</span>
+
+            <span class="k">return</span> <span class="n">node_id</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">ReGraphError</span><span class="p">(</span>
+                <span class="s2">&quot;More than two nodes should be specified for merging!&quot;</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Graph.copy_node"><a class="viewcode-back" href="../../graphs.html#regraph.graphs.Graph.copy_node">[docs]</a>    <span class="k">def</span> <span class="nf">copy_node</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node_id</span><span class="p">,</span> <span class="n">copy_id</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Copy node.</span>
+
+<span class="sd">        Create a copy of a node in a graph. A new id for the copy is</span>
+<span class="sd">        generated by regraph.primitives.unique_node_id.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        node_id : hashable</span>
+<span class="sd">            Node to copy.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        new_name</span>
+<span class="sd">            Id of the copy node.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">copy_id</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">copy_id</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">generate_new_node_id</span><span class="p">(</span><span class="n">node_id</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">copy_id</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
+            <span class="k">raise</span> <span class="n">ReGraphError</span><span class="p">(</span>
+                <span class="s2">&quot;Cannot create a copy of &#39;</span><span class="si">{}</span><span class="s2">&#39; with id &#39;</span><span class="si">{}</span><span class="s2">&#39;, &quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                    <span class="n">node_id</span><span class="p">,</span> <span class="n">copy_id</span><span class="p">)</span> <span class="o">+</span>
+                <span class="s2">&quot;node &#39;</span><span class="si">{}</span><span class="s2">&#39; already exists in the graph&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">copy_id</span><span class="p">))</span>
+        <span class="n">attrs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_node</span><span class="p">(</span><span class="n">node_id</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">add_node</span><span class="p">(</span><span class="n">copy_id</span><span class="p">,</span> <span class="n">attrs</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">copy_id</span></div>
+
+<div class="viewcode-block" id="Graph.relabel_nodes"><a class="viewcode-back" href="../../graphs.html#regraph.graphs.Graph.relabel_nodes">[docs]</a>    <span class="k">def</span> <span class="nf">relabel_nodes</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mapping</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Relabel graph nodes inplace given a mapping.</span>
+
+<span class="sd">        Similar to networkx.relabel.relabel_nodes:</span>
+<span class="sd">        https://networkx.github.io/documentation/development/_modules/networkx/relabel.html</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        mapping: dict</span>
+<span class="sd">            A dictionary with keys being old node ids and their values</span>
+<span class="sd">            being new id&#39;s of the respective nodes.</span>
+
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        ReGraphError</span>
+<span class="sd">            If new id&#39;s do not define a set of distinct node id&#39;s.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">unique_names</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">mapping</span><span class="o">.</span><span class="n">values</span><span class="p">())</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">unique_names</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">()):</span>
+            <span class="k">raise</span> <span class="n">ReGraphError</span><span class="p">(</span>
+                <span class="s2">&quot;Attempt to relabel nodes failed: the IDs are not unique!&quot;</span><span class="p">)</span>
+
+        <span class="n">temp_names</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="c1"># Relabeling of the nodes: if at some point new ID conflicts</span>
+        <span class="c1"># with already existing ID - assign temp ID</span>
+        <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">mapping</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">key</span> <span class="o">!=</span> <span class="n">value</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">value</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
+                    <span class="n">new_name</span> <span class="o">=</span> <span class="n">value</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">new_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">generate_new_node_id</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+                    <span class="n">temp_names</span><span class="p">[</span><span class="n">new_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">relabel_node</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">new_name</span><span class="p">)</span>
+        <span class="c1"># Relabeling the nodes with the temp ID to their new IDs</span>
+        <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">temp_names</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">key</span> <span class="o">!=</span> <span class="n">value</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">relabel_node</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+        <span class="k">return</span></div>
+
+<div class="viewcode-block" id="Graph.generate_new_node_id"><a class="viewcode-back" href="../../graphs.html#regraph.graphs.Graph.generate_new_node_id">[docs]</a>    <span class="k">def</span> <span class="nf">generate_new_node_id</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">basename</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Generate new unique node identifier.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">generate_new_id</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">(),</span> <span class="n">basename</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Graph.filter_edges_by_attributes"><a class="viewcode-back" href="../../graphs.html#regraph.graphs.Graph.filter_edges_by_attributes">[docs]</a>    <span class="k">def</span> <span class="nf">filter_edges_by_attributes</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">attr_key</span><span class="p">,</span> <span class="n">attr_cond</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Filter graph edges by attributes.</span>
+
+<span class="sd">        Removes all the edges of the graph (inplace) that do not</span>
+<span class="sd">        satisfy `attr_cond`.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        attrs_key : hashable</span>
+<span class="sd">            Attribute key</span>
+<span class="sd">        attrs_cond : callable</span>
+<span class="sd">            Condition for an attribute to satisfy: callable that returns</span>
+<span class="sd">            `True` if condition is satisfied, `False` otherwise.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">t</span><span class="p">)</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">edges</span><span class="p">():</span>
+            <span class="n">edge_attrs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_edge</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">t</span><span class="p">)</span>
+            <span class="k">if</span> <span class="p">(</span><span class="n">attr_key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">edge_attrs</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span> <span class="ow">or</span>
+                    <span class="ow">not</span> <span class="n">attr_cond</span><span class="p">(</span><span class="n">edge_attrs</span><span class="p">[</span><span class="n">attr_key</span><span class="p">])):</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">remove_edge</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">t</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Graph.to_json"><a class="viewcode-back" href="../../graphs.html#regraph.graphs.Graph.to_json">[docs]</a>    <span class="k">def</span> <span class="nf">to_json</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Create a JSON representation of a graph.&quot;&quot;&quot;</span>
+        <span class="n">j_data</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;edges&quot;</span><span class="p">:</span> <span class="p">[],</span> <span class="s2">&quot;nodes&quot;</span><span class="p">:</span> <span class="p">[]}</span>
+        <span class="c1"># dump nodes</span>
+        <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
+            <span class="n">node_data</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="n">node_data</span><span class="p">[</span><span class="s2">&quot;id&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">node</span>
+            <span class="n">node_attrs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_node</span><span class="p">(</span><span class="n">node</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">node_attrs</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">attrs</span> <span class="o">=</span> <span class="p">{}</span>
+                <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">node_attrs</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                    <span class="n">attrs</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span><span class="o">.</span><span class="n">to_json</span><span class="p">()</span>
+                <span class="n">node_data</span><span class="p">[</span><span class="s2">&quot;attrs&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">attrs</span>
+            <span class="n">j_data</span><span class="p">[</span><span class="s2">&quot;nodes&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">node_data</span><span class="p">)</span>
+
+        <span class="c1"># dump edges</span>
+        <span class="k">for</span> <span class="n">s</span><span class="p">,</span> <span class="n">t</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">edges</span><span class="p">():</span>
+            <span class="n">edge_data</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="n">edge_data</span><span class="p">[</span><span class="s2">&quot;from&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">s</span>
+            <span class="n">edge_data</span><span class="p">[</span><span class="s2">&quot;to&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">t</span>
+            <span class="n">edge_attrs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_edge</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">t</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">edge_attrs</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">attrs</span> <span class="o">=</span> <span class="p">{}</span>
+                <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">edge_attrs</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                    <span class="n">attrs</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span><span class="o">.</span><span class="n">to_json</span><span class="p">()</span>
+                <span class="n">edge_data</span><span class="p">[</span><span class="s2">&quot;attrs&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">attrs</span>
+            <span class="n">j_data</span><span class="p">[</span><span class="s2">&quot;edges&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">edge_data</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">j_data</span></div>
+
+<div class="viewcode-block" id="Graph.to_d3_json"><a class="viewcode-back" href="../../graphs.html#regraph.graphs.Graph.to_d3_json">[docs]</a>    <span class="k">def</span> <span class="nf">to_d3_json</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                   <span class="n">attrs</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                   <span class="n">node_attrs_to_attach</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                   <span class="n">edge_attrs_to_attach</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                   <span class="n">nodes</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Create a JSON representation of a graph.&quot;&quot;&quot;</span>
+        <span class="n">j_data</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;links&quot;</span><span class="p">:</span> <span class="p">[],</span> <span class="s2">&quot;nodes&quot;</span><span class="p">:</span> <span class="p">[]}</span>
+        <span class="k">if</span> <span class="n">nodes</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">nodes</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">()</span>
+        <span class="c1"># dump nodes</span>
+        <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">nodes</span><span class="p">:</span>
+            <span class="n">node_data</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="n">node_data</span><span class="p">[</span><span class="s2">&quot;id&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">node</span>
+            <span class="k">if</span> <span class="n">attrs</span><span class="p">:</span>
+                <span class="n">node_attrs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_node</span><span class="p">(</span><span class="n">node</span><span class="p">)</span>
+                <span class="n">normalize_attrs</span><span class="p">(</span><span class="n">node_attrs</span><span class="p">)</span>
+                <span class="n">attrs_json</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+                <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">node_attrs</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                    <span class="n">attrs_json</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span><span class="o">.</span><span class="n">to_json</span><span class="p">()</span>
+                <span class="n">node_data</span><span class="p">[</span><span class="s2">&quot;attrs&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">attrs_json</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">node_attrs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_node</span><span class="p">(</span><span class="n">node</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">node_attrs_to_attach</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">node_attrs_to_attach</span><span class="p">:</span>
+                        <span class="k">if</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">node_attrs</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                            <span class="n">node_data</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">node_attrs</span><span class="p">[</span><span class="n">key</span><span class="p">])</span>
+            <span class="n">j_data</span><span class="p">[</span><span class="s2">&quot;nodes&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">node_data</span><span class="p">)</span>
+
+        <span class="c1"># dump edges</span>
+        <span class="k">for</span> <span class="n">s</span><span class="p">,</span> <span class="n">t</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">edges</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">nodes</span> <span class="ow">and</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">nodes</span><span class="p">:</span>
+                <span class="n">edge_data</span> <span class="o">=</span> <span class="p">{}</span>
+                <span class="n">edge_data</span><span class="p">[</span><span class="s2">&quot;source&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">s</span>
+                <span class="n">edge_data</span><span class="p">[</span><span class="s2">&quot;target&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">t</span>
+                <span class="k">if</span> <span class="n">attrs</span><span class="p">:</span>
+                    <span class="n">edge_attrs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_edge</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">t</span><span class="p">)</span>
+                    <span class="n">normalize_attrs</span><span class="p">(</span><span class="n">edge_attrs</span><span class="p">)</span>
+                    <span class="n">attrs_json</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+                    <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">edge_attrs</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                        <span class="n">attrs_json</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span><span class="o">.</span><span class="n">to_json</span><span class="p">()</span>
+                    <span class="n">edge_data</span><span class="p">[</span><span class="s2">&quot;attrs&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">attrs_json</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">edge_attrs_to_attach</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                        <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">edge_attrs_to_attach</span><span class="p">:</span>
+                            <span class="n">edge_attrs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_edge</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">t</span><span class="p">)</span>
+                            <span class="k">if</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">edge_attrs</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                                <span class="n">edge_data</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">edge_attrs</span><span class="p">[</span><span class="n">key</span><span class="p">])</span>
+                <span class="n">j_data</span><span class="p">[</span><span class="s2">&quot;links&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">edge_data</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">j_data</span></div>
+
+<div class="viewcode-block" id="Graph.export"><a class="viewcode-back" href="../../graphs.html#regraph.graphs.Graph.export">[docs]</a>    <span class="k">def</span> <span class="nf">export</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filename</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Export graph to JSON file.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        filename : str</span>
+<span class="sd">            Name of the file to save the json serialization of the graph</span>
+
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="n">j_data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">to_json</span><span class="p">()</span>
+            <span class="n">json</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">j_data</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span>
+        <span class="k">return</span></div>
+
+<div class="viewcode-block" id="Graph.from_json"><a class="viewcode-back" href="../../graphs.html#regraph.graphs.Graph.from_json">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">from_json</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">json_data</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Create a NetworkX graph from a json-like dictionary.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        json_data : dict</span>
+<span class="sd">            JSON-like dictionary with graph representation</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">graph</span> <span class="o">=</span> <span class="bp">cls</span><span class="p">()</span>
+        <span class="n">graph</span><span class="o">.</span><span class="n">add_nodes_from</span><span class="p">(</span><span class="n">load_nodes_from_json</span><span class="p">(</span><span class="n">json_data</span><span class="p">))</span>
+        <span class="n">graph</span><span class="o">.</span><span class="n">add_edges_from</span><span class="p">(</span><span class="n">load_edges_from_json</span><span class="p">(</span><span class="n">json_data</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">graph</span></div>
+
+<div class="viewcode-block" id="Graph.load"><a class="viewcode-back" href="../../graphs.html#regraph.graphs.Graph.load">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">load</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">filename</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Load a graph from a JSON file.</span>
+
+<span class="sd">        Create a `networkx.(Di)Graph` object from</span>
+<span class="sd">        a JSON representation stored in a file.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        filename : str</span>
+<span class="sd">            Name of the file to load the json serialization of the graph</span>
+
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        Graph object</span>
+
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        ReGraphError</span>
+<span class="sd">            If was not able to load the file</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">filename</span><span class="p">):</span>
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="s2">&quot;r+&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+                <span class="n">j_data</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">())</span>
+                <span class="k">return</span> <span class="bp">cls</span><span class="o">.</span><span class="n">from_json</span><span class="p">(</span><span class="n">j_data</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">ReGraphError</span><span class="p">(</span>
+                <span class="s2">&quot;Error loading graph: file &#39;</span><span class="si">{}</span><span class="s2">&#39; does not exist!&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                    <span class="n">filename</span><span class="p">)</span>
+            <span class="p">)</span></div>
+
+<div class="viewcode-block" id="Graph.rewrite"><a class="viewcode-back" href="../../graphs.html#regraph.graphs.Graph.rewrite">[docs]</a>    <span class="k">def</span> <span class="nf">rewrite</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">rule</span><span class="p">,</span> <span class="n">instance</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Perform SqPO rewiting of the graph with a rule.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        rule : regraph.Rule</span>
+<span class="sd">            SqPO rewriting rule</span>
+<span class="sd">        instance : dict, optional</span>
+<span class="sd">            Instance of the input rule. If not specified,</span>
+<span class="sd">            the identity map of the rule&#39;s left-hand side</span>
+<span class="sd">            is used</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">instance</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">instance</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="n">n</span><span class="p">:</span> <span class="n">n</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">lhs</span><span class="o">.</span><span class="n">nodes</span><span class="p">()</span>
+            <span class="p">}</span>
+
+        <span class="c1"># Restrictive phase</span>
+        <span class="n">p_g</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+        <span class="n">cloned_lhs_nodes</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+
+        <span class="c1"># Clone nodes</span>
+        <span class="k">for</span> <span class="n">lhs</span><span class="p">,</span> <span class="n">p_nodes</span> <span class="ow">in</span> <span class="n">rule</span><span class="o">.</span><span class="n">cloned_nodes</span><span class="p">()</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">p</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">p_nodes</span><span class="p">):</span>
+                <span class="k">if</span> <span class="n">i</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="n">p_g</span><span class="p">[</span><span class="n">p</span><span class="p">]</span> <span class="o">=</span> <span class="n">instance</span><span class="p">[</span><span class="n">lhs</span><span class="p">]</span>
+                    <span class="n">cloned_lhs_nodes</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">lhs</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">clone_id</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">clone_node</span><span class="p">(</span><span class="n">instance</span><span class="p">[</span><span class="n">lhs</span><span class="p">])</span>
+                    <span class="n">p_g</span><span class="p">[</span><span class="n">p</span><span class="p">]</span> <span class="o">=</span> <span class="n">clone_id</span>
+
+        <span class="c1"># Delete nodes and add preserved nodes to p_g dictionary</span>
+        <span class="n">removed_nodes</span> <span class="o">=</span> <span class="n">rule</span><span class="o">.</span><span class="n">removed_nodes</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">rule</span><span class="o">.</span><span class="n">lhs</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">removed_nodes</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">remove_node</span><span class="p">(</span><span class="n">instance</span><span class="p">[</span><span class="n">n</span><span class="p">])</span>
+            <span class="k">elif</span> <span class="n">n</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">cloned_lhs_nodes</span><span class="p">:</span>
+                <span class="n">p_g</span><span class="p">[</span><span class="n">keys_by_value</span><span class="p">(</span><span class="n">rule</span><span class="o">.</span><span class="n">p_lhs</span><span class="p">,</span> <span class="n">n</span><span class="p">)[</span><span class="mi">0</span><span class="p">]]</span> <span class="o">=</span>\
+                    <span class="n">instance</span><span class="p">[</span><span class="n">n</span><span class="p">]</span>
+
+        <span class="c1"># Delete edges</span>
+        <span class="k">for</span> <span class="n">u</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">rule</span><span class="o">.</span><span class="n">removed_edges</span><span class="p">():</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">remove_edge</span><span class="p">(</span><span class="n">p_g</span><span class="p">[</span><span class="n">u</span><span class="p">],</span> <span class="n">p_g</span><span class="p">[</span><span class="n">v</span><span class="p">])</span>
+
+        <span class="c1"># Remove node attributes</span>
+        <span class="k">for</span> <span class="n">p_node</span><span class="p">,</span> <span class="n">attrs</span> <span class="ow">in</span> <span class="n">rule</span><span class="o">.</span><span class="n">removed_node_attrs</span><span class="p">()</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">remove_node_attrs</span><span class="p">(</span>
+                <span class="n">p_g</span><span class="p">[</span><span class="n">p_node</span><span class="p">],</span>
+                <span class="n">attrs</span><span class="p">)</span>
+
+        <span class="c1"># Remove edge attributes</span>
+        <span class="k">for</span> <span class="p">(</span><span class="n">u</span><span class="p">,</span> <span class="n">v</span><span class="p">),</span> <span class="n">attrs</span> <span class="ow">in</span> <span class="n">rule</span><span class="o">.</span><span class="n">removed_edge_attrs</span><span class="p">()</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">remove_edge_attrs</span><span class="p">(</span><span class="n">p_g</span><span class="p">[</span><span class="n">u</span><span class="p">],</span> <span class="n">p_g</span><span class="p">[</span><span class="n">v</span><span class="p">],</span> <span class="n">attrs</span><span class="p">)</span>
+
+        <span class="c1"># Expansive phase</span>
+        <span class="n">rhs_g</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+        <span class="n">merged_nodes</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+
+        <span class="c1"># Merge nodes</span>
+        <span class="k">for</span> <span class="n">rhs</span><span class="p">,</span> <span class="n">p_nodes</span> <span class="ow">in</span> <span class="n">rule</span><span class="o">.</span><span class="n">merged_nodes</span><span class="p">()</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">merge_id</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">merge_nodes</span><span class="p">(</span>
+                <span class="p">[</span><span class="n">p_g</span><span class="p">[</span><span class="n">p</span><span class="p">]</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">p_nodes</span><span class="p">])</span>
+            <span class="n">merged_nodes</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">rhs</span><span class="p">)</span>
+            <span class="n">rhs_g</span><span class="p">[</span><span class="n">rhs</span><span class="p">]</span> <span class="o">=</span> <span class="n">merge_id</span>
+
+        <span class="c1"># Add nodes and add preserved nodes to rhs_g dictionary</span>
+        <span class="n">added_nodes</span> <span class="o">=</span> <span class="n">rule</span><span class="o">.</span><span class="n">added_nodes</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">rule</span><span class="o">.</span><span class="n">rhs</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">added_nodes</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">n</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
+                    <span class="n">new_id</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">generate_new_node_id</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">new_id</span> <span class="o">=</span> <span class="n">n</span>
+                <span class="n">new_id</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">add_node</span><span class="p">(</span><span class="n">new_id</span><span class="p">)</span>
+                <span class="n">rhs_g</span><span class="p">[</span><span class="n">n</span><span class="p">]</span> <span class="o">=</span> <span class="n">new_id</span>
+            <span class="k">elif</span> <span class="n">n</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">merged_nodes</span><span class="p">:</span>
+                <span class="n">rhs_g</span><span class="p">[</span><span class="n">n</span><span class="p">]</span> <span class="o">=</span> <span class="n">p_g</span><span class="p">[</span><span class="n">keys_by_value</span><span class="p">(</span><span class="n">rule</span><span class="o">.</span><span class="n">p_rhs</span><span class="p">,</span> <span class="n">n</span><span class="p">)[</span><span class="mi">0</span><span class="p">]]</span>
+
+        <span class="c1"># Add edges</span>
+        <span class="k">for</span> <span class="n">u</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">rule</span><span class="o">.</span><span class="n">added_edges</span><span class="p">():</span>
+            <span class="k">if</span> <span class="p">(</span><span class="n">rhs_g</span><span class="p">[</span><span class="n">u</span><span class="p">],</span> <span class="n">rhs_g</span><span class="p">[</span><span class="n">v</span><span class="p">])</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">edges</span><span class="p">():</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">add_edge</span><span class="p">(</span><span class="n">rhs_g</span><span class="p">[</span><span class="n">u</span><span class="p">],</span> <span class="n">rhs_g</span><span class="p">[</span><span class="n">v</span><span class="p">])</span>
+
+        <span class="c1"># Add node attributes</span>
+        <span class="k">for</span> <span class="n">rhs_node</span><span class="p">,</span> <span class="n">attrs</span> <span class="ow">in</span> <span class="n">rule</span><span class="o">.</span><span class="n">added_node_attrs</span><span class="p">()</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">add_node_attrs</span><span class="p">(</span>
+                <span class="n">rhs_g</span><span class="p">[</span><span class="n">rhs_node</span><span class="p">],</span> <span class="n">attrs</span><span class="p">)</span>
+
+        <span class="c1"># Add edge attributes</span>
+        <span class="k">for</span> <span class="p">(</span><span class="n">u</span><span class="p">,</span> <span class="n">v</span><span class="p">),</span> <span class="n">attrs</span> <span class="ow">in</span> <span class="n">rule</span><span class="o">.</span><span class="n">added_edge_attrs</span><span class="p">()</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">add_edge_attrs</span><span class="p">(</span>
+                <span class="n">rhs_g</span><span class="p">[</span><span class="n">u</span><span class="p">],</span> <span class="n">rhs_g</span><span class="p">[</span><span class="n">v</span><span class="p">],</span> <span class="n">attrs</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">rhs_g</span></div>
+
+<div class="viewcode-block" id="Graph.number_of_edges"><a class="viewcode-back" href="../../graphs.html#regraph.graphs.Graph.number_of_edges">[docs]</a>    <span class="k">def</span> <span class="nf">number_of_edges</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">u</span><span class="p">,</span> <span class="n">v</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return number of directed edges from u to v.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="mi">1</span></div></div>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../index.html">ReGraph</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2018, Eugenia Oshurko.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.2.0</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

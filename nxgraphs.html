@@ -1,0 +1,427 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>NetworkX-based graphs &#8212; ReGraph 3.0 documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="module-regraph.backends.networkx.graphs">
+<span id="networkx-based-graphs"></span><span id="nxgraphs"></span><h1>NetworkX-based graphs<a class="headerlink" href="#module-regraph.backends.networkx.graphs" title="Permalink to this headline">¶</a></h1>
+<p>NetworkX-based in-memory graph objects.</p>
+<p>This module implements data structures wrapping the <cite>networkx.DiGraph</cite> class.</p>
+<dl class="class">
+<dt id="regraph.backends.networkx.graphs.NXGraph">
+<em class="property">class </em><code class="sig-prename descclassname">regraph.backends.networkx.graphs.</code><code class="sig-name descname">NXGraph</code><span class="sig-paren">(</span><em class="sig-param">incoming_graph_data=None</em>, <em class="sig-param">**attr</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/backends/networkx/graphs.html#NXGraph"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.backends.networkx.graphs.NXGraph" title="Permalink to this definition">¶</a></dt>
+<dd><p>Wrapper for NetworkX directed graphs.</p>
+<p class="rubric">Methods</p>
+<table class="longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#regraph.backends.networkx.graphs.NXGraph.add_edge" title="regraph.backends.networkx.graphs.NXGraph.add_edge"><code class="xref py py-obj docutils literal notranslate"><span class="pre">add_edge</span></code></a>(self, s, t[, attrs])</p></td>
+<td><p>Add an edge to a graph.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#regraph.backends.networkx.graphs.NXGraph.add_node" title="regraph.backends.networkx.graphs.NXGraph.add_node"><code class="xref py py-obj docutils literal notranslate"><span class="pre">add_node</span></code></a>(self, node_id[, attrs])</p></td>
+<td><p>Abstract method for adding a node.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#regraph.backends.networkx.graphs.NXGraph.adj_dict_factory" title="regraph.backends.networkx.graphs.NXGraph.adj_dict_factory"><code class="xref py py-obj docutils literal notranslate"><span class="pre">adj_dict_factory</span></code></a></p></td>
+<td><p>alias of <code class="xref py py-class docutils literal notranslate"><span class="pre">builtins.dict</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#regraph.backends.networkx.graphs.NXGraph.copy" title="regraph.backends.networkx.graphs.NXGraph.copy"><code class="xref py py-obj docutils literal notranslate"><span class="pre">copy</span></code></a>(graph)</p></td>
+<td><p>Copy the input graph object.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#regraph.backends.networkx.graphs.NXGraph.edges" title="regraph.backends.networkx.graphs.NXGraph.edges"><code class="xref py py-obj docutils literal notranslate"><span class="pre">edges</span></code></a>(self[, data])</p></td>
+<td><p>Return the list of edges.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#regraph.backends.networkx.graphs.NXGraph.find_matching" title="regraph.backends.networkx.graphs.NXGraph.find_matching"><code class="xref py py-obj docutils literal notranslate"><span class="pre">find_matching</span></code></a>(self, pattern[, nodes, …])</p></td>
+<td><p>Find matching of a pattern in a graph.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#regraph.backends.networkx.graphs.NXGraph.get_edge" title="regraph.backends.networkx.graphs.NXGraph.get_edge"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_edge</span></code></a>(self, s, t)</p></td>
+<td><p>Get edge attributes.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#regraph.backends.networkx.graphs.NXGraph.get_node" title="regraph.backends.networkx.graphs.NXGraph.get_node"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_node</span></code></a>(self, n)</p></td>
+<td><p>Get node attributes.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#regraph.backends.networkx.graphs.NXGraph.get_relabeled_graph" title="regraph.backends.networkx.graphs.NXGraph.get_relabeled_graph"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_relabeled_graph</span></code></a>(self, mapping)</p></td>
+<td><p>Return a graph with node labeling specified in the mapping.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#regraph.backends.networkx.graphs.NXGraph.node_dict_factory" title="regraph.backends.networkx.graphs.NXGraph.node_dict_factory"><code class="xref py py-obj docutils literal notranslate"><span class="pre">node_dict_factory</span></code></a></p></td>
+<td><p>alias of <code class="xref py py-class docutils literal notranslate"><span class="pre">builtins.dict</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#regraph.backends.networkx.graphs.NXGraph.nodes" title="regraph.backends.networkx.graphs.NXGraph.nodes"><code class="xref py py-obj docutils literal notranslate"><span class="pre">nodes</span></code></a>(self[, data])</p></td>
+<td><p>Return the list of nodes.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#regraph.backends.networkx.graphs.NXGraph.predecessors" title="regraph.backends.networkx.graphs.NXGraph.predecessors"><code class="xref py py-obj docutils literal notranslate"><span class="pre">predecessors</span></code></a>(self, node_id)</p></td>
+<td><p>Return the set of predecessors.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#regraph.backends.networkx.graphs.NXGraph.remove_edge" title="regraph.backends.networkx.graphs.NXGraph.remove_edge"><code class="xref py py-obj docutils literal notranslate"><span class="pre">remove_edge</span></code></a>(self, s, t)</p></td>
+<td><p>Remove edge from the graph.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#regraph.backends.networkx.graphs.NXGraph.remove_node" title="regraph.backends.networkx.graphs.NXGraph.remove_node"><code class="xref py py-obj docutils literal notranslate"><span class="pre">remove_node</span></code></a>(self, node_id)</p></td>
+<td><p>Remove node.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#regraph.backends.networkx.graphs.NXGraph.subgraph" title="regraph.backends.networkx.graphs.NXGraph.subgraph"><code class="xref py py-obj docutils literal notranslate"><span class="pre">subgraph</span></code></a>(self, nodes)</p></td>
+<td><p>Get a subgraph induced by the collection of nodes.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#regraph.backends.networkx.graphs.NXGraph.successors" title="regraph.backends.networkx.graphs.NXGraph.successors"><code class="xref py py-obj docutils literal notranslate"><span class="pre">successors</span></code></a>(self, node_id)</p></td>
+<td><p>Return the set of successors.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#regraph.backends.networkx.graphs.NXGraph.update_edge_attrs" title="regraph.backends.networkx.graphs.NXGraph.update_edge_attrs"><code class="xref py py-obj docutils literal notranslate"><span class="pre">update_edge_attrs</span></code></a>(self, s, t, attrs[, normalize])</p></td>
+<td><p>Update attributes of a node.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#regraph.backends.networkx.graphs.NXGraph.update_node_attrs" title="regraph.backends.networkx.graphs.NXGraph.update_node_attrs"><code class="xref py py-obj docutils literal notranslate"><span class="pre">update_node_attrs</span></code></a>(self, node_id, attrs[, …])</p></td>
+<td><p>Update attributes of a node.</p></td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="regraph.backends.networkx.graphs.NXGraph.add_edge">
+<code class="sig-name descname">add_edge</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">s</em>, <em class="sig-param">t</em>, <em class="sig-param">attrs=None</em>, <em class="sig-param">**attr</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/backends/networkx/graphs.html#NXGraph.add_edge"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.backends.networkx.graphs.NXGraph.add_edge" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add an edge to a graph.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>graph</strong><span class="classifier">networkx.(Di)Graph</span></dt><dd></dd>
+<dt><strong>s</strong><span class="classifier">hashable, source node id.</span></dt><dd></dd>
+<dt><strong>t</strong><span class="classifier">hashable, target node id.</span></dt><dd></dd>
+<dt><strong>attrs</strong><span class="classifier">dict</span></dt><dd><p>Edge attributes.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.backends.networkx.graphs.NXGraph.add_node">
+<code class="sig-name descname">add_node</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">node_id</em>, <em class="sig-param">attrs=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/backends/networkx/graphs.html#NXGraph.add_node"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.backends.networkx.graphs.NXGraph.add_node" title="Permalink to this definition">¶</a></dt>
+<dd><p>Abstract method for adding a node.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>node_id</strong><span class="classifier">hashable</span></dt><dd><p>Prefix that is prepended to the new unique name.</p>
+</dd>
+<dt><strong>attrs</strong><span class="classifier">dict, optional</span></dt><dd><p>Node attributes.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="regraph.backends.networkx.graphs.NXGraph.adj_dict_factory">
+<code class="sig-name descname">adj_dict_factory</code><a class="headerlink" href="#regraph.backends.networkx.graphs.NXGraph.adj_dict_factory" title="Permalink to this definition">¶</a></dt>
+<dd><p>alias of <code class="xref py py-class docutils literal notranslate"><span class="pre">builtins.dict</span></code></p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.backends.networkx.graphs.NXGraph.copy">
+<em class="property">classmethod </em><code class="sig-name descname">copy</code><span class="sig-paren">(</span><em class="sig-param">graph</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/backends/networkx/graphs.html#NXGraph.copy"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.backends.networkx.graphs.NXGraph.copy" title="Permalink to this definition">¶</a></dt>
+<dd><p>Copy the input graph object.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.backends.networkx.graphs.NXGraph.edges">
+<code class="sig-name descname">edges</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">data=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/backends/networkx/graphs.html#NXGraph.edges"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.backends.networkx.graphs.NXGraph.edges" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the list of edges.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.backends.networkx.graphs.NXGraph.find_matching">
+<code class="sig-name descname">find_matching</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">pattern</em>, <em class="sig-param">nodes=None</em>, <em class="sig-param">graph_typing=None</em>, <em class="sig-param">pattern_typing=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/backends/networkx/graphs.html#NXGraph.find_matching"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.backends.networkx.graphs.NXGraph.find_matching" title="Permalink to this definition">¶</a></dt>
+<dd><p>Find matching of a pattern in a graph.</p>
+<p>This function takes as an input a graph and a pattern, optionally,
+it also takes a collection of nodes specifying the subgraph of the
+original graph, where the matching should be searched in, then it
+searches for a matching of the pattern inside of the graph (or induced
+subragh), which corresponds to solving subgraph matching problem.
+The matching is defined by a map from the nodes of the pattern
+to the nodes of the graph such that:</p>
+<ul class="simple">
+<li><p>edges are preserved, i.e. if there is an edge between nodes <cite>n1</cite>
+and <cite>n2</cite> in the pattern, there is an edge between the nodes of
+the graph that correspond to the image of <cite>n1</cite> and <cite>n2</cite>,
+moreover, the attribute dictionary of the edge between <cite>n1</cite>
+and <cite>n2</cite> is the subdictiotary of the edge it corresponds to
+in the graph;</p></li>
+<li><p>the attribute dictionary of a pattern node is a subdictionary of
+its image in the graph;</p></li>
+</ul>
+<p>Uses <cite>networkx.isomorphism.(Di)GraphMatcher</cite> class, which implements
+subgraph matching algorithm.</p>
+<p>In addition, two parameters <cite>graph_typing</cite> and <cite>pattern_typing</cite>
+can be specified. They restrict the space of admisible solutions
+by checking if an isomorphic subgraph found in the input graph respects
+the provided pattern typings according to the specified graph typings.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>graph</strong><span class="classifier">nx.(Di)Graph</span></dt><dd></dd>
+<dt><strong>pattern</strong><span class="classifier">nx.(Di)Graph</span></dt><dd><p>Pattern graph to search for</p>
+</dd>
+<dt><strong>nodes</strong><span class="classifier">iterable, optional</span></dt><dd><p>Subset of nodes to search for matching</p>
+</dd>
+<dt><strong>graph_typing</strong><span class="classifier">dict of dict, optional</span></dt><dd><p>Dictionary defining typing of graph nodes</p>
+</dd>
+<dt><strong>pattern_typing</strong><span class="classifier">dict of dict, optional</span></dt><dd><p>Dictionary definiting typing of pattern nodes</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>instances</strong><span class="classifier">list of dict’s</span></dt><dd><p>List of instances of matching found in the graph, every instance
+is represented with a dictionary where keys are nodes of the
+pattern, and values are corresponding nodes of the graph.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.backends.networkx.graphs.NXGraph.get_edge">
+<code class="sig-name descname">get_edge</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">s</em>, <em class="sig-param">t</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/backends/networkx/graphs.html#NXGraph.get_edge"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.backends.networkx.graphs.NXGraph.get_edge" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get edge attributes.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>graph</strong><span class="classifier">networkx.(Di)Graph</span></dt><dd></dd>
+<dt><strong>s</strong><span class="classifier">hashable, source node id.</span></dt><dd></dd>
+<dt><strong>t</strong><span class="classifier">hashable, target node id.</span></dt><dd></dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.backends.networkx.graphs.NXGraph.get_node">
+<code class="sig-name descname">get_node</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">n</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/backends/networkx/graphs.html#NXGraph.get_node"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.backends.networkx.graphs.NXGraph.get_node" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get node attributes.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>n</strong><span class="classifier">hashable</span></dt><dd><p>Node id.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.backends.networkx.graphs.NXGraph.get_relabeled_graph">
+<code class="sig-name descname">get_relabeled_graph</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">mapping</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/backends/networkx/graphs.html#NXGraph.get_relabeled_graph"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.backends.networkx.graphs.NXGraph.get_relabeled_graph" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return a graph with node labeling specified in the mapping.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>graph</strong><span class="classifier">networkx.(Di)Graph</span></dt><dd></dd>
+<dt><strong>mapping: dict</strong></dt><dd><p>A dictionary with keys being old node ids and their values
+being new id’s of the respective nodes.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>g</strong><span class="classifier">networkx.(Di)Graph</span></dt><dd><p>New graph object isomorphic to the <cite>graph</cite> with the relabled nodes.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-odd">Raises</dt>
+<dd class="field-odd"><dl class="simple">
+<dt>ReGraphError</dt><dd><p>If new id’s do not define a set of distinct node id’s.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<div class="admonition seealso">
+<p class="admonition-title">See also</p>
+<dl class="simple">
+<dt><a class="reference internal" href="primitives.html#regraph.primitives.relabel_nodes" title="regraph.primitives.relabel_nodes"><code class="xref py py-obj docutils literal notranslate"><span class="pre">regraph.primitives.relabel_nodes</span></code></a></dt><dd></dd>
+</dl>
+</div>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="regraph.backends.networkx.graphs.NXGraph.node_dict_factory">
+<code class="sig-name descname">node_dict_factory</code><a class="headerlink" href="#regraph.backends.networkx.graphs.NXGraph.node_dict_factory" title="Permalink to this definition">¶</a></dt>
+<dd><p>alias of <code class="xref py py-class docutils literal notranslate"><span class="pre">builtins.dict</span></code></p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.backends.networkx.graphs.NXGraph.nodes">
+<code class="sig-name descname">nodes</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">data=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/backends/networkx/graphs.html#NXGraph.nodes"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.backends.networkx.graphs.NXGraph.nodes" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the list of nodes.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.backends.networkx.graphs.NXGraph.predecessors">
+<code class="sig-name descname">predecessors</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">node_id</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/backends/networkx/graphs.html#NXGraph.predecessors"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.backends.networkx.graphs.NXGraph.predecessors" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the set of predecessors.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.backends.networkx.graphs.NXGraph.remove_edge">
+<code class="sig-name descname">remove_edge</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">s</em>, <em class="sig-param">t</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/backends/networkx/graphs.html#NXGraph.remove_edge"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.backends.networkx.graphs.NXGraph.remove_edge" title="Permalink to this definition">¶</a></dt>
+<dd><p>Remove edge from the graph.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>graph</strong><span class="classifier">networkx.(Di)Graph</span></dt><dd></dd>
+<dt><strong>s</strong><span class="classifier">hashable, source node id.</span></dt><dd></dd>
+<dt><strong>t</strong><span class="classifier">hashable, target node id.</span></dt><dd></dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.backends.networkx.graphs.NXGraph.remove_node">
+<code class="sig-name descname">remove_node</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">node_id</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/backends/networkx/graphs.html#NXGraph.remove_node"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.backends.networkx.graphs.NXGraph.remove_node" title="Permalink to this definition">¶</a></dt>
+<dd><p>Remove node.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>graph</strong><span class="classifier">networkx.(Di)Graph</span></dt><dd></dd>
+<dt><strong>node_id</strong><span class="classifier">hashable, node to remove.</span></dt><dd></dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.backends.networkx.graphs.NXGraph.subgraph">
+<code class="sig-name descname">subgraph</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">nodes</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/backends/networkx/graphs.html#NXGraph.subgraph"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.backends.networkx.graphs.NXGraph.subgraph" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get a subgraph induced by the collection of nodes.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.backends.networkx.graphs.NXGraph.successors">
+<code class="sig-name descname">successors</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">node_id</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/backends/networkx/graphs.html#NXGraph.successors"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.backends.networkx.graphs.NXGraph.successors" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the set of successors.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.backends.networkx.graphs.NXGraph.update_edge_attrs">
+<code class="sig-name descname">update_edge_attrs</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">s</em>, <em class="sig-param">t</em>, <em class="sig-param">attrs</em>, <em class="sig-param">normalize=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/backends/networkx/graphs.html#NXGraph.update_edge_attrs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.backends.networkx.graphs.NXGraph.update_edge_attrs" title="Permalink to this definition">¶</a></dt>
+<dd><p>Update attributes of a node.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>s</strong><span class="classifier">hashable, source node of the edge to update.</span></dt><dd></dd>
+<dt><strong>t</strong><span class="classifier">hashable, target node of the edge to update.</span></dt><dd></dd>
+<dt><strong>attrs</strong><span class="classifier">dict</span></dt><dd><p>New attributes to assign to the node</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.backends.networkx.graphs.NXGraph.update_node_attrs">
+<code class="sig-name descname">update_node_attrs</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">node_id</em>, <em class="sig-param">attrs</em>, <em class="sig-param">normalize=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/backends/networkx/graphs.html#NXGraph.update_node_attrs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.backends.networkx.graphs.NXGraph.update_node_attrs" title="Permalink to this definition">¶</a></dt>
+<dd><p>Update attributes of a node.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>node_id</strong><span class="classifier">hashable, node to update.</span></dt><dd></dd>
+<dt><strong>attrs</strong><span class="classifier">dict</span></dt><dd><p>New attributes to assign to the node</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">ReGraph</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2018, Eugenia Oshurko.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.2.0</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="_sources/nxgraphs.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

@@ -1,0 +1,894 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>regraph.audit &#8212; ReGraph 3.0 documentation</title>
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for regraph.audit</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;Audit trails for graphs and graph hierarchies.</span>
+
+<span class="sd">This module containes a collection of utils for audit trails that</span>
+<span class="sd">provide version control for transformations of graphs and graph hierarchies:</span>
+
+<span class="sd">* `Versioning`, abstract class for in-memory versioning of objects;</span>
+<span class="sd">* `VersionedGraph`, wrapper around graph objects in ReGraph that allows to track their audit trail;</span>
+<span class="sd">* `VersionedHierarchy`, wrapper around hierarchy objects in ReGraph that allows to track their audit trail;</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">from</span> <span class="nn">abc</span> <span class="k">import</span> <span class="n">ABC</span><span class="p">,</span> <span class="n">abstractmethod</span>
+
+<span class="kn">import</span> <span class="nn">copy</span>
+<span class="kn">import</span> <span class="nn">datetime</span>
+<span class="kn">import</span> <span class="nn">uuid</span>
+<span class="kn">import</span> <span class="nn">warnings</span>
+
+<span class="kn">import</span> <span class="nn">networkx</span> <span class="k">as</span> <span class="nn">nx</span>
+
+<span class="kn">from</span> <span class="nn">regraph.exceptions</span> <span class="k">import</span> <span class="n">RevisionError</span><span class="p">,</span> <span class="n">RevisionWarning</span>
+<span class="kn">from</span> <span class="nn">regraph.rules</span> <span class="k">import</span> <span class="p">(</span><span class="n">compose_rules</span><span class="p">,</span> <span class="n">Rule</span><span class="p">,</span>
+                           <span class="n">_create_merging_rule</span><span class="p">,</span>
+                           <span class="n">_create_merging_rule_hierarchy</span><span class="p">,</span>
+                           <span class="n">compose_rule_hierarchies</span><span class="p">,</span>
+                           <span class="n">invert_rule_hierarchy</span><span class="p">)</span>
+<span class="kn">from</span> <span class="nn">regraph.utils</span> <span class="k">import</span> <span class="n">keys_by_value</span>
+
+
+<span class="k">def</span> <span class="nf">_generate_new_commit_meta_data</span><span class="p">():</span>
+    <span class="n">time</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span>
+    <span class="n">commit_id</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">uuid</span><span class="o">.</span><span class="n">uuid4</span><span class="p">())</span>
+    <span class="k">return</span> <span class="n">time</span><span class="p">,</span> <span class="n">commit_id</span>
+
+
+<div class="viewcode-block" id="Versioning"><a class="viewcode-back" href="../../audit.html#regraph.audit.Versioning">[docs]</a><span class="k">class</span> <span class="nc">Versioning</span><span class="p">(</span><span class="n">ABC</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Class for version control.</span>
+
+<span class="sd">    Attributes</span>
+<span class="sd">    ----------</span>
+<span class="sd">    _current_branch</span>
+<span class="sd">        Name of the current branch</span>
+<span class="sd">    _deltas : dict</span>
+<span class="sd">        Dictionary with delta&#39;s to all other branches</span>
+<span class="sd">    _heads : dict</span>
+<span class="sd">    _revision_graph : networkx.DiGraph</span>
+
+<span class="sd">    Methods</span>
+<span class="sd">    -------</span>
+<span class="sd">    branches()</span>
+<span class="sd">    current_branch()</span>
+<span class="sd">    commit(graph, rule, instance)</span>
+<span class="sd">    branch(new_branch)</span>
+<span class="sd">    switch_branch(branch)</span>
+<span class="sd">    merge(branch1, branch2)</span>
+
+<span class="sd">    _compose_deltas</span>
+<span class="sd">    _invert_delta</span>
+<span class="sd">    _merge_into_current_branch</span>
+<span class="sd">    _create_identity_delta</span>
+<span class="sd">    _compose_delta_path</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">init_branch</span><span class="o">=</span><span class="s2">&quot;master&quot;</span><span class="p">,</span> <span class="n">current_branch</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                 <span class="n">deltas</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">heads</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">revision_graph</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Initialize revision object.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">current_branch</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_current_branch</span> <span class="o">=</span> <span class="n">init_branch</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_current_branch</span> <span class="o">=</span> <span class="n">current_branch</span>
+
+        <span class="k">if</span> <span class="n">deltas</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_deltas</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_deltas</span> <span class="o">=</span> <span class="n">deltas</span>
+
+        <span class="k">if</span> <span class="n">heads</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="c1"># Create initial commit</span>
+            <span class="n">time</span><span class="p">,</span> <span class="n">commit_id</span> <span class="o">=</span> <span class="n">_generate_new_commit_meta_data</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_heads</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_heads</span><span class="p">[</span><span class="n">init_branch</span><span class="p">]</span> <span class="o">=</span> <span class="n">commit_id</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_revision_graph</span> <span class="o">=</span> <span class="n">nx</span><span class="o">.</span><span class="n">DiGraph</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_revision_graph</span><span class="o">.</span><span class="n">add_node</span><span class="p">(</span>
+                <span class="n">commit_id</span><span class="p">,</span>
+                <span class="n">branch</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_current_branch</span><span class="p">,</span>
+                <span class="n">message</span><span class="o">=</span><span class="s2">&quot;Initial commit&quot;</span><span class="p">,</span>
+                <span class="n">time</span><span class="o">=</span><span class="n">time</span>
+            <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_heads</span> <span class="o">=</span> <span class="n">heads</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_revision_graph</span> <span class="o">=</span> <span class="n">revision_graph</span>
+
+<div class="viewcode-block" id="Versioning.initial_commit"><a class="viewcode-back" href="../../audit.html#regraph.audit.Versioning.initial_commit">[docs]</a>    <span class="k">def</span> <span class="nf">initial_commit</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return the id of the initial commit.&quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_revision_graph</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_revision_graph</span><span class="o">.</span><span class="n">predecessors</span><span class="p">(</span><span class="n">n</span><span class="p">)))</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">commit</span> <span class="o">=</span> <span class="n">n</span>
+                <span class="k">break</span>
+        <span class="k">return</span> <span class="n">commit</span></div>
+
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">_compose_deltas</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">delta1</span><span class="p">,</span> <span class="n">delta2</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Abstract method for composing deltas.&quot;&quot;&quot;</span>
+        <span class="k">pass</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">_invert_delta</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">delta1</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Abstract method for inverting deltas.&quot;&quot;&quot;</span>
+        <span class="k">pass</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">_merge_into_current_branch</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">delta</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Abstract method for merging a branch into the current one.&quot;&quot;&quot;</span>
+        <span class="k">pass</span>
+
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">_create_identity_delta</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Abstract method for creating an identity-delta.&quot;&quot;&quot;</span>
+        <span class="k">pass</span>
+
+    <span class="k">def</span> <span class="nf">_compose_delta_path</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">path</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">result_delta</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_revision_graph</span><span class="o">.</span><span class="n">adj</span><span class="p">[</span>
+                <span class="n">path</span><span class="p">[</span><span class="mi">0</span><span class="p">]][</span><span class="n">path</span><span class="p">[</span><span class="mi">1</span><span class="p">]][</span><span class="s2">&quot;delta&quot;</span><span class="p">]</span>
+            <span class="n">previous_commit</span> <span class="o">=</span> <span class="n">path</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+            <span class="k">for</span> <span class="n">current_commit</span> <span class="ow">in</span> <span class="n">path</span><span class="p">[</span><span class="mi">2</span><span class="p">:]:</span>
+                <span class="n">result_delta</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_compose_deltas</span><span class="p">(</span>
+                    <span class="n">result_delta</span><span class="p">,</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_revision_graph</span><span class="o">.</span><span class="n">adj</span><span class="p">[</span>
+                        <span class="n">previous_commit</span><span class="p">][</span><span class="n">current_commit</span><span class="p">][</span><span class="s2">&quot;delta&quot;</span><span class="p">])</span>
+
+                <span class="n">d</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_revision_graph</span><span class="o">.</span><span class="n">adj</span><span class="p">[</span><span class="n">previous_commit</span><span class="p">][</span><span class="n">current_commit</span><span class="p">][</span><span class="s2">&quot;delta&quot;</span><span class="p">]</span>
+                <span class="n">previous_commit</span> <span class="o">=</span> <span class="n">current_commit</span>
+            <span class="k">return</span> <span class="n">result_delta</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_create_identity_delta</span><span class="p">()</span>
+
+<div class="viewcode-block" id="Versioning.branches"><a class="viewcode-back" href="../../audit.html#regraph.audit.Versioning.branches">[docs]</a>    <span class="k">def</span> <span class="nf">branches</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return list of branches.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_heads</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span></div>
+
+<div class="viewcode-block" id="Versioning.current_branch"><a class="viewcode-back" href="../../audit.html#regraph.audit.Versioning.current_branch">[docs]</a>    <span class="k">def</span> <span class="nf">current_branch</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return the name of the current branch.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_current_branch</span></div>
+
+<div class="viewcode-block" id="Versioning.print_history"><a class="viewcode-back" href="../../audit.html#regraph.audit.Versioning.print_history">[docs]</a>    <span class="k">def</span> <span class="nf">print_history</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Print the history of commits.&quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_revision_graph</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
+            <span class="nb">print</span><span class="p">(</span>
+                <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_revision_graph</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">n</span><span class="p">][</span><span class="s2">&quot;time&quot;</span><span class="p">]),</span>
+                <span class="n">n</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_revision_graph</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">n</span><span class="p">][</span><span class="s2">&quot;branch&quot;</span><span class="p">],</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_revision_graph</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">n</span><span class="p">][</span><span class="s2">&quot;message&quot;</span><span class="p">])</span></div>
+
+<div class="viewcode-block" id="Versioning.commit"><a class="viewcode-back" href="../../audit.html#regraph.audit.Versioning.commit">[docs]</a>    <span class="k">def</span> <span class="nf">commit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">delta</span><span class="p">,</span> <span class="n">message</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">previous_commit</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Add a commit.&quot;&quot;&quot;</span>
+        <span class="n">time</span><span class="p">,</span> <span class="n">commit_id</span> <span class="o">=</span> <span class="n">_generate_new_commit_meta_data</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="n">previous_commit</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">previous_commit</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_heads</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_current_branch</span><span class="p">]</span>
+
+        <span class="c1"># Update heads and revision graph</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_heads</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_current_branch</span><span class="p">]</span> <span class="o">=</span> <span class="n">commit_id</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_revision_graph</span><span class="o">.</span><span class="n">add_node</span><span class="p">(</span>
+            <span class="n">commit_id</span><span class="p">,</span>
+            <span class="n">branch</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_current_branch</span><span class="p">,</span>
+            <span class="n">time</span><span class="o">=</span><span class="n">time</span><span class="p">,</span>
+            <span class="n">message</span><span class="o">=</span><span class="n">message</span> <span class="k">if</span> <span class="n">message</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_revision_graph</span><span class="o">.</span><span class="n">add_edge</span><span class="p">(</span>
+            <span class="n">previous_commit</span><span class="p">,</span> <span class="n">commit_id</span><span class="p">,</span> <span class="n">delta</span><span class="o">=</span><span class="n">delta</span><span class="p">)</span>
+
+        <span class="n">d</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_revision_graph</span><span class="o">.</span><span class="n">adj</span><span class="p">[</span><span class="n">previous_commit</span><span class="p">][</span><span class="n">commit_id</span><span class="p">][</span><span class="s2">&quot;delta&quot;</span><span class="p">]</span>
+
+        <span class="c1"># Update deltas</span>
+        <span class="k">for</span> <span class="n">branch</span><span class="p">,</span> <span class="n">branch_delta</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_deltas</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_deltas</span><span class="p">[</span><span class="n">branch</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_compose_deltas</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_invert_delta</span><span class="p">(</span><span class="n">delta</span><span class="p">),</span> <span class="n">branch_delta</span><span class="p">)</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">_refine_delta</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_deltas</span><span class="p">[</span><span class="n">branch</span><span class="p">])</span>
+        <span class="k">return</span> <span class="n">commit_id</span></div>
+
+<div class="viewcode-block" id="Versioning.switch_branch"><a class="viewcode-back" href="../../audit.html#regraph.audit.Versioning.switch_branch">[docs]</a>    <span class="k">def</span> <span class="nf">switch_branch</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">branch</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Switch branches.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">branch</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">branches</span><span class="p">():</span>
+            <span class="k">raise</span> <span class="n">RevisionError</span><span class="p">(</span>
+                <span class="s2">&quot;Branch &#39;</span><span class="si">{}</span><span class="s2">&#39; does not exist&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">branch</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">branch</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">_current_branch</span><span class="p">:</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s2">&quot;Already in branch &#39;</span><span class="si">{}</span><span class="s2">&#39;&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">branch</span><span class="p">),</span> <span class="n">RevisionWarning</span><span class="p">)</span>
+
+        <span class="c1"># Set as the current branch</span>
+        <span class="n">previous_branch</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_current_branch</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_current_branch</span> <span class="o">=</span> <span class="n">branch</span>
+
+        <span class="c1"># Apply delta to the versioned object</span>
+        <span class="n">delta</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_deltas</span><span class="p">[</span><span class="n">branch</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_apply_delta</span><span class="p">(</span><span class="n">delta</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_deltas</span><span class="p">[</span><span class="n">previous_branch</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_invert_delta</span><span class="p">(</span><span class="n">delta</span><span class="p">)</span>
+
+        <span class="c1"># Recompute deltas</span>
+        <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">another_delta</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_deltas</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">name</span> <span class="o">!=</span> <span class="n">previous_branch</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_deltas</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_compose_deltas</span><span class="p">(</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_deltas</span><span class="p">[</span><span class="n">previous_branch</span><span class="p">],</span>
+                    <span class="n">another_delta</span>
+                <span class="p">)</span>
+
+        <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">_deltas</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_current_branch</span><span class="p">]</span></div>
+
+<div class="viewcode-block" id="Versioning.branch"><a class="viewcode-back" href="../../audit.html#regraph.audit.Versioning.branch">[docs]</a>    <span class="k">def</span> <span class="nf">branch</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">new_branch</span><span class="p">,</span> <span class="n">message</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Create a new branch with identity commit.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">new_branch</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">branches</span><span class="p">():</span>
+            <span class="k">raise</span> <span class="n">RevisionError</span><span class="p">(</span>
+                <span class="s2">&quot;Branch &#39;</span><span class="si">{}</span><span class="s2">&#39; already exists&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">new_branch</span><span class="p">))</span>
+
+        <span class="k">if</span> <span class="n">message</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">message</span> <span class="o">=</span> <span class="s2">&quot;Created branch &#39;</span><span class="si">{}</span><span class="s2">&#39;&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">new_branch</span><span class="p">)</span>
+
+        <span class="c1"># Set this as a current branch</span>
+        <span class="n">previous_branch</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_current_branch</span>
+        <span class="n">previous_commit</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_heads</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_current_branch</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_current_branch</span> <span class="o">=</span> <span class="n">new_branch</span>
+
+        <span class="n">identity_delta</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_create_identity_delta</span><span class="p">()</span>
+
+        <span class="c1"># Add a new delta</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_deltas</span><span class="p">[</span><span class="n">previous_branch</span><span class="p">]</span> <span class="o">=</span> <span class="n">identity_delta</span>
+
+        <span class="c1"># Create a new identity commit</span>
+        <span class="n">commit_id</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">commit</span><span class="p">(</span>
+            <span class="n">identity_delta</span><span class="p">,</span>
+            <span class="n">message</span><span class="o">=</span><span class="n">message</span><span class="p">,</span>
+            <span class="n">previous_commit</span><span class="o">=</span><span class="n">previous_commit</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_heads</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_current_branch</span><span class="p">]</span> <span class="o">=</span> <span class="n">commit_id</span>
+        <span class="k">return</span> <span class="n">commit_id</span></div>
+
+<div class="viewcode-block" id="Versioning.merge_with"><a class="viewcode-back" href="../../audit.html#regraph.audit.Versioning.merge_with">[docs]</a>    <span class="k">def</span> <span class="nf">merge_with</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">branch</span><span class="p">,</span> <span class="n">message</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Merge the current branch with the specified one.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">branch</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">branches</span><span class="p">():</span>
+            <span class="k">raise</span> <span class="n">RevisionError</span><span class="p">(</span>
+                <span class="s2">&quot;Branch &#39;</span><span class="si">{}</span><span class="s2">&#39; does not exist&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">branch</span><span class="p">))</span>
+
+        <span class="k">if</span> <span class="n">message</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">message</span> <span class="o">=</span> <span class="s2">&quot;Merged branch &#39;</span><span class="si">{}</span><span class="s2">&#39; into &#39;</span><span class="si">{}</span><span class="s2">&#39;&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                <span class="n">branch</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_current_branch</span><span class="p">)</span>
+
+        <span class="n">delta</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_deltas</span><span class="p">[</span><span class="n">branch</span><span class="p">]</span>
+        <span class="n">delta_to_current</span><span class="p">,</span> <span class="n">delta_to_branch</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_merge_into_current_branch</span><span class="p">(</span>
+            <span class="n">delta</span><span class="p">)</span>
+
+        <span class="n">commit_id</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">commit</span><span class="p">(</span><span class="n">delta_to_current</span><span class="p">,</span> <span class="n">message</span><span class="o">=</span><span class="n">message</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_revision_graph</span><span class="o">.</span><span class="n">add_edge</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_heads</span><span class="p">[</span><span class="n">branch</span><span class="p">],</span> <span class="n">commit_id</span><span class="p">,</span>
+            <span class="n">delta</span><span class="o">=</span><span class="n">delta_to_branch</span><span class="p">)</span>
+
+        <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">_heads</span><span class="p">[</span><span class="n">branch</span><span class="p">]</span>
+        <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">_deltas</span><span class="p">[</span><span class="n">branch</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">commit_id</span></div>
+
+<div class="viewcode-block" id="Versioning.rollback"><a class="viewcode-back" href="../../audit.html#regraph.audit.Versioning.rollback">[docs]</a>    <span class="k">def</span> <span class="nf">rollback</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">rollback_commit</span><span class="p">,</span> <span class="n">message</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Rollback the current branch to a specific commit.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">rollback_commit</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_revision_graph</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
+            <span class="k">raise</span> <span class="n">RevisionError</span><span class="p">(</span>
+                <span class="s2">&quot;Commit &#39;</span><span class="si">{}</span><span class="s2">&#39; does not exist in the revision graph&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                    <span class="n">rollback_commit</span><span class="p">))</span>
+
+        <span class="c1"># Find paths from the last commit of the current branch</span>
+        <span class="c1"># to the commit with id &#39;rollback_commit&#39;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">shortest_path</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">nx</span><span class="o">.</span><span class="n">shortest_path</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_revision_graph</span><span class="p">,</span> <span class="n">rollback_commit</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_heads</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_current_branch</span><span class="p">]))</span>
+        <span class="k">except</span> <span class="n">nx</span><span class="o">.</span><span class="n">NetworkXNoPath</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">RevisionError</span><span class="p">(</span>
+                <span class="s2">&quot;Branch &#39;</span><span class="si">{}</span><span class="s2">&#39; does not contain a path to the commit &#39;</span><span class="si">{}</span><span class="s2">&#39;&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_current_branch</span><span class="p">,</span> <span class="n">rollback_commit</span><span class="p">))</span>
+
+        <span class="k">if</span> <span class="n">message</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">message</span> <span class="o">=</span> <span class="s2">&quot;Rollback to commit &#39;</span><span class="si">{}</span><span class="s2">&#39;&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">rollback_commit</span><span class="p">)</span>
+
+        <span class="c1"># Generate a big rollback commit</span>
+        <span class="n">rollback_delta</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_invert_delta</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_compose_delta_path</span><span class="p">(</span><span class="n">shortest_path</span><span class="p">))</span>
+
+        <span class="c1"># Apply the rollback commit</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_apply_delta</span><span class="p">(</span><span class="n">rollback_delta</span><span class="p">)</span>
+
+        <span class="c1"># Compute all paths from every head to the commit</span>
+        <span class="n">head_paths</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">h</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_heads</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
+            <span class="n">head_paths</span><span class="p">[</span><span class="n">h</span><span class="p">]</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">nx</span><span class="o">.</span><span class="n">all_simple_paths</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_revision_graph</span><span class="p">,</span> <span class="n">rollback_commit</span><span class="p">,</span> <span class="n">h</span><span class="p">))</span>
+
+        <span class="c1"># Compute new head commits (commits whose successors</span>
+        <span class="c1"># are merge commits to be removed)</span>
+        <span class="n">new_heads</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">removed_commits</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span>
+            <span class="p">[</span><span class="n">n</span> <span class="k">for</span> <span class="n">pp</span> <span class="ow">in</span> <span class="n">head_paths</span><span class="o">.</span><span class="n">values</span><span class="p">()</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">pp</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">p</span> <span class="k">if</span> <span class="n">n</span> <span class="o">!=</span> <span class="n">rollback_commit</span><span class="p">])</span>
+        <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_revision_graph</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
+            <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_revision_graph</span><span class="o">.</span><span class="n">successors</span><span class="p">(</span><span class="n">n</span><span class="p">):</span>
+                <span class="k">if</span> <span class="n">n</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">removed_commits</span> <span class="ow">and</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">removed_commits</span><span class="p">:</span>
+                    <span class="n">new_heads</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_revision_graph</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">n</span><span class="p">][</span><span class="s2">&quot;branch&quot;</span><span class="p">]]</span> <span class="o">=</span> <span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">s</span><span class="p">)</span>
+
+        <span class="c1"># Recompute deltas</span>
+        <span class="n">new_current_branch</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_revision_graph</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">rollback_commit</span><span class="p">][</span><span class="s2">&quot;branch&quot;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_current_branch</span> <span class="o">=</span> <span class="n">new_current_branch</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_heads</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_current_branch</span><span class="p">]</span> <span class="o">=</span> <span class="n">rollback_commit</span>
+
+        <span class="c1"># Find a branching point from the rollback commit</span>
+        <span class="n">rollback_bfs_from_commit</span> <span class="o">=</span> <span class="n">nx</span><span class="o">.</span><span class="n">bfs_tree</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_revision_graph</span><span class="p">,</span> <span class="n">rollback_commit</span><span class="p">,</span> <span class="n">reverse</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+        <span class="n">rollback_branching_point</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">rollback_bfs_from_commit</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_revision_graph</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">n</span><span class="p">][</span><span class="s2">&quot;branch&quot;</span><span class="p">]</span> <span class="o">!=</span>\
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_current_branch</span><span class="p">:</span>
+                <span class="n">rollback_branching_point</span> <span class="o">=</span> <span class="n">n</span>
+                <span class="k">break</span>
+
+        <span class="c1"># Update deltas of the preserved heads</span>
+        <span class="k">for</span> <span class="n">head</span><span class="p">,</span> <span class="n">commit</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_heads</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">head</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_current_branch</span><span class="p">:</span>
+                <span class="c1"># Find a branching point from the head</span>
+                <span class="n">head_bfs_from_commit</span> <span class="o">=</span> <span class="n">nx</span><span class="o">.</span><span class="n">bfs_tree</span><span class="p">(</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_revision_graph</span><span class="p">,</span> <span class="n">commit</span><span class="p">,</span> <span class="n">reverse</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+                <span class="n">head_branching_point</span> <span class="o">=</span> <span class="kc">None</span>
+                <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">head_bfs_from_commit</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
+                    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_revision_graph</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">n</span><span class="p">][</span><span class="s2">&quot;branch&quot;</span><span class="p">]</span> <span class="o">!=</span> <span class="n">head</span><span class="p">:</span>
+                        <span class="n">head_branching_point</span> <span class="o">=</span> <span class="n">n</span>
+                        <span class="k">break</span>
+
+                <span class="k">if</span> <span class="n">rollback_branching_point</span><span class="p">:</span>
+                    <span class="c1"># Rollback in a branched part of the revision graph</span>
+                    <span class="k">try</span><span class="p">:</span>
+                        <span class="c1"># Rollback happened before head</span>
+                        <span class="n">branching_to_head</span> <span class="o">=</span> <span class="n">nx</span><span class="o">.</span><span class="n">shortest_path</span><span class="p">(</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">_revision_graph</span><span class="p">,</span> <span class="n">rollback_branching_point</span><span class="p">,</span> <span class="n">commit</span><span class="p">)</span>
+                        <span class="n">branching_to_rollback</span> <span class="o">=</span> <span class="n">nx</span><span class="o">.</span><span class="n">shortest_path</span><span class="p">(</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">_revision_graph</span><span class="p">,</span> <span class="n">rollback_branching_point</span><span class="p">,</span> <span class="n">rollback_commit</span><span class="p">)</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">_deltas</span><span class="p">[</span><span class="n">head</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_compose_deltas</span><span class="p">(</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">_invert_delta</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_compose_delta_path</span><span class="p">(</span><span class="n">branching_to_rollback</span><span class="p">)),</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">_compose_delta_path</span><span class="p">(</span><span class="n">branching_to_head</span><span class="p">)</span>
+                        <span class="p">)</span>
+                    <span class="k">except</span> <span class="n">nx</span><span class="o">.</span><span class="n">NetworkXNoPath</span><span class="p">:</span>
+                        <span class="k">if</span> <span class="n">head_branching_point</span><span class="p">:</span>
+                            <span class="k">try</span><span class="p">:</span>
+                                <span class="c1"># Rollback happened after head</span>
+                                <span class="n">branching_to_rollback</span> <span class="o">=</span> <span class="n">nx</span><span class="o">.</span><span class="n">shortest_path</span><span class="p">(</span>
+                                    <span class="bp">self</span><span class="o">.</span><span class="n">_revision_graph</span><span class="p">,</span>
+                                    <span class="n">head_branching_point</span><span class="p">,</span> <span class="n">rollback_commit</span><span class="p">)</span>
+                                <span class="n">branching_to_head</span> <span class="o">=</span> <span class="n">nx</span><span class="o">.</span><span class="n">shortest_path</span><span class="p">(</span>
+                                    <span class="bp">self</span><span class="o">.</span><span class="n">_revision_graph</span><span class="p">,</span>
+                                    <span class="n">head_branching_point</span><span class="p">,</span> <span class="n">commit</span><span class="p">)</span>
+                                <span class="bp">self</span><span class="o">.</span><span class="n">_deltas</span><span class="p">[</span><span class="n">head</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_compose_deltas</span><span class="p">(</span>
+                                    <span class="bp">self</span><span class="o">.</span><span class="n">_invert_delta</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_compose_delta_path</span><span class="p">(</span>
+                                        <span class="n">branching_to_rollback</span><span class="p">)),</span>
+                                    <span class="bp">self</span><span class="o">.</span><span class="n">_compose_delta_path</span><span class="p">(</span><span class="n">branching_to_head</span><span class="p">)</span>
+                                <span class="p">)</span>
+                            <span class="k">except</span><span class="p">:</span>
+                                <span class="c1"># Rollback and head are disjoint,</span>
+                                <span class="c1"># so no delta to compute (no undirected path)</span>
+                                <span class="k">pass</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="c1"># Rollback in an unbranched part of the revision graph</span>
+                    <span class="c1"># So head can be only in a branched part and only before</span>
+                    <span class="c1"># the rollback commit (otherwise removed)</span>
+                    <span class="k">if</span> <span class="n">head_branching_point</span><span class="p">:</span>
+                        <span class="n">branching_to_head</span> <span class="o">=</span> <span class="n">nx</span><span class="o">.</span><span class="n">shortest_path</span><span class="p">(</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">_revision_graph</span><span class="p">,</span> <span class="n">head_branching_point</span><span class="p">,</span> <span class="n">commit</span><span class="p">)</span>
+                        <span class="n">branching_to_rollback</span> <span class="o">=</span> <span class="n">nx</span><span class="o">.</span><span class="n">shortest_path</span><span class="p">(</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">_revision_graph</span><span class="p">,</span>
+                            <span class="n">head_branching_point</span><span class="p">,</span> <span class="n">rollback_commit</span><span class="p">)</span>
+
+                        <span class="n">delta_branching_to_rollback</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_compose_delta_path</span><span class="p">(</span>
+                            <span class="n">branching_to_rollback</span><span class="p">)</span>
+                        <span class="n">delta_branching_to_head</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_compose_delta_path</span><span class="p">(</span>
+                            <span class="n">branching_to_head</span><span class="p">)</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">_deltas</span><span class="p">[</span><span class="n">head</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_compose_deltas</span><span class="p">(</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">_invert_delta</span><span class="p">(</span><span class="n">delta_branching_to_rollback</span><span class="p">),</span>
+                            <span class="n">delta_branching_to_head</span>
+                        <span class="p">)</span>
+
+                <span class="k">if</span> <span class="n">head</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_deltas</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_refine_delta</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_deltas</span><span class="p">[</span><span class="n">head</span><span class="p">])</span>
+
+        <span class="c1"># Compute deltas of the new heads</span>
+        <span class="k">for</span> <span class="n">branch</span><span class="p">,</span> <span class="p">(</span><span class="n">head_commit</span><span class="p">,</span> <span class="n">merge_commit</span><span class="p">)</span><span class="ow">in</span> <span class="n">new_heads</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">path_to_merge</span> <span class="o">=</span> <span class="n">nx</span><span class="o">.</span><span class="n">shortest_path</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_revision_graph</span><span class="p">,</span> <span class="n">rollback_commit</span><span class="p">,</span> <span class="n">merge_commit</span><span class="p">)</span>
+            <span class="n">delta_to_merge</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_compose_delta_path</span><span class="p">(</span><span class="n">path_to_merge</span><span class="p">)</span>
+            <span class="n">head_to_merge</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_revision_graph</span><span class="o">.</span><span class="n">adj</span><span class="p">[</span>
+                <span class="n">head_commit</span><span class="p">][</span><span class="n">merge_commit</span><span class="p">][</span><span class="s2">&quot;delta&quot;</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_deltas</span><span class="p">[</span><span class="n">branch</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_compose_deltas</span><span class="p">(</span>
+                <span class="n">delta_to_merge</span><span class="p">,</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_invert_delta</span><span class="p">(</span><span class="n">head_to_merge</span><span class="p">))</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_refine_delta</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_deltas</span><span class="p">[</span><span class="n">branch</span><span class="p">])</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_heads</span><span class="p">[</span><span class="n">branch</span><span class="p">]</span> <span class="o">=</span> <span class="n">head_commit</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Created the new head for &#39;</span><span class="si">{}</span><span class="s2">&#39;&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">branch</span><span class="p">))</span>
+
+        <span class="c1"># All paths to the heads originating from the commit to</span>
+        <span class="c1"># which we rollaback are removed</span>
+        <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">removed_commits</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">c</span> <span class="o">!=</span> <span class="n">rollback_commit</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_revision_graph</span><span class="o">.</span><span class="n">remove_node</span><span class="p">(</span><span class="n">c</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">c</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_heads</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
+                    <span class="k">for</span> <span class="n">h</span> <span class="ow">in</span> <span class="n">keys_by_value</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_heads</span><span class="p">,</span> <span class="n">c</span><span class="p">):</span>
+                        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Removed a head for &#39;</span><span class="si">{}</span><span class="s2">&#39;&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">h</span><span class="p">))</span>
+                        <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">_heads</span><span class="p">[</span><span class="n">h</span><span class="p">]</span></div>
+
+    <span class="k">def</span> <span class="nf">_revision_graph_to_json</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;nodes&quot;</span><span class="p">:</span> <span class="p">[],</span>
+            <span class="s2">&quot;edges&quot;</span><span class="p">:</span> <span class="p">[]</span>
+        <span class="p">}</span>
+        <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_revision_graph</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
+            <span class="n">data</span><span class="p">[</span><span class="s2">&quot;nodes&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">({</span>
+                <span class="s2">&quot;id&quot;</span><span class="p">:</span> <span class="n">n</span><span class="p">,</span>
+                <span class="s2">&quot;branch&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_revision_graph</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">n</span><span class="p">][</span><span class="s2">&quot;branch&quot;</span><span class="p">],</span>
+                <span class="s2">&quot;time&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_revision_graph</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">n</span><span class="p">][</span><span class="s2">&quot;time&quot;</span><span class="p">],</span>
+                <span class="s2">&quot;message&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_revision_graph</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">n</span><span class="p">][</span><span class="s2">&quot;message&quot;</span><span class="p">]</span>
+            <span class="p">})</span>
+        <span class="k">for</span> <span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">t</span><span class="p">)</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_revision_graph</span><span class="o">.</span><span class="n">edges</span><span class="p">():</span>
+            <span class="n">data</span><span class="p">[</span><span class="s2">&quot;edges&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">({</span>
+                <span class="s2">&quot;from&quot;</span><span class="p">:</span> <span class="n">s</span><span class="p">,</span>
+                <span class="s2">&quot;to&quot;</span><span class="p">:</span> <span class="n">t</span><span class="p">,</span>
+                <span class="s2">&quot;delta&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_delta_to_json</span><span class="p">(</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_revision_graph</span><span class="o">.</span><span class="n">adj</span><span class="p">[</span><span class="n">s</span><span class="p">][</span><span class="n">t</span><span class="p">][</span><span class="s2">&quot;delta&quot;</span><span class="p">])</span>
+            <span class="p">})</span>
+        <span class="k">return</span> <span class="n">data</span>
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">_revision_graph_from_json</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">json_data</span><span class="p">):</span>
+        <span class="n">revision_graph</span> <span class="o">=</span> <span class="n">nx</span><span class="o">.</span><span class="n">DiGraph</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">node_json</span> <span class="ow">in</span> <span class="n">json_data</span><span class="p">[</span><span class="s2">&quot;nodes&quot;</span><span class="p">]:</span>
+            <span class="n">revision_graph</span><span class="o">.</span><span class="n">add_node</span><span class="p">(</span>
+                <span class="n">node_json</span><span class="p">[</span><span class="s2">&quot;id&quot;</span><span class="p">],</span>
+                <span class="n">branch</span><span class="o">=</span><span class="n">node_json</span><span class="p">[</span><span class="s2">&quot;branch&quot;</span><span class="p">],</span>
+                <span class="n">time</span><span class="o">=</span><span class="n">node_json</span><span class="p">[</span><span class="s2">&quot;time&quot;</span><span class="p">],</span>
+                <span class="n">message</span><span class="o">=</span><span class="n">node_json</span><span class="p">[</span><span class="s2">&quot;message&quot;</span><span class="p">])</span>
+        <span class="k">for</span> <span class="n">edge_json</span> <span class="ow">in</span> <span class="n">json_data</span><span class="p">[</span><span class="s2">&quot;edges&quot;</span><span class="p">]:</span>
+            <span class="n">revision_graph</span><span class="o">.</span><span class="n">add_edge</span><span class="p">(</span>
+                <span class="n">edge_json</span><span class="p">[</span><span class="s2">&quot;from&quot;</span><span class="p">],</span>
+                <span class="n">edge_json</span><span class="p">[</span><span class="s2">&quot;to&quot;</span><span class="p">],</span>
+                <span class="n">delta</span><span class="o">=</span><span class="bp">cls</span><span class="o">.</span><span class="n">_delta_from_json</span><span class="p">(</span><span class="n">edge_json</span><span class="p">[</span><span class="s2">&quot;delta&quot;</span><span class="p">]))</span>
+        <span class="k">return</span> <span class="n">revision_graph</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">_delta_to_json</span><span class="p">(</span><span class="n">delta</span><span class="p">):</span>
+        <span class="k">pass</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">_delta_from_json</span><span class="p">(</span><span class="n">json_data</span><span class="p">):</span>
+        <span class="k">pass</span>
+
+<div class="viewcode-block" id="Versioning.to_json"><a class="viewcode-back" href="../../audit.html#regraph.audit.Versioning.to_json">[docs]</a>    <span class="k">def</span> <span class="nf">to_json</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Convert versioning object to JSON.&quot;&quot;&quot;</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">data</span><span class="p">[</span><span class="s2">&quot;current_branch&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_current_branch</span>
+        <span class="n">data</span><span class="p">[</span><span class="s2">&quot;deltas&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_deltas</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">data</span><span class="p">[</span><span class="s2">&quot;deltas&quot;</span><span class="p">][</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_delta_to_json</span><span class="p">(</span><span class="n">v</span><span class="p">)</span>
+        <span class="n">data</span><span class="p">[</span><span class="s2">&quot;heads&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">data</span><span class="p">[</span><span class="s2">&quot;heads&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_heads</span>
+        <span class="n">data</span><span class="p">[</span><span class="s2">&quot;revision_graph&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_revision_graph_to_json</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">data</span></div>
+
+<div class="viewcode-block" id="Versioning.from_json"><a class="viewcode-back" href="../../audit.html#regraph.audit.Versioning.from_json">[docs]</a>    <span class="k">def</span> <span class="nf">from_json</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">json_data</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Retrieve versioning object from JSON.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_current_branch</span> <span class="o">=</span> <span class="n">json_data</span><span class="p">[</span><span class="s2">&quot;current_branch&quot;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_deltas</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="n">k</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_delta_from_json</span><span class="p">(</span><span class="n">v</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">json_data</span><span class="p">[</span><span class="s2">&quot;deltas&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_heads</span> <span class="o">=</span> <span class="n">json_data</span><span class="p">[</span><span class="s2">&quot;heads&quot;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_revision_graph</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_revision_graph_from_json</span><span class="p">(</span>
+            <span class="n">json_data</span><span class="p">[</span><span class="s2">&quot;revision_graph&quot;</span><span class="p">])</span></div></div>
+
+
+<div class="viewcode-block" id="VersionedGraph"><a class="viewcode-back" href="../../audit.html#regraph.audit.VersionedGraph">[docs]</a><span class="k">class</span> <span class="nc">VersionedGraph</span><span class="p">(</span><span class="n">Versioning</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Class for versioned hierarchies.&quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">graph</span><span class="p">,</span> <span class="n">init_branch</span><span class="o">=</span><span class="s2">&quot;master&quot;</span><span class="p">,</span> <span class="n">current_branch</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                 <span class="n">deltas</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">heads</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">revision_graph</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Initialize versioned graph object.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">graph</span> <span class="o">=</span> <span class="n">graph</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">init_branch</span><span class="o">=</span><span class="n">init_branch</span><span class="p">,</span>
+                         <span class="n">current_branch</span><span class="o">=</span><span class="n">current_branch</span><span class="p">,</span>
+                         <span class="n">deltas</span><span class="o">=</span><span class="n">deltas</span><span class="p">,</span> <span class="n">heads</span><span class="o">=</span><span class="n">heads</span><span class="p">,</span>
+                         <span class="n">revision_graph</span><span class="o">=</span><span class="n">revision_graph</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_refine_delta</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">delta</span><span class="p">):</span>
+        <span class="n">lhs</span> <span class="o">=</span> <span class="n">delta</span><span class="p">[</span><span class="s2">&quot;rule&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">refine</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="p">,</span> <span class="n">delta</span><span class="p">[</span><span class="s2">&quot;lhs_instance&quot;</span><span class="p">])</span>
+        <span class="n">delta</span><span class="p">[</span><span class="s2">&quot;lhs_instance&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">lhs</span>
+
+        <span class="n">new_rhs</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">delta</span><span class="p">[</span><span class="s2">&quot;rule&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">rhs</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">n</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">delta</span><span class="p">[</span><span class="s2">&quot;rhs_instance&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                <span class="n">new_rhs</span><span class="p">[</span><span class="n">n</span><span class="p">]</span> <span class="o">=</span> <span class="n">lhs</span><span class="p">[</span><span class="n">delta</span><span class="p">[</span><span class="s2">&quot;rule&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">p_lhs</span><span class="p">[</span>
+                    <span class="n">keys_by_value</span><span class="p">(</span><span class="n">delta</span><span class="p">[</span><span class="s2">&quot;rule&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">p_rhs</span><span class="p">,</span> <span class="n">n</span><span class="p">)[</span><span class="mi">0</span><span class="p">]]]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">new_rhs</span><span class="p">[</span><span class="n">n</span><span class="p">]</span> <span class="o">=</span> <span class="n">delta</span><span class="p">[</span><span class="s2">&quot;rhs_instance&quot;</span><span class="p">][</span><span class="n">n</span><span class="p">]</span>
+        <span class="n">delta</span><span class="p">[</span><span class="s2">&quot;rhs_instance&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">new_rhs</span>
+
+    <span class="k">def</span> <span class="nf">_compose_deltas</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">delta1</span><span class="p">,</span> <span class="n">delta2</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Computing composition of two deltas.&quot;&quot;&quot;</span>
+        <span class="n">rule</span><span class="p">,</span> <span class="n">lhs</span><span class="p">,</span> <span class="n">rhs</span> <span class="o">=</span> <span class="n">compose_rules</span><span class="p">(</span>
+            <span class="n">delta1</span><span class="p">[</span><span class="s2">&quot;rule&quot;</span><span class="p">],</span>
+            <span class="n">delta1</span><span class="p">[</span><span class="s2">&quot;lhs_instance&quot;</span><span class="p">],</span>
+            <span class="n">delta1</span><span class="p">[</span><span class="s2">&quot;rhs_instance&quot;</span><span class="p">],</span>
+            <span class="n">delta2</span><span class="p">[</span><span class="s2">&quot;rule&quot;</span><span class="p">],</span>
+            <span class="n">delta2</span><span class="p">[</span><span class="s2">&quot;lhs_instance&quot;</span><span class="p">],</span>
+            <span class="n">delta2</span><span class="p">[</span><span class="s2">&quot;rhs_instance&quot;</span><span class="p">])</span>
+
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="s2">&quot;rule&quot;</span><span class="p">:</span> <span class="n">rule</span><span class="p">,</span>
+            <span class="s2">&quot;lhs_instance&quot;</span><span class="p">:</span> <span class="n">lhs</span><span class="p">,</span>
+            <span class="s2">&quot;rhs_instance&quot;</span><span class="p">:</span> <span class="n">rhs</span>
+        <span class="p">}</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">_invert_delta</span><span class="p">(</span><span class="n">delta</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Reverse the direction of delta.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="s2">&quot;rule&quot;</span><span class="p">:</span> <span class="n">delta</span><span class="p">[</span><span class="s2">&quot;rule&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">get_inverted_rule</span><span class="p">(),</span>
+            <span class="s2">&quot;lhs_instance&quot;</span><span class="p">:</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">delta</span><span class="p">[</span><span class="s2">&quot;rhs_instance&quot;</span><span class="p">]),</span>
+            <span class="s2">&quot;rhs_instance&quot;</span><span class="p">:</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">delta</span><span class="p">[</span><span class="s2">&quot;lhs_instance&quot;</span><span class="p">])</span>
+        <span class="p">}</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">_create_identity_delta</span><span class="p">():</span>
+        <span class="sd">&quot;&quot;&quot;Create an identity-delta.&quot;&quot;&quot;</span>
+        <span class="n">rule</span> <span class="o">=</span> <span class="n">Rule</span><span class="o">.</span><span class="n">identity_rule</span><span class="p">()</span>
+        <span class="n">identity_delta</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;rule&quot;</span><span class="p">:</span> <span class="n">rule</span><span class="p">,</span>
+            <span class="s2">&quot;lhs_instance&quot;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s2">&quot;rhs_instance&quot;</span><span class="p">:</span> <span class="p">{}</span>
+        <span class="p">}</span>
+        <span class="k">return</span> <span class="n">identity_delta</span>
+
+    <span class="k">def</span> <span class="nf">_apply_delta</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">delta</span><span class="p">,</span> <span class="n">relabel</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Apply delta to the current graph version.&quot;&quot;&quot;</span>
+
+        <span class="n">rhs_instance</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">rewrite</span><span class="p">(</span>
+            <span class="n">delta</span><span class="p">[</span><span class="s2">&quot;rule&quot;</span><span class="p">],</span> <span class="n">delta</span><span class="p">[</span><span class="s2">&quot;lhs_instance&quot;</span><span class="p">])</span>
+
+        <span class="k">if</span> <span class="n">relabel</span><span class="p">:</span>
+            <span class="c1"># Relabel nodes to correspond to the stored rhs</span>
+            <span class="n">new_labels</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="n">v</span><span class="p">:</span> <span class="n">delta</span><span class="p">[</span><span class="s2">&quot;rhs_instance&quot;</span><span class="p">][</span><span class="n">k</span><span class="p">]</span>
+                <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">rhs_instance</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+            <span class="p">}</span>
+
+            <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
+                <span class="k">if</span> <span class="n">n</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">new_labels</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                    <span class="n">new_labels</span><span class="p">[</span><span class="n">n</span><span class="p">]</span> <span class="o">=</span> <span class="n">n</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">relabel_nodes</span><span class="p">(</span><span class="n">new_labels</span><span class="p">)</span>
+            <span class="n">rhs_instance</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="n">k</span><span class="p">:</span> <span class="n">new_labels</span><span class="p">[</span><span class="n">v</span><span class="p">]</span>
+                <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">rhs_instance</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+            <span class="p">}</span>
+        <span class="k">return</span> <span class="n">rhs_instance</span>
+
+    <span class="k">def</span> <span class="nf">_merge_into_current_branch</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">delta</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Merge branch with delta into the current branch.&quot;&quot;&quot;</span>
+        <span class="n">current_to_merged_rule</span><span class="p">,</span> <span class="n">other_to_merged_rule</span> <span class="o">=</span>\
+            <span class="n">_create_merging_rule</span><span class="p">(</span>
+                <span class="n">delta</span><span class="p">[</span><span class="s2">&quot;rule&quot;</span><span class="p">],</span> <span class="n">delta</span><span class="p">[</span><span class="s2">&quot;lhs_instance&quot;</span><span class="p">],</span> <span class="n">delta</span><span class="p">[</span><span class="s2">&quot;rhs_instance&quot;</span><span class="p">])</span>
+
+        <span class="n">rhs_instance</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">rewrite</span><span class="p">(</span>
+            <span class="n">current_to_merged_rule</span><span class="p">,</span> <span class="n">delta</span><span class="p">[</span><span class="s2">&quot;lhs_instance&quot;</span><span class="p">])</span>
+
+        <span class="n">current_to_merged_delta</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;rule&quot;</span><span class="p">:</span> <span class="n">current_to_merged_rule</span><span class="p">,</span>
+            <span class="s2">&quot;lhs_instance&quot;</span><span class="p">:</span> <span class="n">delta</span><span class="p">[</span><span class="s2">&quot;lhs_instance&quot;</span><span class="p">],</span>
+            <span class="s2">&quot;rhs_instance&quot;</span><span class="p">:</span> <span class="n">rhs_instance</span>
+        <span class="p">}</span>
+
+        <span class="n">other_to_merged_delta</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;rule&quot;</span><span class="p">:</span> <span class="n">other_to_merged_rule</span><span class="p">,</span>
+            <span class="s2">&quot;lhs_instance&quot;</span><span class="p">:</span> <span class="n">delta</span><span class="p">[</span><span class="s2">&quot;rhs_instance&quot;</span><span class="p">],</span>
+            <span class="s2">&quot;rhs_instance&quot;</span><span class="p">:</span> <span class="n">rhs_instance</span>
+        <span class="p">}</span>
+
+        <span class="k">return</span> <span class="n">current_to_merged_delta</span><span class="p">,</span> <span class="n">other_to_merged_delta</span>
+
+<div class="viewcode-block" id="VersionedGraph.rewrite"><a class="viewcode-back" href="../../audit.html#regraph.audit.VersionedGraph.rewrite">[docs]</a>    <span class="k">def</span> <span class="nf">rewrite</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">rule</span><span class="p">,</span> <span class="n">instance</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">message</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Rewrite the versioned graph and commit.&quot;&quot;&quot;</span>
+        <span class="c1"># Refine a rule to be side-effect free</span>
+        <span class="n">refined_instance</span> <span class="o">=</span> <span class="n">rule</span><span class="o">.</span><span class="n">refine</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="p">,</span> <span class="n">instance</span><span class="p">)</span>
+        <span class="n">rhs_instance</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">rewrite</span><span class="p">(</span>
+            <span class="n">rule</span><span class="p">,</span> <span class="n">refined_instance</span><span class="p">)</span>
+        <span class="n">commit_id</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">commit</span><span class="p">({</span>
+            <span class="s2">&quot;rule&quot;</span><span class="p">:</span> <span class="n">rule</span><span class="p">,</span>
+            <span class="s2">&quot;lhs_instance&quot;</span><span class="p">:</span> <span class="n">refined_instance</span><span class="p">,</span>
+            <span class="s2">&quot;rhs_instance&quot;</span><span class="p">:</span> <span class="n">rhs_instance</span>
+        <span class="p">},</span> <span class="n">message</span><span class="o">=</span><span class="n">message</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">rhs_instance</span><span class="p">,</span> <span class="n">commit_id</span></div>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">_delta_to_json</span><span class="p">(</span><span class="n">delta</span><span class="p">):</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">data</span><span class="p">[</span><span class="s2">&quot;rule&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">delta</span><span class="p">[</span><span class="s2">&quot;rule&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">to_json</span><span class="p">()</span>
+        <span class="n">data</span><span class="p">[</span><span class="s2">&quot;lhs_instance&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">delta</span><span class="p">[</span><span class="s2">&quot;lhs_instance&quot;</span><span class="p">]</span>
+        <span class="n">data</span><span class="p">[</span><span class="s2">&quot;rhs_instance&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">delta</span><span class="p">[</span><span class="s2">&quot;rhs_instance&quot;</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">data</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">_delta_from_json</span><span class="p">(</span><span class="n">json_data</span><span class="p">):</span>
+        <span class="n">delta</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">delta</span><span class="p">[</span><span class="s2">&quot;rule&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">Rule</span><span class="o">.</span><span class="n">from_json</span><span class="p">(</span><span class="n">json_data</span><span class="p">[</span><span class="s2">&quot;rule&quot;</span><span class="p">])</span>
+        <span class="n">delta</span><span class="p">[</span><span class="s2">&quot;lhs_instance&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">json_data</span><span class="p">[</span><span class="s2">&quot;lhs_instance&quot;</span><span class="p">]</span>
+        <span class="n">delta</span><span class="p">[</span><span class="s2">&quot;rhs_instance&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">json_data</span><span class="p">[</span><span class="s2">&quot;rhs_instance&quot;</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">delta</span>
+
+<div class="viewcode-block" id="VersionedGraph.from_json"><a class="viewcode-back" href="../../audit.html#regraph.audit.VersionedGraph.from_json">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">from_json</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">graph</span><span class="p">,</span> <span class="n">json_data</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Retrieve versioning object from JSON.&quot;&quot;&quot;</span>
+        <span class="n">obj</span> <span class="o">=</span> <span class="bp">cls</span><span class="p">(</span><span class="n">graph</span><span class="p">)</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">VersionedGraph</span><span class="p">,</span> <span class="bp">cls</span><span class="p">)</span><span class="o">.</span><span class="n">from_json</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="n">json_data</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">obj</span></div></div>
+
+
+<div class="viewcode-block" id="VersionedHierarchy"><a class="viewcode-back" href="../../audit.html#regraph.audit.VersionedHierarchy">[docs]</a><span class="k">class</span> <span class="nc">VersionedHierarchy</span><span class="p">(</span><span class="n">Versioning</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Class for versioned hierarchies.&quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">hierarchy</span><span class="p">,</span> <span class="n">init_branch</span><span class="o">=</span><span class="s2">&quot;master&quot;</span><span class="p">,</span> <span class="n">current_branch</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                 <span class="n">deltas</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">heads</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">revision_graph</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Initialize versioned hierarchy object.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">hierarchy</span> <span class="o">=</span> <span class="n">hierarchy</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">init_branch</span><span class="o">=</span><span class="n">init_branch</span><span class="p">,</span> <span class="n">current_branch</span><span class="o">=</span><span class="n">current_branch</span><span class="p">,</span>
+                         <span class="n">deltas</span><span class="o">=</span><span class="n">deltas</span><span class="p">,</span> <span class="n">heads</span><span class="o">=</span><span class="n">heads</span><span class="p">,</span>
+                         <span class="n">revision_graph</span><span class="o">=</span><span class="n">revision_graph</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_refine_delta</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">delta</span><span class="p">):</span>
+        <span class="n">lhs_instances</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">hierarchy</span><span class="o">.</span><span class="n">refine_rule_hierarchy</span><span class="p">(</span>
+            <span class="n">delta</span><span class="p">[</span><span class="s2">&quot;rule_hierarchy&quot;</span><span class="p">],</span>
+            <span class="n">delta</span><span class="p">[</span><span class="s2">&quot;lhs_instances&quot;</span><span class="p">])</span>
+        <span class="n">delta</span><span class="p">[</span><span class="s2">&quot;lhs_instances&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">lhs_instances</span>
+        <span class="k">for</span> <span class="n">graph</span> <span class="ow">in</span> <span class="n">delta</span><span class="p">[</span><span class="s2">&quot;rule_hierarchy&quot;</span><span class="p">][</span><span class="s2">&quot;rules&quot;</span><span class="p">]:</span>
+            <span class="k">if</span> <span class="n">graph</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">delta</span><span class="p">[</span><span class="s2">&quot;rhs_instances&quot;</span><span class="p">]:</span>
+                <span class="n">delta</span><span class="p">[</span><span class="s2">&quot;rhs_instances&quot;</span><span class="p">][</span><span class="n">graph</span><span class="p">]</span> <span class="o">=</span> <span class="n">delta</span><span class="p">[</span>
+                    <span class="s2">&quot;lhs_instances&quot;</span><span class="p">][</span><span class="n">graph</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">graph</span><span class="p">,</span> <span class="n">rule</span> <span class="ow">in</span> <span class="n">delta</span><span class="p">[</span><span class="s2">&quot;rule_hierarchy&quot;</span><span class="p">][</span><span class="s2">&quot;rules&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">rule</span> <span class="o">=</span> <span class="n">delta</span><span class="p">[</span><span class="s2">&quot;rule_hierarchy&quot;</span><span class="p">][</span><span class="s2">&quot;rules&quot;</span><span class="p">][</span><span class="n">graph</span><span class="p">]</span>
+            <span class="n">rhs_instance</span> <span class="o">=</span> <span class="n">delta</span><span class="p">[</span><span class="s2">&quot;rhs_instances&quot;</span><span class="p">][</span><span class="n">graph</span><span class="p">]</span>
+            <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">rule</span><span class="o">.</span><span class="n">rhs</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
+                <span class="k">if</span> <span class="n">n</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">rhs_instance</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                    <span class="n">rhs_instance</span><span class="p">[</span><span class="n">n</span><span class="p">]</span> <span class="o">=</span> <span class="n">delta</span><span class="p">[</span><span class="s2">&quot;lhs_instances&quot;</span><span class="p">][</span><span class="n">graph</span><span class="p">][</span>
+                        <span class="n">rule</span><span class="o">.</span><span class="n">p_lhs</span><span class="p">[</span><span class="n">keys_by_value</span><span class="p">(</span><span class="n">rule</span><span class="o">.</span><span class="n">p_rhs</span><span class="p">,</span> <span class="n">n</span><span class="p">)[</span><span class="mi">0</span><span class="p">]]]</span>
+            <span class="n">delta</span><span class="p">[</span><span class="s2">&quot;rhs_instances&quot;</span><span class="p">][</span><span class="n">graph</span><span class="p">]</span> <span class="o">=</span> <span class="n">rhs_instance</span>
+
+    <span class="k">def</span> <span class="nf">_compose_deltas</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">delta1</span><span class="p">,</span> <span class="n">delta2</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Computing composition of two deltas.&quot;&quot;&quot;</span>
+        <span class="n">rule</span><span class="p">,</span> <span class="n">lhs</span><span class="p">,</span> <span class="n">rhs</span> <span class="o">=</span> <span class="n">compose_rule_hierarchies</span><span class="p">(</span>
+            <span class="n">delta1</span><span class="p">[</span><span class="s2">&quot;rule_hierarchy&quot;</span><span class="p">],</span>
+            <span class="n">delta1</span><span class="p">[</span><span class="s2">&quot;lhs_instances&quot;</span><span class="p">],</span>
+            <span class="n">delta1</span><span class="p">[</span><span class="s2">&quot;rhs_instances&quot;</span><span class="p">],</span>
+            <span class="n">delta2</span><span class="p">[</span><span class="s2">&quot;rule_hierarchy&quot;</span><span class="p">],</span>
+            <span class="n">delta2</span><span class="p">[</span><span class="s2">&quot;lhs_instances&quot;</span><span class="p">],</span>
+            <span class="n">delta2</span><span class="p">[</span><span class="s2">&quot;rhs_instances&quot;</span><span class="p">])</span>
+
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="s2">&quot;rule_hierarchy&quot;</span><span class="p">:</span> <span class="n">rule</span><span class="p">,</span>
+            <span class="s2">&quot;lhs_instances&quot;</span><span class="p">:</span> <span class="n">lhs</span><span class="p">,</span>
+            <span class="s2">&quot;rhs_instances&quot;</span><span class="p">:</span> <span class="n">rhs</span>
+        <span class="p">}</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">_invert_delta</span><span class="p">(</span><span class="n">delta</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Reverse the direction of delta.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="s2">&quot;rule_hierarchy&quot;</span><span class="p">:</span> <span class="n">invert_rule_hierarchy</span><span class="p">(</span>
+                <span class="n">delta</span><span class="p">[</span><span class="s2">&quot;rule_hierarchy&quot;</span><span class="p">]),</span>
+            <span class="s2">&quot;lhs_instances&quot;</span><span class="p">:</span> <span class="n">delta</span><span class="p">[</span><span class="s2">&quot;rhs_instances&quot;</span><span class="p">],</span>
+            <span class="s2">&quot;rhs_instances&quot;</span><span class="p">:</span> <span class="n">delta</span><span class="p">[</span><span class="s2">&quot;lhs_instances&quot;</span><span class="p">]</span>
+        <span class="p">}</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">_create_identity_delta</span><span class="p">():</span>
+        <span class="sd">&quot;&quot;&quot;Create an identity-delta.&quot;&quot;&quot;</span>
+        <span class="n">identity_delta</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;rule_hierarchy&quot;</span><span class="p">:</span> <span class="p">{</span>
+                <span class="s2">&quot;rules&quot;</span><span class="p">:</span> <span class="p">{},</span>
+                <span class="s2">&quot;rule_homomorphisms&quot;</span><span class="p">:</span> <span class="p">{}</span>
+            <span class="p">},</span>
+            <span class="s2">&quot;lhs_instances&quot;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s2">&quot;rhs_instances&quot;</span><span class="p">:</span> <span class="p">{}</span>
+        <span class="p">}</span>
+        <span class="k">return</span> <span class="n">identity_delta</span>
+
+    <span class="k">def</span> <span class="nf">_apply_delta</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">delta</span><span class="p">,</span> <span class="n">relabel</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Apply delta to the current hierarchy version.&quot;&quot;&quot;</span>
+
+        <span class="n">rhs_instances</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">hierarchy</span><span class="o">.</span><span class="n">apply_rule_hierarchy</span><span class="p">(</span>
+            <span class="n">delta</span><span class="p">[</span><span class="s2">&quot;rule_hierarchy&quot;</span><span class="p">],</span> <span class="n">delta</span><span class="p">[</span><span class="s2">&quot;lhs_instances&quot;</span><span class="p">])</span>
+
+        <span class="k">if</span> <span class="n">relabel</span><span class="p">:</span>
+            <span class="c1"># Relabel nodes to correspond to the stored rhs</span>
+            <span class="k">for</span> <span class="n">graph</span><span class="p">,</span> <span class="n">rhs_instance</span> <span class="ow">in</span> <span class="n">delta</span><span class="p">[</span><span class="s2">&quot;rhs_instances&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="n">old_rhs</span> <span class="o">=</span> <span class="n">rhs_instance</span>
+                <span class="n">new_rhs</span> <span class="o">=</span> <span class="n">rhs_instances</span><span class="p">[</span><span class="n">graph</span><span class="p">]</span>
+                <span class="n">new_labels</span> <span class="o">=</span> <span class="p">{</span>
+                    <span class="n">v</span><span class="p">:</span> <span class="n">old_rhs</span><span class="p">[</span><span class="n">k</span><span class="p">]</span>
+                    <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">new_rhs</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+                    <span class="k">if</span> <span class="n">v</span> <span class="o">!=</span> <span class="n">old_rhs</span><span class="p">[</span><span class="n">k</span><span class="p">]</span>
+                <span class="p">}</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">new_labels</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">hierarchy</span><span class="o">.</span><span class="n">get_graph</span><span class="p">(</span><span class="n">graph</span><span class="p">)</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
+                        <span class="k">if</span> <span class="n">n</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">new_labels</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                            <span class="n">new_labels</span><span class="p">[</span><span class="n">n</span><span class="p">]</span> <span class="o">=</span> <span class="n">n</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">hierarchy</span><span class="o">.</span><span class="n">relabel_nodes</span><span class="p">(</span><span class="n">graph</span><span class="p">,</span> <span class="n">new_labels</span><span class="p">)</span>
+                    <span class="n">rhs_instances</span><span class="p">[</span><span class="n">graph</span><span class="p">]</span> <span class="o">=</span> <span class="n">old_rhs</span>
+
+        <span class="k">return</span> <span class="n">rhs_instances</span>
+
+    <span class="k">def</span> <span class="nf">_merge_into_current_branch</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">delta</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Merge branch with delta into the current branch.&quot;&quot;&quot;</span>
+        <span class="n">current_to_merged</span><span class="p">,</span> <span class="n">other_to_merged</span> <span class="o">=</span>\
+            <span class="n">_create_merging_rule_hierarchy</span><span class="p">(</span>
+                <span class="n">delta</span><span class="p">[</span><span class="s2">&quot;rule_hierarchy&quot;</span><span class="p">],</span>
+                <span class="n">delta</span><span class="p">[</span><span class="s2">&quot;lhs_instances&quot;</span><span class="p">],</span>
+                <span class="n">delta</span><span class="p">[</span><span class="s2">&quot;rhs_instances&quot;</span><span class="p">])</span>
+
+        <span class="n">rhs_instances</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">hierarchy</span><span class="o">.</span><span class="n">apply_rule_hierarchy</span><span class="p">(</span>
+            <span class="n">current_to_merged</span><span class="p">,</span>
+            <span class="n">delta</span><span class="p">[</span><span class="s2">&quot;lhs_instances&quot;</span><span class="p">])</span>
+
+        <span class="n">current_to_merged_delta</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;rule_hierarchy&quot;</span><span class="p">:</span> <span class="n">current_to_merged</span><span class="p">,</span>
+            <span class="s2">&quot;lhs_instances&quot;</span><span class="p">:</span> <span class="n">delta</span><span class="p">[</span><span class="s2">&quot;lhs_instances&quot;</span><span class="p">],</span>
+            <span class="s2">&quot;rhs_instances&quot;</span><span class="p">:</span> <span class="n">rhs_instances</span>
+        <span class="p">}</span>
+
+        <span class="n">other_to_merged_delta</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;rule_hierarchy&quot;</span><span class="p">:</span> <span class="n">other_to_merged</span><span class="p">,</span>
+            <span class="s2">&quot;lhs_instances&quot;</span><span class="p">:</span> <span class="n">delta</span><span class="p">[</span><span class="s2">&quot;rhs_instances&quot;</span><span class="p">],</span>
+            <span class="s2">&quot;rhs_instances&quot;</span><span class="p">:</span> <span class="n">rhs_instances</span>
+        <span class="p">}</span>
+
+        <span class="k">return</span> <span class="n">current_to_merged_delta</span><span class="p">,</span> <span class="n">other_to_merged_delta</span>
+
+<div class="viewcode-block" id="VersionedHierarchy.rewrite"><a class="viewcode-back" href="../../audit.html#regraph.audit.VersionedHierarchy.rewrite">[docs]</a>    <span class="k">def</span> <span class="nf">rewrite</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">graph_id</span><span class="p">,</span> <span class="n">rule</span><span class="p">,</span> <span class="n">instance</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                <span class="n">p_typing</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">rhs_typing</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                <span class="n">strict</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">message</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Rewrite the versioned hierarchy and commit.&quot;&quot;&quot;</span>
+        <span class="n">rule_hierarchy</span><span class="p">,</span> <span class="n">lhs_instances</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">hierarchy</span><span class="o">.</span><span class="n">get_rule_hierarchy</span><span class="p">(</span>
+            <span class="n">graph_id</span><span class="p">,</span> <span class="n">rule</span><span class="p">,</span> <span class="n">instance</span><span class="p">,</span> <span class="n">p_typing</span><span class="p">,</span> <span class="n">rhs_typing</span><span class="p">)</span>
+
+        <span class="n">lhs_instances</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">hierarchy</span><span class="o">.</span><span class="n">refine_rule_hierarchy</span><span class="p">(</span>
+            <span class="n">rule_hierarchy</span><span class="p">,</span> <span class="n">lhs_instances</span><span class="p">)</span>
+
+        <span class="n">rhs_instances</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">hierarchy</span><span class="o">.</span><span class="n">apply_rule_hierarchy</span><span class="p">(</span>
+            <span class="n">rule_hierarchy</span><span class="p">,</span> <span class="n">lhs_instances</span><span class="p">)</span>
+
+        <span class="n">commit_id</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">commit</span><span class="p">({</span>
+            <span class="s2">&quot;rule_hierarchy&quot;</span><span class="p">:</span> <span class="n">rule_hierarchy</span><span class="p">,</span>
+            <span class="s2">&quot;lhs_instances&quot;</span><span class="p">:</span> <span class="n">lhs_instances</span><span class="p">,</span>
+            <span class="s2">&quot;rhs_instances&quot;</span><span class="p">:</span> <span class="n">rhs_instances</span>
+        <span class="p">},</span> <span class="n">message</span><span class="o">=</span><span class="n">message</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">rhs_instances</span><span class="p">,</span> <span class="n">commit_id</span></div>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">_delta_to_json</span><span class="p">(</span><span class="n">delta</span><span class="p">):</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">data</span><span class="p">[</span><span class="s2">&quot;rule_hierarchy&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;rules&quot;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s2">&quot;rule_homomorphisms&quot;</span><span class="p">:</span> <span class="n">delta</span><span class="p">[</span><span class="s2">&quot;rule_hierarchy&quot;</span><span class="p">][</span><span class="s2">&quot;rule_homomorphisms&quot;</span><span class="p">]</span>
+        <span class="p">}</span>
+        <span class="k">for</span> <span class="n">graph</span><span class="p">,</span> <span class="n">rule</span> <span class="ow">in</span> <span class="n">delta</span><span class="p">[</span><span class="s2">&quot;rule_hierarchy&quot;</span><span class="p">][</span><span class="s2">&quot;rules&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">data</span><span class="p">[</span><span class="s2">&quot;rule_hierarchy&quot;</span><span class="p">][</span><span class="s2">&quot;rules&quot;</span><span class="p">][</span><span class="n">graph</span><span class="p">]</span> <span class="o">=</span> <span class="n">rule</span><span class="o">.</span><span class="n">to_json</span><span class="p">()</span>
+
+        <span class="n">data</span><span class="p">[</span><span class="s2">&quot;lhs_instances&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">delta</span><span class="p">[</span><span class="s2">&quot;lhs_instances&quot;</span><span class="p">]</span>
+        <span class="n">data</span><span class="p">[</span><span class="s2">&quot;rhs_instances&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">delta</span><span class="p">[</span><span class="s2">&quot;rhs_instances&quot;</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">data</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">_delta_from_json</span><span class="p">(</span><span class="n">json_data</span><span class="p">):</span>
+        <span class="n">delta</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">delta</span><span class="p">[</span><span class="s2">&quot;rule_hierarchy&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;rules&quot;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s2">&quot;rule_homomorphisms&quot;</span><span class="p">:</span> <span class="n">json_data</span><span class="p">[</span><span class="s2">&quot;rule_hierarchy&quot;</span><span class="p">][</span><span class="s2">&quot;rule_homomorphisms&quot;</span><span class="p">]</span>
+        <span class="p">}</span>
+        <span class="k">for</span> <span class="n">graph</span><span class="p">,</span> <span class="n">rule</span> <span class="ow">in</span> <span class="n">json_data</span><span class="p">[</span><span class="s2">&quot;rule_hierarchy&quot;</span><span class="p">][</span><span class="s2">&quot;rules&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">delta</span><span class="p">[</span><span class="s2">&quot;rule_hierarchy&quot;</span><span class="p">][</span><span class="s2">&quot;rules&quot;</span><span class="p">][</span><span class="n">graph</span><span class="p">]</span> <span class="o">=</span> <span class="n">Rule</span><span class="o">.</span><span class="n">from_json</span><span class="p">(</span><span class="n">rule</span><span class="p">)</span>
+
+        <span class="n">delta</span><span class="p">[</span><span class="s2">&quot;lhs_instances&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">json_data</span><span class="p">[</span><span class="s2">&quot;lhs_instances&quot;</span><span class="p">]</span>
+        <span class="n">delta</span><span class="p">[</span><span class="s2">&quot;rhs_instances&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">json_data</span><span class="p">[</span><span class="s2">&quot;rhs_instances&quot;</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">delta</span>
+
+<div class="viewcode-block" id="VersionedHierarchy.from_json"><a class="viewcode-back" href="../../audit.html#regraph.audit.VersionedHierarchy.from_json">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">from_json</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">hierarchy</span><span class="p">,</span> <span class="n">json_data</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Retrieve versioning object from JSON.&quot;&quot;&quot;</span>
+        <span class="n">obj</span> <span class="o">=</span> <span class="bp">cls</span><span class="p">(</span><span class="n">hierarchy</span><span class="p">)</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">VersionedHierarchy</span><span class="p">,</span> <span class="bp">cls</span><span class="p">)</span><span class="o">.</span><span class="n">from_json</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="n">json_data</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">obj</span></div></div>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../index.html">ReGraph</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2018, Eugenia Oshurko.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.2.0</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

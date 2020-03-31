@@ -1,0 +1,605 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>regraph.backends.neo4j.graphs &#8212; ReGraph 3.0 documentation</title>
+    <link rel="stylesheet" href="../../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../../../" src="../../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+   
+  <link rel="stylesheet" href="../../../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for regraph.backends.neo4j.graphs</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;Neo4j-based persisent graph objects.</span>
+
+<span class="sd">This module implements data structures that allow working with persistent</span>
+<span class="sd">graphs stored in an instance of the Neo4j database.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">json</span>
+<span class="kn">import</span> <span class="nn">warnings</span>
+
+<span class="kn">from</span> <span class="nn">neo4j.v1</span> <span class="k">import</span> <span class="n">GraphDatabase</span>
+
+<span class="kn">from</span> <span class="nn">regraph.graphs</span> <span class="k">import</span> <span class="n">Graph</span>
+<span class="kn">from</span> <span class="nn">regraph.utils</span> <span class="k">import</span> <span class="p">(</span><span class="n">normalize_attrs</span><span class="p">,</span>
+                           <span class="n">load_nodes_from_json</span><span class="p">,</span>
+                           <span class="n">load_edges_from_json</span><span class="p">,)</span>
+<span class="kn">from</span> <span class="nn">regraph.exceptions</span> <span class="k">import</span> <span class="n">ReGraphError</span>
+<span class="kn">from</span> <span class="nn">.cypher_utils</span> <span class="k">import</span> <span class="n">generic</span>
+<span class="kn">from</span> <span class="nn">.cypher_utils</span> <span class="k">import</span> <span class="n">rewriting</span>
+
+
+<div class="viewcode-block" id="Neo4jGraph"><a class="viewcode-back" href="../../../../neo4jgraphs.html#regraph.backends.neo4j.graphs.Neo4jGraph">[docs]</a><span class="k">class</span> <span class="nc">Neo4jGraph</span><span class="p">(</span><span class="n">Graph</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Class implementing Neo4j graph instance.</span>
+
+<span class="sd">    This class encapsulates neo4j.v1.GraphDatabase object.</span>
+<span class="sd">    It provides an interface for accessing graph sitting</span>
+<span class="sd">    in the DB. This interface is similar (in fact is</span>
+<span class="sd">    intended to be as similar as possible) to the</span>
+<span class="sd">    `networkx.DiGraph` object.</span>
+
+<span class="sd">    Attributes</span>
+<span class="sd">    ----------</span>
+<span class="sd">    _driver :  neo4j.v1.GraphDatabase</span>
+<span class="sd">        Driver providing connection to a Neo4j database</span>
+<span class="sd">    _node_label : str</span>
+<span class="sd">        Label of nodes inducing the manipulated subgraph.</span>
+<span class="sd">    _edge_label : str</span>
+<span class="sd">        Type of relations used in the manipulated subgraph.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">driver</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">uri</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                 <span class="n">user</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">password</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                 <span class="n">node_label</span><span class="o">=</span><span class="s2">&quot;node&quot;</span><span class="p">,</span>
+                 <span class="n">edge_label</span><span class="o">=</span><span class="s2">&quot;edge&quot;</span><span class="p">,</span>
+                 <span class="n">unique_node_ids</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Initialize Neo4jGraph object.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        driver : neo4j.v1.direct.DirectDriver, optional</span>
+<span class="sd">            Driver providing connection to a Neo4j database</span>
+<span class="sd">        uri : str, optional</span>
+<span class="sd">            Uri for a new Neo4j database connection (bolt)</span>
+<span class="sd">        user : str, optional</span>
+<span class="sd">            Username for the Neo4j database connection</span>
+<span class="sd">        password : str, optional</span>
+<span class="sd">            Password for the Neo4j database connection</span>
+<span class="sd">        node_label : optional</span>
+<span class="sd">            Label of nodes inducing the subgraph to scope.</span>
+<span class="sd">            By default `&quot;node&quot;`.</span>
+<span class="sd">        edge_label : optional</span>
+<span class="sd">            Type of relations inducing the subgraph to scope.</span>
+<span class="sd">            By default `&quot;edge&quot;`.</span>
+<span class="sd">        unique_node_ids : bool, optional</span>
+<span class="sd">            Flag, if True the uniqueness constraint on the property</span>
+<span class="sd">            &#39;id&#39; of nodes is imposed, by default True</span>
+
+<span class="sd">        If database driver is provided, uses it for</span>
+<span class="sd">        connecting to database, otherwise creates</span>
+<span class="sd">        a new driver object using provided credentials.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">driver</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_driver</span> <span class="o">=</span> <span class="n">GraphDatabase</span><span class="o">.</span><span class="n">driver</span><span class="p">(</span>
+                <span class="n">uri</span><span class="p">,</span> <span class="n">auth</span><span class="o">=</span><span class="p">(</span><span class="n">user</span><span class="p">,</span> <span class="n">password</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_driver</span> <span class="o">=</span> <span class="n">driver</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_node_label</span> <span class="o">=</span> <span class="n">node_label</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_edge_label</span> <span class="o">=</span> <span class="n">edge_label</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">unique_node_ids</span> <span class="o">=</span> <span class="n">unique_node_ids</span>
+        <span class="k">if</span> <span class="n">unique_node_ids</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_set_constraint</span><span class="p">(</span><span class="s1">&#39;id&#39;</span><span class="p">)</span>
+            <span class="k">except</span><span class="p">:</span>
+                <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+                    <span class="s2">&quot;Failed to create id uniqueness constraint&quot;</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_execute</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">query</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Execute a Cypher query.&quot;&quot;&quot;</span>
+        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_driver</span><span class="o">.</span><span class="n">session</span><span class="p">()</span> <span class="k">as</span> <span class="n">session</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">query</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">result</span> <span class="o">=</span> <span class="n">session</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">query</span><span class="p">)</span>
+                <span class="k">return</span> <span class="n">result</span>
+
+    <span class="k">def</span> <span class="nf">_close</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Close connection to the database.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_driver</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">_clear</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Clear graph database.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        result : BoltStatementResult</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">query</span> <span class="o">=</span> <span class="n">generic</span><span class="o">.</span><span class="n">clear_graph</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_node_label</span><span class="p">)</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_execute</span><span class="p">(</span><span class="n">query</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">result</span>
+
+    <span class="k">def</span> <span class="nf">_set_constraint</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">prop</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Set a uniqueness constraint on the property.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        prop : str</span>
+<span class="sd">            Name of the property that is required to be unique</span>
+<span class="sd">            for the nodes of the database</span>
+
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        result : BoltStatementResult</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">query</span> <span class="o">=</span> <span class="s2">&quot;CREATE &quot;</span> <span class="o">+</span> <span class="n">generic</span><span class="o">.</span><span class="n">constraint_query</span><span class="p">(</span>
+            <span class="s1">&#39;n&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_node_label</span><span class="p">,</span> <span class="n">prop</span><span class="p">)</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_execute</span><span class="p">(</span><span class="n">query</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">result</span>
+
+    <span class="k">def</span> <span class="nf">_drop_constraint</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">prop</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Drop a uniqueness constraint on the property.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        prop : str</span>
+<span class="sd">            Name of the property</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        result : BoltStatementResult</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">query</span> <span class="o">=</span> <span class="s2">&quot;DROP &quot;</span> <span class="o">+</span> <span class="n">generic</span><span class="o">.</span><span class="n">constraint_query</span><span class="p">(</span><span class="s1">&#39;n&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_node_label</span><span class="p">,</span> <span class="n">prop</span><span class="p">)</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">query</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">result</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s2">&quot;Failed to drop constraint&quot;</span><span class="p">)</span>
+
+<div class="viewcode-block" id="Neo4jGraph.nodes"><a class="viewcode-back" href="../../../../neo4jgraphs.html#regraph.backends.neo4j.graphs.Neo4jGraph.nodes">[docs]</a>    <span class="k">def</span> <span class="nf">nodes</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return a list of nodes of the graph.&quot;&quot;&quot;</span>
+        <span class="n">query</span> <span class="o">=</span> <span class="n">generic</span><span class="o">.</span><span class="n">get_nodes</span><span class="p">(</span><span class="n">node_label</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_node_label</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="p">)</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_execute</span><span class="p">(</span><span class="n">query</span><span class="p">)</span>
+
+        <span class="n">node_list</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">result</span><span class="p">:</span>
+            <span class="n">node_id</span> <span class="o">=</span> <span class="n">d</span><span class="p">[</span><span class="s2">&quot;node_id&quot;</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">data</span><span class="p">:</span>
+                <span class="n">attrs</span> <span class="o">=</span> <span class="n">d</span><span class="p">[</span><span class="s2">&quot;attrs&quot;</span><span class="p">]</span>
+                <span class="k">del</span> <span class="n">attrs</span><span class="p">[</span><span class="s2">&quot;id&quot;</span><span class="p">]</span>
+                <span class="n">normalize_attrs</span><span class="p">(</span><span class="n">attrs</span><span class="p">)</span>
+                <span class="n">node_list</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">node_id</span><span class="p">,</span> <span class="n">attrs</span><span class="p">))</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">node_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">node_id</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">node_list</span></div>
+
+<div class="viewcode-block" id="Neo4jGraph.edges"><a class="viewcode-back" href="../../../../neo4jgraphs.html#regraph.backends.neo4j.graphs.Neo4jGraph.edges">[docs]</a>    <span class="k">def</span> <span class="nf">edges</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return the list of edges of the graph.&quot;&quot;&quot;</span>
+        <span class="n">query</span> <span class="o">=</span> <span class="n">generic</span><span class="o">.</span><span class="n">get_edges</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_node_label</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_node_label</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_edge_label</span><span class="p">,</span>
+            <span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="p">)</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_execute</span><span class="p">(</span><span class="n">query</span><span class="p">)</span>
+        <span class="n">edges</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">result</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">d</span><span class="p">[</span><span class="s2">&quot;source_id&quot;</span><span class="p">]</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
+                <span class="n">s</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">d</span><span class="p">[</span><span class="s2">&quot;source_id&quot;</span><span class="p">])</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">s</span> <span class="o">=</span> <span class="n">d</span><span class="p">[</span><span class="s2">&quot;source_id&quot;</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">d</span><span class="p">[</span><span class="s2">&quot;target_id&quot;</span><span class="p">]</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
+                <span class="n">t</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">d</span><span class="p">[</span><span class="s2">&quot;target_id&quot;</span><span class="p">])</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">t</span> <span class="o">=</span> <span class="n">d</span><span class="p">[</span><span class="s2">&quot;target_id&quot;</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">data</span><span class="p">:</span>
+                <span class="n">normalize_attrs</span><span class="p">(</span><span class="n">d</span><span class="p">[</span><span class="s2">&quot;attrs&quot;</span><span class="p">])</span>
+                <span class="n">edges</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">s</span><span class="p">,</span> <span class="n">t</span><span class="p">,</span> <span class="n">d</span><span class="p">[</span><span class="s2">&quot;attrs&quot;</span><span class="p">]))</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">edges</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">s</span><span class="p">,</span> <span class="n">t</span><span class="p">))</span>
+
+        <span class="k">return</span> <span class="n">edges</span></div>
+
+<div class="viewcode-block" id="Neo4jGraph.get_node"><a class="viewcode-back" href="../../../../neo4jgraphs.html#regraph.backends.neo4j.graphs.Neo4jGraph.get_node">[docs]</a>    <span class="k">def</span> <span class="nf">get_node</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node_id</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Get node attributes.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        graph : networkx.(Di)Graph or regraph.neo4j.Neo4jGraph</span>
+<span class="sd">        node_id : hashable, node id.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">query</span> <span class="o">=</span> <span class="n">generic</span><span class="o">.</span><span class="n">get_node_attrs</span><span class="p">(</span>
+            <span class="n">node_id</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_node_label</span><span class="p">,</span>
+            <span class="s2">&quot;attributes&quot;</span><span class="p">)</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_execute</span><span class="p">(</span><span class="n">query</span><span class="p">)</span>
+        <span class="n">attrs</span> <span class="o">=</span> <span class="n">generic</span><span class="o">.</span><span class="n">properties_to_attributes</span><span class="p">(</span>
+            <span class="n">result</span><span class="p">,</span> <span class="s2">&quot;attributes&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">attrs</span></div>
+
+<div class="viewcode-block" id="Neo4jGraph.get_edge"><a class="viewcode-back" href="../../../../neo4jgraphs.html#regraph.backends.neo4j.graphs.Neo4jGraph.get_edge">[docs]</a>    <span class="k">def</span> <span class="nf">get_edge</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">s</span><span class="p">,</span> <span class="n">t</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Get edge attributes.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        graph : networkx.(Di)Graph</span>
+<span class="sd">        s : hashable, source node id.</span>
+<span class="sd">        t : hashable, target node id.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">query</span> <span class="o">=</span> <span class="n">generic</span><span class="o">.</span><span class="n">get_edge_attrs</span><span class="p">(</span>
+            <span class="n">s</span><span class="p">,</span> <span class="n">t</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_node_label</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_edge_label</span><span class="p">,</span>
+            <span class="s2">&quot;attributes&quot;</span><span class="p">)</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_execute</span><span class="p">(</span><span class="n">query</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">generic</span><span class="o">.</span><span class="n">properties_to_attributes</span><span class="p">(</span>
+            <span class="n">result</span><span class="p">,</span> <span class="s2">&quot;attributes&quot;</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Neo4jGraph.add_node"><a class="viewcode-back" href="../../../../neo4jgraphs.html#regraph.backends.neo4j.graphs.Neo4jGraph.add_node">[docs]</a>    <span class="k">def</span> <span class="nf">add_node</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">,</span> <span class="n">attrs</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">ignore_naming</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Abstract method for adding a node.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        node : hashable</span>
+<span class="sd">            Prefix that is prepended to the new unique name.</span>
+<span class="sd">        attrs : dict, optional</span>
+<span class="sd">            Node attributes.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">attrs</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">attrs</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+        <span class="n">normalize_attrs</span><span class="p">(</span><span class="n">attrs</span><span class="p">)</span>
+        <span class="n">query</span> <span class="o">=</span>\
+            <span class="n">rewriting</span><span class="o">.</span><span class="n">add_node</span><span class="p">(</span>
+                <span class="s2">&quot;n&quot;</span><span class="p">,</span> <span class="n">node</span><span class="p">,</span> <span class="s1">&#39;new_id&#39;</span><span class="p">,</span>
+                <span class="n">node_label</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_node_label</span><span class="p">,</span>
+                <span class="n">attrs</span><span class="o">=</span><span class="n">attrs</span><span class="p">,</span>
+                <span class="n">literal_id</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                <span class="n">ignore_naming</span><span class="o">=</span><span class="n">ignore_naming</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span>\
+            <span class="n">generic</span><span class="o">.</span><span class="n">return_vars</span><span class="p">([</span><span class="s1">&#39;new_id&#39;</span><span class="p">])</span>
+
+        <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_execute</span><span class="p">(</span><span class="n">query</span><span class="p">)</span>
+        <span class="n">new_id</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">single</span><span class="p">()[</span><span class="s1">&#39;new_id&#39;</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">new_id</span></div>
+
+<div class="viewcode-block" id="Neo4jGraph.remove_node"><a class="viewcode-back" href="../../../../neo4jgraphs.html#regraph.backends.neo4j.graphs.Neo4jGraph.remove_node">[docs]</a>    <span class="k">def</span> <span class="nf">remove_node</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Remove node.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        graph : networkx.(Di)Graph</span>
+<span class="sd">        node_id : hashable, node to remove.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">query</span> <span class="o">=</span>\
+            <span class="n">generic</span><span class="o">.</span><span class="n">match_node</span><span class="p">(</span>
+                <span class="s2">&quot;n&quot;</span><span class="p">,</span> <span class="n">node</span><span class="p">,</span>
+                <span class="n">node_label</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_node_label</span><span class="p">)</span> <span class="o">+</span>\
+            <span class="n">rewriting</span><span class="o">.</span><span class="n">remove_node</span><span class="p">(</span><span class="s2">&quot;n&quot;</span><span class="p">)</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_execute</span><span class="p">(</span><span class="n">query</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">result</span></div>
+
+<div class="viewcode-block" id="Neo4jGraph.add_edge"><a class="viewcode-back" href="../../../../neo4jgraphs.html#regraph.backends.neo4j.graphs.Neo4jGraph.add_edge">[docs]</a>    <span class="k">def</span> <span class="nf">add_edge</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">s</span><span class="p">,</span> <span class="n">t</span><span class="p">,</span> <span class="n">attrs</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">attr</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Add an edge to a graph.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        graph : networkx.(Di)Graph</span>
+<span class="sd">        s : hashable, source node id.</span>
+<span class="sd">        t : hashable, target node id.</span>
+<span class="sd">        attrs : dict</span>
+<span class="sd">            Edge attributes.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">attrs</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">attrs</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+        <span class="n">normalize_attrs</span><span class="p">(</span><span class="n">attrs</span><span class="p">)</span>
+        <span class="n">query</span> <span class="o">=</span> <span class="n">generic</span><span class="o">.</span><span class="n">match_nodes</span><span class="p">(</span>
+            <span class="p">{</span><span class="s2">&quot;s&quot;</span><span class="p">:</span> <span class="n">s</span><span class="p">,</span> <span class="s2">&quot;t&quot;</span><span class="p">:</span> <span class="n">t</span><span class="p">},</span>
+            <span class="n">node_label</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_node_label</span><span class="p">)</span>
+        <span class="n">query</span> <span class="o">+=</span> <span class="n">rewriting</span><span class="o">.</span><span class="n">add_edge</span><span class="p">(</span>
+            <span class="n">edge_var</span><span class="o">=</span><span class="s1">&#39;new_edge&#39;</span><span class="p">,</span>
+            <span class="n">source_var</span><span class="o">=</span><span class="s2">&quot;s&quot;</span><span class="p">,</span>
+            <span class="n">target_var</span><span class="o">=</span><span class="s2">&quot;t&quot;</span><span class="p">,</span>
+            <span class="n">edge_label</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_edge_label</span><span class="p">,</span>
+            <span class="n">attrs</span><span class="o">=</span><span class="n">attrs</span><span class="p">)</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_execute</span><span class="p">(</span><span class="n">query</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">result</span></div>
+
+<div class="viewcode-block" id="Neo4jGraph.remove_edge"><a class="viewcode-back" href="../../../../neo4jgraphs.html#regraph.backends.neo4j.graphs.Neo4jGraph.remove_edge">[docs]</a>    <span class="k">def</span> <span class="nf">remove_edge</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">s</span><span class="p">,</span> <span class="n">t</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Remove edge from the graph.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        graph : networkx.(Di)Graph</span>
+<span class="sd">        s : hashable, source node id.</span>
+<span class="sd">        t : hashable, target node id.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">query</span> <span class="o">=</span>\
+            <span class="n">generic</span><span class="o">.</span><span class="n">match_edge</span><span class="p">(</span>
+                <span class="s2">&quot;s&quot;</span><span class="p">,</span> <span class="s2">&quot;t&quot;</span><span class="p">,</span> <span class="n">s</span><span class="p">,</span> <span class="n">t</span><span class="p">,</span> <span class="s1">&#39;edge_var&#39;</span><span class="p">,</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_node_label</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_node_label</span><span class="p">,</span>
+                <span class="n">edge_label</span><span class="o">=</span><span class="s1">&#39;edge&#39;</span><span class="p">)</span> <span class="o">+</span>\
+            <span class="n">rewriting</span><span class="o">.</span><span class="n">remove_edge</span><span class="p">(</span><span class="s1">&#39;edge_var&#39;</span><span class="p">)</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_execute</span><span class="p">(</span><span class="n">query</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">result</span></div>
+
+<div class="viewcode-block" id="Neo4jGraph.update_node_attrs"><a class="viewcode-back" href="../../../../neo4jgraphs.html#regraph.backends.neo4j.graphs.Neo4jGraph.update_node_attrs">[docs]</a>    <span class="k">def</span> <span class="nf">update_node_attrs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node_id</span><span class="p">,</span> <span class="n">attrs</span><span class="p">,</span> <span class="n">normalize</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Update attributes of a node.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        node_id : hashable, node to update.</span>
+<span class="sd">        attrs : dict</span>
+<span class="sd">            New attributes to assign to the node</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">normalize_attrs</span><span class="p">(</span><span class="n">attrs</span><span class="p">)</span>
+        <span class="n">query</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">generic</span><span class="o">.</span><span class="n">match_node</span><span class="p">(</span><span class="s2">&quot;n&quot;</span><span class="p">,</span> <span class="n">node_id</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_node_label</span><span class="p">)</span> <span class="o">+</span>
+            <span class="n">generic</span><span class="o">.</span><span class="n">set_attributes</span><span class="p">(</span><span class="s2">&quot;n&quot;</span><span class="p">,</span> <span class="n">attrs</span><span class="p">,</span> <span class="n">update</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_execute</span><span class="p">(</span><span class="n">query</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">result</span></div>
+
+<div class="viewcode-block" id="Neo4jGraph.update_edge_attrs"><a class="viewcode-back" href="../../../../neo4jgraphs.html#regraph.backends.neo4j.graphs.Neo4jGraph.update_edge_attrs">[docs]</a>    <span class="k">def</span> <span class="nf">update_edge_attrs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">s</span><span class="p">,</span> <span class="n">t</span><span class="p">,</span> <span class="n">attrs</span><span class="p">,</span> <span class="n">normalize</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Update attributes of a node.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        s : hashable, source node of the edge to update.</span>
+<span class="sd">        t : hashable, target node of the edge to update.</span>
+<span class="sd">        attrs : dict</span>
+<span class="sd">            New attributes to assign to the node</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">normalize_attrs</span><span class="p">(</span><span class="n">attrs</span><span class="p">)</span>
+        <span class="n">query</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">generic</span><span class="o">.</span><span class="n">match_edge</span><span class="p">(</span>
+                <span class="s2">&quot;s&quot;</span><span class="p">,</span> <span class="s2">&quot;t&quot;</span><span class="p">,</span> <span class="n">s</span><span class="p">,</span> <span class="n">t</span><span class="p">,</span> <span class="s2">&quot;rel&quot;</span><span class="p">,</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_node_label</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_node_label</span><span class="p">,</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_edge_label</span><span class="p">)</span> <span class="o">+</span>
+            <span class="n">generic</span><span class="o">.</span><span class="n">set_attributes</span><span class="p">(</span><span class="s2">&quot;rel&quot;</span><span class="p">,</span> <span class="n">attrs</span><span class="p">,</span> <span class="n">update</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_execute</span><span class="p">(</span><span class="n">query</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">result</span></div>
+
+<div class="viewcode-block" id="Neo4jGraph.successors"><a class="viewcode-back" href="../../../../neo4jgraphs.html#regraph.backends.neo4j.graphs.Neo4jGraph.successors">[docs]</a>    <span class="k">def</span> <span class="nf">successors</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node_id</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return the set of successors.&quot;&quot;&quot;</span>
+        <span class="n">query</span> <span class="o">=</span> <span class="n">generic</span><span class="o">.</span><span class="n">successors_query</span><span class="p">(</span>
+            <span class="n">node_id</span><span class="p">,</span> <span class="n">node_id</span><span class="p">,</span>
+            <span class="n">node_label</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_node_label</span><span class="p">,</span>
+            <span class="n">edge_label</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_edge_label</span><span class="p">)</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_execute</span><span class="p">(</span><span class="n">query</span><span class="p">)</span>
+        <span class="n">succ</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">record</span> <span class="ow">in</span> <span class="n">result</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">record</span><span class="p">[</span><span class="s2">&quot;suc&quot;</span><span class="p">]</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">succ</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">record</span><span class="p">[</span><span class="s2">&quot;suc&quot;</span><span class="p">])</span>
+        <span class="k">return</span> <span class="n">succ</span></div>
+
+<div class="viewcode-block" id="Neo4jGraph.predecessors"><a class="viewcode-back" href="../../../../neo4jgraphs.html#regraph.backends.neo4j.graphs.Neo4jGraph.predecessors">[docs]</a>    <span class="k">def</span> <span class="nf">predecessors</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node_id</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return the set of predecessors.&quot;&quot;&quot;</span>
+        <span class="n">query</span> <span class="o">=</span> <span class="n">generic</span><span class="o">.</span><span class="n">predecessors_query</span><span class="p">(</span>
+            <span class="n">node_id</span><span class="p">,</span> <span class="n">node_id</span><span class="p">,</span>
+            <span class="n">node_label</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_node_label</span><span class="p">,</span>
+            <span class="n">edge_label</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_edge_label</span><span class="p">)</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_execute</span><span class="p">(</span><span class="n">query</span><span class="p">)</span>
+        <span class="n">pred</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">record</span> <span class="ow">in</span> <span class="n">result</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">record</span><span class="p">[</span><span class="s2">&quot;pred&quot;</span><span class="p">]</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">pred</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">record</span><span class="p">[</span><span class="s2">&quot;pred&quot;</span><span class="p">])</span>
+        <span class="k">return</span> <span class="n">pred</span></div>
+
+<div class="viewcode-block" id="Neo4jGraph.find_matching"><a class="viewcode-back" href="../../../../neo4jgraphs.html#regraph.backends.neo4j.graphs.Neo4jGraph.find_matching">[docs]</a>    <span class="k">def</span> <span class="nf">find_matching</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pattern</span><span class="p">,</span> <span class="n">nodes</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                      <span class="n">graph_typing</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">pattern_typing</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Find matching of a pattern in a graph.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">pattern</span><span class="o">.</span><span class="n">nodes</span><span class="p">())</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+
+            <span class="c1"># filter nodes by typing</span>
+            <span class="n">matching_nodes</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+            <span class="k">for</span> <span class="n">pattern_node</span> <span class="ow">in</span> <span class="n">pattern</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
+                <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
+                    <span class="n">type_matches</span> <span class="o">=</span> <span class="kc">True</span>
+                    <span class="k">if</span> <span class="n">pattern_typing</span><span class="p">:</span>
+                        <span class="c1"># check types match</span>
+                        <span class="k">for</span> <span class="n">graph</span><span class="p">,</span> <span class="n">pattern_mapping</span> <span class="ow">in</span> <span class="n">pattern_typing</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                            <span class="k">if</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">graph_typing</span><span class="p">[</span><span class="n">graph</span><span class="p">]</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span> <span class="ow">and</span>\
+                               <span class="n">pattern_node</span> <span class="ow">in</span> <span class="n">pattern_mapping</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                                <span class="k">if</span> <span class="n">graph_typing</span><span class="p">[</span><span class="n">graph</span><span class="p">][</span><span class="n">node</span><span class="p">]</span> <span class="o">!=</span> <span class="n">pattern_mapping</span><span class="p">[</span>
+                                        <span class="n">pattern_node</span><span class="p">]:</span>
+                                    <span class="n">type_matches</span> <span class="o">=</span> <span class="kc">False</span>
+                    <span class="k">if</span> <span class="n">type_matches</span> <span class="ow">and</span> <span class="n">nodes</span> <span class="ow">and</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">nodes</span><span class="p">:</span>
+                        <span class="n">matching_nodes</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">node</span><span class="p">)</span>
+
+            <span class="n">query</span> <span class="o">=</span> <span class="n">rewriting</span><span class="o">.</span><span class="n">find_matching</span><span class="p">(</span>
+                <span class="n">pattern</span><span class="p">,</span>
+                <span class="n">node_label</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_node_label</span><span class="p">,</span>
+                <span class="n">edge_label</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_edge_label</span><span class="p">,</span>
+                <span class="n">nodes</span><span class="o">=</span><span class="n">matching_nodes</span><span class="p">,</span>
+                <span class="n">pattern_typing</span><span class="o">=</span><span class="n">pattern_typing</span><span class="p">)</span>
+
+            <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_execute</span><span class="p">(</span><span class="n">query</span><span class="p">)</span>
+            <span class="n">instances</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+
+            <span class="k">for</span> <span class="n">record</span> <span class="ow">in</span> <span class="n">result</span><span class="p">:</span>
+                <span class="n">instance</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+                <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">record</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                    <span class="n">instance</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">v</span><span class="p">)[</span><span class="s2">&quot;id&quot;</span><span class="p">]</span>
+
+                <span class="n">new_instance</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+                <span class="k">for</span> <span class="n">pattern_node</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">instance</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                    <span class="k">if</span> <span class="n">pattern_node</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">pattern</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
+                        <span class="n">new_instance</span><span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">pattern_node</span><span class="p">)]</span> <span class="o">=</span> <span class="n">v</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">new_instance</span><span class="p">[</span><span class="n">pattern_node</span><span class="p">]</span> <span class="o">=</span> <span class="n">v</span>
+
+                <span class="n">instances</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">new_instance</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">instances</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">return</span> <span class="n">instances</span></div>
+
+<div class="viewcode-block" id="Neo4jGraph.relabel_node"><a class="viewcode-back" href="../../../../neo4jgraphs.html#regraph.backends.neo4j.graphs.Neo4jGraph.relabel_node">[docs]</a>    <span class="k">def</span> <span class="nf">relabel_node</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node_id</span><span class="p">,</span> <span class="n">new_id</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Relabel a node in the graph.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        node_id : hashable</span>
+<span class="sd">            Id of the node to relabel.</span>
+<span class="sd">        new_id : hashable</span>
+<span class="sd">            New label of a node.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">new_id</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
+            <span class="k">raise</span> <span class="n">ReGraphError</span><span class="p">(</span>
+                <span class="s2">&quot;Cannot relabel &#39;</span><span class="si">{}</span><span class="s2">&#39; to &#39;</span><span class="si">{}</span><span class="s2">&#39;, &#39;</span><span class="si">{}</span><span class="s2">&#39; &quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                    <span class="n">node_id</span><span class="p">,</span> <span class="n">new_id</span><span class="p">,</span> <span class="n">new_id</span><span class="p">)</span> <span class="o">+</span>
+                <span class="s2">&quot;already exists in the graph&quot;</span><span class="p">)</span>
+        <span class="n">query</span> <span class="o">=</span> <span class="n">generic</span><span class="o">.</span><span class="n">set_id</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_node_label</span><span class="p">,</span> <span class="n">node_id</span><span class="p">,</span> <span class="n">new_id</span><span class="p">)</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_execute</span><span class="p">(</span><span class="n">query</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">result</span></div>
+
+<div class="viewcode-block" id="Neo4jGraph.from_json"><a class="viewcode-back" href="../../../../neo4jgraphs.html#regraph.backends.neo4j.graphs.Neo4jGraph.from_json">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">from_json</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">driver</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">uri</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">user</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">password</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                  <span class="n">json_data</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">node_label</span><span class="o">=</span><span class="s2">&quot;node&quot;</span><span class="p">,</span> <span class="n">edge_label</span><span class="o">=</span><span class="s2">&quot;edge&quot;</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Create a Neo4jGraph from a json-like dictionary.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        json_data : dict</span>
+<span class="sd">            JSON-like dictionary with graph representation</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">graph</span> <span class="o">=</span> <span class="bp">cls</span><span class="p">(</span>
+            <span class="n">driver</span><span class="o">=</span><span class="n">driver</span><span class="p">,</span> <span class="n">uri</span><span class="o">=</span><span class="n">uri</span><span class="p">,</span> <span class="n">user</span><span class="o">=</span><span class="n">user</span><span class="p">,</span> <span class="n">password</span><span class="o">=</span><span class="n">password</span><span class="p">,</span>
+            <span class="n">node_label</span><span class="o">=</span><span class="n">node_label</span><span class="p">,</span> <span class="n">edge_label</span><span class="o">=</span><span class="n">edge_label</span><span class="p">)</span>
+        <span class="n">graph</span><span class="o">.</span><span class="n">add_nodes_from</span><span class="p">(</span><span class="n">load_nodes_from_json</span><span class="p">(</span><span class="n">json_data</span><span class="p">))</span>
+        <span class="n">graph</span><span class="o">.</span><span class="n">add_edges_from</span><span class="p">(</span><span class="n">load_edges_from_json</span><span class="p">(</span><span class="n">json_data</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">graph</span></div>
+
+<div class="viewcode-block" id="Neo4jGraph.load"><a class="viewcode-back" href="../../../../neo4jgraphs.html#regraph.backends.neo4j.graphs.Neo4jGraph.load">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">load</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">driver</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">uri</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">user</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">password</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+             <span class="n">filename</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">node_label</span><span class="o">=</span><span class="s2">&quot;node&quot;</span><span class="p">,</span> <span class="n">edge_label</span><span class="o">=</span><span class="s2">&quot;edge&quot;</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Load a Neo4jGraph from a JSON file.</span>
+
+<span class="sd">        Create a graph object from</span>
+<span class="sd">        a JSON representation stored in a file.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        driver : neo4j.v1.direct.DirectDriver, optional</span>
+<span class="sd">            Driver providing connection to a Neo4j database</span>
+<span class="sd">        uri : str, optional</span>
+<span class="sd">            Uri for a new Neo4j database connection (bolt)</span>
+<span class="sd">        user : str, optional</span>
+<span class="sd">            Username for the Neo4j database connection</span>
+<span class="sd">        password : str, optional</span>
+<span class="sd">            Password for the Neo4j database connection</span>
+<span class="sd">        filename : str, optional</span>
+<span class="sd">            Name of the file to load the json serialization of the graph</span>
+<span class="sd">        node_label : optional</span>
+<span class="sd">            Label of nodes inducing the subgraph to scope.</span>
+<span class="sd">            By default `&quot;node&quot;`.</span>
+<span class="sd">        edge_label : optional</span>
+<span class="sd">            Type of relations inducing the subgraph to scope.</span>
+<span class="sd">            By default `&quot;edge&quot;`.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        Graph object</span>
+
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        ReGraphError</span>
+<span class="sd">            If was not able to load the file</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">filename</span><span class="p">):</span>
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="s2">&quot;r+&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+                <span class="n">j_data</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">())</span>
+                <span class="k">return</span> <span class="bp">cls</span><span class="o">.</span><span class="n">from_json</span><span class="p">(</span>
+                    <span class="n">driver</span><span class="o">=</span><span class="n">driver</span><span class="p">,</span> <span class="n">uri</span><span class="o">=</span><span class="n">uri</span><span class="p">,</span> <span class="n">user</span><span class="o">=</span><span class="n">user</span><span class="p">,</span> <span class="n">password</span><span class="o">=</span><span class="n">password</span><span class="p">,</span>
+                    <span class="n">json_data</span><span class="o">=</span><span class="n">j_data</span><span class="p">,</span> <span class="n">node_label</span><span class="o">=</span><span class="n">node_label</span><span class="p">,</span> <span class="n">edge_label</span><span class="o">=</span><span class="n">edge_label</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">ReGraphError</span><span class="p">(</span>
+                <span class="s2">&quot;Error loading graph: file &#39;</span><span class="si">{}</span><span class="s2">&#39; does not exist!&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                    <span class="n">filename</span><span class="p">)</span>
+            <span class="p">)</span></div></div>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../../../index.html">ReGraph</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2018, Eugenia Oshurko.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.2.0</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

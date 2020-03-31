@@ -1,0 +1,253 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>Advanced node and edge attributes &#8212; ReGraph 3.0 documentation</title>
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="advanced-node-and-edge-attributes">
+<span id="advanced-attributes"></span><h1>Advanced node and edge attributes<a class="headerlink" href="#advanced-node-and-edge-attributes" title="Permalink to this headline">¶</a></h1>
+<p>ReGraph implements a collection of data structures for representation of potentially infinite sets of attribute values, together with all the default set operations on them (such as union, intersection, inclusion test etc.):</p>
+<ul class="simple">
+<li><p><cite>FiniteSet</cite>, a wrapper for Python finite sets.</p></li>
+<li><p><cite>RegexSet</cite>, a class for possibly infinite sets of strings given by regular expressions.</p></li>
+<li><p><cite>IntegerSet</cite>, a class for possibly infinite sets of integers defined by a set of disjoint intervals.</p></li>
+</ul>
+<p>Import module containing attribute sets data structures:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">math</span> <span class="k">import</span> <span class="n">inf</span>
+
+<span class="kn">import</span> <span class="nn">regraph.attribute_sets</span> <span class="k">as</span> <span class="nn">atsets</span>
+</pre></div>
+</div>
+<p>Define an infinite integer set:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">ints</span> <span class="o">=</span> <span class="n">atsets</span><span class="o">.</span><span class="n">IntegerSet</span><span class="p">({(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">8</span><span class="p">),</span> <span class="p">(</span><span class="mi">11</span><span class="p">,</span> <span class="n">inf</span><span class="p">)})</span>
+</pre></div>
+</div>
+<p>Test if an interger value is in the set:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">ints</span><span class="o">.</span><span class="n">contains</span><span class="p">(</span><span class="mi">5</span><span class="p">)</span>
+<span class="go">True</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">ints</span><span class="o">.</span><span class="n">contains</span><span class="p">(</span><span class="mi">9</span><span class="p">)</span>
+<span class="go">False</span>
+</pre></div>
+</div>
+<p>Test if another integer set is a subset:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">a</span> <span class="o">=</span> <span class="n">atsets</span><span class="o">.</span><span class="n">IntegerSet</span><span class="p">({(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span> <span class="p">(</span><span class="mi">20</span><span class="p">,</span> <span class="mi">30</span><span class="p">)})</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">a</span><span class="o">.</span><span class="n">issubset</span><span class="p">(</span><span class="n">ints</span><span class="p">)</span>
+<span class="go">True</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">b</span> <span class="o">=</span> <span class="n">atsets</span><span class="o">.</span><span class="n">IntegerSet</span><span class="p">({(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">10</span><span class="p">)})</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">b</span><span class="o">.</span><span class="n">issubset</span><span class="p">(</span><span class="n">ints</span><span class="p">)</span>
+<span class="go">False</span>
+</pre></div>
+</div>
+<p>Find the intersection of two <cite>IntegerSet</cite> objects:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">a_and_ints</span> <span class="o">=</span> <span class="n">a</span><span class="o">.</span><span class="n">intersection</span><span class="p">(</span><span class="n">ints</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">a_and_ints</span>
+<span class="go">[0, 3], [20, 30]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">b_and_ints</span> <span class="o">=</span> <span class="n">b</span><span class="o">.</span><span class="n">intersection</span><span class="p">(</span><span class="n">ints</span><span class="p">)</span>
+<span class="go">[0, 8]</span>
+</pre></div>
+</div>
+<p>Find the union of two <cite>IntegerSet</cite> objects:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">a_or_ints</span> <span class="o">=</span> <span class="n">a</span><span class="o">.</span><span class="n">union</span><span class="p">(</span><span class="n">ints</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">a_or_ints</span>
+<span class="go">[0, 8], [11, inf]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">b_or_ints</span> <span class="o">=</span> <span class="n">b</span><span class="o">.</span><span class="n">union</span><span class="p">(</span><span class="n">ints</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">b_or_ints</span>
+<span class="go">[0, inf]</span>
+</pre></div>
+</div>
+<p>We can also find unions and intersections of integer sets with
+ordinary Python sets, as long as these sets contain integer values:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">a</span><span class="o">.</span><span class="n">union</span><span class="p">({</span><span class="mi">13</span><span class="p">,</span> <span class="mi">14</span><span class="p">})</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">a</span>
+<span class="go">[0, 3] [13, 14] [20, 30]</span>
+</pre></div>
+</div>
+<p>The following line of code with cause the <cite>AttributeSetError</cite> exception:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">a</span><span class="o">.</span><span class="n">union</span><span class="p">({</span><span class="mi">13</span><span class="p">,</span> <span class="mi">14</span><span class="p">,</span> <span class="s2">&quot;a&quot;</span><span class="p">})</span>
+<span class="go">AttributeSetError: Set &#39;{&#39;a&#39;, 13, 14}&#39; contains non-integer elements!</span>
+</pre></div>
+</div>
+<p>Now, define objects of <cite>RegexSet</cite>:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">words</span> <span class="o">=</span> <span class="n">atsets</span><span class="o">.</span><span class="n">RegexSet</span><span class="p">(</span><span class="s2">&quot;[A-Za-z]+&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">integers</span> <span class="o">=</span> <span class="n">atsets</span><span class="o">.</span><span class="n">RegexSet</span><span class="p">(</span><span class="s2">&quot;\d+&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">alphanums</span> <span class="o">=</span> <span class="n">atsets</span><span class="o">.</span><span class="n">RegexSet</span><span class="p">(</span><span class="s2">&quot;[A-Za-z\d]+&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Test if strings are matched by regex’s defining our <cite>RegexSet</cite> objects:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">words</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="s2">&quot;42&quot;</span><span class="p">)</span>
+<span class="go">False</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">integers</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="s2">&quot;42&quot;</span><span class="p">)</span>
+<span class="go">True</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">words</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="s2">&quot;hello&quot;</span><span class="p">)</span>
+<span class="go">True</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">integers</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="s2">&quot;hello&quot;</span><span class="p">)</span>
+<span class="go">False</span>
+</pre></div>
+</div>
+<p>Test if one regex set is a subset of another:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">integers</span><span class="o">.</span><span class="n">issubset</span><span class="p">(</span><span class="n">words</span><span class="p">)</span>
+<span class="go">False</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">integers</span><span class="o">.</span><span class="n">issubset</span><span class="p">(</span><span class="n">alphanums</span><span class="p">)</span>
+<span class="go">True</span>
+</pre></div>
+</div>
+<p>Find the intersection of two regex sets:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">integers</span><span class="o">.</span><span class="n">intersection</span><span class="p">(</span><span class="n">words</span><span class="p">)</span>
+<span class="go">[]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">integers</span><span class="o">.</span><span class="n">intersection</span><span class="p">(</span><span class="n">alphanums</span><span class="p">)</span>
+<span class="go">\d+</span>
+</pre></div>
+</div>
+<p>Find the union of two regex sets:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">integers</span><span class="o">.</span><span class="n">union</span><span class="p">(</span><span class="n">words</span><span class="p">)</span>
+<span class="go">\d+|[A-Za-z]+</span>
+</pre></div>
+</div>
+<p>Subtract a finite set of strings from a regex set:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">words</span><span class="o">.</span><span class="n">difference</span><span class="p">({</span><span class="s2">&quot;hi&quot;</span><span class="p">,</span> <span class="s2">&quot;bye&quot;</span><span class="p">})</span>
+<span class="go">([A-Zac-gi-z]|b([A-Za-xz]|y([A-Za-df-z]|e[A-Za-z]))|h([A-Za-hj-z]|i[A-Za-z]))[A-Za-z]*|by?|h</span>
+</pre></div>
+</div>
+<p>The result may be not extremely readable, but we can test it in the following way:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">no_hi_bye</span> <span class="o">=</span> <span class="n">words</span><span class="o">.</span><span class="n">difference</span><span class="p">({</span><span class="s2">&quot;hi&quot;</span><span class="p">,</span> <span class="s2">&quot;bye&quot;</span><span class="p">})</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">no_hi_bye</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="s2">&quot;hi&quot;</span><span class="p">)</span>
+<span class="go">False</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">no_hi_bye</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="s2">&quot;bye&quot;</span><span class="p">)</span>
+<span class="go">False</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">no_hi_bye</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="s2">&quot;afternoon&quot;</span><span class="p">)</span>
+<span class="go">True</span>
+</pre></div>
+</div>
+<p>Now, we can also wrap Python set objects into <cite>FiniteSet</cite> class provided in ReGraph.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">a</span> <span class="o">=</span> <span class="n">atsets</span><span class="o">.</span><span class="n">FiniteSet</span><span class="p">({</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">})</span>
+</pre></div>
+</div>
+<p>It allows us to apply to them any set operations from the common interface of ReGraph’s
+attribute sets. For example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">math</span> <span class="k">import</span> <span class="n">inf</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">int_regex</span> <span class="o">=</span> <span class="n">atsets</span><span class="o">.</span><span class="n">RegexSet</span><span class="p">(</span><span class="s2">&quot;\d+&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">positive_integers</span> <span class="o">=</span> <span class="n">atsets</span><span class="o">.</span><span class="n">IntegerSet</span><span class="p">([(</span><span class="mi">0</span><span class="p">,</span> <span class="n">inf</span><span class="p">)])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">a</span><span class="o">.</span><span class="n">issubset</span><span class="p">(</span><span class="n">int_regex</span><span class="p">)</span>
+<span class="go">True</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">a</span><span class="o">.</span><span class="n">issubset</span><span class="p">(</span><span class="n">positive_integers</span><span class="p">)</span>
+<span class="go">True</span>
+</pre></div>
+</div>
+<p>ReGraph provides two special classes of attribute sets: <cite>UniversalSet</cite> and <cite>EmptySet</cite>,
+which in their essence are static classes. These classes contain all standard
+set theoretic operations and follow the common interface defined in the base class
+<cite>AttributeSet</cite> (as all previously presented attribute set classes).
+Consider a couple of examples illustrating the behaviour of <cite>UniversalSet</cite> and <cite>EmptySet</cite>:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">univ</span> <span class="o">=</span> <span class="n">atsets</span><span class="o">.</span><span class="n">UniversalSet</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">empty</span> <span class="o">=</span> <span class="n">atsets</span><span class="o">.</span><span class="n">EmptySet</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">univ</span><span class="o">.</span><span class="n">union</span><span class="p">(</span><span class="n">empty</span><span class="p">)</span>
+<span class="go">UniversalSet</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">univ</span><span class="o">.</span><span class="n">intersection</span><span class="p">(</span><span class="n">empty</span><span class="p">)</span>
+<span class="go">EmptySet</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">a</span> <span class="o">=</span> <span class="n">atsets</span><span class="o">.</span><span class="n">FiniteSet</span><span class="p">({</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">})</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">a</span><span class="o">.</span><span class="n">issubset</span><span class="p">(</span><span class="n">univ</span><span class="p">)</span>
+<span class="go">True</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">a</span><span class="o">.</span><span class="n">issubset</span><span class="p">(</span><span class="n">empty</span><span class="p">)</span>
+<span class="go">False</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">univ</span><span class="o">.</span><span class="n">intersection</span><span class="p">(</span><span class="n">a</span><span class="p">)</span>
+<span class="go">{1, 2, 3}</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">univ</span><span class="o">.</span><span class="n">union</span><span class="p">(</span><span class="n">a</span><span class="p">)</span>
+<span class="go">UniversalSet</span>
+</pre></div>
+</div>
+<div class="section" id="see-more">
+<h2>See more<a class="headerlink" href="#see-more" title="Permalink to this headline">¶</a></h2>
+<p>Module reference: <a class="reference internal" href="../attribute_sets.html#attribute-sets"><span class="std std-ref">Attribute Sets</span></a></p>
+</div>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">ReGraph</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2018, Eugenia Oshurko.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.2.0</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="../_sources/old/tutorial_attrs.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

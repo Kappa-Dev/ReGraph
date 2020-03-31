@@ -1,0 +1,1107 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>Neo4j-based hierarchies &#8212; ReGraph 3.0 documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="module-regraph.backends.neo4j.hierarchies">
+<span id="neo4j-based-hierarchies"></span><span id="neo4jhierarchies"></span><h1>Neo4j-based hierarchies<a class="headerlink" href="#module-regraph.backends.neo4j.hierarchies" title="Permalink to this headline">¶</a></h1>
+<p>Neo4j-based persisent graph hierarchies.</p>
+<p>This module implements data structures that allow working with persistent
+graph hierarchies stored in an instance of the Neo4j database:</p>
+<ul class="simple">
+<li><p><cite>Neo4jHierarchy</cite> – class for persistent graph hierarchies.</p></li>
+<li><p><cite>TypedNeo4jGraph</cite> – class for schema-aware property graph.</p></li>
+</ul>
+<dl class="class">
+<dt id="regraph.backends.neo4j.hierarchies.Neo4jHierarchy">
+<em class="property">class </em><code class="sig-prename descclassname">regraph.backends.neo4j.hierarchies.</code><code class="sig-name descname">Neo4jHierarchy</code><span class="sig-paren">(</span><em class="sig-param">uri=None</em>, <em class="sig-param">user=None</em>, <em class="sig-param">password=None</em>, <em class="sig-param">driver=None</em>, <em class="sig-param">graph_label='graph'</em>, <em class="sig-param">typing_label='homomorphism'</em>, <em class="sig-param">relation_label='binaryRelation'</em>, <em class="sig-param">graph_edge_label='edge'</em>, <em class="sig-param">graph_typing_label='typing'</em>, <em class="sig-param">graph_relation_label='relation'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/backends/neo4j/hierarchies.html#Neo4jHierarchy"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.backends.neo4j.hierarchies.Neo4jHierarchy" title="Permalink to this definition">¶</a></dt>
+<dd><p>Class for persistent hierarchies.</p>
+<p class="rubric">Methods</p>
+<table class="longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#regraph.backends.neo4j.hierarchies.Neo4jHierarchy.add_empty_graph" title="regraph.backends.neo4j.hierarchies.Neo4jHierarchy.add_empty_graph"><code class="xref py py-obj docutils literal notranslate"><span class="pre">add_empty_graph</span></code></a>(self, graph_id[, attrs])</p></td>
+<td><p>“Add a new empty graph to the hierarchy.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#regraph.backends.neo4j.hierarchies.Neo4jHierarchy.add_graph" title="regraph.backends.neo4j.hierarchies.Neo4jHierarchy.add_graph"><code class="xref py py-obj docutils literal notranslate"><span class="pre">add_graph</span></code></a>(self, graph_id, graph[, attrs])</p></td>
+<td><p>Add a new graph to the hierarchy.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#regraph.backends.neo4j.hierarchies.Neo4jHierarchy.add_graph_from_data" title="regraph.backends.neo4j.hierarchies.Neo4jHierarchy.add_graph_from_data"><code class="xref py py-obj docutils literal notranslate"><span class="pre">add_graph_from_data</span></code></a>(self, graph_id, …[, attrs])</p></td>
+<td><p>Add a new graph to the hierarchy from the input node/edge lists.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#regraph.backends.neo4j.hierarchies.Neo4jHierarchy.add_relation" title="regraph.backends.neo4j.hierarchies.Neo4jHierarchy.add_relation"><code class="xref py py-obj docutils literal notranslate"><span class="pre">add_relation</span></code></a>(self, left, right, relation[, …])</p></td>
+<td><p>Add relation to the hierarchy.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#regraph.backends.neo4j.hierarchies.Neo4jHierarchy.add_typing" title="regraph.backends.neo4j.hierarchies.Neo4jHierarchy.add_typing"><code class="xref py py-obj docutils literal notranslate"><span class="pre">add_typing</span></code></a>(self, source, target, mapping[, …])</p></td>
+<td><p>Add homomorphism to the hierarchy.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#regraph.backends.neo4j.hierarchies.Neo4jHierarchy.bfs_tree" title="regraph.backends.neo4j.hierarchies.Neo4jHierarchy.bfs_tree"><code class="xref py py-obj docutils literal notranslate"><span class="pre">bfs_tree</span></code></a>(self, graph[, reverse])</p></td>
+<td><p>BFS tree from the graph to all other reachable graphs.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#regraph.backends.neo4j.hierarchies.Neo4jHierarchy.close" title="regraph.backends.neo4j.hierarchies.Neo4jHierarchy.close"><code class="xref py py-obj docutils literal notranslate"><span class="pre">close</span></code></a>(self)</p></td>
+<td><p>Close connection to the database.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#regraph.backends.neo4j.hierarchies.Neo4jHierarchy.copy_graph" title="regraph.backends.neo4j.hierarchies.Neo4jHierarchy.copy_graph"><code class="xref py py-obj docutils literal notranslate"><span class="pre">copy_graph</span></code></a>(self, graph_id, new_graph_id[, …])</p></td>
+<td><p>Create a copy of a graph in a hierarchy.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#regraph.backends.neo4j.hierarchies.Neo4jHierarchy.execute" title="regraph.backends.neo4j.hierarchies.Neo4jHierarchy.execute"><code class="xref py py-obj docutils literal notranslate"><span class="pre">execute</span></code></a>(self, query)</p></td>
+<td><p>Execute a Cypher query.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#regraph.backends.neo4j.hierarchies.Neo4jHierarchy.from_json" title="regraph.backends.neo4j.hierarchies.Neo4jHierarchy.from_json"><code class="xref py py-obj docutils literal notranslate"><span class="pre">from_json</span></code></a>([uri, user, password, driver, …])</p></td>
+<td><p>Create hierarchy object from JSON representation.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#regraph.backends.neo4j.hierarchies.Neo4jHierarchy.get_graph" title="regraph.backends.neo4j.hierarchies.Neo4jHierarchy.get_graph"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_graph</span></code></a>(self, graph_id)</p></td>
+<td><p>Get a graph object associated to the node ‘graph_id’.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#regraph.backends.neo4j.hierarchies.Neo4jHierarchy.get_graph_attrs" title="regraph.backends.neo4j.hierarchies.Neo4jHierarchy.get_graph_attrs"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_graph_attrs</span></code></a>(self, graph_id)</p></td>
+<td><p>Get attributes of a graph in the hierarchy.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#regraph.backends.neo4j.hierarchies.Neo4jHierarchy.get_relation" title="regraph.backends.neo4j.hierarchies.Neo4jHierarchy.get_relation"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_relation</span></code></a>(self, left_id, right_id)</p></td>
+<td><p>Get a relation dict associated to the rel ‘left_id-&gt;target_id’.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#regraph.backends.neo4j.hierarchies.Neo4jHierarchy.get_relation_attrs" title="regraph.backends.neo4j.hierarchies.Neo4jHierarchy.get_relation_attrs"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_relation_attrs</span></code></a>(self, left_id, right_id)</p></td>
+<td><p>Get attributes of a reltion in the hierarchy.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#regraph.backends.neo4j.hierarchies.Neo4jHierarchy.get_typing" title="regraph.backends.neo4j.hierarchies.Neo4jHierarchy.get_typing"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_typing</span></code></a>(self, source_id, target_id)</p></td>
+<td><p>Get a typing dict associated to the edge ‘source_id-&gt;target_id’.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#regraph.backends.neo4j.hierarchies.Neo4jHierarchy.get_typing_attrs" title="regraph.backends.neo4j.hierarchies.Neo4jHierarchy.get_typing_attrs"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_typing_attrs</span></code></a>(self, source_id, target_id)</p></td>
+<td><p>Get attributes of a typing in the hierarchy.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#regraph.backends.neo4j.hierarchies.Neo4jHierarchy.graphs" title="regraph.backends.neo4j.hierarchies.Neo4jHierarchy.graphs"><code class="xref py py-obj docutils literal notranslate"><span class="pre">graphs</span></code></a>(self[, data])</p></td>
+<td><p>Return a list of graphs in the hierarchy.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#regraph.backends.neo4j.hierarchies.Neo4jHierarchy.load" title="regraph.backends.neo4j.hierarchies.Neo4jHierarchy.load"><code class="xref py py-obj docutils literal notranslate"><span class="pre">load</span></code></a>([uri, user, password, driver, …])</p></td>
+<td><p>Load the hierarchy.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#regraph.backends.neo4j.hierarchies.Neo4jHierarchy.predecessors" title="regraph.backends.neo4j.hierarchies.Neo4jHierarchy.predecessors"><code class="xref py py-obj docutils literal notranslate"><span class="pre">predecessors</span></code></a>(self, node_id)</p></td>
+<td><p>Return the set of predecessors.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#regraph.backends.neo4j.hierarchies.Neo4jHierarchy.relabel_graph" title="regraph.backends.neo4j.hierarchies.Neo4jHierarchy.relabel_graph"><code class="xref py py-obj docutils literal notranslate"><span class="pre">relabel_graph</span></code></a>(self, graph_id, new_graph_id)</p></td>
+<td><p>Relabel a graph in the hierarchy.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#regraph.backends.neo4j.hierarchies.Neo4jHierarchy.relabel_graph_node" title="regraph.backends.neo4j.hierarchies.Neo4jHierarchy.relabel_graph_node"><code class="xref py py-obj docutils literal notranslate"><span class="pre">relabel_graph_node</span></code></a>(self, graph_id, node, …)</p></td>
+<td><p>Rename a node in a graph of the hierarchy.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#regraph.backends.neo4j.hierarchies.Neo4jHierarchy.relabel_graphs" title="regraph.backends.neo4j.hierarchies.Neo4jHierarchy.relabel_graphs"><code class="xref py py-obj docutils literal notranslate"><span class="pre">relabel_graphs</span></code></a>(self, mapping)</p></td>
+<td><p>Relabel graphs in the hierarchy.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#regraph.backends.neo4j.hierarchies.Neo4jHierarchy.relations" title="regraph.backends.neo4j.hierarchies.Neo4jHierarchy.relations"><code class="xref py py-obj docutils literal notranslate"><span class="pre">relations</span></code></a>(self[, data])</p></td>
+<td><p>Return a list of relations.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#regraph.backends.neo4j.hierarchies.Neo4jHierarchy.remove_graph" title="regraph.backends.neo4j.hierarchies.Neo4jHierarchy.remove_graph"><code class="xref py py-obj docutils literal notranslate"><span class="pre">remove_graph</span></code></a>(self, graph_id[, reconnect])</p></td>
+<td><p>Remove graph from the hierarchy.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#regraph.backends.neo4j.hierarchies.Neo4jHierarchy.remove_relation" title="regraph.backends.neo4j.hierarchies.Neo4jHierarchy.remove_relation"><code class="xref py py-obj docutils literal notranslate"><span class="pre">remove_relation</span></code></a>(self, left, right)</p></td>
+<td><p>Remove a relation from the hierarchy.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#regraph.backends.neo4j.hierarchies.Neo4jHierarchy.remove_typing" title="regraph.backends.neo4j.hierarchies.Neo4jHierarchy.remove_typing"><code class="xref py py-obj docutils literal notranslate"><span class="pre">remove_typing</span></code></a>(self, s, t)</p></td>
+<td><p>Remove a typing from the hierarchy.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#regraph.backends.neo4j.hierarchies.Neo4jHierarchy.set_graph_attrs" title="regraph.backends.neo4j.hierarchies.Neo4jHierarchy.set_graph_attrs"><code class="xref py py-obj docutils literal notranslate"><span class="pre">set_graph_attrs</span></code></a>(self, graph_id, attrs[, update])</p></td>
+<td><p>Set attributes of a graph in the hierarchy.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#regraph.backends.neo4j.hierarchies.Neo4jHierarchy.set_node_relation" title="regraph.backends.neo4j.hierarchies.Neo4jHierarchy.set_node_relation"><code class="xref py py-obj docutils literal notranslate"><span class="pre">set_node_relation</span></code></a>(self, left_graph, …)</p></td>
+<td><p>Set relation for a particular node.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#regraph.backends.neo4j.hierarchies.Neo4jHierarchy.set_relation_attrs" title="regraph.backends.neo4j.hierarchies.Neo4jHierarchy.set_relation_attrs"><code class="xref py py-obj docutils literal notranslate"><span class="pre">set_relation_attrs</span></code></a>(self, left, right, attrs)</p></td>
+<td><p>Set attributes of a relation in the hierarchy.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#regraph.backends.neo4j.hierarchies.Neo4jHierarchy.set_typing_attrs" title="regraph.backends.neo4j.hierarchies.Neo4jHierarchy.set_typing_attrs"><code class="xref py py-obj docutils literal notranslate"><span class="pre">set_typing_attrs</span></code></a>(self, source, target, attrs)</p></td>
+<td><p>Set attributes of a typing in the hierarchy.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#regraph.backends.neo4j.hierarchies.Neo4jHierarchy.shortest_path" title="regraph.backends.neo4j.hierarchies.Neo4jHierarchy.shortest_path"><code class="xref py py-obj docutils literal notranslate"><span class="pre">shortest_path</span></code></a>(self, source, target)</p></td>
+<td><p>Shortest path from ‘source’ to ‘target’.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#regraph.backends.neo4j.hierarchies.Neo4jHierarchy.successors" title="regraph.backends.neo4j.hierarchies.Neo4jHierarchy.successors"><code class="xref py py-obj docutils literal notranslate"><span class="pre">successors</span></code></a>(self, node_id)</p></td>
+<td><p>Return the set of successors.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#regraph.backends.neo4j.hierarchies.Neo4jHierarchy.typings" title="regraph.backends.neo4j.hierarchies.Neo4jHierarchy.typings"><code class="xref py py-obj docutils literal notranslate"><span class="pre">typings</span></code></a>(self[, data])</p></td>
+<td><p>Return a list of graph typing edges in the hierarchy.</p></td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="regraph.backends.neo4j.hierarchies.Neo4jHierarchy.add_empty_graph">
+<code class="sig-name descname">add_empty_graph</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">graph_id</em>, <em class="sig-param">attrs=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/backends/neo4j/hierarchies.html#Neo4jHierarchy.add_empty_graph"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.backends.neo4j.hierarchies.Neo4jHierarchy.add_empty_graph" title="Permalink to this definition">¶</a></dt>
+<dd><p>“Add a new empty graph to the hierarchy.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>graph_id</strong><span class="classifier">hashable</span></dt><dd><p>Id of a new node in the hierarchy</p>
+</dd>
+<dt><strong>graph_attrs</strong><span class="classifier">dict, optional</span></dt><dd><p>Dictionary containing attributes of the new node</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.backends.neo4j.hierarchies.Neo4jHierarchy.add_graph">
+<code class="sig-name descname">add_graph</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">graph_id</em>, <em class="sig-param">graph</em>, <em class="sig-param">attrs=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/backends/neo4j/hierarchies.html#Neo4jHierarchy.add_graph"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.backends.neo4j.hierarchies.Neo4jHierarchy.add_graph" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add a new graph to the hierarchy.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>graph_id</strong><span class="classifier">hashable</span></dt><dd><p>Id of a new node in the hierarchy</p>
+</dd>
+<dt><strong>graph</strong><span class="classifier">regraph.Graph</span></dt><dd><p>Graph object corresponding to the new node of
+the hierarchy</p>
+</dd>
+<dt><strong>graph_attrs</strong><span class="classifier">dict, optional</span></dt><dd><p>Dictionary containing attributes of the new node</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.backends.neo4j.hierarchies.Neo4jHierarchy.add_graph_from_data">
+<code class="sig-name descname">add_graph_from_data</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">graph_id</em>, <em class="sig-param">node_list</em>, <em class="sig-param">edge_list</em>, <em class="sig-param">attrs=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/backends/neo4j/hierarchies.html#Neo4jHierarchy.add_graph_from_data"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.backends.neo4j.hierarchies.Neo4jHierarchy.add_graph_from_data" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add a new graph to the hierarchy from the input node/edge lists.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>graph_id</strong><span class="classifier">hashable</span></dt><dd><p>Id of a new node in the hierarchy</p>
+</dd>
+<dt><strong>node_list</strong><span class="classifier">iterable</span></dt><dd><p>List of nodes (with attributes)</p>
+</dd>
+<dt><strong>edge_list</strong><span class="classifier">iterable</span></dt><dd><p>List of edges (with attributes)</p>
+</dd>
+<dt><strong>graph_attrs</strong><span class="classifier">dict, optional</span></dt><dd><p>Dictionary containing attributes of the new node</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.backends.neo4j.hierarchies.Neo4jHierarchy.add_relation">
+<code class="sig-name descname">add_relation</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">left</em>, <em class="sig-param">right</em>, <em class="sig-param">relation</em>, <em class="sig-param">attrs=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/backends/neo4j/hierarchies.html#Neo4jHierarchy.add_relation"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.backends.neo4j.hierarchies.Neo4jHierarchy.add_relation" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add relation to the hierarchy.</p>
+<p>This method adds a relation between two graphs in
+the hierarchy corresponding to the nodes with ids
+<cite>left</cite> and <cite>right</cite>, the relation itself is defined
+by a dictionary <cite>relation</cite>, where a key is a node in
+the <cite>left</cite> graph and its corresponding value is a set
+of nodes from the <cite>right</cite> graph to which the node is
+related. Relations in the hierarchy are symmetric
+(see example below).</p>
+<dl class="field-list">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>left</strong></dt><dd><p>Id of the hierarchy’s node represening the <cite>left</cite> graph</p>
+</dd>
+<dt><strong>right</strong></dt><dd><p>Id of the hierarchy’s node represening the <cite>right</cite> graph</p>
+</dd>
+<dt><strong>relation</strong><span class="classifier">dict</span></dt><dd><p>Dictionary representing a relation of nodes from <cite>left</cite>
+to the nodes from <cite>right</cite>, a key of the dictionary is
+assumed to be a node from <cite>left</cite> and its value a set
+of ids of related nodes from <cite>right</cite></p>
+</dd>
+<dt><strong>attrs</strong><span class="classifier">dict</span></dt><dd><p>Dictionary containing attributes of the new relation</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><dl>
+<dt>HierarchyError</dt><dd><p>This error is raised in the following cases:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>node with id <cite>left</cite>/<cite>right</cite> is not defined in the hierarchy;</p></li>
+<li><p>node with id <cite>left</cite>/<cite>right</cite> is not a graph;</p></li>
+<li><p>a relation between <cite>left</cite> and <cite>right</cite> already exists;</p></li>
+<li><p>some node ids specified in <cite>relation</cite> are not found in the</p></li>
+</ul>
+<p><cite>left</cite>/<cite>right</cite> graph.</p>
+</div></blockquote>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.backends.neo4j.hierarchies.Neo4jHierarchy.add_typing">
+<code class="sig-name descname">add_typing</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">source</em>, <em class="sig-param">target</em>, <em class="sig-param">mapping</em>, <em class="sig-param">attrs=None</em>, <em class="sig-param">check=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/backends/neo4j/hierarchies.html#Neo4jHierarchy.add_typing"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.backends.neo4j.hierarchies.Neo4jHierarchy.add_typing" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add homomorphism to the hierarchy.</p>
+<dl class="field-list">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>source</strong><span class="classifier">hashable</span></dt><dd><p>Id of the source graph node of typing</p>
+</dd>
+<dt><strong>target</strong><span class="classifier">hashable</span></dt><dd><p>Id of the target graph node of typing</p>
+</dd>
+<dt><strong>mapping</strong><span class="classifier">dict</span></dt><dd><p>Dictionary representing a mapping of nodes
+from the source graph to target’s nodes</p>
+</dd>
+<dt><strong>attrs</strong><span class="classifier">dict</span></dt><dd><p>Dictionary containing attributes of the new
+typing edge</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><dl>
+<dt>HierarchyError</dt><dd><p>This error is raised in the following cases:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>source or target ids are not found in the hierarchy</p></li>
+<li><p>a typing edge between source and target already exists</p></li>
+<li><p>addition of an edge between source and target creates</p></li>
+</ul>
+<p>a cycle or produces paths that do not commute with
+some already existing paths</p>
+</div></blockquote>
+</dd>
+<dt>InvalidHomomorphism</dt><dd><p>If a homomorphisms from a graph at the source to a graph at
+the target given by <cite>mapping</cite> is not a valid homomorphism.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.backends.neo4j.hierarchies.Neo4jHierarchy.bfs_tree">
+<code class="sig-name descname">bfs_tree</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">graph</em>, <em class="sig-param">reverse=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/backends/neo4j/hierarchies.html#Neo4jHierarchy.bfs_tree"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.backends.neo4j.hierarchies.Neo4jHierarchy.bfs_tree" title="Permalink to this definition">¶</a></dt>
+<dd><p>BFS tree from the graph to all other reachable graphs.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.backends.neo4j.hierarchies.Neo4jHierarchy.close">
+<code class="sig-name descname">close</code><span class="sig-paren">(</span><em class="sig-param">self</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/backends/neo4j/hierarchies.html#Neo4jHierarchy.close"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.backends.neo4j.hierarchies.Neo4jHierarchy.close" title="Permalink to this definition">¶</a></dt>
+<dd><p>Close connection to the database.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.backends.neo4j.hierarchies.Neo4jHierarchy.copy_graph">
+<code class="sig-name descname">copy_graph</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">graph_id</em>, <em class="sig-param">new_graph_id</em>, <em class="sig-param">attach_graphs=[]</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/backends/neo4j/hierarchies.html#Neo4jHierarchy.copy_graph"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.backends.neo4j.hierarchies.Neo4jHierarchy.copy_graph" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a copy of a graph in a hierarchy.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.backends.neo4j.hierarchies.Neo4jHierarchy.execute">
+<code class="sig-name descname">execute</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">query</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/backends/neo4j/hierarchies.html#Neo4jHierarchy.execute"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.backends.neo4j.hierarchies.Neo4jHierarchy.execute" title="Permalink to this definition">¶</a></dt>
+<dd><p>Execute a Cypher query.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.backends.neo4j.hierarchies.Neo4jHierarchy.from_json">
+<em class="property">classmethod </em><code class="sig-name descname">from_json</code><span class="sig-paren">(</span><em class="sig-param">uri=None</em>, <em class="sig-param">user=None</em>, <em class="sig-param">password=None</em>, <em class="sig-param">driver=None</em>, <em class="sig-param">json_data=None</em>, <em class="sig-param">ignore=None</em>, <em class="sig-param">clear=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/backends/neo4j/hierarchies.html#Neo4jHierarchy.from_json"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.backends.neo4j.hierarchies.Neo4jHierarchy.from_json" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create hierarchy object from JSON representation.</p>
+<dl class="field-list">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl>
+<dt><strong>uri</strong><span class="classifier">str, optional</span></dt><dd><p>Uri for Neo4j database connection</p>
+</dd>
+<dt><strong>user</strong><span class="classifier">str, optional</span></dt><dd><p>Username for Neo4j database connection</p>
+</dd>
+<dt><strong>password</strong><span class="classifier">str, optional</span></dt><dd><p>Password for Neo4j database connection</p>
+</dd>
+<dt><strong>driver</strong><span class="classifier">neo4j.v1.direct.DirectDriver, optional</span></dt><dd><p>DB driver object</p>
+</dd>
+<dt><strong>json_data</strong><span class="classifier">dict, optional</span></dt><dd><p>JSON-like dict containing representation of a hierarchy</p>
+</dd>
+<dt><strong>ignore</strong><span class="classifier">dict, optional</span></dt><dd><p>Dictionary containing components to ignore in the process
+of converting from JSON, dictionary should respect the
+following format:
+{</p>
+<blockquote>
+<div><p>“graphs”: &lt;collection of ids of graphs to ignore&gt;,
+“rules”: &lt;collection of ids of rules to ignore&gt;,
+“typing”: &lt;collection of tuples containing typing</p>
+<blockquote>
+<div><p>edges to ignore&gt;,</p>
+</div></blockquote>
+<dl class="simple">
+<dt>“rule_typing”: &lt;collection of tuples containing rule</dt><dd><p>typing edges to ignore&gt;&gt;,</p>
+</dd>
+<dt>“relations”: &lt;collection of tuples containing</dt><dd><p>relations to ignore&gt;,</p>
+</dd>
+</dl>
+</div></blockquote>
+<p>}</p>
+</dd>
+<dt><strong>directed</strong><span class="classifier">bool, optional</span></dt><dd><p>True if graphs from JSON representation should be loaded as
+directed graphs, False otherwise, default value – True</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>hierarchy</strong><span class="classifier">regraph.hierarchy.Hierarchy</span></dt><dd></dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.backends.neo4j.hierarchies.Neo4jHierarchy.get_graph">
+<code class="sig-name descname">get_graph</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">graph_id</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/backends/neo4j/hierarchies.html#Neo4jHierarchy.get_graph"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.backends.neo4j.hierarchies.Neo4jHierarchy.get_graph" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get a graph object associated to the node ‘graph_id’.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.backends.neo4j.hierarchies.Neo4jHierarchy.get_graph_attrs">
+<code class="sig-name descname">get_graph_attrs</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">graph_id</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/backends/neo4j/hierarchies.html#Neo4jHierarchy.get_graph_attrs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.backends.neo4j.hierarchies.Neo4jHierarchy.get_graph_attrs" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get attributes of a graph in the hierarchy.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>graph_id</strong><span class="classifier">hashable</span></dt><dd><p>Id of the graph</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.backends.neo4j.hierarchies.Neo4jHierarchy.get_relation">
+<code class="sig-name descname">get_relation</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">left_id</em>, <em class="sig-param">right_id</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/backends/neo4j/hierarchies.html#Neo4jHierarchy.get_relation"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.backends.neo4j.hierarchies.Neo4jHierarchy.get_relation" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get a relation dict associated to the rel ‘left_id-&gt;target_id’.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.backends.neo4j.hierarchies.Neo4jHierarchy.get_relation_attrs">
+<code class="sig-name descname">get_relation_attrs</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">left_id</em>, <em class="sig-param">right_id</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/backends/neo4j/hierarchies.html#Neo4jHierarchy.get_relation_attrs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.backends.neo4j.hierarchies.Neo4jHierarchy.get_relation_attrs" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get attributes of a reltion in the hierarchy.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>left</strong><span class="classifier">hashable</span></dt><dd><p>Id of the left graph</p>
+</dd>
+<dt><strong>right</strong><span class="classifier">hashable</span></dt><dd><p>Id of the right graph</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.backends.neo4j.hierarchies.Neo4jHierarchy.get_typing">
+<code class="sig-name descname">get_typing</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">source_id</em>, <em class="sig-param">target_id</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/backends/neo4j/hierarchies.html#Neo4jHierarchy.get_typing"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.backends.neo4j.hierarchies.Neo4jHierarchy.get_typing" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get a typing dict associated to the edge ‘source_id-&gt;target_id’.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.backends.neo4j.hierarchies.Neo4jHierarchy.get_typing_attrs">
+<code class="sig-name descname">get_typing_attrs</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">source_id</em>, <em class="sig-param">target_id</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/backends/neo4j/hierarchies.html#Neo4jHierarchy.get_typing_attrs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.backends.neo4j.hierarchies.Neo4jHierarchy.get_typing_attrs" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get attributes of a typing in the hierarchy.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>source</strong><span class="classifier">hashable</span></dt><dd><p>Id of the source graph</p>
+</dd>
+<dt><strong>target</strong><span class="classifier">hashable</span></dt><dd><p>Id of the target graph</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.backends.neo4j.hierarchies.Neo4jHierarchy.graphs">
+<code class="sig-name descname">graphs</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">data=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/backends/neo4j/hierarchies.html#Neo4jHierarchy.graphs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.backends.neo4j.hierarchies.Neo4jHierarchy.graphs" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return a list of graphs in the hierarchy.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.backends.neo4j.hierarchies.Neo4jHierarchy.load">
+<em class="property">classmethod </em><code class="sig-name descname">load</code><span class="sig-paren">(</span><em class="sig-param">uri=None</em>, <em class="sig-param">user=None</em>, <em class="sig-param">password=None</em>, <em class="sig-param">driver=None</em>, <em class="sig-param">filename=None</em>, <em class="sig-param">ignore=None</em>, <em class="sig-param">clear=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/backends/neo4j/hierarchies.html#Neo4jHierarchy.load"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.backends.neo4j.hierarchies.Neo4jHierarchy.load" title="Permalink to this definition">¶</a></dt>
+<dd><p>Load the hierarchy.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.backends.neo4j.hierarchies.Neo4jHierarchy.predecessors">
+<code class="sig-name descname">predecessors</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">node_id</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/backends/neo4j/hierarchies.html#Neo4jHierarchy.predecessors"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.backends.neo4j.hierarchies.Neo4jHierarchy.predecessors" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the set of predecessors.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.backends.neo4j.hierarchies.Neo4jHierarchy.relabel_graph">
+<code class="sig-name descname">relabel_graph</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">graph_id</em>, <em class="sig-param">new_graph_id</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/backends/neo4j/hierarchies.html#Neo4jHierarchy.relabel_graph"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.backends.neo4j.hierarchies.Neo4jHierarchy.relabel_graph" title="Permalink to this definition">¶</a></dt>
+<dd><p>Relabel a graph in the hierarchy.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>graph_id</strong><span class="classifier">hashable</span></dt><dd><p>Id of the graph to relabel</p>
+</dd>
+<dt><strong>new_graph_id</strong><span class="classifier">hashable</span></dt><dd><p>New graph id to assign to this graph</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.backends.neo4j.hierarchies.Neo4jHierarchy.relabel_graph_node">
+<code class="sig-name descname">relabel_graph_node</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">graph_id</em>, <em class="sig-param">node</em>, <em class="sig-param">new_name</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/backends/neo4j/hierarchies.html#Neo4jHierarchy.relabel_graph_node"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.backends.neo4j.hierarchies.Neo4jHierarchy.relabel_graph_node" title="Permalink to this definition">¶</a></dt>
+<dd><p>Rename a node in a graph of the hierarchy.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.backends.neo4j.hierarchies.Neo4jHierarchy.relabel_graphs">
+<code class="sig-name descname">relabel_graphs</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">mapping</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/backends/neo4j/hierarchies.html#Neo4jHierarchy.relabel_graphs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.backends.neo4j.hierarchies.Neo4jHierarchy.relabel_graphs" title="Permalink to this definition">¶</a></dt>
+<dd><p>Relabel graphs in the hierarchy.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>mapping: dict</strong></dt><dd><p>A dictionary with keys being old graph ids and their values
+being new id’s of the respective graphs.</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><dl class="simple">
+<dt>ReGraphError</dt><dd><p>If new id’s do not define a set of distinct graph id’s.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.backends.neo4j.hierarchies.Neo4jHierarchy.relations">
+<code class="sig-name descname">relations</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">data=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/backends/neo4j/hierarchies.html#Neo4jHierarchy.relations"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.backends.neo4j.hierarchies.Neo4jHierarchy.relations" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return a list of relations.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.backends.neo4j.hierarchies.Neo4jHierarchy.remove_graph">
+<code class="sig-name descname">remove_graph</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">graph_id</em>, <em class="sig-param">reconnect=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/backends/neo4j/hierarchies.html#Neo4jHierarchy.remove_graph"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.backends.neo4j.hierarchies.Neo4jHierarchy.remove_graph" title="Permalink to this definition">¶</a></dt>
+<dd><p>Remove graph from the hierarchy.</p>
+<p>Removes a graph from the hierarchy, if the <cite>reconnect</cite>
+parameter is set to True, adds typing from the
+predecessors of the removed node to all its successors,
+by composing the homomorphisms (for every predecessor <cite>p</cite>
+and for every successor ‘s’ composes two homomorphisms
+<cite>p</cite>-&gt;`node_id` and <cite>node_id</cite>-&gt;`s`, then removes <cite>node_id</cite> and
+all its incident edges, by which makes node’s
+removal a procedure of ‘forgetting’ one level
+of ‘abstraction’).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>node_id</strong></dt><dd><p>Id of a graph to remove</p>
+</dd>
+<dt><strong>reconnect</strong><span class="classifier">bool</span></dt><dd><p>Reconnect the descendants of the removed node to
+its predecessors</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><dl class="simple">
+<dt>HierarchyError</dt><dd><p>If graph with <cite>node_id</cite> is not defined in the hierarchy</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.backends.neo4j.hierarchies.Neo4jHierarchy.remove_relation">
+<code class="sig-name descname">remove_relation</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">left</em>, <em class="sig-param">right</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/backends/neo4j/hierarchies.html#Neo4jHierarchy.remove_relation"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.backends.neo4j.hierarchies.Neo4jHierarchy.remove_relation" title="Permalink to this definition">¶</a></dt>
+<dd><p>Remove a relation from the hierarchy.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.backends.neo4j.hierarchies.Neo4jHierarchy.remove_typing">
+<code class="sig-name descname">remove_typing</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">s</em>, <em class="sig-param">t</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/backends/neo4j/hierarchies.html#Neo4jHierarchy.remove_typing"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.backends.neo4j.hierarchies.Neo4jHierarchy.remove_typing" title="Permalink to this definition">¶</a></dt>
+<dd><p>Remove a typing from the hierarchy.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.backends.neo4j.hierarchies.Neo4jHierarchy.set_graph_attrs">
+<code class="sig-name descname">set_graph_attrs</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">graph_id</em>, <em class="sig-param">attrs</em>, <em class="sig-param">update=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/backends/neo4j/hierarchies.html#Neo4jHierarchy.set_graph_attrs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.backends.neo4j.hierarchies.Neo4jHierarchy.set_graph_attrs" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set attributes of a graph in the hierarchy.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>graph_id</strong><span class="classifier">hashable</span></dt><dd><p>Id of the graph</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.backends.neo4j.hierarchies.Neo4jHierarchy.set_node_relation">
+<code class="sig-name descname">set_node_relation</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">left_graph</em>, <em class="sig-param">right_graph</em>, <em class="sig-param">left_node</em>, <em class="sig-param">right_node</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/backends/neo4j/hierarchies.html#Neo4jHierarchy.set_node_relation"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.backends.neo4j.hierarchies.Neo4jHierarchy.set_node_relation" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set relation for a particular node.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.backends.neo4j.hierarchies.Neo4jHierarchy.set_relation_attrs">
+<code class="sig-name descname">set_relation_attrs</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">left</em>, <em class="sig-param">right</em>, <em class="sig-param">attrs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/backends/neo4j/hierarchies.html#Neo4jHierarchy.set_relation_attrs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.backends.neo4j.hierarchies.Neo4jHierarchy.set_relation_attrs" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set attributes of a relation in the hierarchy.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>left</strong><span class="classifier">hashable</span></dt><dd><p>Id of the left graph</p>
+</dd>
+<dt><strong>right</strong><span class="classifier">hashable</span></dt><dd><p>Id of the right graph</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.backends.neo4j.hierarchies.Neo4jHierarchy.set_typing_attrs">
+<code class="sig-name descname">set_typing_attrs</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">source</em>, <em class="sig-param">target</em>, <em class="sig-param">attrs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/backends/neo4j/hierarchies.html#Neo4jHierarchy.set_typing_attrs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.backends.neo4j.hierarchies.Neo4jHierarchy.set_typing_attrs" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set attributes of a typing in the hierarchy.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>source</strong><span class="classifier">hashable</span></dt><dd><p>Id of the source graph</p>
+</dd>
+<dt><strong>target</strong><span class="classifier">hashable</span></dt><dd><p>Id of the target graph</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.backends.neo4j.hierarchies.Neo4jHierarchy.shortest_path">
+<code class="sig-name descname">shortest_path</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">source</em>, <em class="sig-param">target</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/backends/neo4j/hierarchies.html#Neo4jHierarchy.shortest_path"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.backends.neo4j.hierarchies.Neo4jHierarchy.shortest_path" title="Permalink to this definition">¶</a></dt>
+<dd><p>Shortest path from ‘source’ to ‘target’.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.backends.neo4j.hierarchies.Neo4jHierarchy.successors">
+<code class="sig-name descname">successors</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">node_id</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/backends/neo4j/hierarchies.html#Neo4jHierarchy.successors"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.backends.neo4j.hierarchies.Neo4jHierarchy.successors" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the set of successors.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.backends.neo4j.hierarchies.Neo4jHierarchy.typings">
+<code class="sig-name descname">typings</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">data=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/backends/neo4j/hierarchies.html#Neo4jHierarchy.typings"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.backends.neo4j.hierarchies.Neo4jHierarchy.typings" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return a list of graph typing edges in the hierarchy.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="regraph.backends.neo4j.hierarchies.TypedNeo4jGraph">
+<em class="property">class </em><code class="sig-prename descclassname">regraph.backends.neo4j.hierarchies.</code><code class="sig-name descname">TypedNeo4jGraph</code><span class="sig-paren">(</span><em class="sig-param">uri=None</em>, <em class="sig-param">user=None</em>, <em class="sig-param">password=None</em>, <em class="sig-param">driver=None</em>, <em class="sig-param">schema_graph=None</em>, <em class="sig-param">data_graph=None</em>, <em class="sig-param">typing=None</em>, <em class="sig-param">clear=False</em>, <em class="sig-param">graph_label='graph'</em>, <em class="sig-param">typing_label='homomorphism'</em>, <em class="sig-param">graph_edge_label='edge'</em>, <em class="sig-param">graph_typing_label='typing'</em>, <em class="sig-param">schema_node_label='type'</em>, <em class="sig-param">data_node_label='node'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/backends/neo4j/hierarchies.html#TypedNeo4jGraph"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.backends.neo4j.hierarchies.TypedNeo4jGraph" title="Permalink to this definition">¶</a></dt>
+<dd><p>Class implementing two level hiearchy.</p>
+<p>This class encapsulates neo4j.v1.GraphDatabase object.
+It provides an interface for accessing typed graphs
+accommodated in the Neo4j DB. Our system is assumed to
+consist of two graphs (the data graph) and (the schema graph)
+connected with a graph homomorphisms (defining typing of
+the data graph by the schema graph).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Attributes</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>_driver</strong><span class="classifier">neo4j.v1.GraphDatabase</span></dt><dd><p>Driver providing connection to a Neo4j database</p>
+</dd>
+<dt><strong>_graph_label</strong><span class="classifier">str</span></dt><dd></dd>
+<dt><strong>_typing_label</strong><span class="classifier">str</span></dt><dd></dd>
+<dt><strong>_graph_edge_label</strong><span class="classifier">str</span></dt><dd></dd>
+<dt><strong>_graph_typing_label</strong><span class="classifier">str</span></dt><dd></dd>
+<dt><strong>_schema_node_label</strong><span class="classifier">str</span></dt><dd><p>Label of nodes inducing the schema graph.</p>
+</dd>
+<dt><strong>_data_node_label</strong><span class="classifier">str</span></dt><dd></dd>
+<dt><strong>Top level represents a data instance, while bottom level represents</strong></dt><dd></dd>
+<dt><strong>a graphical schema.</strong></dt><dd></dd>
+</dl>
+</dd>
+</dl>
+<p class="rubric">Methods</p>
+<table class="longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.add_data_edge" title="regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.add_data_edge"><code class="xref py py-obj docutils literal notranslate"><span class="pre">add_data_edge</span></code></a>(self, source, target[, attrs])</p></td>
+<td><p>Add a data edge.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.add_data_edge_attrs" title="regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.add_data_edge_attrs"><code class="xref py py-obj docutils literal notranslate"><span class="pre">add_data_edge_attrs</span></code></a>(self, source, target, attrs)</p></td>
+<td><p>Add a data edge.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.add_data_node" title="regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.add_data_node"><code class="xref py py-obj docutils literal notranslate"><span class="pre">add_data_node</span></code></a>(self, node_id, typing[, attrs])</p></td>
+<td><p>Add a data node typed by the specified schema node.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.add_data_node_attrs" title="regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.add_data_node_attrs"><code class="xref py py-obj docutils literal notranslate"><span class="pre">add_data_node_attrs</span></code></a>(self, node_id, attrs)</p></td>
+<td><p>Add the attributes to a data node.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.add_schema_edge" title="regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.add_schema_edge"><code class="xref py py-obj docutils literal notranslate"><span class="pre">add_schema_edge</span></code></a>(self, source, target[, attrs])</p></td>
+<td><p>Add a schema node.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.add_schema_node" title="regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.add_schema_node"><code class="xref py py-obj docutils literal notranslate"><span class="pre">add_schema_node</span></code></a>(self, node_id[, attrs])</p></td>
+<td><p>Add a schema node.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.add_schema_node_attrs" title="regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.add_schema_node_attrs"><code class="xref py py-obj docutils literal notranslate"><span class="pre">add_schema_node_attrs</span></code></a>(self, node_id, attrs)</p></td>
+<td><p>Add the attributes of a schema node.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.clone_schema_node" title="regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.clone_schema_node"><code class="xref py py-obj docutils literal notranslate"><span class="pre">clone_schema_node</span></code></a>(self, node, data_typing)</p></td>
+<td><p>Clone a schema node.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.find_data_matching" title="regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.find_data_matching"><code class="xref py py-obj docutils literal notranslate"><span class="pre">find_data_matching</span></code></a>(self, pattern[, …])</p></td>
+<td><p>Find matching of a pattern in the data graph.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.find_schema_matching" title="regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.find_schema_matching"><code class="xref py py-obj docutils literal notranslate"><span class="pre">find_schema_matching</span></code></a>(self, pattern[, nodes])</p></td>
+<td><p>Find matching of a pattern in the schema graph.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.get_data" title="regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.get_data"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_data</span></code></a>(self)</p></td>
+<td><p>Get the data graph object.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.get_data_edges" title="regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.get_data_edges"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_data_edges</span></code></a>(self[, data])</p></td>
+<td><p>Get the edges of the data.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.get_data_node" title="regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.get_data_node"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_data_node</span></code></a>(self, node_id)</p></td>
+<td><p>Get the attributes of a data node.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.get_data_nodes" title="regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.get_data_nodes"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_data_nodes</span></code></a>(self[, data])</p></td>
+<td><p>Get to nodes of the data.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.get_data_typing" title="regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.get_data_typing"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_data_typing</span></code></a>(self)</p></td>
+<td><p>Get the typing of the data.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.get_instances" title="regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.get_instances"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_instances</span></code></a>(self, schema_node)</p></td>
+<td><p>Get all the instances of the schema node.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.get_node_type" title="regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.get_node_type"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_node_type</span></code></a>(self, node_id)</p></td>
+<td><p>Get the type of a node in the data.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.get_schema" title="regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.get_schema"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_schema</span></code></a>(self)</p></td>
+<td><p>Get the schema graph object.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.get_schema_edges" title="regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.get_schema_edges"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_schema_edges</span></code></a>(self[, data])</p></td>
+<td><p>Get the edges of the schema.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.get_schema_node" title="regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.get_schema_node"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_schema_node</span></code></a>(self, node_id)</p></td>
+<td><p>Get the attributes of a schema node.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.get_schema_nodes" title="regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.get_schema_nodes"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_schema_nodes</span></code></a>(self[, data])</p></td>
+<td><p>Get the nodes of the schema.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.merge_data_nodes" title="regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.merge_data_nodes"><code class="xref py py-obj docutils literal notranslate"><span class="pre">merge_data_nodes</span></code></a>(self, node_list)</p></td>
+<td><p>Merge data nodes.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.relabel_data_node" title="regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.relabel_data_node"><code class="xref py py-obj docutils literal notranslate"><span class="pre">relabel_data_node</span></code></a>(self, node_id, new_node_id)</p></td>
+<td><p>Relabel a node in the data.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.relabel_schema_node" title="regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.relabel_schema_node"><code class="xref py py-obj docutils literal notranslate"><span class="pre">relabel_schema_node</span></code></a>(self, node_id, new_node_id)</p></td>
+<td><p>Relabel a node in the schema.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.remove_data_edge" title="regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.remove_data_edge"><code class="xref py py-obj docutils literal notranslate"><span class="pre">remove_data_edge</span></code></a>(self, source, target)</p></td>
+<td><p>Remove a data edge.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.remove_data_node" title="regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.remove_data_node"><code class="xref py py-obj docutils literal notranslate"><span class="pre">remove_data_node</span></code></a>(self, node_id)</p></td>
+<td><p>Remove a data node.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.remove_data_node_attrs" title="regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.remove_data_node_attrs"><code class="xref py py-obj docutils literal notranslate"><span class="pre">remove_data_node_attrs</span></code></a>(self, node_id, attrs)</p></td>
+<td><p>Remove the attributes of a data node.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.remove_schema_edge" title="regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.remove_schema_edge"><code class="xref py py-obj docutils literal notranslate"><span class="pre">remove_schema_edge</span></code></a>(self, source, target)</p></td>
+<td><p>Remove a schema node.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.remove_schema_edge_attrs" title="regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.remove_schema_edge_attrs"><code class="xref py py-obj docutils literal notranslate"><span class="pre">remove_schema_edge_attrs</span></code></a>(self, source, …)</p></td>
+<td><p>Remove a schema node.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.remove_schema_node" title="regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.remove_schema_node"><code class="xref py py-obj docutils literal notranslate"><span class="pre">remove_schema_node</span></code></a>(self, node_id)</p></td>
+<td><p>Remove a schema node.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.remove_schema_node_attrs" title="regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.remove_schema_node_attrs"><code class="xref py py-obj docutils literal notranslate"><span class="pre">remove_schema_node_attrs</span></code></a>(self, node_id, attrs)</p></td>
+<td><p>Remove a schema node.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.rewrite_data" title="regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.rewrite_data"><code class="xref py py-obj docutils literal notranslate"><span class="pre">rewrite_data</span></code></a>(self, rule, instance[, …])</p></td>
+<td><p>Rewrite the data graph.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.rewrite_schema" title="regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.rewrite_schema"><code class="xref py py-obj docutils literal notranslate"><span class="pre">rewrite_schema</span></code></a>(self, rule[, instance, …])</p></td>
+<td><p>Rewrite the schema graph.</p></td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.add_data_edge">
+<code class="sig-name descname">add_data_edge</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">source</em>, <em class="sig-param">target</em>, <em class="sig-param">attrs=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/backends/neo4j/hierarchies.html#TypedNeo4jGraph.add_data_edge"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.add_data_edge" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add a data edge.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.add_data_edge_attrs">
+<code class="sig-name descname">add_data_edge_attrs</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">source</em>, <em class="sig-param">target</em>, <em class="sig-param">attrs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/backends/neo4j/hierarchies.html#TypedNeo4jGraph.add_data_edge_attrs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.add_data_edge_attrs" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add a data edge.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.add_data_node">
+<code class="sig-name descname">add_data_node</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">node_id</em>, <em class="sig-param">typing</em>, <em class="sig-param">attrs=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/backends/neo4j/hierarchies.html#TypedNeo4jGraph.add_data_node"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.add_data_node" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add a data node typed by the specified schema node.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.add_data_node_attrs">
+<code class="sig-name descname">add_data_node_attrs</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">node_id</em>, <em class="sig-param">attrs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/backends/neo4j/hierarchies.html#TypedNeo4jGraph.add_data_node_attrs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.add_data_node_attrs" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add the attributes to a data node.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.add_schema_edge">
+<code class="sig-name descname">add_schema_edge</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">source</em>, <em class="sig-param">target</em>, <em class="sig-param">attrs=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/backends/neo4j/hierarchies.html#TypedNeo4jGraph.add_schema_edge"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.add_schema_edge" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add a schema node.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.add_schema_node">
+<code class="sig-name descname">add_schema_node</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">node_id</em>, <em class="sig-param">attrs=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/backends/neo4j/hierarchies.html#TypedNeo4jGraph.add_schema_node"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.add_schema_node" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add a schema node.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.add_schema_node_attrs">
+<code class="sig-name descname">add_schema_node_attrs</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">node_id</em>, <em class="sig-param">attrs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/backends/neo4j/hierarchies.html#TypedNeo4jGraph.add_schema_node_attrs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.add_schema_node_attrs" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add the attributes of a schema node.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.clone_schema_node">
+<code class="sig-name descname">clone_schema_node</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">node</em>, <em class="sig-param">data_typing</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/backends/neo4j/hierarchies.html#TypedNeo4jGraph.clone_schema_node"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.clone_schema_node" title="Permalink to this definition">¶</a></dt>
+<dd><p>Clone a schema node.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.find_data_matching">
+<code class="sig-name descname">find_data_matching</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">pattern</em>, <em class="sig-param">pattern_typing=None</em>, <em class="sig-param">nodes=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/backends/neo4j/hierarchies.html#TypedNeo4jGraph.find_data_matching"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.find_data_matching" title="Permalink to this definition">¶</a></dt>
+<dd><p>Find matching of a pattern in the data graph.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>pattern</strong><span class="classifier">Graph object</span></dt><dd><p>A pattern to match</p>
+</dd>
+<dt><strong>pattern_typing</strong><span class="classifier">dict</span></dt><dd><p>A dictionary that specifies a typing of a pattern,
+keys of the dictionary – graph id that types a pattern, this graph
+should be among parents of the <cite>graph_id</cite> graph;
+values are mappings of nodes from pattern to the typing graph;</p>
+</dd>
+<dt><strong>nodes</strong><span class="classifier">iterable</span></dt><dd><p>Subset of nodes where matching should be performed</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>instances</strong><span class="classifier">list of dict</span></dt><dd><p>List of matched instances</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.find_schema_matching">
+<code class="sig-name descname">find_schema_matching</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">pattern</em>, <em class="sig-param">nodes=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/backends/neo4j/hierarchies.html#TypedNeo4jGraph.find_schema_matching"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.find_schema_matching" title="Permalink to this definition">¶</a></dt>
+<dd><p>Find matching of a pattern in the schema graph.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>pattern</strong><span class="classifier">Graph object</span></dt><dd><p>A pattern to match</p>
+</dd>
+<dt><strong>pattern_typing</strong><span class="classifier">dict</span></dt><dd><p>A dictionary that specifies a typing of a pattern,
+keys of the dictionary – graph id that types a pattern, this graph
+should be among parents of the <cite>graph_id</cite> graph;
+values are mappings of nodes from pattern to the typing graph;</p>
+</dd>
+<dt><strong>nodes</strong><span class="classifier">iterable</span></dt><dd><p>Subset of nodes where matching should be performed</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>instances</strong><span class="classifier">list of dict</span></dt><dd><p>List of matched instances</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.get_data">
+<code class="sig-name descname">get_data</code><span class="sig-paren">(</span><em class="sig-param">self</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/backends/neo4j/hierarchies.html#TypedNeo4jGraph.get_data"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.get_data" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the data graph object.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.get_data_edges">
+<code class="sig-name descname">get_data_edges</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">data=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/backends/neo4j/hierarchies.html#TypedNeo4jGraph.get_data_edges"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.get_data_edges" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the edges of the data.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.get_data_node">
+<code class="sig-name descname">get_data_node</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">node_id</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/backends/neo4j/hierarchies.html#TypedNeo4jGraph.get_data_node"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.get_data_node" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the attributes of a data node.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.get_data_nodes">
+<code class="sig-name descname">get_data_nodes</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">data=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/backends/neo4j/hierarchies.html#TypedNeo4jGraph.get_data_nodes"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.get_data_nodes" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get to nodes of the data.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.get_data_typing">
+<code class="sig-name descname">get_data_typing</code><span class="sig-paren">(</span><em class="sig-param">self</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/backends/neo4j/hierarchies.html#TypedNeo4jGraph.get_data_typing"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.get_data_typing" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the typing of the data.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.get_instances">
+<code class="sig-name descname">get_instances</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">schema_node</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/backends/neo4j/hierarchies.html#TypedNeo4jGraph.get_instances"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.get_instances" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get all the instances of the schema node.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.get_node_type">
+<code class="sig-name descname">get_node_type</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">node_id</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/backends/neo4j/hierarchies.html#TypedNeo4jGraph.get_node_type"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.get_node_type" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the type of a node in the data.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.get_schema">
+<code class="sig-name descname">get_schema</code><span class="sig-paren">(</span><em class="sig-param">self</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/backends/neo4j/hierarchies.html#TypedNeo4jGraph.get_schema"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.get_schema" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the schema graph object.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.get_schema_edges">
+<code class="sig-name descname">get_schema_edges</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">data=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/backends/neo4j/hierarchies.html#TypedNeo4jGraph.get_schema_edges"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.get_schema_edges" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the edges of the schema.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.get_schema_node">
+<code class="sig-name descname">get_schema_node</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">node_id</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/backends/neo4j/hierarchies.html#TypedNeo4jGraph.get_schema_node"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.get_schema_node" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the attributes of a schema node.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.get_schema_nodes">
+<code class="sig-name descname">get_schema_nodes</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">data=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/backends/neo4j/hierarchies.html#TypedNeo4jGraph.get_schema_nodes"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.get_schema_nodes" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the nodes of the schema.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.merge_data_nodes">
+<code class="sig-name descname">merge_data_nodes</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">node_list</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/backends/neo4j/hierarchies.html#TypedNeo4jGraph.merge_data_nodes"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.merge_data_nodes" title="Permalink to this definition">¶</a></dt>
+<dd><p>Merge data nodes.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.relabel_data_node">
+<code class="sig-name descname">relabel_data_node</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">node_id</em>, <em class="sig-param">new_node_id</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/backends/neo4j/hierarchies.html#TypedNeo4jGraph.relabel_data_node"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.relabel_data_node" title="Permalink to this definition">¶</a></dt>
+<dd><p>Relabel a node in the data.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.relabel_schema_node">
+<code class="sig-name descname">relabel_schema_node</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">node_id</em>, <em class="sig-param">new_node_id</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/backends/neo4j/hierarchies.html#TypedNeo4jGraph.relabel_schema_node"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.relabel_schema_node" title="Permalink to this definition">¶</a></dt>
+<dd><p>Relabel a node in the schema.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.remove_data_edge">
+<code class="sig-name descname">remove_data_edge</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">source</em>, <em class="sig-param">target</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/backends/neo4j/hierarchies.html#TypedNeo4jGraph.remove_data_edge"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.remove_data_edge" title="Permalink to this definition">¶</a></dt>
+<dd><p>Remove a data edge.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.remove_data_node">
+<code class="sig-name descname">remove_data_node</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">node_id</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/backends/neo4j/hierarchies.html#TypedNeo4jGraph.remove_data_node"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.remove_data_node" title="Permalink to this definition">¶</a></dt>
+<dd><p>Remove a data node.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.remove_data_node_attrs">
+<code class="sig-name descname">remove_data_node_attrs</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">node_id</em>, <em class="sig-param">attrs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/backends/neo4j/hierarchies.html#TypedNeo4jGraph.remove_data_node_attrs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.remove_data_node_attrs" title="Permalink to this definition">¶</a></dt>
+<dd><p>Remove the attributes of a data node.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.remove_schema_edge">
+<code class="sig-name descname">remove_schema_edge</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">source</em>, <em class="sig-param">target</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/backends/neo4j/hierarchies.html#TypedNeo4jGraph.remove_schema_edge"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.remove_schema_edge" title="Permalink to this definition">¶</a></dt>
+<dd><p>Remove a schema node.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.remove_schema_edge_attrs">
+<code class="sig-name descname">remove_schema_edge_attrs</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">source</em>, <em class="sig-param">target</em>, <em class="sig-param">attrs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/backends/neo4j/hierarchies.html#TypedNeo4jGraph.remove_schema_edge_attrs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.remove_schema_edge_attrs" title="Permalink to this definition">¶</a></dt>
+<dd><p>Remove a schema node.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.remove_schema_node">
+<code class="sig-name descname">remove_schema_node</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">node_id</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/backends/neo4j/hierarchies.html#TypedNeo4jGraph.remove_schema_node"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.remove_schema_node" title="Permalink to this definition">¶</a></dt>
+<dd><p>Remove a schema node.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.remove_schema_node_attrs">
+<code class="sig-name descname">remove_schema_node_attrs</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">node_id</em>, <em class="sig-param">attrs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/backends/neo4j/hierarchies.html#TypedNeo4jGraph.remove_schema_node_attrs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.remove_schema_node_attrs" title="Permalink to this definition">¶</a></dt>
+<dd><p>Remove a schema node.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.rewrite_data">
+<code class="sig-name descname">rewrite_data</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">rule</em>, <em class="sig-param">instance</em>, <em class="sig-param">rhs_typing=None</em>, <em class="sig-param">strict=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/backends/neo4j/hierarchies.html#TypedNeo4jGraph.rewrite_data"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.rewrite_data" title="Permalink to this definition">¶</a></dt>
+<dd><p>Rewrite the data graph.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>rule</strong><span class="classifier">regraph.rule.Rule</span></dt><dd><p>Rule object to apply</p>
+</dd>
+<dt><strong>instance</strong><span class="classifier">dict, optional</span></dt><dd><p>Dictionary containing an instance of the lhs of the rule in
+the data graph, by default, tries to construct the
+identity morphism of the nodes of the pattern</p>
+</dd>
+<dt><strong>rhs_typing</strong><span class="classifier">dict, optional</span></dt><dd><p>Dictionary containing typing of the rhs by the schema.</p>
+</dd>
+<dt><strong>strict</strong><span class="classifier">bool, optional</span></dt><dd><p>Rewriting is strict when propagation down is not allowed</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><dl class="simple">
+<dt>HierarchyError</dt><dd><p>If the graph is not in the database</p>
+</dd>
+<dt>RewritingError</dt><dd><p>If the provided p and rhs typing are inconsistent</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.rewrite_schema">
+<code class="sig-name descname">rewrite_schema</code><span class="sig-paren">(</span><em class="sig-param">self</em>, <em class="sig-param">rule</em>, <em class="sig-param">instance=None</em>, <em class="sig-param">data_typing=None</em>, <em class="sig-param">strict=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/regraph/backends/neo4j/hierarchies.html#TypedNeo4jGraph.rewrite_schema"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#regraph.backends.neo4j.hierarchies.TypedNeo4jGraph.rewrite_schema" title="Permalink to this definition">¶</a></dt>
+<dd><p>Rewrite the schema graph.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>rule</strong><span class="classifier">regraph.rule.Rule</span></dt><dd><p>Rule object to apply</p>
+</dd>
+<dt><strong>instance</strong><span class="classifier">dict, optional</span></dt><dd><p>Dictionary containing an instance of the lhs of the rule in
+the schema graph, by default, tries to construct the
+identity morphism of the nodes of the pattern</p>
+</dd>
+<dt><strong>data_typing</strong><span class="classifier">dict, optional</span></dt><dd><p>Dictionary containing typing of data by the
+interface of the rule.</p>
+</dd>
+<dt><strong>strict</strong><span class="classifier">bool, optional</span></dt><dd><p>Rewriting is strict when propagation down is not allowed</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><dl class="simple">
+<dt>HierarchyError</dt><dd><p>If the graph is not in the database</p>
+</dd>
+<dt>RewritingError</dt><dd><p>If the provided p and rhs typing are inconsistent</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">ReGraph</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2018, Eugenia Oshurko.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.2.0</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="_sources/neo4jhierarchies.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
