@@ -813,7 +813,6 @@ class Neo4jHierarchy(Hierarchy):
             else (k, v)
             for k, v in relation.items()
         ])
-
         relation_to_remove = dict([
             (k, v.difference(relation[k]))
             if k in relation
@@ -825,7 +824,7 @@ class Neo4jHierarchy(Hierarchy):
                 query = (
                     "MATCH (s:{} {{id: '{}'}}), (t:{} {{id: '{}'}}) \n".format(
                         left, k, right, v) +
-                    "MERGE (s)-[:{}]->(new_t)\n".format(
+                    "MERGE (s)-[:{}]->(t)\n".format(
                         self._graph_relation_label)
                 )
                 self.execute(query)

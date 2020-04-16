@@ -169,7 +169,7 @@ class Hierarchy(ABC):
         pass
 
     @abstractmethod
-    def add_graph(self, graph_id, graph, graph_attrs=None):
+    def add_graph(self, graph_id, graph, attrs=None):
         """Add a new graph to the hierarchy.
 
         Parameters
@@ -179,7 +179,7 @@ class Hierarchy(ABC):
         graph : regraph.Graph
             Graph object corresponding to the new node of
             the hierarchy
-        graph_attrs : dict, optional
+        attrs : dict, optional
             Dictionary containing attributes of the new node
         """
         pass
@@ -2435,9 +2435,9 @@ class Hierarchy(ABC):
             new_rel = dict()
             for node in self.get_graph(graph_id).nodes():
                 old_node = g_m_g[node]
+                ns = keys_by_value(g_m_g, old_node)
                 if old_node in rel.keys():
                     new_rel[node] = rel[old_node]
-
             self._update_relation(graph_id, related_g, new_rel)
 
     def _expansive_update_incident_homs(self, graph_id, g_m_g_prime,

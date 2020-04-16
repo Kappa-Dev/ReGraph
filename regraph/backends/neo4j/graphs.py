@@ -506,3 +506,16 @@ class Neo4jGraph(Graph):
                 "Error loading graph: file '{}' does not exist!".format(
                     filename)
             )
+
+    def nodes_disconnected_from(self, node_id):
+        """Find nodes disconnected from the input node."""
+        query = (
+            "MATCH (n:{} {{id: '{}'}}), (m:{})\n".format(
+                self._node_label, node_id, self._node_label) +
+            "WHERE NOT (n)-[:{}*1..]-(m) AND n.id <> m.id\n".format(
+                self._edge_label) +
+            "RETURN collect(m.id) as disconnected_nodes"
+        )
+        res = self._execute(query)
+        for record in res:
+            return record["disconnected_nodes"]

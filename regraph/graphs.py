@@ -1021,3 +1021,37 @@ class Graph(ABC):
     def number_of_edges(self, u, v):
         """Return number of directed edges from u to v."""
         return 1
+
+    def ancestors(self, t):
+        """Return the set of ancestors."""
+        current_level = set(self.predecessors(t))
+        visited = set()
+
+        while len(current_level) > 0:
+            next_level = set()
+            for el in current_level:
+                if el not in visited:
+                    visited.add(el)
+                    next_level.update([
+                        p
+                        for p in self.predecessors(el)
+                        if p not in visited])
+            current_level = next_level
+        return visited
+
+    def descendants(self, s):
+        """Return the set of ancestors."""
+        current_level = set(self.successors(s))
+        visited = set()
+
+        while len(current_level) > 0:
+            next_level = set()
+            for el in current_level:
+                if el not in visited:
+                    visited.add(el)
+                    next_level.update([
+                        p
+                        for p in self.successors(el)
+                        if p not in visited])
+            current_level = next_level
+        return visited

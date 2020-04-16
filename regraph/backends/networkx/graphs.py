@@ -277,7 +277,7 @@ class NXGraph(Graph):
             try:
                 new_node = mapping[old_node]
             except KeyError:
-                continue
+                pass
             try:
                 g.add_node(
                     new_node,
@@ -288,11 +288,19 @@ class NXGraph(Graph):
         new_edges = list()
         attributes = dict()
         for s, t in self.edges():
-            new_edges.append((
-                mapping[s],
-                mapping[t]))
-            attributes[(mapping[s], mapping[t])] =\
-                self.get_edge(s, t)
+            new_s = None
+            new_t = None
+            try:
+                new_s = mapping[s]
+            except KeyError:
+                pass
+            try:
+                new_t = mapping[t]
+            except KeyError:
+                pass
+            if new_s and new_t:
+                new_edges.append((new_s, new_t))
+                attributes[(new_s, new_t)] = self.get_edge(s, t)
 
         g.add_edges_from(new_edges)
         for s, t in g.edges():
@@ -488,3 +496,18 @@ class NXGraph(Graph):
         new_graph.add_nodes_from(graph.nodes(data=True))
         new_graph.add_edges_from(graph.edges(data=True))
         return new_graph
+
+    def nodes_disconnected_from(self, node_id):
+        """Find nodes disconnected from the input node."""
+        components = nx.weakly_connected_components(
+            self._graph)
+
+        disconnected_components = []
+        for comp in components:
+            if node_id not in comp:
+                disconnected_components.append(comp)
+        return set([
+            n
+            for n in comp
+            for comp in disconnected_components
+        ])
