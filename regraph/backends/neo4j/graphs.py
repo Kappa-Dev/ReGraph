@@ -10,6 +10,7 @@ import warnings
 from neo4j.v1 import GraphDatabase
 
 from regraph.graphs import Graph
+from regraph.backends.networkx.graphs import NXGraph
 from regraph.utils import (normalize_attrs,
                            normalize_relation,
                            load_nodes_from_json,
@@ -375,8 +376,32 @@ class Neo4jGraph(Graph):
                 pred.add(record["pred"])
         return pred
 
+    def advanced_find_matching(self, pattern_dict,
+                               nodes=None, graph_typing=None,
+                               pattern_typing=None):
+        """Find matching of a pattern in a graph in an advanced way."""
+        patterns = []
+
+        pattern = NXGraph()
+        pattern.add_nodes_from(pattern_dict["nodes"])
+        pattern.add_edges_from(pattern_dict["directed_edges"])
+        pattern.add_edges_from(pattern_dict["undirected_edges"])
+
+        undirected_edges = [
+            (u_var, v_var)
+            for (u_var, v_var, _) in pattern_dict["undirected_edges"]
+        ]
+
+        instances = []
+        for pattern in patterns:
+            instances += self.find_matching(
+                pattern, nodes, graph_typing, pattern_typing,
+                undirected_edges=undirected_edges)
+        return instances
+
     def find_matching(self, pattern, nodes=None,
-                      graph_typing=None, pattern_typing=None):
+                      graph_typing=None, pattern_typing=None,
+                      undirected_edges=None):
         """Find matching of a pattern in a graph."""
         new_pattern_typing = dict()
         if pattern_typing:
@@ -407,7 +432,8 @@ class Neo4jGraph(Graph):
                 node_label=self._node_label,
                 edge_label=self._edge_label,
                 nodes=matching_nodes,
-                pattern_typing=new_pattern_typing)
+                pattern_typing=new_pattern_typing,
+                undirected_edges=undirected_edges)
 
             result = self._execute(query)
             instances = list()

@@ -338,13 +338,10 @@ class NXGraph(Graph):
             pattern.add_edges_from(list(new_edges))
             patterns.append(pattern)
 
-        for pattern in patterns:
-            print("Pattern: ")
-            print(pattern.nodes(data=True))
-            print(pattern.edges(data=True))
-            print(pattern_typing)
-            print()
         instances = []
+        for pattern in patterns:
+            instances += self.find_matching(
+                pattern, nodes, graph_typing, pattern_typing)
         return instances
 
     def find_matching(self, pattern, nodes=None,

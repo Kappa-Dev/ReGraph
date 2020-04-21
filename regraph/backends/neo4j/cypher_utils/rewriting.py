@@ -737,7 +737,7 @@ def merging_query1(original_vars, merged_var, merged_id, merged_id_var,
 
 
 def find_matching(pattern, node_label, edge_label,
-                  nodes=None, pattern_typing=None):
+                  nodes=None, pattern_typing=None, undirected_edges=None):
     """Query that performs pattern match in the graph.
 
     Parameters
@@ -751,6 +751,8 @@ def find_matching(pattern, node_label, edge_label,
     edge_label
         Label of the edges to match, default is 'edge'
     """
+    if undirected_edges is None:
+        undirected_edges = []
     # normalize pattern typing
     pattern_nodes = list(pattern.nodes())
     pattern_edges = list(pattern.edges(data=True))
@@ -762,8 +764,9 @@ def find_matching(pattern, node_label, edge_label,
                 for n in pattern_nodes))
     if len(pattern.edges()) > 0:
         query += ", {}".format(
-            ", ".join("(`{}`)-[`{}_to_{}`:{}]->(`{}`)".format(
-                u, u, v, edge_label, v)
+            ", ".join("(`{}`)-[`{}_to_{}`:{}]-{}(`{}`)".format(
+                u, u, v, edge_label,
+                "" if (u, v) in undirected_edges else ">", v)
                 for u, v, _ in pattern_edges))
 
     if pattern_typing is not None and len(pattern_typing) > 0:
