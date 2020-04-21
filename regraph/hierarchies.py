@@ -1378,6 +1378,42 @@ class Hierarchy(ABC):
             attrs)
         return common, left_h, right_h
 
+    def _get_graph_pattern_typing(self, graph_id, pattern, pattern_typing,
+                                  advanced=False):
+        # Check that 'typing_graph' and 'pattern_typing' are correctly
+        # specified
+        descendants = self.get_descendants(graph_id)
+        if pattern_typing is not None:
+            for typing_graph, _ in pattern_typing.items():
+                if typing_graph not in descendants.keys():
+                    raise HierarchyError(
+                        "Pattern typing graph '{}' is not in "
+                        "the (transitive) typing graphs of '{}'!".format(
+                            typing_graph, graph_id)
+                    )
+
+            # Check pattern typing is a valid homomorphism
+            if not advanced:
+                for typing_graph, mapping in pattern_typing.items():
+                    try:
+                        check_homomorphism(
+                            pattern,
+                            self.get_graph(typing_graph),
+                            mapping
+                        )
+                    except InvalidHomomorphism as e:
+                        raise ReGraphError(
+                            "Specified pattern is not valid in the "
+                            "hierarchy (it produces the following error: "
+                            "{}) ".format(e)
+                        )
+
+        graph_typing = {
+            typing_graph: self.get_typing(graph_id, typing_graph)
+            for typing_graph in pattern_typing.keys()
+        }
+        return graph_typing
+
     def find_matching(self, graph_id, pattern,
                       pattern_typing=None, nodes=None):
         """Find an instance of a pattern in a specified graph.
@@ -1404,39 +1440,22 @@ class Hierarchy(ABC):
         if pattern_typing is None:
             pattern_typing = dict()
 
-        # Check that 'typing_graph' and 'pattern_typing' are correctly
-        # specified
-        descendants = self.get_descendants(graph_id)
-        if pattern_typing is not None:
-            for typing_graph, _ in pattern_typing.items():
-                if typing_graph not in descendants.keys():
-                    raise HierarchyError(
-                        "Pattern typing graph '{}' is not in "
-                        "the (transitive) typing graphs of '{}'!".format(
-                            typing_graph, graph_id)
-                    )
-
-            # Check pattern typing is a valid homomorphism
-            for typing_graph, mapping in pattern_typing.items():
-                try:
-                    check_homomorphism(
-                        pattern,
-                        self.get_graph(typing_graph),
-                        mapping
-                    )
-                except InvalidHomomorphism as e:
-                    raise ReGraphError(
-                        "Specified pattern is not valid in the "
-                        "hierarchy (it produces the following error: "
-                        "{}) ".format(e)
-                    )
-
-        graph_typing = {
-            typing_graph: self.get_typing(graph_id, typing_graph)
-            for typing_graph in pattern_typing.keys()
-        }
+        graph_typing = self._get_graph_pattern_typing(
+            graph_id, pattern, pattern_typing)
         instances = self.get_graph(graph_id).find_matching(
             pattern, nodes, graph_typing, pattern_typing)
+        return instances
+
+    def advanced_find_matching(self, graph_id, pattern_dict,
+                               pattern_typing=None, nodes=None):
+        """Find matching of a pattern in a graph in an advanced way."""
+        if pattern_typing is None:
+            pattern_typing = dict()
+
+        graph_typing = self._get_graph_pattern_typing(
+            graph_id, pattern_dict, pattern_typing, True)
+        instances = self.get_graph(graph_id).advanced_find_matching(
+            pattern_dict, nodes, graph_typing, pattern_typing)
         return instances
 
     def rewrite(self, graph_id, rule, instance,

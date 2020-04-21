@@ -17,6 +17,7 @@ from regraph.graphs import Graph
 from regraph.utils import (normalize_attrs,
                            safe_deepcopy_dict,
                            valid_attributes,
+                           normalize_relation,
                            )
 
 
@@ -319,6 +320,33 @@ class NXGraph(Graph):
                 g.add_edge(s, t, attrs)
         return g
 
+    def advanced_find_matching(self, pattern_dict,
+                               nodes=None, graph_typing=None,
+                               pattern_typing=None):
+        """Find matching of a pattern in a graph in an advanced way."""
+        patterns = []
+
+        edge_combinations = [
+            [(u_var, v_var, attrs), (v_var, u_var, attrs)]
+            for (u_var, v_var, attrs) in pattern_dict["undirected_edges"]
+        ]
+
+        for new_edges in itertools.product(*edge_combinations):
+            pattern = NXGraph()
+            pattern.add_nodes_from(pattern_dict["nodes"])
+            pattern.add_edges_from(pattern_dict["directed_edges"])
+            pattern.add_edges_from(list(new_edges))
+            patterns.append(pattern)
+
+        for pattern in patterns:
+            print("Pattern: ")
+            print(pattern.nodes(data=True))
+            print(pattern.edges(data=True))
+            print(pattern_typing)
+            print()
+        instances = []
+        return instances
+
     def find_matching(self, pattern, nodes=None,
                       graph_typing=None, pattern_typing=None):
         """Find matching of a pattern in a graph.
@@ -368,14 +396,17 @@ class NXGraph(Graph):
             pattern, and values are corresponding nodes of the graph.
 
         """
-        if pattern_typing is None:
-            pattern_typing = {}
+        new_pattern_typing = dict()
+        if pattern_typing:
+            for graph, pattern_mapping in pattern_typing.items():
+                new_pattern_typing[graph] = normalize_relation(
+                    pattern_mapping)
 
         if graph_typing is None:
             graph_typing = {}
 
         # check graph/pattern typing is consistent
-        for g, mapping in pattern_typing.items():
+        for g, mapping in new_pattern_typing.items():
             if g not in graph_typing:
                 raise ReGraphError(
                     "Graph is not typed by '{}' from the specified ".format(
@@ -398,13 +429,13 @@ class NXGraph(Graph):
         # find all the nodes matching the nodes in pattern
         for pattern_node in pattern.nodes():
             for node in g.nodes():
-                if pattern_typing:
+                if new_pattern_typing:
                     # check types match
                     match = False
-                    for graph, pattern_mapping in pattern_typing.items():
+                    for graph, pattern_mapping in new_pattern_typing.items():
                         if node in graph_typing[graph].keys() and\
                            pattern_node in pattern_mapping.keys():
-                            if graph_typing[graph][node] == pattern_mapping[
+                            if graph_typing[graph][node] in pattern_mapping[
                                     pattern_node]:
                                 if valid_attributes(
                                         pattern.node[pattern_node],
@@ -451,12 +482,12 @@ class NXGraph(Graph):
             # exclude subgraphs which nodes information does not
             # correspond to pattern
             for (pattern_node, node) in mapping.items():
-                if pattern_typing:
-                    for g, pattern_mapping in pattern_typing.items():
+                if new_pattern_typing:
+                    for g, pattern_mapping in new_pattern_typing.items():
                         if inverse_mapping[node] in graph_typing[g].keys() and\
                            pattern_node in pattern_mapping.keys():
                             if graph_typing[g][
-                                inverse_mapping[node]] != pattern_mapping[
+                                inverse_mapping[node]] not in pattern_mapping[
                                     pattern_node]:
                                 break
                         if not valid_attributes(

@@ -11,6 +11,7 @@ from neo4j.v1 import GraphDatabase
 
 from regraph.graphs import Graph
 from regraph.utils import (normalize_attrs,
+                           normalize_relation,
                            load_nodes_from_json,
                            load_edges_from_json,)
 from regraph.exceptions import ReGraphError
@@ -377,6 +378,12 @@ class Neo4jGraph(Graph):
     def find_matching(self, pattern, nodes=None,
                       graph_typing=None, pattern_typing=None):
         """Find matching of a pattern in a graph."""
+        new_pattern_typing = dict()
+        if pattern_typing:
+            for graph, pattern_mapping in pattern_typing.items():
+                new_pattern_typing[graph] = normalize_relation(
+                    pattern_mapping)
+
         if len(pattern.nodes()) != 0:
 
             # filter nodes by typing
@@ -384,12 +391,12 @@ class Neo4jGraph(Graph):
             for pattern_node in pattern.nodes():
                 for node in self.nodes():
                     type_matches = True
-                    if pattern_typing:
+                    if new_pattern_typing:
                         # check types match
-                        for graph, pattern_mapping in pattern_typing.items():
+                        for graph, pattern_mapping in new_pattern_typing.items():
                             if node in graph_typing[graph].keys() and\
                                pattern_node in pattern_mapping.keys():
-                                if graph_typing[graph][node] != pattern_mapping[
+                                if graph_typing[graph][node] not in pattern_mapping[
                                         pattern_node]:
                                     type_matches = False
                     if type_matches and nodes and node in nodes:
@@ -400,7 +407,7 @@ class Neo4jGraph(Graph):
                 node_label=self._node_label,
                 edge_label=self._edge_label,
                 nodes=matching_nodes,
-                pattern_typing=pattern_typing)
+                pattern_typing=new_pattern_typing)
 
             result = self._execute(query)
             instances = list()
