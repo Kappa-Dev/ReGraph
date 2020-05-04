@@ -30,13 +30,8 @@ class NXGraph(Graph):
 
     def __init__(self, incoming_graph_data=None, **attr):
         """Initialize NetworkX graph."""
-        self.node_dict_factory = ndf = self.node_dict_factory
-        self.adj_dict_factory = adf = self.adj_dict_factory
-
         super().__init__()
         self._graph = nx.DiGraph()
-        self.node = ndf()
-        self.adj = adf()
 
     def nodes(self, data=False):
         """Return the list of nodes."""
@@ -59,7 +54,7 @@ class NXGraph(Graph):
         n : hashable
             Node id.
         """
-        return self._graph.node[n]
+        return self._graph.nodes[n]
 
     def get_edge(self, s, t):
         """Get edge attributes.
@@ -88,11 +83,7 @@ class NXGraph(Graph):
             new_attrs = safe_deepcopy_dict(attrs)
             normalize_attrs(new_attrs)
         if node_id not in self.nodes():
-            self._graph.add_node(node_id)
-            self.node[node_id] = dict()
-            for k, v in new_attrs.items():
-                self._graph.node[node_id][k] = v
-                self.node[node_id][k] = v
+            self._graph.add_node(node_id, **new_attrs)
             return node_id
         else:
             raise GraphError("Node '{}' already exists!".format(node_id))
@@ -107,14 +98,6 @@ class NXGraph(Graph):
         """
         if node_id in self.nodes():
             self._graph.remove_node(node_id)
-            del self.node[node_id]
-
-            if node_id in self.adj.items():
-                del self.adj[node_id]
-
-            for k, v in self.adj.items():
-                if v == node_id:
-                    del self.adj[k][v]
         else:
             raise GraphError("Node '{}' does not exist!".format(node_id))
         return
@@ -151,10 +134,6 @@ class NXGraph(Graph):
             raise GraphError(
                 "Edge '{}'->'{}' already exists!".format(s, t))
         self._graph.add_edge(s, t, **new_attrs)
-        if s in self.adj.keys():
-            self.adj[s][t] = new_attrs
-        else:
-            self.adj[s] = {t: new_attrs}
 
     def remove_edge(self, s, t):
         """Remove edge from the graph.
@@ -169,7 +148,6 @@ class NXGraph(Graph):
             raise GraphError(
                 "Edge '{}->{}' does not exist!".format(s, t))
         self._graph.remove_edge(s, t)
-        del self.adj[s][t]
 
     def update_node_attrs(self, node_id, attrs, normalize=True):
         """Update attributes of a node.
@@ -195,13 +173,12 @@ class NXGraph(Graph):
             if normalize is True:
                 normalize_attrs(new_attrs)
             attrs_to_remove = set()
-            for k in self._graph.node[node_id].keys():
+            for k in self._graph.nodes[node_id].keys():
                 if k not in new_attrs.keys():
                     attrs_to_remove.add(k)
             self._graph.add_node(node_id, **new_attrs)
-            self.node[node_id] = new_attrs
             for k in attrs_to_remove:
-                del self._graph.node[node_id][k]
+                del self._graph.nodes[node_id][k]
 
     def update_edge_attrs(self, s, t, attrs, normalize=True):
         """Update attributes of a node.
@@ -230,7 +207,6 @@ class NXGraph(Graph):
             if k not in attrs.keys():
                 attrs_to_remove.add(k)
         self._graph.add_edge(s, t, **attrs)
-        self.adj[s][t] = attrs
         for k in attrs_to_remove:
             del self._graph.adj[s][t][k]
 
@@ -437,20 +413,20 @@ class NXGraph(Graph):
                             if graph_typing[graph][node] in pattern_mapping[
                                     pattern_node]:
                                 if valid_attributes(
-                                        pattern.node[pattern_node],
-                                        g.node[node]):
+                                        pattern.get_node(pattern_node),
+                                        g.nodes[node]):
                                     match = True
                         else:
                             if valid_attributes(
-                                    pattern.node[pattern_node],
-                                    g.node[node]):
+                                    pattern.get_node(pattern_node),
+                                    g.nodes[node]):
                                 match = True
                     if match:
                         matching_nodes.add(node)
                 else:
                     if valid_attributes(
-                            pattern.node[pattern_node],
-                            g.node[node]):
+                            pattern.get_node(pattern_node),
+                            g.nodes[node]):
                         matching_nodes.add(node)
 
         # find all the isomorphic subgraphs
@@ -490,21 +466,21 @@ class NXGraph(Graph):
                                     pattern_node]:
                                 break
                         if not valid_attributes(
-                                pattern.node[pattern_node],
-                                subgraph.node[node]):
+                                pattern.get_node(pattern_node),
+                                subgraph.nodes[node]):
                             break
                     else:
                         continue
                     break
                 else:
                     if not valid_attributes(
-                            pattern.node[pattern_node],
-                            subgraph.node[node]):
+                            pattern.get_node(pattern_node),
+                            subgraph.nodes[node]):
                         break
             else:
                 # check edge attribute matched
                 for edge in pattern.edges():
-                    pattern_attrs = pattern.adj[edge[0]][edge[1]]
+                    pattern_attrs = pattern.get_edge(edge[0], edge[1])
                     target_attrs = subgraph.adj[
                         mapping[edge[0]]][mapping[edge[1]]]
                     if not valid_attributes(pattern_attrs, target_attrs):

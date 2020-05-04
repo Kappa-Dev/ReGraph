@@ -88,7 +88,7 @@ class NXHierarchy(Hierarchy, NXGraph):
         if not self.is_graph(graph_id):
             raise HierarchyError(
                 "Hierarchy node '{}' is a rule!".format(graph_id))
-        return self.node[graph_id]["graph"]
+        return self.get_node(graph_id)["graph"]
 
     def get_typing(self, source, target):
         """Get a typing dict associated to the edge 'source->target'."""

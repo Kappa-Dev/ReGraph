@@ -561,40 +561,40 @@ def get_unique_map_to_pullback_complement(a_p, p_c,
 # Relations related utils
 
 def relation_to_span(g1, g2, relation, edges=False, attrs=False):
-        """Convert a relation to a span."""
-        new_graph = type(g1)()
+    """Convert a relation to a span."""
+    new_graph = type(g1)()
 
-        left_h = dict()
-        right_h = dict()
+    left_h = dict()
+    right_h = dict()
 
-        for a, bs in relation.items():
-            for b in bs:
-                new_node = str(a) + "_" + str(b)
-                new_graph.add_node(new_node)
-                if attrs:
-                    common_attrs = attrs_intersection(
-                        g1.get_node(a),
-                        g2.get_node(b)
-                    )
-                    new_graph.add_node_attrs(new_node, common_attrs)
-                left_h[new_node] = a
-                right_h[new_node] = b
+    for a, bs in relation.items():
+        for b in bs:
+            new_node = str(a) + "_" + str(b)
+            new_graph.add_node(new_node)
+            if attrs:
+                common_attrs = attrs_intersection(
+                    g1.get_node(a),
+                    g2.get_node(b)
+                )
+                new_graph.add_node_attrs(new_node, common_attrs)
+            left_h[new_node] = a
+            right_h[new_node] = b
 
-        for n1 in new_graph.nodes():
-            for n2 in new_graph.nodes():
-                if (left_h[n1], left_h[n2]) in g1.edges() and\
-                   (right_h[n1], right_h[n2]) in g2.edges():
-                    new_graph.add_edge(n1, n2)
-                    common_attrs = attrs_intersection(
-                        g1.adj[left_h[n1]][left_h[n2]],
-                        g2.adj[right_h[n1]][right_h[n2]],
-                    )
-                    new_graph.add_edge_attrs(
-                        n1, n2,
-                        common_attrs
-                    )
+    for n1 in new_graph.nodes():
+        for n2 in new_graph.nodes():
+            if (left_h[n1], left_h[n2]) in g1.edges() and\
+               (right_h[n1], right_h[n2]) in g2.edges():
+                new_graph.add_edge(n1, n2)
+                common_attrs = attrs_intersection(
+                    g1.get_edge(left_h[n1], left_h[n2]),
+                    g2.get_edge(right_h[n1], right_h[n2]),
+                )
+                new_graph.add_edge_attrs(
+                    n1, n2,
+                    common_attrs
+                )
 
-        return new_graph, left_h, right_h
+    return new_graph, left_h, right_h
 
 
 def left_relation_dict(relation):
@@ -664,8 +664,8 @@ def pushout_from_relation(g1, g2, relation, inplace=False):
             g12.add_edge(g2_g12[u], g2_g12[v], g2.get_edge(u, v))
         else:
             edge_attrs_diff = dict_sub(
-                g2.adj[u][v],
-                g12.adj[g2_g12[u]][g2_g12[v]])
+                g2.get_edge(u, v),
+                g12.get_edge(g2_g12[u], g2_g12[v]))
             g12.add_edge_attrs(g2_g12[u], g2_g12[v], edge_attrs_diff)
     return (g12, g1_g12, g2_g12)
 

@@ -51,8 +51,8 @@ class TestPrimitives(object):
         add_node(self.graph, "a", attrs)
         assert("a" in self.graph.nodes())
         normalize_attrs(attrs)
-        assert(self.graph.node["a"] == attrs)
-        assert(id(attrs) != id(self.graph.node["a"]))
+        assert(self.graph.get_node("a") == attrs)
+        assert(id(attrs) != id(self.graph.get_node("a")))
 
     def test_remove_node(self):
         try:
@@ -81,8 +81,8 @@ class TestPrimitives(object):
         add_edge(self.graph, s, t, attrs)
         normalize_attrs(attrs)
         assert((s, t) in self.graph.edges())
-        assert(self.graph.adj[s][t] == attrs)
-        assert(id(self.graph.adj[s][t]) != id(attrs))
+        assert(self.graph.get_edge(s, t) == attrs)
+        assert(id(self.graph.get_edge(s, t)) != id(attrs))
 
     def test_remove_edge(self):
         # g = self.graph.to_undirected()
@@ -93,7 +93,7 @@ class TestPrimitives(object):
     def test_update_node_attrs(self):
         new_attr = {"b": {1}}
         add_node_attrs(self.graph, '1', new_attr)
-        assert(id(self.graph.node['1']) != id(new_attr))
+        assert(id(self.graph.get_node('1')) != id(new_attr))
 
     def test_clone_node(self):
         node_to_clone = '1'
@@ -104,20 +104,20 @@ class TestPrimitives(object):
         new_name = clone_node(self.graph, node_to_clone)
 
         assert(new_name in self.graph.nodes())
-        assert(self.graph.node[new_name] == self.graph.node[node_to_clone])
+        assert(self.graph.get_node(new_name) == self.graph.get_node(node_to_clone))
         assert(
-            id(self.graph.node[new_name]) !=
-            id(self.graph.node[node_to_clone])
+            id(self.graph.get_node(new_name)) !=
+            id(self.graph.get_node(node_to_clone))
         )
         for u, _ in in_edges:
             assert((u, new_name) in self.graph.edges())
             assert(
-                self.graph.adj[u][node_to_clone] ==
-                self.graph.adj[u][new_name]
+                self.graph.get_edge(u, node_to_clone) ==
+                self.graph.get_edge(u, new_name)
             )
             assert(
-                id(self.graph.adj[u][node_to_clone]) !=
-                id(self.graph.adj[u][new_name])
+                id(self.graph.get_edge(u, node_to_clone)) !=
+                id(self.graph.get_edge(u, new_name))
             )
         for _, v in out_edges:
             assert((new_name, v) in self.graph.edges())
@@ -128,25 +128,25 @@ class TestPrimitives(object):
         new_name = 'a'
         new_node = clone_node(g, node_to_clone, new_name)
         assert(new_name in g.nodes())
-        assert(g.node[new_name] == self.graph.node[node_to_clone])
-        assert(id(g.node[new_name]) != id(self.graph.node[node_to_clone]))
+        assert(g.get_node(new_name) == self.graph.get_node(node_to_clone))
+        assert(id(g.get_node(new_name)) != id(self.graph.get_node(node_to_clone)))
 
     def test_merge_nodes(self):
         g = self.graph
 
-        old_attrs1 = self.graph.node['8']
-        old_attrs2 = self.graph.node['9']
-        old_edge_attrs1 = self.graph.adj['10']['8']
-        old_edge_attrs2 = self.graph.adj['10']['9']
+        old_attrs1 = self.graph.get_node('8')
+        old_attrs2 = self.graph.get_node('9')
+        old_edge_attrs1 = self.graph.get_edge('10', '8')
+        old_edge_attrs2 = self.graph.get_edge('10', '9')
         new_name = merge_nodes(self.graph, ["8", "9"])
         assert(new_name in self.graph.nodes())
         assert("8" not in self.graph.nodes())
         assert("9" not in self.graph.nodes())
-        assert(valid_attributes(old_attrs1, self.graph.node[new_name]))
-        assert(valid_attributes(old_attrs2, self.graph.node[new_name]))
+        assert(valid_attributes(old_attrs1, self.graph.get_node(new_name)))
+        assert(valid_attributes(old_attrs2, self.graph.get_node(new_name)))
         assert((new_name, new_name) in self.graph.edges())
-        assert(valid_attributes(old_edge_attrs1, self.graph.adj['10'][new_name]))
-        assert(valid_attributes(old_edge_attrs2, self.graph.adj['10'][new_name]))
+        assert(valid_attributes(old_edge_attrs1, self.graph.get_edge('10', new_name)))
+        assert(valid_attributes(old_edge_attrs2, self.graph.get_edge('10', new_name)))
 
     def test_relabel_node(self):
         g = self.graph

@@ -147,11 +147,12 @@ class Versioning(ABC):
         """Print the history of commits."""
         for n in self._revision_graph.nodes():
             print(
-                str(self._revision_graph.node[n]["time"]),
-                n, self._revision_graph.node[n]["branch"],
-                self._revision_graph.node[n]["message"])
+                self._revision_graph.nodes[n]["time"].strftime(
+                    "%d/%m/%Y,  %H:%M:%S"),
+                n, self._revision_graph.nodes[n]["branch"],
+                self._revision_graph.nodes[n]["message"])
 
-    def commit(self, delta, message=None, previous_commit=None):
+    def commit(self, delta, message=None, previous_commit=None, **kwargs):
         """Add a commit."""
         time, commit_id = _generate_new_commit_meta_data()
 
@@ -164,7 +165,8 @@ class Versioning(ABC):
             commit_id,
             branch=self._current_branch,
             time=time,
-            message=message if message is not None else "")
+            message=message if message is not None else "",
+            **kwargs)
 
         self._revision_graph.add_edge(
             previous_commit, commit_id, delta=delta)
@@ -298,10 +300,10 @@ class Versioning(ABC):
         for n in self._revision_graph.nodes():
             for s in self._revision_graph.successors(n):
                 if n not in removed_commits and s in removed_commits:
-                    new_heads[self._revision_graph.node[n]["branch"]] = (n, s)
+                    new_heads[self._revision_graph.nodes[n]["branch"]] = (n, s)
 
         # Recompute deltas
-        new_current_branch = self._revision_graph.node[rollback_commit]["branch"]
+        new_current_branch = self._revision_graph.nodes[rollback_commit]["branch"]
         self._current_branch = new_current_branch
         self._heads[self._current_branch] = rollback_commit
 
@@ -311,7 +313,7 @@ class Versioning(ABC):
 
         rollback_branching_point = None
         for n in rollback_bfs_from_commit.nodes():
-            if self._revision_graph.node[n]["branch"] !=\
+            if self._revision_graph.nodes[n]["branch"] !=\
                     self._current_branch:
                 rollback_branching_point = n
                 break
@@ -325,7 +327,7 @@ class Versioning(ABC):
 
                 head_branching_point = None
                 for n in head_bfs_from_commit.nodes():
-                    if self._revision_graph.node[n]["branch"] != head:
+                    if self._revision_graph.nodes[n]["branch"] != head:
                         head_branching_point = n
                         break
 
@@ -415,9 +417,9 @@ class Versioning(ABC):
         for n in self._revision_graph.nodes():
             data["nodes"].append({
                 "id": n,
-                "branch": self._revision_graph.node[n]["branch"],
-                "time": self._revision_graph.node[n]["time"],
-                "message": self._revision_graph.node[n]["message"]
+                "branch": self._revision_graph.nodes[n]["branch"],
+                "time": self._revision_graph.nodes[n]["time"],
+                "message": self._revision_graph.nodes[n]["message"]
             })
         for (s, t) in self._revision_graph.edges():
             data["edges"].append({
@@ -585,7 +587,7 @@ class VersionedGraph(Versioning):
 
         return current_to_merged_delta, other_to_merged_delta
 
-    def rewrite(self, rule, instance=None, message=None):
+    def rewrite(self, rule, instance=None, message=None, **kwargs):
         """Rewrite the versioned graph and commit."""
         # Refine a rule to be side-effect free
         refined_instance = rule.refine(self.graph, instance)
@@ -595,7 +597,7 @@ class VersionedGraph(Versioning):
             "rule": rule,
             "lhs_instance": refined_instance,
             "rhs_instance": rhs_instance
-        }, message=message)
+        }, message=message, **kwargs)
         return rhs_instance, commit_id
 
     @staticmethod
@@ -743,7 +745,7 @@ class VersionedHierarchy(Versioning):
 
     def rewrite(self, graph_id, rule, instance=None,
                 p_typing=None, rhs_typing=None,
-                strict=False, message=""):
+                strict=False, message="", **kwargs):
         """Rewrite the versioned hierarchy and commit."""
         rule_hierarchy, lhs_instances = self.hierarchy.get_rule_hierarchy(
             graph_id, rule, instance, p_typing, rhs_typing)
@@ -758,8 +760,8 @@ class VersionedHierarchy(Versioning):
             "rule_hierarchy": rule_hierarchy,
             "lhs_instances": lhs_instances,
             "rhs_instances": rhs_instances
-        }, message=message)
-        return rhs_instances, commit_id
+        }, message=message, **kwargs)
+        return rhs_instances[graph_id], commit_id
 
     @staticmethod
     def _delta_to_json(delta):

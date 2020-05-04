@@ -7,7 +7,7 @@ import os
 import json
 import warnings
 
-from neo4j.v1 import GraphDatabase
+from neo4j import GraphDatabase
 
 from regraph.graphs import Graph
 from regraph.backends.networkx.graphs import NXGraph

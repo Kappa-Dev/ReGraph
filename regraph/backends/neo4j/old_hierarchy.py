@@ -5,7 +5,7 @@ import json
 import copy
 import networkx as nx
 
-from neo4j.v1 import GraphDatabase
+from neo4j import GraphDatabase
 from neo4j.exceptions import ConstraintError
 
 from . import graphs

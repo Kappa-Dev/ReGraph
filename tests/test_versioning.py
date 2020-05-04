@@ -43,8 +43,8 @@ class TestVersioning(object):
 
         print("\n\n\nasserting...............")
         for s, t in g._revision_graph.edges():
-            print(g._revision_graph.node[s]["message"])
-            print(g._revision_graph.node[t]["message"])
+            print(g._revision_graph.nodes[s]["message"])
+            print(g._revision_graph.nodes[t]["message"])
             d = g._revision_graph.adj[s][t]["delta"]
             assert(
                 set(d["rule"].rhs.nodes()) ==

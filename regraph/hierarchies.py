@@ -1115,17 +1115,25 @@ class Hierarchy(ABC):
                 for ancestor, typing in self.get_ancestors(graph).items():
                     if ancestor not in rule_hierarchy["rules"] and\
                        ancestor not in new_rules:
-                        # Find a typing of ancestor by the graph
-                        l_pred, l_pred_pred, l_pred_l_graph = pullback(
-                            self.get_graph(ancestor), rule.lhs,
-                            self.get_graph(graph), typing,
-                            new_lhs_instances[graph])
-                        new_rules[ancestor] = Rule(p=l_pred, lhs=l_pred)
-                        new_lhs_instances[ancestor] = l_pred_pred
-                        r_pred_r_graph = {
-                            v: rule.p_rhs[k]
-                            for k, v in l_pred_l_graph.items()
-                        }
+                        if len(rule.merged_nodes()) > 0:
+                            # We create a non-empty rule that preserves
+                            # the info on typing
+                            l_pred, l_pred_pred, l_pred_l_graph = pullback(
+                                self.get_graph(ancestor), rule.lhs,
+                                self.get_graph(graph), typing,
+                                new_lhs_instances[graph])
+                            new_rules[ancestor] = Rule(p=l_pred, lhs=l_pred)
+                            new_lhs_instances[ancestor] = l_pred_pred
+                            r_pred_r_graph = {
+                                v: rule.p_rhs[k]
+                                for k, v in l_pred_l_graph.items()
+                            }
+                        else:
+                            # We create an empty rule if no merges are performed
+                            new_rules[ancestor] = Rule.identity_rule()
+                            new_lhs_instances[ancestor] = dict()
+                            l_pred_l_graph = dict()
+                            r_pred_r_graph = dict()
                         for successor in self.successors(ancestor):
                             if successor in rule_hierarchy["rules"]:
                                 if successor == graph:
