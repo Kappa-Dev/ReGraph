@@ -426,7 +426,7 @@ def successors_query(var_name, node_id, node_label,
     else:
         arrow = ""
     query = (
-        "OPTIONAL MATCH (n{}:{} {{id : '{}'}})-[:{}]-{} (suc:{})\n".format(
+        "OPTIONAL MATCH (`{}`:{} {{id : '{}'}})-[:{}]-{}(suc:{})\n".format(
             var_name, node_label,
             node_id, edge_label,
             arrow,

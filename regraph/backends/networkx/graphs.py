@@ -13,6 +13,7 @@ from regraph.exceptions import (ReGraphError,
                                 GraphAttrsWarning,
                                 )
 from regraph.graphs import Graph
+from regraph.backends.networkx.plotting import plot_graph
 
 from regraph.utils import (normalize_attrs,
                            safe_deepcopy_dict,
@@ -337,6 +338,7 @@ class NXGraph(Graph):
             pattern.add_edges_from(pattern_dict["directed_edges"])
             pattern.add_edges_from(list(new_edges))
             patterns.append(pattern)
+            plot_graph(pattern)
 
         instances = []
         for pattern in patterns:
