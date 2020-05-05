@@ -1120,9 +1120,10 @@ class Rule(object):
             self.lhs.add_edge_attrs(source, target, attrs)
             for s_p_node in keys_by_value(self.p_lhs, source):
                 for t_p_node in keys_by_value(self.p_lhs, target):
-                    self.p.add_edge_attrs(s_p_node, t_p_node, attrs)
-                    self.rhs.add_edge_attrs(
-                        self.p_rhs[s_p_node], self.p_rhs[t_p_node], attrs)
+                    if (s_p_node, t_p_node) in self.p.edges():
+                        self.p.add_edge_attrs(s_p_node, t_p_node, attrs)
+                        self.rhs.add_edge_attrs(
+                            self.p_rhs[s_p_node], self.p_rhs[t_p_node], attrs)
         else:
             raise RuleError(
                 "Edge '{}'->'{}' does not exists in the left-hand side "

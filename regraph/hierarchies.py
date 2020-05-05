@@ -1084,7 +1084,7 @@ class Hierarchy(ABC):
             for node in source_rule.lhs.nodes():
                 t_node = lhs_h[node]
                 target_rule._add_node_attrs_lhs(t_node, source_rule.lhs.get_node(node))
-            # Add necessary node edges
+            # Add necessary edges
             for s_lhs_s, s_lhs_t in source_rule.lhs.edges():
                 t_lhs_s = lhs_h[s_lhs_s]
                 t_lhs_t = lhs_h[s_lhs_t]

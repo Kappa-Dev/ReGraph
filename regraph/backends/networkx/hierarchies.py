@@ -119,15 +119,18 @@ class NXHierarchy(Hierarchy, NXGraph):
         """
         return self.get_node(graph_id)["attrs"]
 
-    def set_graph_attrs(self, node_id, attrs):
+    def set_graph_attrs(self, node_id, new_attrs):
         """Set attributes of a graph in the hierarchy.
 
         graph_id : hashable
             Id of the graph
         """
-        normalize_attrs(attrs)
-        for k, v in attrs.items():
-            nx.set_node_attributes(self._graph, {node_id: {"attrs": attrs}})
+        normalize_attrs(new_attrs)
+        attrs = self.get_node(node_id)["attrs"]
+        for k, v in new_attrs.items():
+            attrs[k] = v
+
+        nx.set_node_attributes(self._graph, {node_id: {"attrs": attrs}})
 
     def get_typing_attrs(self, source, target):
         """Get attributes of a typing in the hierarchy.
