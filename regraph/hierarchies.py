@@ -853,6 +853,13 @@ class Hierarchy(ABC):
                     r_r_t[k]: v
                     for k, v in rhs_typing[descendant].items()
                 }
+                for n in l_t.nodes():
+                    if l_t_r_t[n] not in r_t_factorization:
+                        r_t_factorization[l_t_r_t[n]] = {l_t_t[n]}
+                    else:
+                        if not {l_t_t[n]}.issubset(r_t_factorization[l_t_r_t[n]]):
+                            r_t_factorization[l_t_r_t[n]].add(l_t_t[n])
+
                 added_t_nodes = set()
                 for n in r_t.nodes():
                     if n in r_t_factorization.keys():
@@ -871,6 +878,26 @@ class Hierarchy(ABC):
                                 l_t_t[new_p_node] = t_node
                             else:
                                 l_t_r_t[keys_by_value(l_t_t, t_node)[0]] = n
+
+                # check if some nodes need merging
+                inverse_factorization = dict()
+                for k, v in r_t_factorization.items():
+                    for vv in v:
+                        if vv not in inverse_factorization:
+                            inverse_factorization[vv] = set([k])
+                        else:
+                            inverse_factorization[vv].add(k)
+
+                for k, v in inverse_factorization.items():
+                    if len(v) > 1:
+                        merged_node = r_t.merge_nodes(v)
+                        for vv in v:
+                            l_t_nodes = keys_by_value(l_t_r_t, vv)
+                            for l_t_node in l_t_nodes:
+                                l_t_r_t[l_t_node] = merged_node
+                            r_nodes = keys_by_value(r_r_t, vv)
+                            for r_node in r_nodes:
+                                r_r_t[r_node] = merged_node
 
             rule_hierarchy["rules"][descendant] =\
                 Rule(lhs=l_t, p=l_t, rhs=r_t, p_rhs=l_t_r_t)
@@ -1031,8 +1058,16 @@ class Hierarchy(ABC):
                 if node not in lhs_h.keys():
                     source_node = new_lhs_instances[source][node]
                     target_node = typing[source_node]
-                    target_lhs_node = keys_by_value(
-                        new_lhs_instances[target], target_node)[0]
+
+                    target_lhs_nodes = keys_by_value(
+                        new_lhs_instances[target], target_node)
+                    if len(target_lhs_nodes) == 1:
+                        target_lhs_node = target_lhs_nodes[0]
+                    else:
+                        target_rule._add_node_lhs(target_node)
+                        target_lhs_node = target_node
+                        new_lhs_instances[target][target_lhs_node] = target_node
+
                     lhs_h[node] = target_lhs_node
 
                     if node in source_rule.p_lhs.values():
@@ -1535,25 +1570,6 @@ class Hierarchy(ABC):
 
         return rhs_g_prime
 
-    def new_apply_rule_hierarchy(self, rule_hierarchy, instances):
-        """Apply rule hierarchy.
-
-        Parameters
-        ----------
-        rule_hierarchy : dict
-            Dictionary containing the input rule hierarchy
-        instances : dict
-            Dictionary containing an instance for every rule in the hierarchy
-
-        Returns
-        -------
-        rhs_instances : dict
-            Dictionary containing the RHS instances for every
-            graph in the hierarchy
-        """
-        # Check if the rule hierarchy is applicable
-        self._check_applicability(rule_hierarchy, instances)
-        pass
 
     def apply_rule_hierarchy(self, rule_hierarchy, instances):
         """Apply rule hierarchy.

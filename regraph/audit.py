@@ -148,7 +148,7 @@ class Versioning(ABC):
         for n in self._revision_graph.nodes():
             print(
                 self._revision_graph.nodes[n]["time"].strftime(
-                    "%d/%m/%Y,  %H:%M:%S"),
+                    "%d/%m/%Y %H:%M:%S"),
                 n, self._revision_graph.nodes[n]["branch"],
                 self._revision_graph.nodes[n]["message"])
 

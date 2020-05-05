@@ -3,10 +3,9 @@ import copy
 
 from nose.tools import assert_equals
 
-from regraph import (get_relabeled_graph,
-                     print_graph,
+from regraph import (print_graph,
                      NXGraph)
-from regraph.utils import assert_nx_graph_eq
+# from regraph.utils import assert_nx_graph_eq
 from regraph.category_utils import (pullback,
                                     pushout,
                                     pullback_complement,
@@ -103,10 +102,11 @@ class TestCategoryUtils:
             self.A, self.B, self.D, self.homAB, self.homBD
         )
         assert_equals(type(C), NXGraph)
-        test_graph = get_relabeled_graph(
-            self.C, {2: "circle", 3: "dark_circle", "dark_square": "dark_square"}
+        test_graph = self.C.get_relabeled_graph(
+            {2: "circle", 3: "dark_circle", "dark_square": "dark_square"}
         )
-        assert_nx_graph_eq(test_graph, C)
+        # assert_nx_graph_eq(test_graph, C)
+        assert(test_graph == C)
         assert(id(self.D) != id(C))
 
     def test_pullpack_complement_inplace(self):
@@ -115,10 +115,10 @@ class TestCategoryUtils:
             self.A, self.B, D_copy, self.homAB, self.homBD, inplace=True
         )
         assert_equals(type(C), NXGraph)
-        test_graph = get_relabeled_graph(
-            self.C, {2: "circle", 3: "dark_circle", "dark_square": "dark_square"}
+        test_graph = self.C.get_relabeled_graph(
+            {2: "circle", 3: "dark_circle", "dark_square": "dark_square"}
         )
-        assert_nx_graph_eq(test_graph, C)
+        assert(test_graph == C)
         assert(id(D_copy) == id(C))
 
     def test_pushout(self):

@@ -1,5 +1,6 @@
 """."""
 import copy
+import warnings
 
 from nose.tools import raises
 
@@ -25,11 +26,16 @@ class TestHierarchy(object):
     def __init__(self):
         """Initialize hierarchies."""
         self.nx_hierarchy = NXHierarchy()
-        self.neo4j_hierarchy = Neo4jHierarchy(
-            uri="bolt://localhost:7687",
-            user="neo4j",
-            password="admin")
-        self.neo4j_hierarchy._clear()
+        try:
+            self.neo4j_hierarchy = Neo4jHierarchy(
+                uri="bolt://localhost:7687",
+                user="neo4j",
+                password="admin")
+            self.neo4j_hierarchy._clear()
+        except:
+            warnings.warn(
+                "Neo4j is down, skipping Neo4j-related tests")
+            self.neo4j_hierarchy = None
 
         g0 = NXGraph()
         g0.add_node("circle", {"a": {1, 2, 3}})
@@ -42,7 +48,8 @@ class TestHierarchy(object):
             ("square", "triangle", {"new_attrs": {3, 4}})
         ])
         self.nx_hierarchy.add_graph("g0", g0, {"name": "Shapes"})
-        self.neo4j_hierarchy.add_graph("g0", g0, {"name": "Shapes"})
+        if self.neo4j_hierarchy:
+            self.neo4j_hierarchy.add_graph("g0", g0, {"name": "Shapes"})
 
         g00 = NXGraph()
         g00.add_node('black', {"a": {1, 2, 3}, "new_attrs": {1}})
@@ -54,7 +61,8 @@ class TestHierarchy(object):
             ('black', 'white')
         ])
         self.nx_hierarchy.add_graph("g00", g00, {"name": "Colors"})
-        self.neo4j_hierarchy.add_graph("g00", g00, {"name": "Colors"})
+        if self.neo4j_hierarchy:
+            self.neo4j_hierarchy.add_graph("g00", g00, {"name": "Colors"})
 
         g1 = NXGraph()
         g1.add_nodes_from([
@@ -81,7 +89,8 @@ class TestHierarchy(object):
         ])
 
         self.nx_hierarchy.add_graph("g1", g1)
-        self.neo4j_hierarchy.add_graph("g1", g1)
+        if self.neo4j_hierarchy:
+            self.neo4j_hierarchy.add_graph("g1", g1)
         self.nx_hierarchy.add_typing(
             "g1", "g0",
             {"black_circle": "circle",
@@ -91,15 +100,16 @@ class TestHierarchy(object):
              "black_triangle": "triangle",
              "white_triangle": "triangle"}
         )
-        self.neo4j_hierarchy.add_typing(
-            "g1", "g0",
-            {"black_circle": "circle",
-             "white_circle": "circle",
-             "black_square": "square",
-             "white_square": "square",
-             "black_triangle": "triangle",
-             "white_triangle": "triangle"}
-        )
+        if self.neo4j_hierarchy:
+            self.neo4j_hierarchy.add_typing(
+                "g1", "g0",
+                {"black_circle": "circle",
+                 "white_circle": "circle",
+                 "black_square": "square",
+                 "white_square": "square",
+                 "black_triangle": "triangle",
+                 "white_triangle": "triangle"}
+            )
 
         self.nx_hierarchy.add_typing(
             "g1", "g00",
@@ -112,17 +122,18 @@ class TestHierarchy(object):
                 "white_triangle": "white"
             }
         )
-        self.neo4j_hierarchy.add_typing(
-            "g1", "g00",
-            {
-                "black_square": "black",
-                "black_circle": "black",
-                "black_triangle": "black",
-                "white_square": "white",
-                "white_circle": "white",
-                "white_triangle": "white"
-            }
-        )
+        if self.neo4j_hierarchy:
+            self.neo4j_hierarchy.add_typing(
+                "g1", "g00",
+                {
+                    "black_square": "black",
+                    "black_circle": "black",
+                    "black_triangle": "black",
+                    "white_square": "white",
+                    "white_circle": "white",
+                    "white_triangle": "white"
+                }
+            )
 
         g2 = NXGraph()
         g2.add_nodes_from([
@@ -145,7 +156,8 @@ class TestHierarchy(object):
             (5, 7)
         ])
         self.nx_hierarchy.add_graph("g2", g2)
-        self.neo4j_hierarchy.add_graph("g2", g2)
+        if self.neo4j_hierarchy:
+            self.neo4j_hierarchy.add_graph("g2", g2)
         self.nx_hierarchy.add_typing(
             "g2", "g1",
             {1: "black_circle",
@@ -156,16 +168,17 @@ class TestHierarchy(object):
              6: "white_triangle",
              7: "black_triangle"}
         )
-        self.neo4j_hierarchy.add_typing(
-            "g2", "g1",
-            {1: "black_circle",
-             2: "black_circle",
-             3: "black_square",
-             4: "white_circle",
-             5: "white_square",
-             6: "white_triangle",
-             7: "black_triangle"}
-        )
+        if self.neo4j_hierarchy:
+            self.neo4j_hierarchy.add_typing(
+                "g2", "g1",
+                {1: "black_circle",
+                 2: "black_circle",
+                 3: "black_square",
+                 4: "white_circle",
+                 5: "white_square",
+                 6: "white_triangle",
+                 7: "black_triangle"}
+            )
 
         g3 = NXGraph()
         g3.add_nodes_from([
@@ -191,7 +204,8 @@ class TestHierarchy(object):
             (5, 7)
         ])
         self.nx_hierarchy.add_graph("g3", g3)
-        self.neo4j_hierarchy.add_graph("g3", g3)
+        if self.neo4j_hierarchy:
+            self.neo4j_hierarchy.add_graph("g3", g3)
         self.nx_hierarchy.add_typing(
             "g3", "g1",
             {1: "black_circle",
@@ -202,16 +216,17 @@ class TestHierarchy(object):
              6: "white_triangle",
              7: "black_triangle"}
         )
-        self.neo4j_hierarchy.add_typing(
-            "g3", "g1",
-            {1: "black_circle",
-             2: "white_circle",
-             3: "white_circle",
-             5: "black_square",
-             4: "white_square",
-             6: "white_triangle",
-             7: "black_triangle"}
-        )
+        if self.neo4j_hierarchy:
+            self.neo4j_hierarchy.add_typing(
+                "g3", "g1",
+                {1: "black_circle",
+                 2: "white_circle",
+                 3: "white_circle",
+                 5: "black_square",
+                 4: "white_square",
+                 6: "white_triangle",
+                 7: "black_triangle"}
+            )
 
         g4 = NXGraph()
         g4.add_nodes_from([1, 2, 3])
@@ -223,9 +238,10 @@ class TestHierarchy(object):
         self.nx_hierarchy.add_graph("g4", g4)
         self.nx_hierarchy.add_typing("g4", "g2", {1: 2, 2: 3, 3: 6})
         self.nx_hierarchy.add_typing("g4", "g3", {1: 1, 2: 5, 3: 6})
-        self.neo4j_hierarchy.add_graph("g4", g4)
-        self.neo4j_hierarchy.add_typing("g4", "g2", {1: 2, 2: 3, 3: 6})
-        self.neo4j_hierarchy.add_typing("g4", "g3", {1: 1, 2: 5, 3: 6})
+        if self.neo4j_hierarchy:
+            self.neo4j_hierarchy.add_graph("g4", g4)
+            self.neo4j_hierarchy.add_typing("g4", "g2", {1: 2, 2: 3, 3: 6})
+            self.neo4j_hierarchy.add_typing("g4", "g3", {1: 1, 2: 5, 3: 6})
 
         g5 = NXGraph()
         g5.add_nodes_from([
@@ -242,7 +258,8 @@ class TestHierarchy(object):
         ])
 
         self.nx_hierarchy.add_graph("g5", g5)
-        self.neo4j_hierarchy.add_graph("g5", g5)
+        if self.neo4j_hierarchy:
+            self.neo4j_hierarchy.add_graph("g5", g5)
 
     def test_add_graph(self):
         # add nice assertions here!
@@ -255,11 +272,12 @@ class TestHierarchy(object):
             {"circle": "black_circle",
              "square": "white_square",
              "triangle": "black_triangle"})
-        self.neo4j_hierarchy.add_typing(
-            "g0", "g1",
-            {"circle": "black_circle",
-             "square": "white_square",
-             "triangle": "black_triangle"})
+        if self.neo4j_hierarchy:
+            self.neo4j_hierarchy.add_typing(
+                "g0", "g1",
+                {"circle": "black_circle",
+                 "square": "white_square",
+                 "triangle": "black_triangle"})
 
     # def test_remove_graph(self):
     #     h = copy.deepcopy(self.hierarchy)
@@ -291,17 +309,19 @@ class TestHierarchy(object):
                 "g00": {1: "white", 2: "white", 3: "black"}
             }
         )
-        n4instances = self.neo4j_hierarchy.find_matching(
-            graph_id="g1",
-            pattern=pattern,
-            pattern_typing={
-                "g0": pattern_typing,
-                "g00": {1: "white", 2: "white", 3: "black"}
-            }
-        )
+        if self.neo4j_hierarchy:
+            n4instances = self.neo4j_hierarchy.find_matching(
+                graph_id="g1",
+                pattern=pattern,
+                pattern_typing={
+                    "g0": pattern_typing,
+                    "g00": {1: "white", 2: "white", 3: "black"}
+                }
+            )
 
         assert(len(nxinstances) == 1)
-        assert(n4instances == nxinstances)
+        if self.neo4j_hierarchy:
+            assert(n4instances == nxinstances)
 
     def test_rewrite(self):
         pattern = NXGraph()
@@ -399,77 +419,82 @@ class TestHierarchy(object):
         for s, t, attrs in old_g00_edges:
             assert(self.nx_hierarchy.get_graph("g00").get_edge(s, t) == attrs)
 
-        instances = self.neo4j_hierarchy.find_matching(
-            "g1",
-            pattern,
-            pattern_typing=lhs_typing
-        )
+        if self.neo4j_hierarchy:
+            instances = self.neo4j_hierarchy.find_matching(
+                "g1",
+                pattern,
+                pattern_typing=lhs_typing
+            )
 
-        old_g0_nodes = self.neo4j_hierarchy.get_graph("g0").nodes(data=True)
-        old_g0_edges = self.neo4j_hierarchy.get_graph("g0").edges(data=True)
-        old_g00_nodes = self.neo4j_hierarchy.get_graph("g00").nodes(data=True)
-        old_g00_edges = self.neo4j_hierarchy.get_graph("g00").edges(data=True)
+        if self.neo4j_hierarchy:
+            old_g0_nodes = self.neo4j_hierarchy.get_graph("g0").nodes(data=True)
+            old_g0_edges = self.neo4j_hierarchy.get_graph("g0").edges(data=True)
+            old_g00_nodes = self.neo4j_hierarchy.get_graph("g00").nodes(data=True)
+            old_g00_edges = self.neo4j_hierarchy.get_graph("g00").edges(data=True)
+            self.neo4j_hierarchy.rewrite(
+                "g1",
+                rule,
+                instances[0],
+                rhs_typing=rhs_typing
+            )
 
-        self.neo4j_hierarchy.rewrite(
-            "g1",
-            rule,
-            instances[0],
-            rhs_typing=rhs_typing
-        )
+            assert(set([n[0] for n in old_g0_nodes]) == set(
+                self.neo4j_hierarchy.get_graph("g0").nodes()))
+            assert(set([(n[0], n[1]) for n in old_g0_edges]) == set(
+                self.neo4j_hierarchy.get_graph("g0").edges()))
+            assert(set([n[0] for n in old_g00_nodes]) == set(
+                self.neo4j_hierarchy.get_graph("g00").nodes()))
+            assert(set([(n[0], n[1]) for n in old_g00_edges]) == set(
+                self.neo4j_hierarchy.get_graph("g00").edges()))
 
-        assert(set([n[0] for n in old_g0_nodes]) == set(
-            self.neo4j_hierarchy.get_graph("g0").nodes()))
-        assert(set([(n[0], n[1]) for n in old_g0_edges]) == set(
-            self.neo4j_hierarchy.get_graph("g0").edges()))
-        assert(set([n[0] for n in old_g00_nodes]) == set(
-            self.neo4j_hierarchy.get_graph("g00").nodes()))
-        assert(set([(n[0], n[1]) for n in old_g00_edges]) == set(
-            self.neo4j_hierarchy.get_graph("g00").edges()))
+            for n, attrs in old_g0_nodes:
+                assert(self.neo4j_hierarchy.get_graph("g0").get_node(n) == attrs)
 
-        for n, attrs in old_g0_nodes:
-            assert(self.neo4j_hierarchy.get_graph("g0").get_node(n) == attrs)
+            for s, t, attrs in old_g0_edges:
+                assert(self.neo4j_hierarchy.get_graph("g0").get_edge(s, t) == attrs)
 
-        for s, t, attrs in old_g0_edges:
-            assert(self.neo4j_hierarchy.get_graph("g0").get_edge(s, t) == attrs)
+            for n, attrs in old_g00_nodes:
+                assert(self.neo4j_hierarchy.get_graph("g00").get_node(n) == attrs)
 
-        for n, attrs in old_g00_nodes:
-            assert(self.neo4j_hierarchy.get_graph("g00").get_node(n) == attrs)
-
-        for s, t, attrs in old_g00_edges:
-            assert(self.neo4j_hierarchy.get_graph("g00").get_edge(s, t) == attrs)
+            for s, t, attrs in old_g00_edges:
+                assert(self.neo4j_hierarchy.get_graph("g00").get_edge(s, t) == attrs)
 
     def test_node_type(self):
         assert(
             self.nx_hierarchy.node_type("g1", "white_circle") ==
             {"g00": "white", "g0": "circle"}
         )
-        assert(
-            self.neo4j_hierarchy.node_type("g1", "white_circle") ==
-            {"g00": "white", "g0": "circle"}
-        )
+        if self.neo4j_hierarchy:
+            assert(
+                self.neo4j_hierarchy.node_type("g1", "white_circle") ==
+                {"g00": "white", "g0": "circle"}
+            )
         assert(
             self.nx_hierarchy.node_type("g1", "black_square") ==
             {"g00": "black", "g0": "square"}
         )
-        assert(
-            self.neo4j_hierarchy.node_type("g1", "black_square") ==
-            {"g00": "black", "g0": "square"}
-        )
+        if self.neo4j_hierarchy:
+            assert(
+                self.neo4j_hierarchy.node_type("g1", "black_square") ==
+                {"g00": "black", "g0": "square"}
+            )
 
     def test_to_json(self):
         res = self.nx_hierarchy.to_json()
         new_h = NXHierarchy.from_json(res)
         assert(self.nx_hierarchy == new_h)
 
-        res = self.neo4j_hierarchy.to_json()
-        self.neo4j_hierarchy = Neo4jHierarchy.from_json(
-            uri="bolt://localhost:7687",
-            user="neo4j",
-            password="admin",
-            json_data=res,
-            clear=True)
+        if self.neo4j_hierarchy:
+            res = self.neo4j_hierarchy.to_json()
+            self.neo4j_hierarchy = Neo4jHierarchy.from_json(
+                uri="bolt://localhost:7687",
+                user="neo4j",
+                password="admin",
+                json_data=res,
+                clear=True)
 
-        assert(self.neo4j_hierarchy == self.nx_hierarchy)
+        if self.neo4j_hierarchy:
+            assert(self.neo4j_hierarchy == self.nx_hierarchy)
 
     # def test_add_rule(self):
     #     lhs = NXGraph()

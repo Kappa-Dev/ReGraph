@@ -223,7 +223,7 @@ class NXGraph(Graph):
 
         return self._graph.predecessors(node_id)
 
-    def get_relabeled_graph(self, mapping):
+    def get_relabeled_graph(self, mapping, raw=False):
         """Return a graph with node labeling specified in the mapping.
 
         Parameters
@@ -284,6 +284,10 @@ class NXGraph(Graph):
         for s, t in g.edges():
             for k, v in attributes[(s, t)].items():
                 g.adj[s][t][k] = v
+        if not raw:
+            new_obj = NXGraph()
+            new_obj._graph = g
+            return new_obj
         return g
 
     def subgraph(self, nodes):
@@ -394,7 +398,7 @@ class NXGraph(Graph):
             g = self._graph
 
         labels_mapping = dict([(n, i + 1) for i, n in enumerate(g.nodes())])
-        g = self.get_relabeled_graph(labels_mapping)
+        g = self.get_relabeled_graph(labels_mapping, raw=True)
         inverse_mapping = dict(
             [(value, key) for key, value in labels_mapping.items()]
         )

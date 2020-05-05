@@ -127,7 +127,7 @@ class NXHierarchy(Hierarchy, NXGraph):
         """
         normalize_attrs(attrs)
         for k, v in attrs.items():
-            self.node[node_id]["attrs"][k] = v
+            nx.set_node_attributes(self._graph, {node_id: {"attrs": attrs}})
 
     def get_typing_attrs(self, source, target):
         """Get attributes of a typing in the hierarchy.
@@ -302,7 +302,6 @@ class NXHierarchy(Hierarchy, NXGraph):
                 "no muliple edges allowed!".format(source, target)
             )
         if not self.is_graph(source):
-            print(self.node[source])
             raise HierarchyError(
                 "Source of a typing should be a graph"
             )
@@ -1014,7 +1013,7 @@ class NXHierarchy(Hierarchy, NXGraph):
             pass
         if not self.is_rule(rule_id):
             pass
-        return self.node[rule_id]["rule"]
+        return self.get_node(rule_id)["rule"]
 
     def add_rule(self, rule_id, rule, attrs=None):
         """Add rule to the hierarchy.
@@ -1110,18 +1109,18 @@ class NXHierarchy(Hierarchy, NXGraph):
             raise HierarchyError(
                 "Source of a rule typing should be a rule, "
                 "`{}` is provided!".format(
-                    type(self.node[rule_id]))
+                    type(self.get_node(rule_id)))
             )
         if not self.is_graph(graph_id):
             raise HierarchyError(
                 "Target of a rule typing should be a graph, "
                 "'{}' is provided!".format(
-                    type(self.node[graph_id])))
+                    type(self.get_node(graph_id))))
 
         # check if an lhs typing is valid
         check_homomorphism(
-            self.node[rule_id]["rule"].lhs,
-            self.node[graph_id]["graph"],
+            self.get_node(rule_id)["rule"].lhs,
+            self.get_node(graph_id)["graph"],
             lhs_mapping,
             total=lhs_total
         )
@@ -1129,7 +1128,7 @@ class NXHierarchy(Hierarchy, NXGraph):
         new_rhs_mapping = rhs_mapping
         if new_rhs_mapping is None:
             new_rhs_mapping = dict()
-        rule = self.node[rule_id]["rule"]
+        rule = self.get_node(rule_id)["rule"]
         for node in rule.rhs.nodes():
             p_keys = keys_by_value(rule.p_rhs, node)
             if len(p_keys) == 1:
@@ -1152,8 +1151,8 @@ class NXHierarchy(Hierarchy, NXGraph):
 
         # check if an rhs typing is valid
         check_homomorphism(
-            self.node[rule_id]["rule"].rhs,
-            self.node[graph_id]["graph"],
+            self.get_node(rule_id)["rule"].rhs,
+            self.get_node(graph_id)["graph"],
             new_rhs_mapping,
             total=rhs_total
         )
@@ -1389,7 +1388,7 @@ class NXHierarchy(Hierarchy, NXGraph):
         if not self.is_rule(rule_id):
             raise HierarchyError("Invalid rule '{}' to match!".format(rule_id))
 
-        rule = self.node[rule_id]["rule"]
+        rule = self.get_node(rule_id)["rule"]
 
         lhs_typing = dict()
         rhs_typing = dict()
@@ -1397,8 +1396,8 @@ class NXHierarchy(Hierarchy, NXGraph):
         rule_successors = self.successors(rule_id)
 
         for suc in rule_successors:
-            lhs_typing[suc] = self.adj[rule_id][suc]["lhs_mapping"]
-            rhs_typing[suc] = self.adj[rule_id][suc]["rhs_mapping"]
+            lhs_typing[suc] = self.get_edge(rule_id, suc)["lhs_mapping"]
+            rhs_typing[suc] = self.get_edge(rule_id, suc)["rhs_mapping"]
 
         instances = self.find_matching(
             graph_id,
@@ -1412,7 +1411,7 @@ class NXHierarchy(Hierarchy, NXGraph):
         self.set_node_attrs(
             graph_id, {
                 "graph": graph_obj,
-                "attrs": self.node[graph_id]["attrs"]
+                "attrs": self.get_node(graph_id)["attrs"]
             },
             normalize=False
         )
@@ -1445,7 +1444,7 @@ class NXHierarchy(Hierarchy, NXGraph):
             rule_id,
             {
                 "rule": rule_obj,
-                "attrs": self.node[rule_id]["attrs"]
+                "attrs": self.get_node(rule_id)["attrs"]
             },
             normalize=False
         )
@@ -1557,9 +1556,9 @@ class NXHierarchy(Hierarchy, NXGraph):
 
         for suc in rule_successors:
             lhs_typing[suc] =\
-                self.adj[rule_id][suc]["lhs_mapping"]
+                self.get_edge(rule_id, suc)["lhs_mapping"]
             rhs_typing[suc] =\
-                self.adj[rule_id][suc]["rhs_mapping"]
+                self.get_edge(rule_id, suc)["rhs_mapping"]
 
         return self.rewrite(
             graph_id,

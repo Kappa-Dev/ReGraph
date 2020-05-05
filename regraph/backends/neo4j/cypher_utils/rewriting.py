@@ -774,7 +774,7 @@ def find_matching(pattern, node_label, edge_label,
             query += ", {}".format(
                 ", ".join(
                     "(`{}`)-[:typing*..]->(`{}`:{})".format(
-                        n, "{}_type".format(n), typing_graph)
+                        n, "{}_type_{}".format(n, typing_graph), typing_graph)
                     for n in pattern.nodes() if n in pattern_typing[typing_graph].keys()
                 ))
     query += "\n"
@@ -797,13 +797,17 @@ def find_matching(pattern, node_label, edge_label,
             where_appeared = True
         else:
             query += "AND "
+
+        typing_strs = []
         for typing_graph, mapping in pattern_typing.items():
-            query += " AND ".join(
-                "{}.id IN [{}]".format(
-                    "{}_type".format(n),
+            typing_strs.append(" AND ".join(
+                "`{}`.id IN [{}]".format(
+                    "{}_type_{}".format(n, typing_graph),
                     ", ".join("'{}'".format(t) for t in pattern_typing[typing_graph][n]))
                 for n in pattern.nodes() if n in pattern_typing[typing_graph].keys()
-            )
+            ))
+
+        query += " AND ".join(typing_strs)
 
     if nodes is not None and len(nodes) > 0:
         if where_appeared is False:
