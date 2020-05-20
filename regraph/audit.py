@@ -143,13 +143,14 @@ class Versioning(ABC):
         """Return the name of the current branch."""
         return self._current_branch
 
-    def print_history(self):
+    def print_history(self, hide_id=False):
         """Print the history of commits."""
         for n in self._revision_graph.nodes():
             print(
                 self._revision_graph.nodes[n]["time"].strftime(
                     "%d/%m/%Y %H:%M:%S"),
-                n, self._revision_graph.nodes[n]["branch"],
+                n if not hide_id else "", 
+                self._revision_graph.nodes[n]["branch"],
                 self._revision_graph.nodes[n]["message"])
 
     def commit(self, delta, message=None, previous_commit=None, **kwargs):
@@ -167,7 +168,6 @@ class Versioning(ABC):
             time=time,
             message=message if message is not None else "",
             **kwargs)
-
         self._revision_graph.add_edge(
             previous_commit, commit_id, delta=delta)
 
@@ -418,7 +418,8 @@ class Versioning(ABC):
             data["nodes"].append({
                 "id": n,
                 "branch": self._revision_graph.nodes[n]["branch"],
-                "time": self._revision_graph.nodes[n]["time"],
+                "time": self._revision_graph.nodes[n]["time"].strftime(
+                    "%d/%m/%Y %H:%M:%S"),
                 "message": self._revision_graph.nodes[n]["message"]
             })
         for (s, t) in self._revision_graph.edges():
@@ -437,7 +438,8 @@ class Versioning(ABC):
             revision_graph.add_node(
                 node_json["id"],
                 branch=node_json["branch"],
-                time=node_json["time"],
+                time=datetime.datetime.strptime(
+                    node_json["time"], "%d/%m/%Y %H:%M:%S"),
                 message=node_json["message"])
         for edge_json in json_data["edges"]:
             revision_graph.add_edge(
@@ -755,7 +757,6 @@ class VersionedHierarchy(Versioning):
 
         rhs_instances = self.hierarchy.apply_rule_hierarchy(
             rule_hierarchy, lhs_instances)
-
         commit_id = self.commit({
             "rule_hierarchy": rule_hierarchy,
             "lhs_instances": lhs_instances,
@@ -765,10 +766,21 @@ class VersionedHierarchy(Versioning):
 
     @staticmethod
     def _delta_to_json(delta):
+        rule_homs_json = []
+        for (s, t), (lh, ph, rh) in delta[
+                "rule_hierarchy"]["rule_homomorphisms"].items():
+            rule_homs_json.append({
+                "from": s,
+                "to": t,
+                "lhs_mapping": lh,
+                "p_mapping": ph,
+                "rhs_mapping": rh
+            })
+
         data = {}
         data["rule_hierarchy"] = {
             "rules": {},
-            "rule_homomorphisms": delta["rule_hierarchy"]["rule_homomorphisms"]
+            "rule_homomorphisms": rule_homs_json
         }
         for graph, rule in delta["rule_hierarchy"]["rules"].items():
             data["rule_hierarchy"]["rules"][graph] = rule.to_json()
@@ -780,9 +792,17 @@ class VersionedHierarchy(Versioning):
     @staticmethod
     def _delta_from_json(json_data):
         delta = {}
+        rule_homs = {}
+        for record in json_data["rule_hierarchy"]["rule_homomorphisms"]:
+            rule_homs[(record["from"], record["to"])] = (
+                record["lhs_mapping"],
+                record["p_mapping"],
+                record["rhs_mapping"],
+            )
+
         delta["rule_hierarchy"] = {
             "rules": {},
-            "rule_homomorphisms": json_data["rule_hierarchy"]["rule_homomorphisms"]
+            "rule_homomorphisms": rule_homs
         }
         for graph, rule in json_data["rule_hierarchy"]["rules"].items():
             delta["rule_hierarchy"]["rules"][graph] = Rule.from_json(rule)

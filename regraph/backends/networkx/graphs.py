@@ -301,6 +301,18 @@ class NXGraph(Graph):
                 g.add_edge(s, t, attrs)
         return g
 
+    @classmethod
+    def generate_subgraph(cls, graph, nodes):
+        """Get a subgraph induced by the collection of nodes."""
+        g = cls()
+        g.add_nodes_from([
+            (n, attrs) for n, attrs in graph.nodes(data=True)
+            if n in nodes])
+        for s, t, attrs in graph.edges(data=True):
+            if s in g.nodes() and t in g.nodes():
+                g.add_edge(s, t, attrs)
+        return g
+
     def advanced_find_matching(self, pattern_dict,
                                nodes=None, graph_typing=None,
                                pattern_typing=None):
@@ -518,6 +530,6 @@ class NXGraph(Graph):
                 disconnected_components.append(comp)
         return set([
             n
-            for n in comp
             for comp in disconnected_components
+            for n in comp
         ])

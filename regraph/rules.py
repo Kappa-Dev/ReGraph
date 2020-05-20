@@ -1129,6 +1129,22 @@ class Rule(object):
                 "Edge '{}'->'{}' does not exists in the left-hand side "
                 "of the rule".format(source, target))
 
+    def _remove_node_lhs(self, node_id):
+        """Remove a node from the `rhs`.
+
+        This method removes a given node from the `rhs`,
+        if there exist nodes from `p` that map to this node
+        they are removed as well.
+        """
+        if node_id in self.lhs.nodes():
+            self.lhs.remove_node(node_id)
+            p_nodes = keys_by_value(self.p_lhs, node_id)
+            for p in p_nodes:
+                self.p.remove_node(p)
+                self.rhs.remove_node(self.p_rhs[p])
+                del self.p_lhs[p]
+                del self.p_rhs[p]
+
     def _remove_node_rhs(self, node_id):
         """Remove a node from the `rhs`.
 

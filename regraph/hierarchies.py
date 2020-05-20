@@ -737,6 +737,52 @@ class Hierarchy(ABC):
             )
         return homomorphism
 
+    def _get_backward_propagation_rule(self, origin_id, ancestor, rule,
+                                       instance=None, p_typing=None):
+        """Compute a propagation rule to the ancestor."""
+        if p_typing is None:
+            p_typing = {}
+
+        origin_typing = self.get_typing(ancestor, origin_id)
+
+        # Compute L_G
+        l_g, l_g_g, l_g_l = pullback(
+            self.get_graph(ancestor),
+            rule.lhs,
+            self.get_graph(origin_id),
+            origin_typing,
+            instance)
+
+        # Compute canonical P_G
+        canonical_p_g, p_g_l_g, p_g_p = pullback(
+            l_g, rule.p, rule.lhs, l_g_l, rule.p_lhs)
+
+        # Remove controlled things from P_G
+        if ancestor in p_typing.keys():
+            l_g_factorization = {
+                keys_by_value(l_g_g, k)[0]: v
+                for k, v in p_typing[ancestor].items()
+            }
+            p_g_nodes_to_remove = set()
+            for n in canonical_p_g.nodes():
+                l_g_node = p_g_l_g[n]
+                # If corresponding L_G node is specified in
+                # the controlling relation, remove all
+                # the instances of P nodes not mentioned
+                # in this relations
+                if l_g_node in l_g_factorization.keys():
+                    p_nodes = l_g_factorization[l_g_node]
+                    if p_g_p[n] not in p_nodes:
+                        del p_g_p[n]
+                        del p_g_l_g[n]
+                        p_g_nodes_to_remove.add(n)
+
+            for n in p_g_nodes_to_remove:
+                canonical_p_g.remove_node(n)
+        rule = Rule(p=canonical_p_g, lhs=l_g, p_lhs=p_g_l_g)
+
+        return rule, l_g_g, l_g_l, p_g_p
+
     def get_rule_hierarchy(self, origin_id, rule, instance=None,
                            p_typing=None, rhs_typing=None):
         """Find rule hierarchy corresponding to the input rewriting.
@@ -2506,56 +2552,57 @@ class Hierarchy(ABC):
         """Check if a rule hierarchy is applicable."""
         # Check that instances commute
         for (s, t) in self.typings():
-            typing = self.get_typing(s, t)
-            lhs_s_t1 = compose(instances[s], typing)
-            lhs_s_t2 = compose(
-                rule_hierarchy["rule_homomorphisms"][(s, t)][0],
-                instances[t])
-            if (lhs_s_t1 != lhs_s_t2):
-                raise RewritingError(
-                    "Instance of a specified rule for '{}' ({}) ".format(
-                        s, instances[s]) +
-                    "is not compatible with such instance for '{}' ({})".format(
-                        t, instances[t]))
+            if s in instances and t in instances:
+                typing = self.get_typing(s, t)
+                lhs_s_t1 = compose(instances[s], typing)
+                lhs_s_t2 = compose(
+                    rule_hierarchy["rule_homomorphisms"][(s, t)][0],
+                    instances[t])
+                if (lhs_s_t1 != lhs_s_t2):
+                    raise RewritingError(
+                        "Instance of a specified rule for '{}' ({}) ".format(
+                            s, instances[s]) +
+                        "is not compatible with such instance for '{}' ({})".format(
+                            t, instances[t]))
 
-            # Check the applicability
-            t_rule = rule_hierarchy["rules"][t]
-            if t_rule.is_restrictive():
-                # Check the square L_S -> S -> T and L_S -> L_T -> T is a PB
-                for lhs_t_node in t_rule.lhs.nodes():
-                    t_node = instances[t][lhs_t_node]
-                    s_nodes = keys_by_value(typing, t_node)
-                    if lhs_t_node in t_rule.removed_nodes():
-                        for s_node in s_nodes:
-                            error = False
-                            if s_node not in instances[s].values():
-                                error = True
-                            elif keys_by_value(instances[s], s_node)[
-                                    0] not in rule_hierarchy[
-                                        "rules"][s].removed_nodes():
-                                error = True
-                            if error:
-                                raise RewritingError(
-                                    "Specified rule hierarchy is not applicable "
-                                    "the typing of the node '{}' ".format(s_node) +
-                                    "from the graph '{}' is removed ".format(s) +
-                                    "by rewriting of '{}', but ".format(t) +
-                                    "this node is not removed by the rule " +
-                                    "applied to '{}'".format(s)
-                                )
+                # Check the applicability
+                t_rule = rule_hierarchy["rules"][t]
+                if t_rule.is_restrictive():
+                    # Check the square L_S -> S -> T and L_S -> L_T -> T is a PB
+                    for lhs_t_node in t_rule.lhs.nodes():
+                        t_node = instances[t][lhs_t_node]
+                        s_nodes = keys_by_value(typing, t_node)
+                        if lhs_t_node in t_rule.removed_nodes():
+                            for s_node in s_nodes:
+                                error = False
+                                if s_node not in instances[s].values():
+                                    error = True
+                                elif keys_by_value(instances[s], s_node)[
+                                        0] not in rule_hierarchy[
+                                            "rules"][s].removed_nodes():
+                                    error = True
+                                if error:
+                                    raise RewritingError(
+                                        "Specified rule hierarchy is not applicable "
+                                        "the typing of the node '{}' ".format(s_node) +
+                                        "from the graph '{}' is removed ".format(s) +
+                                        "by rewriting of '{}', but ".format(t) +
+                                        "this node is not removed by the rule " +
+                                        "applied to '{}'".format(s)
+                                    )
 
-                    if lhs_t_node in t_rule.cloned_nodes():
-                        for s_node in s_nodes:
-                            if s_node not in instances[s].values():
-                                raise RewritingError(
-                                    "Specified rule hierarchy is not applicable "
-                                    "the typing of the node '{}' ".format(s_node) +
-                                    "from the graph '{}' is cloned ".format(s) +
-                                    "by rewriting of '{}', but the ".format(t) +
-                                    "retyping of this node is not specified, i.e. " +
-                                    "'{}' is not in the instances of ".format(s_node) +
-                                    "the rule applied to '{}'".format(s)
-                                )
+                        if lhs_t_node in t_rule.cloned_nodes():
+                            for s_node in s_nodes:
+                                if s_node not in instances[s].values():
+                                    raise RewritingError(
+                                        "Specified rule hierarchy is not applicable "
+                                        "the typing of the node '{}' ".format(s_node) +
+                                        "from the graph '{}' is cloned ".format(s) +
+                                        "by rewriting of '{}', but the ".format(t) +
+                                        "retyping of this node is not specified, i.e. " +
+                                        "'{}' is not in the instances of ".format(s_node) +
+                                        "the rule applied to '{}'".format(s)
+                                    )
 
     def relabel_nodes(self, graph, mapping):
         """Relabel nodes of a graph in the hierarchy."""
