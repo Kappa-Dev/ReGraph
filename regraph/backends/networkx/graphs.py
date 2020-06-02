@@ -257,7 +257,7 @@ class NXGraph(Graph):
 
         Returns
         -------
-        g : networkx.(Di)Graph
+        g : NXGraph
             New graph object isomorphic to the `graph` with the relabled nodes.
 
         Raises
@@ -270,9 +270,8 @@ class NXGraph(Graph):
         --------
         regraph.primitives.relabel_nodes
         """
-        g = nx.DiGraph()
+        g = NXGraph()
         old_nodes = set(mapping.keys())
-
         for old_node in old_nodes:
             try:
                 new_node = mapping[old_node]
@@ -281,7 +280,7 @@ class NXGraph(Graph):
             try:
                 g.add_node(
                     new_node,
-                    **self.get_node(old_node))
+                    self.get_node(old_node))
             except KeyError:
                 raise GraphError("Node '%s' does not exist!" % old_node)
 
@@ -380,7 +379,7 @@ class NXGraph(Graph):
             g = self._graph
 
         labels_mapping = dict([(n, i + 1) for i, n in enumerate(g.nodes())])
-        g = self.get_relabeled_graph(labels_mapping)
+        g = nx.relabel_nodes(g, labels_mapping)
         inverse_mapping = dict(
             [(value, key) for key, value in labels_mapping.items()]
         )

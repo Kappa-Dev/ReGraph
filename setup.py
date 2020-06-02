@@ -4,8 +4,8 @@ from setuptools import setup
 
 setup(
     name='ReGraph',
-    version='2.0',
-    description='Graph rewriting tool',
+    version='2.0.1',
+    description='Graph rewriting and graph-based knowledge representation framework',
     author='Eugenia Oshurko',
     license='MIT License',
     packages=[

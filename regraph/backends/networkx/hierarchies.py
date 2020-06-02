@@ -125,7 +125,9 @@ class NXHierarchy(Hierarchy, NXGraph):
         graph_id : hashable
             Id of the graph
         """
-        return self.set_node_attrs(node_id, {"attrs": attrs})
+        normalize_attrs(attrs)
+        for k, v in attrs.items():
+            self.node[node_id]["attrs"][k] = v
 
     def get_typing_attrs(self, source, target):
         """Get attributes of a typing in the hierarchy.
@@ -145,7 +147,9 @@ class NXHierarchy(Hierarchy, NXGraph):
         target : hashable
             Id of the target graph
         """
-        return self.set_edge_attrs(source, target, {"attrs": attrs})
+        normalize_attrs(attrs)
+        for k, v in attrs.items():
+            self.adj[source][target]["attrs"][k] = v
 
     def get_relation_attrs(self, left, right):
         """Get attributes of a reltion in the hierarchy.
@@ -189,7 +193,7 @@ class NXHierarchy(Hierarchy, NXGraph):
             self.relation_edges[right_graph, left_graph]["rel"][right_node] = {
                 left_node}
 
-    def add_graph(self, graph_id, graph, graph_attrs=None):
+    def add_graph(self, graph_id, graph, attrs=None):
         """Add a new graph to the hierarchy.
 
         Parameters
@@ -207,14 +211,14 @@ class NXHierarchy(Hierarchy, NXGraph):
                 "Node '{}' already exists in the hierarchy!".format(graph_id))
 
         self.add_node(graph_id)
-        if graph_attrs is not None:
-            normalize_attrs(graph_attrs)
+        if attrs is not None:
+            normalize_attrs(attrs)
         else:
-            graph_attrs = dict()
+            attrs = dict()
         self.update_node_attrs(
             graph_id, {
                 "graph": graph,
-                "attrs": graph_attrs
+                "attrs": attrs
             }, normalize=False)
         return
 
@@ -300,6 +304,7 @@ class NXHierarchy(Hierarchy, NXGraph):
                 "no muliple edges allowed!".format(source, target)
             )
         if not self.is_graph(source):
+            print(self.node[source])
             raise HierarchyError(
                 "Source of a typing should be a graph,"
                 " '{}' is provided!".format(
@@ -1533,7 +1538,7 @@ class NXHierarchy(Hierarchy, NXGraph):
     def _expansive_update_incident_rels(self, graph_id, g_m_g_prime,
                                         adj_relations):
         """Update incident relations after an expansive change."""
-        for related_g, rel in self.adjacent_relations(graph_id):
+        for related_g in self.adjacent_relations(graph_id):
             if self.is_graph(related_g):
                 super()._expansive_update_incident_rels(
                     graph_id, g_m_g_prime, adj_relations)

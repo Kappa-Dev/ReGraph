@@ -577,7 +577,7 @@ class Rule(object):
             else:
                 raise RuleError(
                     "Node with the id '{}' does not exist in the "
-                    "preserved part of the rule".fromat(n)
+                    "preserved part of the rule".format(n)
                 )
             nodes_to_merge.add(rhs_node)
         new_name = self.rhs.merge_nodes(
@@ -614,7 +614,6 @@ class Rule(object):
         if n not in self.rhs.nodes():
             raise RuleError(
                 "Node '{}' exists in the RHS of the rule".format(n))
-
         self.rhs.add_node_attrs(n, attrs)
         return
 

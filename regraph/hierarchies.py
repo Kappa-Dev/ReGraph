@@ -1980,6 +1980,11 @@ class Hierarchy(ABC):
                     origin_id, graph, rule,
                     p_origin_m, g_g_prime, rhs_g_prime)
 
+            self._expansive_update_incident_homs(
+                graph, g_g_prime, pred_typings)
+            self._expansive_update_incident_rels(
+                graph, g_g_prime, adj_relations)
+
             # Propagate node additions
             if len(rule.added_nodes()) > 0:
                 self._propagate_node_addition(
@@ -1987,10 +1992,10 @@ class Hierarchy(ABC):
                     rhs_graph_typing,
                     g_g_prime, rhs_g_prime)
 
-            self._expansive_update_incident_homs(
-                graph, g_g_prime, pred_typings)
-            self._expansive_update_incident_rels(
-                graph, g_g_prime, adj_relations)
+            for n in rule.p.nodes():
+                if rule.p_rhs[n] not in rhs_g_prime and\
+                        n in rhs_g_prime:
+                    rhs_g_prime[rule.p_rhs[n]] = rhs_g_prime[n]
 
             # Propagate node attrs additions
             if len(rule.added_node_attrs()) > 0:
@@ -2501,3 +2506,9 @@ class Hierarchy(ABC):
         """Relabel nodes of a graph in the hierarchy."""
         graph = self.get_graph(graph)
         graph.relabel_nodes(mapping)
+
+    def set_node_typing(self, source_id, target_id, node_id, typing_node_id):
+        """Set typing of the individual node."""
+        old_typing = self.get_typing(source_id, target_id)
+        old_typing[node_id] = typing_node_id
+        self._update_mapping(source_id, target_id, old_typing)
