@@ -31,7 +31,15 @@ class NXGraph(Graph):
     def __init__(self, incoming_graph_data=None, **attr):
         """Initialize NetworkX graph."""
         super().__init__()
-        self._graph = nx.DiGraph()
+        if incoming_graph_data:
+            if isinstance(incoming_graph_data, nx.DiGraph):
+                self._graph = incoming_graph_data
+            else:
+                raise ReGraphError(
+                    "The incoming_graph_data argument must be nx.DiGraph."
+                )
+        else:
+            self._graph = nx.DiGraph()
 
     def nodes(self, data=False):
         """Return the list of nodes."""
