@@ -96,7 +96,7 @@ def plot_graph(graph, filename=None, parent_pos=None, title=None):
         graph._graph, k=k, pos=pos, fixed=fixed, iterations=iterations)
     nx.draw_networkx_nodes(
         graph._graph, pos, node_color=[[0.6, 0.8, 0.047]] * len(graph.nodes()),
-        node_size=200, scale=1.0)
+        node_size=200)
     nx.draw_networkx_edges(graph._graph, pos, alpha=0.4, width=2.0, node_size=200)
 
     labels = {}
@@ -195,7 +195,7 @@ def plot_instance(graph, pattern, instance, filename=None,
     nx.draw_networkx_nodes(
         graph._graph, pos, node_color=new_colors, node_size=200)
     nx.draw_networkx_edges(
-        graph._graph, pos, alpha=0.4, width=2.0, node_size=200, scale=1.0)
+        graph._graph, pos, alpha=0.4, width=2.0, node_size=200)
 
     # Draw pattern edges highlighted
     edgelist = [(instance[edge[0]], instance[edge[1]])
@@ -373,7 +373,7 @@ def plot_rule(rule, filename=None, title=None):
     _set_limits(all_pos, all_label_pos)
     nx.draw_networkx_nodes(rule.lhs._graph, lhs_pos,
                            node_color=lhs_colors,
-                           node_size=100, arrows=True)
+                           node_size=100)
     nx.draw_networkx_edges(rule.lhs._graph, lhs_pos, alpha=0.4, node_size=100)
     nx.draw_networkx_labels(rule.lhs._graph, lhs_label_pos, lhs_labels, font_size=11)
 
@@ -383,7 +383,7 @@ def plot_rule(rule, filename=None, title=None):
     _set_limits(all_pos, all_label_pos)
     nx.draw_networkx_nodes(rule.p._graph, p_pos,
                            node_color=p_colors,
-                           node_size=100, arrows=True)
+                           node_size=100)
     nx.draw_networkx_edges(rule.p._graph, p_pos, alpha=0.4, node_size=100)
     nx.draw_networkx_labels(rule.p._graph, p_label_pos, p_labels, font_size=11)
 
@@ -393,7 +393,7 @@ def plot_rule(rule, filename=None, title=None):
     _set_limits(all_pos, all_label_pos)
     nx.draw_networkx_nodes(rule.rhs._graph, rhs_pos,
                            node_color=rhs_colors,
-                           node_size=100, arrows=True)
+                           node_size=100)
     nx.draw_networkx_edges(rule.rhs._graph, rhs_pos, alpha=0.4, node_size=100)
     nx.draw_networkx_labels(rule.rhs._graph, rhs_label_pos, rhs_labels, font_size=11)
 
