@@ -29,7 +29,7 @@ import numpy as np
 import math
 import sys
 
-from greenery.lego import parse
+from greenery import parse
 
 from regraph.exceptions import AttributeSetError
 
@@ -538,7 +538,7 @@ class RegexSet(AttributeSet):
 
         * If `other` is a string, a Python dict or a FiniteSet,
           it is converted to a regex pattern, after which it
-          is parsed by `greenery.lego.parse` method and its
+          is parsed by `greenery.parse` method and its
           intersection with the pattern of the `self` is found.
           The library `greenery` finds the intersection between two
           regex's by constructing corresponding FSM's (finite state
@@ -620,7 +620,7 @@ class RegexSet(AttributeSet):
 
         * If `other` is a string, a Python dict or a FiniteSet,
           it is converted to a regex pattern, after which it
-          is parsed by `greenery.lego.parse` method and its
+          is parsed by `greenery.parse` method and its
           difference with the pattern of the `self` is found.
           See more details here:
           https://github.com/qntm/greenery
