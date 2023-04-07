@@ -37,8 +37,8 @@ setuptools.setup(
         "pyparsing",
         "lrparsing",
         "sympy",
-        "greenery",
-        "neo4j-driver",
+        "greenery==3.3.1",
+        "neo4j-driver==1.7.4",
         "neobolt"
     ]
 )
